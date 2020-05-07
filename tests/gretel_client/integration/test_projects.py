@@ -19,7 +19,7 @@ if not API_KEY:
 def client():
     client = get_cloud_client('api-dev', API_KEY)
     # clear out any old projects that got leftover
-    for p in client.get_projects()['data']['projects']:
+    for p in client.search_projects():
         client._delete_project(p['_id'])
     return client
 
@@ -55,6 +55,10 @@ def check_for_records(project: Project, count=1):
     if len(recs) >= count:
         return True
 
+@poll
+def check_record_count(project: Project, count):
+    if project.record_count >= count:
+        return True
 
 def test_project_not_found(client: Client):
     with pytest.raises(BadRequest):
@@ -70,6 +74,17 @@ def test_new_empty_project(client: Client, project: Project):
     assert not project.field_count
     assert not project.sample()
 
-    # send a record!
-    project.send_records({'foo': 'bar'})
+    # send a record async
+    project.send_async({'foo': 'bar'})
     assert check_for_records(project)
+
+    # send a record sync
+    s, f = project.send({'foo2': 'bar2'})
+    assert not f
+    assert len(s) == 1
+    assert check_record_count(project, 2)
+
+    # send some bad records
+    s, f = project.send([1, 2, 3])
+    assert not s
+    assert len(f) == 3

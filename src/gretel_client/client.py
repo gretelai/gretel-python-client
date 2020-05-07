@@ -1,7 +1,7 @@
 import json
 from functools import wraps
 import time
-from typing import Iterator, Callable, Optional, Union
+from typing import Iterator, Callable, Optional, Union, List
 import threading
 from queue import Queue
 
@@ -40,7 +40,7 @@ class BadRequest(ClientError):
     pass
 
 
-def api_call(method):
+def _api_call(method):
     def dec(func):
         @wraps(func)
         def handler(inst, *args, **kwargs):
@@ -84,13 +84,13 @@ class Client:
         if self.api_key:
             self.session.headers.update({'Authorization': self.api_key})
 
-    @api_call('get')
+    @_api_call('get')
     def _get(self, resource, params):
         return self.session.get(
             self.base_url + resource, params=params, timeout=TIMEOUT
         )
 
-    @api_call('post')
+    @_api_call('post')
     def _post(self, resource, params: dict, data: dict):
         if data is not None:
             data = json.dumps(data)
@@ -99,26 +99,22 @@ class Client:
             timeout=TIMEOUT
         )
 
-    @api_call('delete')
+    @_api_call('delete')
     def _delete(self, resource):
         return self.session.delete(self.base_url + resource, timeout=TIMEOUT)
 
-    def get_entities(self, project):
+    def _get_entities(self, project):
         ents = self._get(f'fields/entities/{project}', None)
         return ents
 
-    def get_fields(self, project, detail='yes', count=500, field_filter: dict = None):
+    def _get_fields(self, project, detail='yes', count=500, field_filter: dict = None):
         params = {'detail': detail, 'count': count}
         if field_filter:
             params.update(field_filter)
         fields = self._get(f'fields/schema/{project}', params=params)
         return fields
 
-    def get_projects(self, count=200):
-        params = {'limit': count}
-        return self._get('projects', params=params)
-
-    def create_project(self, name=None, desc=None):
+    def _create_project(self, name=None, desc=None):
         """
         NOTE(jm): not supporting display name or long description
         here yet
@@ -158,7 +154,7 @@ class Client:
                 error_queue.push(record_batch)
             write_queue.task_done()
 
-    def write_records(
+    def _write_records(
         self,
         *,
         project: str,
@@ -240,7 +236,7 @@ class Client:
                    .get(DATA) \
                    .get(RECORDS, [])
 
-    def _iter_records(
+    def __iter_records(
         self,
         project: str,
         position: Optional[str] = None,
@@ -249,7 +245,7 @@ class Client:
         wait_for: int = -1,
     ):
         if direction not in ('forward', 'backward'):
-            raise TypeError('direction parameter is invalid.')
+            raise AttributeError('direction parameter is invalid.')
         callback = self._build_callback(post_process)
         forward = direction == 'forward'
         start_key = 'oldest' if forward else 'newest'
@@ -298,7 +294,7 @@ class Client:
             if forward:
                 time.sleep(.5)
 
-    def iter_records(
+    def _iter_records(
         self,
         *,
         project: str,
@@ -342,14 +338,30 @@ class Client:
         Raises:
             TypeError: When invalid `direction` parameter supplied.
         """
-        record_source = self._iter_records(project, position, post_process,
-                                           direction, wait_for)
+        record_source = self.__iter_records(
+            project, position, post_process, direction, wait_for)
         record_iterator = ConstantSampler(record_limit=record_limit)
         record_iterator.set_source(record_source)
         return record_iterator
 
     def _get_project(self, name):
         return self._get(f'projects/{name}', None)['data']
+
+    def search_projects(self, count=200, query=None) -> List[Project]:
+        """Search for projects that you are a member of.
+
+        Args:
+            count: the max number of projects to return
+            query: an optional query string to filter projects on
+
+        Returns:
+            A list of ``Project`` instances
+        """
+        params = {'limit': count}
+        if query is not None:
+            params.update({'query': query})
+        projects = self._get('projects', params=params)['data']['projects']
+        return [Project(name=p['name'], client=self, project_id=p['_id']) for p in projects]
 
     def get_project(self, *, name=None, create=True) -> Project:
         if name:
@@ -359,7 +371,7 @@ class Client:
             return Project(name=name, client=self, project_id=p['_id'])
 
         if not name and create:
-            res = self.create_project()
+            res = self._create_project()
             _id = res['data']['id']
             p = self._get_project(_id)['project']
             return Project(name=p['name'], client=self, project_id=_id)

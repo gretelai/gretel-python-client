@@ -113,13 +113,13 @@ def write(args, gretel_client: Client):
     sampler = ConstantSampler(sample_rate=args.sample_rate,
                               record_limit=args.max_records)
 
-    gretel_client.write_records(project=args.project, sampler=sampler, reader=reader)
+    gretel_client._write_records(project=args.project, sampler=sampler, reader=reader)
 
 
 def tail(args, gretel_client: Client):
     """command handler for `gretel tail`"""
     if args.project:
-        iterator = gretel_client.iter_records(args.project, direction='forward')
+        iterator = gretel_client._iter_records(args.project, direction='forward')
         for record in iterator:
             print(record)
 
