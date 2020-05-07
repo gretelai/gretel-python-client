@@ -1,0 +1,6 @@
+pylint
+pytest
+flake8
+pytest-cov
+sphinx
+faker
