@@ -106,7 +106,7 @@ The failure list will be empty if there were no issues on ingest.
 You may also send a list of dicts. When using `send()` you will be subject to the max record size per API call, which is currently 50.
 
 ```python
-data = [{'foo': 'bar'}, 1, 2 , 3] 
+data = [{'foo': 'bar'}, 1, 2, 3] 
 s, f = project.send(data)
 ```
 
