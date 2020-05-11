@@ -12,7 +12,7 @@ API_KEY = os.getenv('GRETEL_TEST_API_KEY')
 
 
 if not API_KEY:
-    raise AttributeError('GRETEL_API_KEY must be set!')
+    raise AttributeError('GRETEL_TEST_API_KEY must be set!')
 
 
 @pytest.fixture(scope='module')

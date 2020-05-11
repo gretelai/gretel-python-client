@@ -22,6 +22,8 @@ jobs:
     - name: Unit Tests
       run: make test
     - name: Integration Tests
+      env:
+        GRETEL_TEST_API_KEY: ${{ secrets.GRETEL_TEST_API_KEY }}
       run: make test-int
     - uses: 8398a7/action-slack@v2
       with:
