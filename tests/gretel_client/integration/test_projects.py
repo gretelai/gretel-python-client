@@ -8,7 +8,7 @@ import pytest
 from gretel_client.client import get_cloud_client, Client, BadRequest
 from gretel_client.projects import Project
 
-API_KEY = os.getenv('GRETEL_API_KEY')
+API_KEY = os.getenv('GRETEL_TEST_API_KEY')
 
 
 if not API_KEY:
