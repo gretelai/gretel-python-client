@@ -47,7 +47,7 @@ def _api_call(method):
             try:
                 res: requests.Response
                 res = func(inst, *args, **kwargs)
-            except requests.HTTPError as err:
+            except requests.HTTPError as err:  # pragma: no cover
                 raise ClientError(f'HTTP error: {str(err)}') from err
 
             if res.status_code != 200:
@@ -77,7 +77,7 @@ class Client:
         if self.ssl:
             self.base_url = 'https://' + path
         else:
-            self.base_url = 'http://' + path
+            self.base_url = 'http://' + path  # pragma: no cover
 
     def _build_session(self):
         self.session = requests.Session()

@@ -50,14 +50,19 @@ def poll(func):
     return handler
 
 @poll
-def check_for_records(project: Project, count=1):
+def assert_check_for_records(project: Project, count=1):
     recs = project.sample()
     if len(recs) >= count:
         return True
 
 @poll
-def check_record_count(project: Project, count):
+def assert_check_record_count(project: Project, count):
     if project.record_count >= count:
+        return True
+
+@poll
+def assert_check_field_count(project: Project, count):
+    if project.field_count >= count:
         return True
 
 def test_project_not_found(client: Client):
@@ -74,17 +79,21 @@ def test_new_empty_project(client: Client, project: Project):
     assert not project.field_count
     assert not project.sample()
 
-    # send a record async
-    project.send_async({'foo': 'bar'})
-    assert check_for_records(project)
+    # send via bulk
+    project.send_bulk({'foo': 'bar'})
+    assert_check_for_records(project)
 
     # send a record sync
     s, f = project.send({'foo2': 'bar2'})
     assert not f
     assert len(s) == 1
-    assert check_record_count(project, 2)
+    assert_check_record_count(project, 2)
 
     # send some bad records
     s, f = project.send([1, 2, 3])
     assert not s
     assert len(f) == 3
+
+    assert_check_field_count(project, count=2)
+    assert_check_record_count(project, count=2)
+    

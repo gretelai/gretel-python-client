@@ -27,23 +27,27 @@ def records():
     chunk1 = [{
                 'id': '1',
                 'data': 'foo_1',
-                'metadata': {}
+                'metadata': {},
+                'ingest_time': '2020-05-10T12:41:55.585538'
             },
             {
                 'id': '2',
                 'data': 'foo_2',
-                'metadata': {}
+                'metadata': {},
+                'ingest_time': '2020-05-10T12:41:55.585538'
             },
             {
                 'id': '3',
                 'data': 'foo_3',
-                'metadata': {}
+                'metadata': {},
+                'ingest_time': '2020-05-10T12:41:55.585538'
             }]
 
     chunk2 = [{
                 'id': '4',
                 'data': 'foo_4',
-                'metadata': {}
+                'metadata': {},
+                'ingest_time': '2020-05-10T12:41:55.585538'
               }]
 
     chunk3 = []
@@ -51,12 +55,14 @@ def records():
     chunk4 = [{
                 'id': '5',
                 'data': 'foo_5',
-                'metadata': {}
+                'metadata': {},
+                'ingest_time': '2020-05-10T12:41:55.585538'
             },
             {
                 'id': '6',
                 'data': 'foo_6',
-                'metadata': {}
+                'metadata': {},
+                'ingest_time': '2020-05-10T12:41:55.585538'
             }]
 
     return [{'data': {'records': chunk1}},
@@ -69,40 +75,47 @@ def records_rev():
     chunk1 = [{
                 'id': '1',
                 'data': 'foo_1',
-                'metadata': {}
+                'metadata': {},
+                'ingest_time': '2020-05-10T12:41:55.585538'
             },
             {
                 'id': '2',
                 'data': 'foo_2',
-                'metadata': {}
+                'metadata': {},
+                'ingest_time': '2020-05-10T12:41:55.585538'
             },
             {
                 'id': '3',
                 'data': 'foo_3',
-                'metadata': {}
+                'metadata': {},
+                'ingest_time': '2020-05-10T12:41:55.585538'
             }]
 
     chunk2 = [{
                 'id': '4',
                 'data': 'foo_4',
                 'metadata': {},
+                'ingest_time': '2020-05-10T12:41:55.585538'
               },
               {
                 'id': '5',
                 'data': 'foo_5',
-                'metadata': {}
+                'metadata': {},
+                'ingest_time': '2020-05-10T12:41:55.585538'
                 },
                 {
                 'id': '6',
                 'data': 'foo_6',
-                'metadata': {}
+                'metadata': {},
+                'ingest_time': '2020-05-10T12:41:55.585538'
                 }
               ]
 
     chunk3 = [{
                 'id': '7',
                 'data': 'foo_7',
-                'metadata': {}
+                'metadata': {},
+                'ingest_time': '2020-05-10T12:41:55.585538'
               }]
 
     return [{'data': {'records': chunk1}},
@@ -113,7 +126,7 @@ def test_iter_records(records):
     client = get_cloud_client('api', 'abc123xyz')
     client._get = Mock(side_effect=records)
     check = []
-    for rec in client.iter_records(project='foo'):
+    for rec in client._iter_records(project='foo'):
         check.append(rec['record'])
         if len(check) == 6:
             break
@@ -126,7 +139,7 @@ def test_iter_records_reverse(records_rev):
     client = get_cloud_client('api', 'abcd123xyz')
     client._get = Mock(side_effect=records)
     check = []
-    for rec in client.iter_records(project='foo', direction='backward'):
+    for rec in client._iter_records(project='foo', direction='backward'):
         check.append(rec['record'])
 
     assert check == ['foo_1', 'foo_2', 'foo_3', 'foo_4', 'foo_5', 'foo_6', 'foo_7']
@@ -135,14 +148,14 @@ def test_iter_records_reverse(records_rev):
 def test_iter_records_does_terminate(records):
     client = get_cloud_client('api', 'abc123xyz')
     client._get = Mock(side_effect=records)
-    for _ in client.iter_records(project='foo', wait_for=1):
+    for _ in client._iter_records(project='foo', wait_for=1):
         continue
 
 def test_iter_record_with_limit(records):
     client = get_cloud_client('api', 'abc123xyz')
     client._get = Mock(side_effect=records)
     check = []
-    for rec in client.iter_records(project='foo', record_limit=3):
+    for rec in client._iter_records(project='foo', record_limit=3):
         check.append(rec)
     assert len(check) == 3
 
@@ -163,7 +176,7 @@ def test_record_writer_csv(fake, client: Client):
         rows.append([str(val) for val in row])
     input_csv.seek(0)
 
-    client.write_records(project='test-proj', reader=CsvReader(input_csv))
+    client._write_records(project='test-proj', reader=CsvReader(input_csv))
 
     expected_payload = [dict(zip(header, row)) for row in rows]
 
@@ -176,7 +189,7 @@ def test_json_writer(test_records, client):
         input_json.write(json.dumps(record) + '\n')
     input_json.seek(0)
     client._post = Mock()
-    client.write_records(project='test-project', reader=JsonReader(input_json))
+    client._write_records(project='test-project', reader=JsonReader(input_json))
     client._post.called_with('test-proj', {}, test_records)
 
 
@@ -205,7 +218,7 @@ def test_get_project(client: Client):
     assert check.client == client
     assert check.project_id == 123
 
-    client.create_project = Mock(return_value={'data': {'id': '5eb07df99294fd2dbc3dbe6a'}})
+    client._create_project = Mock(return_value={'data': {'id': '5eb07df99294fd2dbc3dbe6a'}})
     client._get_project = Mock(return_value={
         'project': {
             'name': 'random',

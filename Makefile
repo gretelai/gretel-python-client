@@ -31,9 +31,14 @@ test:
 	$(PYTEST) -s -vv --cov src --cov-report term-missing tests/gretel_client/unit
 
 
-.PHONY: int-test
-int-test:
+.PHONY: test-int
+test-int:
 	$(PYTEST) -s -vv --cov src --cov-report term-missing tests/gretel_client/integration
+
+
+.PHONY: test-all
+test-all:
+	$(PYTEST) -s -vv --cov src --cov-report term-missing tests/gretel_client/
 
 
 .PHONY: clean

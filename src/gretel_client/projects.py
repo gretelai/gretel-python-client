@@ -15,7 +15,17 @@ if TYPE_CHECKING:
 
 
 class Project:
+    """Representation of a single Gretel project. In general you should not have
+    to init this class directly, but can make use of the factory method from a
+    ``Client`` instnace.
 
+    Using the factory method::
+
+        from gretel_client import get_cloud_client
+
+        client = get_cloud_client('api', 'your_api_key')
+        project = client.get_project()  # creates a project with an auto-named slug
+    """
     def __init__(self, *, name: str, client: Client, project_id: str):
         self.name = name
         self.client = client  # type: Client
@@ -88,7 +98,13 @@ class Project:
         self.client._flush_project(self.project_id)
 
     def send(self, data: Union[List[dict], dict]) -> Tuple[list, list]:
-        """Write one or more records syncronously.
+        """Write one or more records syncronously. This is similar
+        to making a single API call to the records endpoint. You will also
+        receive the success and failure arrays back which contain the Gretel IDs
+        that were generated for each ingested record.
+
+        NOTE: Because this is just like making a single call to the Records
+        endpoint, the maximum record count per-call will be enforced.
 
         Args:
             data: a dict or a list of dicts
@@ -99,10 +115,15 @@ class Project:
         ret = self.client._write_record_sync(self.name, data)['data']
         return ret['success'], ret['failure']
 
-    def send_async(self, data: Union[List[dict], dict]):
+    def send_bulk(self, data: Union[List[dict], dict]):
         """Send a dict or list of dicts to the project.  Records
         are queued and send in parallel for performance. API
-        reponses are not returned
+        reponses are not returned.
+
+        NOTE: Since a queue and threading is used here, you
+        can send any number of records in the ``data`` param.
+        The records will automatically be chunked up into
+        appropiately sized buffers to send to the Records API.
 
         Args:
             data: a dict or a list of dicts
@@ -113,16 +134,40 @@ class Project:
             reader=reader
         )
 
-    def send_dataframe(self, df: pd.DataFrame):
+    def send_dataframe(self, df: pd.DataFrame, sample=None):
         """Send the contents of a DataFrame
 
         This will convert each row of the DataFrame
         into a dictionary and send it as a record.  This
-        operation happens using the async writer so no
-        results from the API calls are returned
+        operation happens using the bulk writer so no
+        results from the API calls are returned.
+
+        Args:
+            df: A pandas DataFrame
+            sample: Specify a subset of the DataFrame rows to be sent. If ``sample``
+                is > 1, then ``sample`` number of rows will be queued for sending. If
+                ``sample`` is between 0 and 1, then a fraction of the DataFrame's rows
+                will be queued for sending. So a ``sample`` of .5 will queue up half
+                of the DataFrame's rows.
+
+            NOTE:
+                Sampling is randomized, not done by first N.
         """
-        reader = DataFrameReader(df)
-        self.client.write_records(
+        if not isinstance(df, pd.DataFrame):
+            raise AttributeError('A Pandas DataFrame is required!')
+
+        if sample is not None:
+            if sample <= 0:
+                raise AttributeError('Sample must be greater than 1')
+            elif sample < 1:
+                new_df = df.sample(frac=sample)
+            else:
+                if sample > len(df):
+                    raise AttributeError('Sample size cannot be larger than DataFrame')
+                new_df = df.sample(n=sample)
+
+        reader = DataFrameReader(new_df)
+        self.client._write_records(
             project=self.name,
             reader=reader
         )
