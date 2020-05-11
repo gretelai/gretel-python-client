@@ -53,4 +53,95 @@ project = client.get_project(create=True)
 
 You can see the name Gretel created by checking `project.name`.
 
+### Flushing and Deleting projects
+
+Once you have a project instance you can flush and delete it.
+
+Assuming an instance variable name of `project`, you can:
+
+Flush:
+
+This will purge all data from the metastore and delete cached annotated records. Your project namespace, permissions, and collaborators will still be there.
+
+```python
+project.flush()
+```
+
+Delete:
+
+This will flush all data (see above) _and_ also delete the project shell (name, description), collaborators, and permissions.
+
+```python
+project.delete()
+```
+
+**NOTE:** Both of these commands run asyncronously in Gretel as they are called. So it may be a few moments for them to complete. Additionally, your `project` instance, if using `delete()` will not be usable anymore.
+
 ## Sending Records
+
+The Gretel API consumes JSON-formatted records. There's a few ways that you can send these via the client.
+
+### Dicts
+
+You can send Python dictionaries directly using different methods.
+
+First, you can send them on an API-call-by-API-call basis. When records are received by the Gretel API, each record is assigned a `gretel_id` and the status of each record (success or fail) is returned to the user. You can utilize this behavior with the `send()` method:
+
+This method will return a tuple of `success` and `failure` notifications.
+
+```
+s, f = project.send({'foo': 'bar'})
+```
+
+The list of success items will look like:
+
+```python
+[{'idx': 0, 'gretel_id': '8afbd2c8f5b147c9bd30faffa3e5ad0a'}]
+```
+
+`idx` refers to the index in the original list of records that were sent. If you only sent a single record (a dict) then `idx` 0 will refer to that record.
+
+The failure list will be empty if there were no issues on ingest.
+
+You may also send a list of dicts. When using `send()` you will be subject to the max record size per API call, which is currently 50.
+
+```python
+data = [{'foo': 'bar'}, 1, 2 , 3] 
+s, f = project.send(data)
+```
+
+Here only the first record is valid:
+
+```python
+s
+[{'idx': 0, 'gretel_id': '4c34d2fbc2974f81af2c07ac78eedcef'}]
+```
+
+And the last three were not valid JSON objects:
+
+
+```python
+f
+[{'idx': 1,
+  'message': 'Individual records must be JSON objects',
+  'sender_fault': True},
+ {'idx': 2,
+  'message': 'Individual records must be JSON objects',
+  'sender_fault': True},
+ {'idx': 3,
+  'message': 'Individual records must be JSON objects',
+  'sender_fault': True}]
+```
+
+### Bulk Records
+
+If you are streaming data or sending large amounts of records, you may not want to worry about using the `send()` method and chunking up your records. For this use case, you may use the `send_bulk()` method. It has the same signature as `send()` but the client will automatically chunk the input up and multithread to push the records to Gretel.
+
+One exception to using this is that you will not receive any success or failure confirmations.
+
+```python
+data = [{f'foo_{i}': 'bar'} for i in range(500)]
+project.send_buld(data)
+
+# >> 500records [00:00, 157184.23records/s]
+```
