@@ -225,7 +225,7 @@ def test_get_project(client: Client):
             'id': '5eb07df99294fd2dbc3dbe6a'
         }
     })
-    check = client.get_project()
+    check = client.get_project(create=True)
     client._get_project.assert_called_with('5eb07df99294fd2dbc3dbe6a')
     assert check.name == 'random'
     assert check.client == client

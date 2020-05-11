@@ -37,6 +37,36 @@ class ClientError(Exception):
 
 
 class BadRequest(ClientError):
+    """A custom error class that can be raised when a non-200 OK
+    is received back from the Gretel API.
+
+    The Gretel API returns errors with the following format::
+
+        {
+            'message': 'a description of what is wrong
+            'context': {}
+        }
+
+    The ``context`` key will contain structured information about
+    a particular field if there was an error with it.
+    """
+
+    def __init__(self, msg: dict):
+        """Create an API exception.
+
+        Args:
+            msg: A dictionary that is created from the JSON payload
+                returned by the Gretel API
+        """
+        self._msg_dict = msg
+        self.message = self._msg_dict['message']
+        self.context = self._msg_dict['context']
+
+    def __str__(self):
+        return self.message
+
+
+class NotFound(BadRequest):
     pass
 
 
@@ -51,7 +81,9 @@ def _api_call(method):
                 raise ClientError(f'HTTP error: {str(err)}') from err
 
             if res.status_code != 200:
-                raise BadRequest(f'Bad Request: {res.json()}')
+                if res.status_code == 404:
+                    raise NotFound(res.json())
+                raise BadRequest(res.json())
 
             if method in ('get', 'post', 'delete'):
                 return res.json()
@@ -363,15 +395,25 @@ class Client:
         projects = self._get('projects', params=params)['data']['projects']
         return [Project(name=p['name'], client=self, project_id=p['_id']) for p in projects]
 
-    def get_project(self, *, name=None, create=True) -> Project:
+    def _create_get_project(self, name=None):
+        res = self._create_project(name=name)
+        _id = res['data']['id']
+        p = self._get_project(_id)['project']
+        return Project(name=p['name'], client=self, project_id=_id)
+
+    def get_project(self, *, name=None, create=False) -> Project:
+        """
+        TODO: docstrings
+        """
         if name:
-            # if this call does not throw an error, then we know
-            # the project already exists
-            p = self._get_project(name)['project']
-            return Project(name=name, client=self, project_id=p['_id'])
+            try:
+                p = self._get_project(name)['project']
+                return Project(name=name, client=self, project_id=p['_id'])
+            except NotFound:
+                if create:
+                    return self._create_get_project(name=name)
+                else:
+                    raise
 
         if not name and create:
-            res = self._create_project()
-            _id = res['data']['id']
-            p = self._get_project(_id)['project']
-            return Project(name=p['name'], client=self, project_id=_id)
+            return self._create_get_project()

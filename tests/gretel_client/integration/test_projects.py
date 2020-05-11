@@ -20,7 +20,7 @@ def client():
     client = get_cloud_client('api-dev', API_KEY)
     # clear out any old projects that got leftover
     for p in client.search_projects():
-        client._delete_project(p['_id'])
+        p.delete()
     return client
 
 @pytest.fixture
@@ -31,7 +31,7 @@ def project(client):
     # fixture hook will still delete the
     # project
     p: Project
-    p = client.get_project()
+    p = client.get_project(create=True)
     yield p
     p.delete()
 
@@ -68,6 +68,12 @@ def assert_check_field_count(project: Project, count):
 def test_project_not_found(client: Client):
     with pytest.raises(BadRequest):
         client.get_project(name=uuid.uuid4().hex)
+
+
+def test_project_not_available(client: Client):
+    # use ``safecast`` that's one Gretel owns
+    with pytest.raises(BadRequest):
+        client.get_project(name='safecast', create=True)
 
 
 def test_new_empty_project(client: Client, project: Project):
