@@ -28,6 +28,7 @@ class Project:
     """
     def __init__(self, *, name: str, client: Client, project_id: str):
         self.name = name
+        self.client: Client
         self.client = client  # type: Client
         self.project_id = project_id
 
@@ -224,7 +225,7 @@ class Project:
         field_filter = None
         if entity:
             field_filter = {'filter': 'entity', 'value': entity}
-        return self.client.get_fields(
+        return self.client._get_fields(
             self.name, count=self.field_count, field_filter=field_filter
         )['data']['fields']
 

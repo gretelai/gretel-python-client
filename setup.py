@@ -25,6 +25,7 @@ setup(
         'requests',
         'smart_open==1.10.0',
         'tqdm==4.45.0',
-        'pandas==1.0.3'
+        'pandas==1.0.3',
+        'requests'
     ]
 )

@@ -8,6 +8,7 @@ import pytest
 from gretel_client.client import get_cloud_client, Client, BadRequest
 from gretel_client.projects import Project
 
+
 API_KEY = os.getenv('GRETEL_TEST_API_KEY')
 
 
@@ -103,3 +104,6 @@ def test_new_empty_project(client: Client, project: Project):
     assert_check_field_count(project, count=2)
     assert_check_record_count(project, count=2)
     
+
+def test_install_transformers(client: Client):
+    client.install_transformers()

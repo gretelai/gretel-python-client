@@ -4,6 +4,7 @@ import time
 from typing import Iterator, Callable, Optional, Union, List
 import threading
 from queue import Queue
+from getpass import getpass
 
 import requests
 
@@ -11,6 +12,7 @@ from gretel_client.readers import Reader
 from gretel_client.samplers import ConstantSampler, Sampler, \
     get_default_sampler
 from gretel_client.projects import Project
+import gretel_client.pkg_installers as pkg
 
 
 TIMEOUT = 30
@@ -20,14 +22,15 @@ META = 'metadata'
 DATA = 'data'
 ID = 'id'
 INGEST_TIME = 'ingest_time'
+PROMPT = 'prompt'
 
 MAX_BATCH_SIZE = 50
 
 
-def get_cloud_client(stage, api_key):
+def get_cloud_client(stage: str, api_key: str):
     return Client(
         host=f'{stage}.gretel.cloud',
-        api_key=api_key,
+        api_key=getpass('Enter Gretel API key: ') if api_key == PROMPT else api_key,
         ssl=True
     )
 
@@ -417,3 +420,8 @@ class Client:
 
         if not name and create:
             return self._create_get_project()
+
+    def install_transformers(self):
+        """Installs the latest version of the Gretel Tranfsormers package'
+        """
+        pkg.install_transformers(self.api_key, self.host)
