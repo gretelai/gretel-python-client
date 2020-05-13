@@ -4,6 +4,8 @@ High level API for interacting with a Gretel Project
 from __future__ import annotations
 from typing import TYPE_CHECKING, List, Union, Tuple
 from functools import partial
+from copy import deepcopy
+
 import pandas as pd
 
 from gretel_client.readers import JsonReader, DataFrameReader
@@ -26,6 +28,7 @@ class Project:
         client = get_cloud_client('api', 'your_api_key')
         project = client.get_project()  # creates a project with an auto-named slug
     """
+
     def __init__(self, *, name: str, client: Client, project_id: str):
         self.name = name
         self.client: Client
@@ -35,10 +38,7 @@ class Project:
         self._iter_records = partial(self.client._iter_records, project=self.name)
 
         self._get_field_count = partial(
-            self.client._get_fields,
-            self.name,
-            detail='no',
-            count=1
+            self.client._get_fields, self.name, detail="no", count=1
         )
 
     @property
@@ -46,14 +46,14 @@ class Project:
         """Return the total number of fields (as an int) in
         the project
         """
-        return self._get_field_count()['total_field_count']
+        return self._get_field_count()["total_field_count"]
 
     @property
     def record_count(self):
         """Return the total number of records that have been
         ingested (as an int) for the project
         """
-        return self._get_field_count()['project_record_count']
+        return self._get_field_count()["project_record_count"]
 
     def iter_records(self, **kwargs):
         """Iterate forwards (optionally waiting) or backwards in
@@ -113,8 +113,8 @@ class Project:
         Returns:
             A tuple of (success, failure) lists
         """
-        ret = self.client._write_record_sync(self.name, data)['data']
-        return ret['success'], ret['failure']
+        ret = self.client._write_record_sync(self.name, data)["data"]
+        return ret["success"], ret["failure"]
 
     def send_bulk(self, data: Union[List[dict], dict]):
         """Send a dict or list of dicts to the project.  Records
@@ -130,10 +130,7 @@ class Project:
             data: a dict or a list of dicts
         """
         reader = JsonReader(data)
-        return self.client._write_records(
-            project=self.name,
-            reader=reader
-        )
+        return self.client._write_records(project=self.name, reader=reader)
 
     def send_dataframe(self, df: pd.DataFrame, sample=None):
         """Send the contents of a DataFrame
@@ -155,23 +152,20 @@ class Project:
                 Sampling is randomized, not done by first N.
         """
         if not isinstance(df, pd.DataFrame):
-            raise AttributeError('A Pandas DataFrame is required!')
+            raise AttributeError("A Pandas DataFrame is required!")
 
         if sample is not None:
             if sample <= 0:
-                raise AttributeError('Sample must be greater than 1')
+                raise AttributeError("Sample must be greater than 1")
             elif sample < 1:
                 new_df = df.sample(frac=sample)
             else:
                 if sample > len(df):
-                    raise AttributeError('Sample size cannot be larger than DataFrame')
+                    raise AttributeError("Sample size cannot be larger than DataFrame")
                 new_df = df.sample(n=sample)
 
         reader = DataFrameReader(new_df)
-        self.client._write_records(
-            project=self.name,
-            reader=reader
-        )
+        self.client._write_records(project=self.name, reader=reader)
 
     def head(self, n: int = 5) -> pd.DataFrame:
         """Get the top N records, flattened,
@@ -183,11 +177,8 @@ class Project:
 
         Returns a Pandas DataFrame
         """
-        recs = self.client._get_records_sync(
-            self.name,
-            {'flatten': 'yes', 'count': n}
-        )
-        recs = [item['data'] for item in recs]
+        recs = self.client._get_records_sync(self.name, {"flatten": "yes", "count": n})
+        recs = [item["data"] for item in recs]
         return pd.DataFrame(recs)
 
     def sample(self, n=10) -> list:
@@ -202,8 +193,7 @@ class Project:
         are removed and the list of records is only returned
         """
         return self.client._get_records_sync(
-            self.name,
-            {'with_meta': 'yes', 'count': n}
+            self.name, {"with_meta": "yes", "count": n}
         )
 
     def get_field_details(self, *, entity: str = None) -> List[dict]:
@@ -224,10 +214,59 @@ class Project:
         """
         field_filter = None
         if entity:
-            field_filter = {'filter': 'entity', 'value': entity}
+            field_filter = {"filter": "entity", "value": entity}
         return self.client._get_fields(
             self.name, count=self.field_count, field_filter=field_filter
-        )['data']['fields']
+        )["data"]["fields"]
+
+    def get_field_entities(
+        self, *, as_df=False, entity: str = None
+    ) -> Union[List[dict], pd.DataFrame]:
+        """Download all fields from the Metastore and create
+        flat rows of all field + entity relationships.
+
+        Normally, the list of all entities for a given field is
+        stored in an array attached to the field level, here we
+        will de-normalize this and create a single record
+        for each field and entity combination.
+
+        So if a field called "foo" has 3 entities embedded inside
+        its metadata, we'll create 3 new rows out of this field
+        metadata. We can then easily return this as a DataFrame.
+
+        Args:
+            as_df: Return this dataset as a Pandas DataFrame
+            entity: Filter on a specific entity, if None, we'll
+                use all fields
+
+        Returns:
+            A Pandas DataFrame or a list of dicts
+        """
+        field_meta = self.get_field_details(entity=entity)
+        recs = []
+        for field in field_meta:
+            # if there are no entities, skip
+            if not field["entities"]:
+                continue
+
+            # remove the types
+            field.pop("types")
+
+            # store the entities
+            ents = field.pop("entities")
+
+            for ent in ents:
+                # make a clean copy of the current
+                # top level field data
+                tmp = deepcopy(field)
+                for k, v in ent.items():
+                    tmp[f"entity_{k}"] = v
+                recs.append(tmp)
+
+        if not as_df:
+            return recs
+        else:
+            return pd.DataFrame(recs)
 
     def delete(self):
         """Deletes this project. After this is called, this

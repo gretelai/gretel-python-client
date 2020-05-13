@@ -7,6 +7,7 @@ from typing import List
 import pandas as pd
 
 from tqdm.auto import tqdm
+from smart_open import open as smart_open
 
 from gretel_client.projects import Project
 
@@ -72,6 +73,7 @@ def build_training_set(
         df = df[fields]
 
     if save_to:
-        df.to_csv(save_to, index=False, header=False, sep=",")
+        with smart_open(save_to, 'w', newline='') as fp:
+            df.to_csv(fp, index=False, header=False, sep=",")
 
     return df
