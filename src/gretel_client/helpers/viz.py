@@ -16,23 +16,35 @@ from gretel_client.projects import Project
 MD1 = """
 ## Field Selection
 
-Here you may choose which fields you include for synthetic data generation. Field selection happens sequentially
-through the various options below.
+The widgets below provide an initial start on how you can filter out interesting fields from the
+Gretel Metastore.  These interesting fields can be used to build transformations and synthetic data.
 
-First, you may narrow down fields based on how unique they are or how much missing data there is.
+As you interact with the widgets the field table will adjust automatically. Additionally, the second
+table will show you a preview of your records based on these adjustments.
 
-Second, if you are only interested in specific entities, you may select those.
+### Quantative
 
-The table below will automatically update to show you the fields that match your current selection.
+The two sliders below allow you to explore two metrics that are tracked for all fields discovered by Gretel.
 
-The field list based on initial filtering is available via the `data.fields` property. To export the final
-list you may call:
+- How unique is the value of a field? The first slider lets you adjust the percent of uniqueness in a field.
 
-```python
-target_fields = data.export_fields()
-```
+- How often is this field missing or null? The second slider lets you adjust what percent of a
+field does not have any data.
 
-This will create a deep copy of the field list that you can manipulate freely.
+
+### Qualatative
+
+Below the sliders, are checkboxes that represent entities which have been discovered in your data. Selecting
+certain entities will further filter the visible fields. You can see all of the entities for a given field
+under the `entities` column. Additional detail for each entity per-field can be explored via the REST API
+or gretel-client.
+
+
+### Additional Exploration
+
+To further explore the field metadata from the Gretel Metastore please visit your project in our Console or take a
+look at the full field metadata by using our gretel-client or REST API.
+
 ***
 """
 
@@ -56,8 +68,10 @@ class FieldFilter:
         return deepcopy(self.fields)
 
 
-def start_field_filtering(project: Project):
-    pass
+def start_field_filtering(project: Project, field_filter: FieldFilter):
+    field_meta = project.get_field_details()
+    records = project.sample(n=20)
+    _start_field_filtering(field_meta, records, field_filter)
 
 
 def _build_main_df(field_meta: dict) -> pd.DataFrame:

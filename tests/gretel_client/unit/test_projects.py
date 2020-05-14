@@ -40,3 +40,9 @@ def test_send_dataframe(client: Client):
     _, _, kwargs = client._write_records.mock_calls[1]
     check_df = kwargs['reader']
     assert len(check_df.df) == 5
+
+    p.send_dataframe(df)
+    _, _, kwargs = client._write_records.mock_calls[2]
+    check_df = kwargs['reader']
+    assert len(check_df.df) == 50
+

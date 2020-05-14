@@ -154,6 +154,8 @@ class Project:
         if not isinstance(df, pd.DataFrame):
             raise AttributeError("A Pandas DataFrame is required!")
 
+        new_df = df
+
         if sample is not None:
             if sample <= 0:
                 raise AttributeError("Sample must be greater than 1")
