@@ -1,12 +1,26 @@
+from __future__ import annotations
 from collections.abc import Iterator
-from typing import List, Any, IO, Union, Callable
+from typing import List, Any, IO, Union, Callable, TYPE_CHECKING
 import csv
 import json
 import os
+import io
 
 import smart_open
-import pandas as pd
-import io
+
+from gretel_client.errors import GretelDependencyError
+
+
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
+
+
+if TYPE_CHECKING:
+    from pandas import DataFrame as _DataFrameT
+else:
+    class _DataFrameT: ... # noqa
 
 
 class ReaderError(Exception):
@@ -178,7 +192,10 @@ class CsvReader(Reader):
 
 class DataFrameReader(Reader):
 
-    def __init__(self, input_data: pd.DataFrame):
+    def __init__(self, input_data: _DataFrameT):
+        if not pd:
+            raise GretelDependencyError('pandas must be installed for this reader')
+
         if not isinstance(input_data, pd.DataFrame):
             raise AttributeError('input_data must be a dataframe')
 

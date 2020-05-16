@@ -1,39 +1,39 @@
 """
 This module contains various helper functions that interact with the
-Gretel API and manipulate data for easier use of the Gretel Synthetics
-library.
+Gretel API.
 """
-from typing import List
-import pandas as pd
+from __future__ import annotations
+from typing import List, TYPE_CHECKING
 
-from tqdm.auto import tqdm
 from smart_open import open as smart_open
 
 from gretel_client.projects import Project
 
+try:
+    from tqdm.auto import tqdm
+except ImportError:
+    tqdm = None
 
-def filter_records(
-    field_meta: List[dict], max_unique_pct: float = 80.0, max_missing_pct: float = 20.0
-) -> List[str]:
-    """
-    Returns list of field names based on statistical properties.
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 
-    Args:
-        field_meta: A list of field metadata as returned from the Gretel API
-        max_unique_pct: The upper bound of how many fields can be missing
-        max_unique_pct: The upper bound of how many unique values a field has
 
-    Returns:
-        A list of field names
-    """
-    df = pd.DataFrame(field_meta)
-    df = df.loc[df["pct_relative_unique"] <= max_unique_pct]
-    df = df.loc[df["pct_missing"] <= max_missing_pct]
-    keep_fields = list(df["field"])
-    return keep_fields
+if TYPE_CHECKING:
+    from pandas import DataFrame as _DataFrameT
+else:
+
+    class _DataFrameT:
+        ...  # noqa
+
+
+from gretel_client.errors import GretelDependencyError
 
 
 def _collect_records(project: Project, max_size: int) -> List[dict]:  # pragma: no cover
+    if not tqdm:
+        raise GretelDependencyError("tqdm required for this feature")
     out = []
     t = tqdm(total=max_size, desc="Downloading records")
     for data in project.iter_records(
@@ -47,11 +47,16 @@ def _collect_records(project: Project, max_size: int) -> List[dict]:  # pragma: 
     return out
 
 
-def build_training_set(
-    project: Project, max_size: int, fields: List[str] = None, save_to: str = None
-) -> pd.DataFrame:
+def build_df_csv(
+    project: Project,
+    max_size: int,
+    fields: List[str] = None,
+    save_to: str = None,
+    headers: bool = True,
+) -> _DataFrameT:
     """
-    Create a training set for Gretel Synthetics
+    Create a DataFrame from historical records. Optionally write the data as a
+    CSV with or without headers.
 
     Args:
         project: A gretel-client ``Project`` instance
@@ -59,11 +64,16 @@ def build_training_set(
         fields: An optional list of fields to only include
         save_to: An optional filepath where a CSV of the dataset will be
             saved to before returning the DataFrame
+        headers: If True, keep header names, if False, remove headers.
 
     Returns:
         A Pandas DataFrame with headers removed and columns in the order
         specified by the ``fields`` param if provided.
     """
+    if not pd:
+        raise GretelDependencyError("pandas must be installed for this feature")
+    if not isinstance(project, Project):
+        raise AttributeError("project must be a Project instance")
     records = _collect_records(project, max_size)
     df = pd.DataFrame(records)
     df = df.fillna("")
@@ -73,7 +83,7 @@ def build_training_set(
         df = df[fields]
 
     if save_to:
-        with smart_open(save_to, 'w', newline='') as fp:
-            df.to_csv(fp, index=False, header=False, sep=",")
+        with smart_open(save_to, "w", newline="") as fp:
+            df.to_csv(fp, index=False, header=headers, sep=",")
 
     return df

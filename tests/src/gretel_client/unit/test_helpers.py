@@ -6,7 +6,7 @@ from unittest.mock import patch, Mock
 import pytest
 import pandas as pd
 
-from gretel_client.helpers.synthetics import filter_records, build_training_set
+from gretel_client.helpers import build_df_csv
 from gretel_client.projects import Project
 from gretel_client.client import Client
 
@@ -355,25 +355,20 @@ def fields():
     ]
 
 
-def test_filter_records(field_meta, fields):
-    check = filter_records(field_meta)
-    assert check == fields
-
-
-@patch("gretel_client.helpers.synthetics._collect_records")
-def test_build_training_set(_collect, sc_records, fields):
+@patch("gretel_client.helpers._collect_records")
+def test_build_df_csv(_collect, sc_records, fields):
     _collect.return_value = sc_records
     project = Project(
         project_id=123,
         name="test",
         client=Client(host="api.gretel.cloud", api_key="123"),
     )
-    check = build_training_set(project, 5000, fields)
+    check = build_df_csv(project, 5000, fields)
     assert isinstance(check, pd.DataFrame)
     assert list(check) == fields
 
     # now save it somewhere too
     t_path = Path(__file__).parent / "training_data.csv"
-    build_training_set(project, 5000, fields, save_to=t_path.as_posix())
+    build_df_csv(project, 5000, fields, save_to=t_path.as_posix())
     assert t_path.exists()
     t_path.unlink()

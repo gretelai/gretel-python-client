@@ -6,14 +6,20 @@ from typing import TYPE_CHECKING, List, Union, Tuple
 from functools import partial
 from copy import deepcopy
 
-import pandas as pd
-
 from gretel_client.readers import JsonReader, DataFrameReader
+from gretel_client.errors import GretelDependencyError
+
+try:
+    import pandas as pd
+except ImportError:  # pragma: no cover
+    pd = None
 
 
-# Avoid circular import
 if TYPE_CHECKING:
     from gretel_client.client import Client
+    from pandas import DataFrame as _DataFrameT
+else:
+    class _DataFrameT: ...  # noqa
 
 
 class Project:
@@ -132,7 +138,7 @@ class Project:
         reader = JsonReader(data)
         return self.client._write_records(project=self.name, reader=reader)
 
-    def send_dataframe(self, df: pd.DataFrame, sample=None):
+    def send_dataframe(self, df: _DataFrameT, sample=None):
         """Send the contents of a DataFrame
 
         This will convert each row of the DataFrame
@@ -151,6 +157,9 @@ class Project:
             NOTE:
                 Sampling is randomized, not done by first N.
         """
+        if not pd:
+            raise GretelDependencyError('pandas must be installed for this feature')
+
         if not isinstance(df, pd.DataFrame):
             raise AttributeError("A Pandas DataFrame is required!")
 
@@ -169,7 +178,7 @@ class Project:
         reader = DataFrameReader(new_df)
         self.client._write_records(project=self.name, reader=reader)
 
-    def head(self, n: int = 5) -> pd.DataFrame:
+    def head(self, n: int = 5) -> _DataFrameT:
         """Get the top N records, flattened,
         and return them as a DataFrame. This
         mimics the DataFrame.head() method
@@ -179,6 +188,8 @@ class Project:
 
         Returns a Pandas DataFrame
         """
+        if not pd:
+            raise GretelDependencyError('pandas must be installed to use this feature')
         recs = self.client._get_records_sync(self.name, {"flatten": "yes", "count": n})
         recs = [item["data"] for item in recs]
         return pd.DataFrame(recs)
@@ -195,7 +206,7 @@ class Project:
         are removed and the list of records is only returned
         """
         return self.client._get_records_sync(
-            self.name, {"with_meta": "yes", "count": n}
+            self.name, {"with_meta": "yes", "count": n, "flatten": "yes"}
         )
 
     def get_field_details(self, *, entity: str = None) -> List[dict]:
@@ -223,7 +234,7 @@ class Project:
 
     def get_field_entities(
         self, *, as_df=False, entity: str = None
-    ) -> Union[List[dict], pd.DataFrame]:
+    ) -> Union[List[dict], _DataFrameT]:
         """Download all fields from the Metastore and create
         flat rows of all field + entity relationships.
 
@@ -268,6 +279,8 @@ class Project:
         if not as_df:
             return recs
         else:
+            if not pd:  # pragma: no cover
+                raise GretelDependencyError('cannot export as a DF without pandas installed')
             return pd.DataFrame(recs)
 
     def delete(self):

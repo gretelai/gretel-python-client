@@ -28,17 +28,17 @@ lint:
 
 .PHONY: test
 test:
-	$(PYTEST) -s -vv --cov src --cov-report term-missing tests/gretel_client/unit
+	$(PYTEST) -s -vv --cov src --cov-report term-missing tests/src/gretel_client/unit
 
 
 .PHONY: test-int
 test-int:
-	$(PYTEST) -s -vv --cov src --cov-report term-missing tests/gretel_client/integration
+	$(PYTEST) -s -vv --cov src --cov-report term-missing tests/src/gretel_client/integration
 
 
 .PHONY: test-all
 test-all:
-	$(PYTEST) -s -vv --cov src --cov-report term-missing tests/gretel_client/
+	$(PYTEST) -s -vv --cov src --cov-report term-missing tests/src/gretel_client/
 
 
 .PHONY: clean

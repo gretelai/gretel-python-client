@@ -160,7 +160,7 @@ class Client:
         if desc is not None:
             payload['description'] = desc
 
-        return self._post(f'projects', None, data=payload)
+        return self._post('projects', None, data=payload)
 
     def _delete_project(self, project_id):
         return self._delete(f'projects/{project_id}')
