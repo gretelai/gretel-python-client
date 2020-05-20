@@ -76,8 +76,6 @@ def build_df_csv(
         raise AttributeError("project must be a Project instance")
     records = _collect_records(project, max_size)
     df = pd.DataFrame(records)
-    df = df.fillna("")
-    df = df.replace(",", "[c]", regex=True)
 
     if fields is not None:
         df = df[fields]
