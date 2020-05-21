@@ -7,7 +7,7 @@ import pytest
 import faker
 from faker.providers import misc
 
-from gretel_client import get_cloud_client, Client
+from gretel_client import get_cloud_client, Client, NotFound, Unauthorized, BadRequest
 from gretel_client.samplers import ConstantSampler
 from gretel_client.readers import CsvReader, JsonReader
 
@@ -230,3 +230,39 @@ def test_get_project(client: Client):
     assert check.name == 'random'
     assert check.client == client
     assert check.project_id == '5eb07df99294fd2dbc3dbe6a'
+
+
+class Fake400:
+    status_code = 400
+
+    def json(self):
+        return {
+            "message": "very bad",
+            "context": {}
+        }
+
+class Fake404(Fake400):
+    status_code = 404
+
+
+class Fake401:
+    status_code = 401
+
+    def json(self):
+        return {
+            "message": "Unauthorized"
+        }
+
+
+def test_api_4xx_errors(client: Client):
+    client.session.get = Mock(
+        side_effect=[Fake404(), Fake400(), Fake401()])
+
+    with pytest.raises(NotFound):
+        client._get('foo', None)
+
+    with pytest.raises(BadRequest):
+        client._get('foo', None)
+
+    with pytest.raises(Unauthorized):
+        client._get('foo', None)
