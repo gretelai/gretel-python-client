@@ -71,12 +71,6 @@ def test_project_not_found(client: Client):
         client.get_project(name=uuid.uuid4().hex)
 
 
-def test_project_not_available(client: Client):
-    # use ``safecast`` that's one Gretel owns
-    with pytest.raises(BadRequest):
-        client.get_project(name='safecast', create=True)
-
-
 def test_new_empty_project(client: Client, project: Project):
     # get a named project already, this should just return
     # as we already have a project instnace as a fixture

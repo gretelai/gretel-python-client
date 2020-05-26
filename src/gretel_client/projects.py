@@ -1,7 +1,6 @@
 """
 High level API for interacting with a Gretel Project
 """
-from __future__ import annotations
 from typing import TYPE_CHECKING, List, Union, Tuple
 from functools import partial
 from copy import deepcopy
@@ -15,7 +14,7 @@ except ImportError:  # pragma: no cover
     pd = None
 
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from gretel_client.client import Client
     from pandas import DataFrame as _DataFrameT
 else:
@@ -35,9 +34,8 @@ class Project:
         project = client.get_project()  # creates a project with an auto-named slug
     """
 
-    def __init__(self, *, name: str, client: Client, project_id: str):
+    def __init__(self, *, name: str, client: "Client", project_id: str):
         self.name = name
-        self.client: Client
         self.client = client  # type: Client
         self.project_id = project_id
 
@@ -138,7 +136,7 @@ class Project:
         reader = JsonReader(data)
         return self.client._write_records(project=self.name, reader=reader)
 
-    def send_dataframe(self, df: _DataFrameT, sample=None):
+    def send_dataframe(self, df: "_DataFrameT", sample=None):
         """Send the contents of a DataFrame
 
         This will convert each row of the DataFrame
@@ -178,7 +176,7 @@ class Project:
         reader = DataFrameReader(new_df)
         self.client._write_records(project=self.name, reader=reader)
 
-    def head(self, n: int = 5) -> _DataFrameT:
+    def head(self, n: int = 5) -> "_DataFrameT":
         """Get the top N records, flattened,
         and return them as a DataFrame. This
         mimics the DataFrame.head() method
@@ -234,7 +232,7 @@ class Project:
 
     def get_field_entities(
         self, *, as_df=False, entity: str = None
-    ) -> Union[List[dict], _DataFrameT]:
+    ) -> Union[List[dict], "_DataFrameT"]:
         """Download all fields from the Metastore and create
         flat rows of all field + entity relationships.
 

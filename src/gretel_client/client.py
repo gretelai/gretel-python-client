@@ -345,7 +345,7 @@ class Client:
                     if record[ID] == last:
                         continue
                 yield callback(
-                    {RECORD: record[DATA], META: record[META],}
+                    {RECORD: record[DATA], META: record[META], INGEST_TIME: record[INGEST_TIME]}
                 )
                 records_seen += 1
             last = next_last

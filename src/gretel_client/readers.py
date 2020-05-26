@@ -1,4 +1,3 @@
-from __future__ import annotations
 from collections.abc import Iterator
 from typing import List, Any, IO, Union, Callable, TYPE_CHECKING
 import csv
@@ -192,7 +191,7 @@ class CsvReader(Reader):
 
 class DataFrameReader(Reader):
 
-    def __init__(self, input_data: _DataFrameT):
+    def __init__(self, input_data: "_DataFrameT"):
         if not pd:
             raise GretelDependencyError('pandas must be installed for this reader')
 

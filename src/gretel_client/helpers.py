@@ -2,7 +2,6 @@
 This module contains various helper functions that interact with the
 Gretel API.
 """
-from __future__ import annotations
 from typing import List, TYPE_CHECKING
 
 from smart_open import open as smart_open
@@ -53,7 +52,7 @@ def build_df_csv(
     fields: List[str] = None,
     save_to: str = None,
     headers: bool = True,
-) -> _DataFrameT:
+) -> "_DataFrameT":
     """
     Create a DataFrame from historical records. Optionally write the data as a
     CSV with or without headers.
