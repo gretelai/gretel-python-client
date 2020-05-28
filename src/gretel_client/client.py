@@ -5,6 +5,8 @@ from typing import Iterator, Callable, Optional, Union, List
 import threading
 from queue import Queue
 from getpass import getpass
+import logging
+from dataclasses import dataclass, field
 
 import requests
 
@@ -12,6 +14,10 @@ from gretel_client.readers import Reader
 from gretel_client.samplers import ConstantSampler, Sampler, get_default_sampler
 from gretel_client.projects import Project
 import gretel_client.pkg_installers as pkg
+
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 TIMEOUT = 30
@@ -45,8 +51,8 @@ class BadRequest(ClientError):
     The Gretel API returns errors with the following format::
 
         {
-            'message': 'a description of what is wrong
-            'context': {}
+            "message": "a description of what is wrong"
+            "context": {}
         }
 
     The ``context`` key will contain structured information about
@@ -66,6 +72,9 @@ class BadRequest(ClientError):
 
     def __str__(self):
         return self.message
+
+    def as_str(self):
+        return f"{self.message}: {json.dumps(self.context)}"
 
 
 class NotFound(BadRequest):
@@ -111,6 +120,23 @@ def _api_call(method):
         return handler
 
     return dec
+
+
+@dataclass
+class WriteSummary:
+    """This object is returned from write operations that use
+    threading to batch records to the API. It is truthy.
+    """
+
+    success: bool = True
+    """Whether or not the batch upload of data was successful """
+
+    api_errors: List[dict] = field(default_factory=list)
+    """A list of unique errors (as strings) returned from the API if
+    the upload operation was not successful """
+
+    def __bool__(self):
+        return self.success
 
 
 class Client:
@@ -196,14 +222,23 @@ class Client:
             records = [records]
         return self._post(f"records/send/{project}", {}, records)
 
-    def _write_record_batch(self, project, write_queue, error_queue):
-        while True:
+    def _write_record_batch(
+        self, project, write_queue, error_list: list, thread_event: threading.Event
+    ):
+        while not thread_event.is_set():
             record_batch = write_queue.get()
             try:
                 self._write_record_sync(project, record_batch)
+            except Unauthorized as err:
+                # logger.warning("Received Unauthorized response, halting...")
+                error_list.append(str(err))
+                thread_event.set()
+            except BadRequest as err:
+                # logger.warning(f"Received, BadRequest response: {str(e)}, halting...")
+                error_list.append(err.as_str())
+                thread_event.set()
             except Exception as e:
-                print(e)
-                error_queue.push(record_batch)
+                logger.warning(str(e))
             write_queue.task_done()
 
     def _write_records(
@@ -215,8 +250,8 @@ class Client:
         worker_threads: int = 10,
         max_inflight_batches: int = 100,
         disable_progress: bool = False,
-        use_progress_widget: bool = False,
-    ):
+        use_progress_widget: bool = False
+    ) -> WriteSummary:
         """
         Write a stream of input records to Gretel's API.
 
@@ -244,14 +279,14 @@ class Client:
         """
         sampler.set_source(iter(reader))
         write_queue = Queue(max_inflight_batches)  # backpressured worker queue
-        error_queue = Queue()
+        error_list = []
 
         threads = []
+        thread_event = threading.Event()
         for _ in range(worker_threads):
             t = threading.Thread(
                 target=self._write_record_batch,
-                args=(project, write_queue, error_queue),
-                daemon=True,
+                args=(project, write_queue, error_list, thread_event)
             )
             t.start()
             threads.append(t)
@@ -261,19 +296,37 @@ class Client:
         else:
             from tqdm import tqdm
 
-        t = tqdm(total=1, unit="records", disable=disable_progress)
+        t = tqdm(total=1, unit=" records", disable=disable_progress)
         acc = []
         for record in sampler:
             acc.append(record)
             if len(acc) == MAX_BATCH_SIZE:
+                if thread_event.is_set():
+                    logger.info("Exiting record processing loop")
+                    break
                 write_queue.put(acc)
                 acc = []
             t.update()
-        if acc:  # flush remaining records from accumulator
-            write_queue.put(acc)
-            t.update()
+
+        if not error_list:
+            if acc:  # flush remaining records from accumulator
+                write_queue.put(acc)
+                t.update()
+
+            # wait for all threads to drain the queue
+            write_queue.join()
+
+        thread_event.set()
         t.close()
-        write_queue.join()
+        for t in threads:
+            t.join()
+        if error_list:
+            return WriteSummary(
+                success=False,
+                api_errors=list(set(error_list))
+            )
+
+        return WriteSummary()
 
     def _build_callback(self, post_process):
         if callable(post_process):
@@ -345,7 +398,11 @@ class Client:
                     if record[ID] == last:
                         continue
                 yield callback(
-                    {RECORD: record[DATA], META: record[META], INGEST_TIME: record[INGEST_TIME]}
+                    {
+                        RECORD: record[DATA],
+                        META: record[META],
+                        INGEST_TIME: record[INGEST_TIME],
+                    }
                 )
                 records_seen += 1
             last = next_last
@@ -430,9 +487,33 @@ class Client:
         p = self._get_project(_id)["project"]
         return Project(name=p["name"], client=self, project_id=_id)
 
-    def get_project(self, *, name=None, create=False) -> Project:
+    def get_project(self, *, name: str = None, create: bool = False) -> Project:
         """
-        TODO: docstrings
+        Create or get a project.  By default, this method will try
+        and fetch an existing Gretel project. If the project does not
+        exist or you are not a member, a ``NotFound`` exception will be thrown.
+
+        Additionally, you can try and create the project by setting the ``create``
+        flag to ``True``. If this flag is set and the project already exists,
+        ``Project`` instance will be returned.  If the project does not already
+        exist, Gretel will attempt to create it for you. If the project name is
+        not available then a ``BadRequest`` will be returned.
+
+        Finally, if you just need a quick project to work with, Gretel can name
+        the project for you by omitting the ``name``::
+
+            client.get_project(create=True)
+
+        Args:
+            name: The unique name of the project to get or create.
+            create: If the project does not exist, try and create it. If no project name
+                is provided, create a unique name based on the authenticated user.
+
+        Returns:
+            A ``Project`` instnace.
+
+        Raises:
+            ``Unauthorized`` or ``BadRequest``
         """
         if name:
             try:

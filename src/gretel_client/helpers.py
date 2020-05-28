@@ -10,16 +10,16 @@ from gretel_client.projects import Project
 
 try:
     from tqdm.auto import tqdm
-except ImportError:
+except ImportError:  # pragma: no cover
     tqdm = None
 
 try:
     import pandas as pd
-except ImportError:
+except ImportError:  # pragma: no cover
     pd = None
 
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from pandas import DataFrame as _DataFrameT
 else:
 
@@ -69,9 +69,9 @@ def build_df_csv(
         A Pandas DataFrame with headers removed and columns in the order
         specified by the ``fields`` param if provided.
     """
-    if not pd:
+    if not pd:  # pragma: no cover
         raise GretelDependencyError("pandas must be installed for this feature")
-    if not isinstance(project, Project):
+    if not isinstance(project, Project):  # pragma: no cover
         raise AttributeError("project must be a Project instance")
     records = _collect_records(project, max_size)
     df = pd.DataFrame(records)

@@ -10,15 +10,14 @@ from gretel_client.errors import GretelDependencyError
 
 try:
     import pandas as pd
+    from pandas import DataFrame as _DataFrameT
 except ImportError:  # pragma: no cover
     pd = None
+    class _DataFrameT: ... # noqa
 
 
 if TYPE_CHECKING:  # pragma: no cover
-    from gretel_client.client import Client
-    from pandas import DataFrame as _DataFrameT
-else:
-    class _DataFrameT: ...  # noqa
+    from gretel_client.client import Client, WriteSummary
 
 
 class Project:
@@ -136,7 +135,7 @@ class Project:
         reader = JsonReader(data)
         return self.client._write_records(project=self.name, reader=reader)
 
-    def send_dataframe(self, df: "_DataFrameT", sample=None):
+    def send_dataframe(self, df: _DataFrameT, sample=None) -> "WriteSummary":
         """Send the contents of a DataFrame
 
         This will convert each row of the DataFrame
@@ -154,29 +153,32 @@ class Project:
 
             NOTE:
                 Sampling is randomized, not done by first N.
+
+        Returns:
+            An instance of ``WriteSummary``
         """
-        if not pd:
+        if not pd:  # pragma: no cover
             raise GretelDependencyError('pandas must be installed for this feature')
 
-        if not isinstance(df, pd.DataFrame):
-            raise AttributeError("A Pandas DataFrame is required!")
+        if not isinstance(df, pd.DataFrame):  # pragma: no cover
+            raise ValueError("A Pandas DataFrame is required!")
 
         new_df = df
 
         if sample is not None:
             if sample <= 0:
-                raise AttributeError("Sample must be greater than 1")
+                raise ValueError("Sample must be greater than 1")
             elif sample < 1:
                 new_df = df.sample(frac=sample)
             else:
                 if sample > len(df):
-                    raise AttributeError("Sample size cannot be larger than DataFrame")
+                    raise ValueError("Sample size cannot be larger than DataFrame")
                 new_df = df.sample(n=sample)
 
         reader = DataFrameReader(new_df)
-        self.client._write_records(project=self.name, reader=reader)
+        return self.client._write_records(project=self.name, reader=reader)
 
-    def head(self, n: int = 5) -> "_DataFrameT":
+    def head(self, n: int = 5) -> _DataFrameT:
         """Get the top N records, flattened,
         and return them as a DataFrame. This
         mimics the DataFrame.head() method
@@ -186,7 +188,7 @@ class Project:
 
         Returns a Pandas DataFrame
         """
-        if not pd:
+        if not pd:  # pragma: no cover
             raise GretelDependencyError('pandas must be installed to use this feature')
         recs = self.client._get_records_sync(self.name, {"flatten": "yes", "count": n})
         recs = [item["data"] for item in recs]
@@ -232,7 +234,7 @@ class Project:
 
     def get_field_entities(
         self, *, as_df=False, entity: str = None
-    ) -> Union[List[dict], "_DataFrameT"]:
+    ) -> Union[List[dict], _DataFrameT]:
         """Download all fields from the Metastore and create
         flat rows of all field + entity relationships.
 
@@ -274,7 +276,7 @@ class Project:
                     tmp[f"entity_{k}"] = v
                 recs.append(tmp)
 
-        if not as_df:
+        if not as_df:  # pragma: no cover
             return recs
         else:
             if not pd:  # pragma: no cover
