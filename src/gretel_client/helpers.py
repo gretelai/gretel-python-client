@@ -27,12 +27,9 @@ else:
         ...  # noqa
 
 
-from gretel_client.errors import GretelDependencyError
-
-
 def _collect_records(project: Project, max_size: int) -> List[dict]:  # pragma: no cover
     if not tqdm:
-        raise GretelDependencyError("tqdm required for this feature")
+        raise RuntimeError("tqdm required for this feature")
     out = []
     t = tqdm(total=max_size, desc="Downloading records")
     for data in project.iter_records(
@@ -70,7 +67,7 @@ def build_df_csv(
         specified by the ``fields`` param if provided.
     """
     if not pd:  # pragma: no cover
-        raise GretelDependencyError("pandas must be installed for this feature")
+        raise RuntimeError("pandas must be installed for this feature")
     if not isinstance(project, Project):  # pragma: no cover
         raise AttributeError("project must be a Project instance")
     records = _collect_records(project, max_size)

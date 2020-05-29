@@ -6,7 +6,7 @@ from functools import partial
 from copy import deepcopy
 
 from gretel_client.readers import JsonReader, DataFrameReader
-from gretel_client.errors import GretelDependencyError
+
 
 try:
     import pandas as pd
@@ -30,13 +30,20 @@ class Project:
         from gretel_client import get_cloud_client
 
         client = get_cloud_client('api', 'your_api_key')
-        project = client.get_project()  # creates a project with an auto-named slug
+        project = client.get_project(create=True)  # creates a project with an auto-named slug
     """
 
     def __init__(self, *, name: str, client: "Client", project_id: str):
         self.name = name
+        """The unique name of the project. This is either set by you or auto 
+        managed by Gretel
+        """
+
         self.client = client  # type: Client
+
         self.project_id = project_id
+        """The unique Project ID for your project. This is auto-managed by Gretel
+        """
 
         self._iter_records = partial(self.client._iter_records, project=self.name)
 
@@ -45,16 +52,16 @@ class Project:
         )
 
     @property
-    def field_count(self):
+    def field_count(self) -> int:
         """Return the total number of fields (as an int) in
-        the project
+        the project.
         """
         return self._get_field_count()["total_field_count"]
 
     @property
-    def record_count(self):
+    def record_count(self) -> int:
         """Return the total number of records that have been
-        ingested (as an int) for the project
+        ingested (as an int) for the project.
         """
         return self._get_field_count()["project_record_count"]
 
@@ -95,9 +102,10 @@ class Project:
 
         This includes all Field, Entity, and cached Record information
 
-        NOTE: This command runs asyncronously. When it returns, it
-        means it has only triggered the flush operation in Gretel. This
-        full operations may take several seconds to complete.
+        NOTE:
+            This command runs asyncronously. When it returns, it
+            means it has only triggered the flush operation in Gretel. This
+            full operations may take several seconds to complete.
         """
         self.client._flush_project(self.project_id)
 
@@ -107,8 +115,9 @@ class Project:
         receive the success and failure arrays back which contain the Gretel IDs
         that were generated for each ingested record.
 
-        NOTE: Because this is just like making a single call to the Records
-        endpoint, the maximum record count per-call will be enforced.
+        NOTE:
+            Because this is just like making a single call to the Records
+            endpoint, the maximum record count per-call will be enforced.
 
         Args:
             data: a dict or a list of dicts
@@ -119,18 +128,22 @@ class Project:
         ret = self.client._write_record_sync(self.name, data)["data"]
         return ret["success"], ret["failure"]
 
-    def send_bulk(self, data: Union[List[dict], dict]):
+    def send_bulk(self, data: Union[List[dict], dict]) -> "WriteSummary":
         """Send a dict or list of dicts to the project.  Records
         are queued and send in parallel for performance. API
         reponses are not returned.
 
-        NOTE: Since a queue and threading is used here, you
-        can send any number of records in the ``data`` param.
-        The records will automatically be chunked up into
-        appropiately sized buffers to send to the Records API.
+        NOTE: 
+            Since a queue and threading is used here, you
+            can send any number of records in the ``data`` param.
+            The records will automatically be chunked up into
+            appropiately sized buffers to send to the Records API.
 
         Args:
-            data: a dict or a list of dicts
+            data: A dict or a list of dicts.
+
+        Returns:
+            A ``WriteSummary`` instance.
         """
         reader = JsonReader(data)
         return self.client._write_records(project=self.name, reader=reader)
@@ -151,14 +164,18 @@ class Project:
                 will be queued for sending. So a ``sample`` of .5 will queue up half
                 of the DataFrame's rows.
 
-            NOTE:
-                Sampling is randomized, not done by first N.
+        NOTE:
+            Sampling is randomized, not done by first N.
 
         Returns:
             An instance of ``WriteSummary``
+
+        Raises:
+            ``RuntimeError`` if Pandas is not installed
+            ``ValueError`` if a Pandas DataFrame was not provided
         """
         if not pd:  # pragma: no cover
-            raise GretelDependencyError('pandas must be installed for this feature')
+            raise RuntimeError('pandas must be installed for this feature')
 
         if not isinstance(df, pd.DataFrame):  # pragma: no cover
             raise ValueError("A Pandas DataFrame is required!")
@@ -189,12 +206,12 @@ class Project:
         Returns a Pandas DataFrame
         """
         if not pd:  # pragma: no cover
-            raise GretelDependencyError('pandas must be installed to use this feature')
+            raise RuntimeError('pandas must be installed to use this feature')
         recs = self.client._get_records_sync(self.name, {"flatten": "yes", "count": n})
         recs = [item["data"] for item in recs]
         return pd.DataFrame(recs)
 
-    def sample(self, n=10) -> list:
+    def sample(self, n=10) -> List[dict]:
         """Return the top N records. These records
         will be in the raw format that they were received
         and will have all Gretel metadata attached.
@@ -202,34 +219,31 @@ class Project:
         Returns a list that matches the response
         from the REST API.
 
-        NOTE: The outter keys from the API response
-        are removed and the list of records is only returned
+        NOTE:
+            The outter keys from the API response
+            are removed and the list of records is only returned
         """
         return self.client._get_records_sync(
             self.name, {"with_meta": "yes", "count": n, "flatten": "yes"}
         )
 
-    def get_field_details(self, *, entity: str = None) -> List[dict]:
+    def get_field_details(self, *, entity: str = None, count=500) -> List[dict]:
         """Return details for all fields in the project.
 
         Args:
             entity: if an entity label is supplied, then
                 only return fields that contain that entity
+            count: how many fields to retrieve
 
         Returns:
             A list of dictionaries that match the Fields API
             schema from the Gretel REST API
-
-        NOTE: We don't do any automatic pagination here yet. So we'll
-        actually make an API call to first find the number of fields
-        in the project, and use that as the ``count`` parameter to the
-        Fields API call
         """
         field_filter = None
         if entity:
             field_filter = {"filter": "entity", "value": entity}
         return self.client._get_fields(
-            self.name, count=self.field_count, field_filter=field_filter
+            self.name, count=count, field_filter=field_filter
         )["data"]["fields"]
 
     def get_field_entities(
@@ -280,14 +294,15 @@ class Project:
             return recs
         else:
             if not pd:  # pragma: no cover
-                raise GretelDependencyError('cannot export as a DF without pandas installed')
+                raise RuntimeError('cannot export as a DF without pandas installed')
             return pd.DataFrame(recs)
 
     def delete(self):
         """Deletes this project. After this is called, this
         object can be discarded or deleted itself.
 
-        NOTE: If you attempt to use other methods on this project
-        instance after deletion, you will receive API errors.
+        NOTE:
+            If you attempt to use other methods on this project
+            instance after deletion, you will receive API errors.
         """
         self.client._delete_project(self.project_id)

@@ -2,7 +2,7 @@ pylint
 pytest
 flake8
 pytest-cov
-sphinx
+sphinx==3.0.3
 faker
 pandas==1.0.3
 ipywidgets==7.5.1

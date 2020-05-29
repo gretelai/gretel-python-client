@@ -1,3 +1,6 @@
+"""
+Low level API for interacting directly with the Gretel API
+"""
 import json
 from functools import wraps
 import time
@@ -14,6 +17,8 @@ from gretel_client.readers import Reader
 from gretel_client.samplers import ConstantSampler, Sampler, get_default_sampler
 from gretel_client.projects import Project
 import gretel_client.pkg_installers as pkg
+from gretel_client.errors import ClientError, BadRequest, Unauthorized, NotFound
+
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -30,71 +35,6 @@ INGEST_TIME = "ingest_time"
 PROMPT = "prompt"
 
 MAX_BATCH_SIZE = 50
-
-
-def get_cloud_client(stage: str, api_key: str):
-    return Client(
-        host=f"{stage}.gretel.cloud",
-        api_key=getpass("Enter Gretel API key: ") if api_key == PROMPT else api_key,
-        ssl=True,
-    )
-
-
-class ClientError(Exception):
-    pass
-
-
-class BadRequest(ClientError):
-    """A custom error class that can be raised when a non-200 OK
-    is received back from the Gretel API.
-
-    The Gretel API returns errors with the following format::
-
-        {
-            "message": "a description of what is wrong"
-            "context": {}
-        }
-
-    The ``context`` key will contain structured information about
-    a particular field if there was an error with it.
-    """
-
-    def __init__(self, msg: dict):
-        """Create an API exception.
-
-        Args:
-            msg: A dictionary that is created from the JSON payload
-                returned by the Gretel API
-        """
-        self._msg_dict = msg
-        self.message = self._msg_dict["message"]
-        self.context = self._msg_dict["context"]
-
-    def __str__(self):
-        return self.message
-
-    def as_str(self):
-        return f"{self.message}: {json.dumps(self.context)}"
-
-
-class NotFound(BadRequest):
-    pass
-
-
-class Unauthorized(Exception):
-    """Represents a 401 that gets returned
-    from the Gretel API authorizer. Because this
-    is directly handled by our authorizer Lambdas,
-    we get a different body back (missing the ``context``)
-    object.
-    """
-
-    def __init__(self, msg: dict):
-        self._msg_dict = msg
-        self.message = self._msg_dict["message"]
-
-    def __str__(self):
-        return self.message
 
 
 def _api_call(method):
@@ -125,7 +65,10 @@ def _api_call(method):
 @dataclass
 class WriteSummary:
     """This object is returned from write operations that use
-    threading to batch records to the API. It is truthy.
+    threading to batch records to the API.
+
+    NOTE:
+        This object is truthy and can be evaluated as a bool.
     """
 
     success: bool = True
@@ -140,10 +83,18 @@ class WriteSummary:
 
 
 class Client:
-    def __init__(self, *, host, api_key=None, ssl=True):
+    """A single client connection to the Gretel API.
+    """
+    def __init__(self, *, host: str, api_key: str = None):
+        """Create a connection to the Gretel API
+
+        Args:
+            host: The API designator to be used. Most likely should be "api" but
+                can be different based on deployment scenarios
+            api_key: Your Gretel API key
+        """
         self.host = host
         self.api_key = api_key
-        self.ssl = ssl
 
         self.base_url = None
         self.session = None
@@ -153,10 +104,7 @@ class Client:
 
     def _build_base_url(self):
         path = f"{self.host}/"
-        if self.ssl:
-            self.base_url = "https://" + path
-        else:
-            self.base_url = "http://" + path  # pragma: no cover
+        self.base_url = "https://" + path
 
     def _build_session(self):
         self.session = requests.Session()
@@ -304,7 +252,7 @@ class Client:
             acc.append(record)
             if len(acc) == MAX_BATCH_SIZE:
                 # if any of the threads experience a fatal
-                # exception, they will set the event, so 
+                # exception, they will set the event, so
                 # we can break out of the sampler loop
                 # early
                 if thread_event.is_set():
@@ -534,6 +482,9 @@ class Client:
         Raises:
             ``Unauthorized`` or ``BadRequest``
         """
+        if not name and not create:  # pragma: no cover
+            raise ValueError('Must provide a name or create flag!')
+
         if name:
             try:
                 p = self._get_project(name)["project"]
@@ -548,6 +499,27 @@ class Client:
             return self._create_get_project()
 
     def install_transformers(self):
-        """Installs the latest version of the Gretel Tranfsormers package'
+        """Installs the latest version of the Gretel Tranfsormers package
         """
         pkg.install_transformers(self.api_key, self.host)
+
+
+def get_cloud_client(prefix: str, api_key: str) -> Client:
+    """
+    Factory function that creates a ``Client`` instance.
+
+    Args:
+        prefix: The API designator, such as "api"
+        api_key: Your Gretel API key
+
+    NOTE:
+        If ``api_key`` is "prompt" then you will be prompted to
+        input your API Key. This is useful for Jupyter Notebooks, etc.
+
+    Returns:
+        A ``Client`` instance
+    """
+    return Client(
+        host=f"{prefix}.gretel.cloud",
+        api_key=getpass("Enter Gretel API key: ") if api_key == PROMPT else api_key
+    )

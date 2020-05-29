@@ -7,8 +7,6 @@ import io
 
 import smart_open
 
-from gretel_client.errors import GretelDependencyError
-
 
 try:
     import pandas as pd
@@ -193,7 +191,7 @@ class DataFrameReader(Reader):
 
     def __init__(self, input_data: "_DataFrameT"):
         if not pd:  # pragma: no cover
-            raise GretelDependencyError('pandas must be installed for this reader')
+            raise RuntimeError('pandas must be installed for this reader')
 
         if not isinstance(input_data, pd.DataFrame):  # pragma: no cover
             raise AttributeError('input_data must be a dataframe')
