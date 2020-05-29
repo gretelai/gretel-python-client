@@ -30,10 +30,13 @@ def test_send_dataframe(client: Client):
     check_df = kwargs['reader']
     assert len(check_df.df) == 25
 
-    with pytest.raises(AttributeError):
+    with pytest.raises(ValueError):
         p.send_dataframe(df, sample=0)
+    with pytest.raises(ValueError):
         p.send_dataframe(df, sample=100)
+    with pytest.raises(ValueError):
         p.send_dataframe(df, sample=-1)
+    with pytest.raises(ValueError):
         p.send_dataframe([1, 2])
 
     p.send_dataframe(df, sample=.1)
@@ -45,4 +48,3 @@ def test_send_dataframe(client: Client):
     _, _, kwargs = client._write_records.mock_calls[2]
     check_df = kwargs['reader']
     assert len(check_df.df) == 50
-

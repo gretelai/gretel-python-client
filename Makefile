@@ -18,6 +18,7 @@ VERSION=$(shell $(PYTHON) -c "import setuptools_scm;print(setuptools_scm.get_ver
 setup:
 	$(PIP) install -U -e .
 	$(PIP) install -r dev-requirements.txt
+	$(PIP) install dataclasses
 
 
 .PHONY: lint

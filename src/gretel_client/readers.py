@@ -12,11 +12,11 @@ from gretel_client.errors import GretelDependencyError
 
 try:
     import pandas as pd
-except ImportError:
+except ImportError:  # pragma: no cover
     pd = None
 
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover
     from pandas import DataFrame as _DataFrameT
 else:
     class _DataFrameT: ... # noqa
@@ -49,13 +49,13 @@ class Reader(Iterator):
         self._name = name
 
     @property
-    def name(self) -> str:
+    def name(self) -> str:  # pragma: no cover
         return self._name
 
     def __iter__(self) -> Iterator:
         return self
 
-    def __next__(self):
+    def __next__(self):  # pragma: no cover
         raise NotImplementedError('__next__ not implemented.')
 
 
@@ -115,7 +115,7 @@ class JsonReader(Reader):
             return self.mapper(json.loads(record.strip()))
         elif isinstance(record, object):
             return self.mapper(record)
-        raise ReaderError(f"Bad object record type {type(record)}.")
+        raise ReaderError(f"Bad object record type {type(record)}.")  # pragma: no cover
 
 
 class CsvReader(Reader):
@@ -192,10 +192,10 @@ class CsvReader(Reader):
 class DataFrameReader(Reader):
 
     def __init__(self, input_data: "_DataFrameT"):
-        if not pd:
+        if not pd:  # pragma: no cover
             raise GretelDependencyError('pandas must be installed for this reader')
 
-        if not isinstance(input_data, pd.DataFrame):
+        if not isinstance(input_data, pd.DataFrame):  # pragma: no cover
             raise AttributeError('input_data must be a dataframe')
 
         self.df = input_data

@@ -4,7 +4,9 @@ import json
 from collections import namedtuple
 from pathlib import Path
 
-from gretel_client.readers import CsvReader, JsonReader, try_data_source
+import pandas as pd
+
+from gretel_client.readers import CsvReader, JsonReader, try_data_source, DataFrameReader
 from gretel_client.cli import SeekableStreamBuffer
 
 
@@ -23,6 +25,15 @@ def test_csv_file_reader(generate_csv, test_records, tmpdir_factory):
         generate_csv(test_records, input_csv)
 
     reader = CsvReader(file_path)
+
+    for expected, actual in zip(test_records, reader):
+        assert actual == {k: str(v) for k, v in expected.items()}
+
+    with pytest.raises(StopIteration):
+        next(reader) # call next one more time to ensure we get a StopIteration
+        assert reader.data_source.closed  # type: ignore
+
+    reader = CsvReader(file_path, sniff=False)
 
     for expected, actual in zip(test_records, reader):
         assert actual == {k: str(v) for k, v in expected.items()}
@@ -53,6 +64,12 @@ def test_json_buffer_reader(test_records, tmpdir_factory):
     with pytest.raises(StopIteration):
         next(reader) # call next one more time to ensure we get a StopIteration
         assert reader.data_source.closed  # type: ignore
+
+    # load a single dict
+    reader = JsonReader({'foo': 'bar'})
+    assert next(reader) == {'foo': 'bar'}
+    with pytest.raises(StopIteration):
+        next(reader)
 
 def test_json_file_array(test_records, tmpdir_factory):
     json_file = tmpdir_factory.mktemp('test') / 'test_json.json'
@@ -113,3 +130,16 @@ def test_empty_input_stream():
 
     reader = CsvReader(input_stream)
     assert len(list(reader)) == 0
+
+
+def test_dataframe_reader():
+    df = pd.DataFrame([
+        {'foo': 'bar'},
+        {'foo': 'bar2'},
+        {'foo': 'bar3'}
+    ])
+    reader = DataFrameReader(df)
+    check = []
+    for row in reader:
+        check.append(row)
+    assert check == [{'foo': 'bar'}, {'foo': 'bar2'}, {'foo': 'bar3'}]

@@ -227,6 +227,8 @@ class Client:
     ):
         while not thread_event.is_set():
             record_batch = write_queue.get()
+            if record_batch is None:
+                break
             try:
                 self._write_record_sync(project, record_batch)
             except Unauthorized as err:
@@ -301,6 +303,10 @@ class Client:
         for record in sampler:
             acc.append(record)
             if len(acc) == MAX_BATCH_SIZE:
+                # if any of the threads experience a fatal
+                # exception, they will set the event, so 
+                # we can break out of the sampler loop
+                # early
                 if thread_event.is_set():
                     logger.info("Exiting record processing loop")
                     break
@@ -308,6 +314,9 @@ class Client:
                 acc = []
             t.update()
 
+        # if we exited the sampler loop and the error list
+        # is empty, we should process any last partial
+        # batches
         if not error_list:
             if acc:  # flush remaining records from accumulator
                 write_queue.put(acc)
@@ -316,10 +325,20 @@ class Client:
             # wait for all threads to drain the queue
             write_queue.join()
 
+        # this will cause all threads to break
+        # out of their while loops
         thread_event.set()
+
+        # unblock any threads that are waiting
+        # on a queue item to be popped
+        for _ in range(worker_threads):
+            write_queue.put(None)
+
+        for thr in threads:
+            thr.join()
+
         t.close()
-        for t in threads:
-            t.join()
+
         if error_list:
             return WriteSummary(
                 success=False,
