@@ -53,6 +53,12 @@ def records():
             "data": "foo_4",
             "metadata": {},
             "ingest_time": "2020-05-10T12:41:55.585538",
+        },
+        {
+            "id": "1",
+            "data": "foo_1",
+            "metadata": {},
+            "ingest_time": "2020-05-10T12:41:55.585538",
         }
     ]
 
@@ -218,6 +224,8 @@ def test_write_unauthorized(test_records, client):
     input_json = io.StringIO()
     for record in test_records:
         input_json.write(json.dumps(record) + "\n")
+    for _ in range(5000):
+        input_json.write(json.dumps({"foo": "bar"}) + "\n")
     input_json.seek(0)
     client._write_record_sync = Mock(
         side_effect=Unauthorized({"message": "Unauthorized"})
@@ -263,7 +271,7 @@ def test_constant_sampler(fake):
 
 
 def test_get_project(client: Client):
-    client._get = Mock(return_value={"data": {"project": {"_id": 123}}})
+    client._get = Mock(return_value={"data": {"project": {"_id": 123, "description": ""}}})
     check = client.get_project(name="proj")
     assert check.name == "proj"
     assert check.client == client
@@ -273,7 +281,7 @@ def test_get_project(client: Client):
         return_value={"data": {"id": "5eb07df99294fd2dbc3dbe6a"}}
     )
     client._get_project = Mock(
-        return_value={"project": {"name": "random", "id": "5eb07df99294fd2dbc3dbe6a"}}
+        return_value={"project": {"name": "random", "id": "5eb07df99294fd2dbc3dbe6a", "description": ""}}
     )
     check = client.get_project(create=True)
     client._get_project.assert_called_with("5eb07df99294fd2dbc3dbe6a")

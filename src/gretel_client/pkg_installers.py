@@ -19,7 +19,7 @@ def _install_pip_dependency(dep: str):
     print(f"running: {' '.join(cmd)}")
     results = subprocess.Popen(cmd, stdout=subprocess.PIPE,
                                stderr=subprocess.STDOUT)
-    for line in iter(results.stdout.readline, b''):
+    for line in iter(results.stdout.readline, b''):  # pragma: no cover
         if isinstance(line, bytes):
             print(line.decode('utf-8').strip())  # type: ignore
         else:
@@ -31,7 +31,7 @@ def _get_package_endpoint(package_identifier: str, api_key: str, host: str) -> s
     pkg_resp = requests.get(f'{PKG_ENDPOINT.format(host)}/{package_identifier}',
                             headers={'Authorization': api_key})
 
-    if pkg_resp.status_code != 200:
+    if pkg_resp.status_code != 200:  # pragma: no cover
         raise GretelInstallError('Could not fetch package details from '
                                  'endpoint.')
 

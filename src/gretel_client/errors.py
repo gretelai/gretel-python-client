@@ -45,7 +45,7 @@ class BadRequest(ClientError):
             {'foo': ['Unknown field.']}
         """
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return self.message
 
     def as_str(self):

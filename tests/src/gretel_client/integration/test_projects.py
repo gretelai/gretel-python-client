@@ -108,6 +108,12 @@ def assert_field_entity(project: Project, field, entity):
 
     return True
 
+@poll
+def assert_entity_count(project: Project, count: int):
+    ents = project.entities
+    if len(ents) == count:
+        return True
+
 
 def test_project_not_found(client: Client):
     with pytest.raises(BadRequest):
@@ -149,15 +155,35 @@ def test_simple_project_flow(client: Client, project: Project):
     check = project.get_field_details(entity='email_address')
     assert len(check) == 1
 
+    assert_entity_count(project, 1)
+
     assert_head(project)
 
     # flush out all data
     project.flush()
     assert_flush(project)
 
-    
-    
-    
+
+def test_create_named_project(client: Client):
+    name = uuid.uuid4().hex
+    p = client.get_project(name=name, create=True)
+    assert p.name == name
+    assert p.description == ""
+
+    # test search
+    assert len(client.search_projects(query=name)) == 1
+    p.delete()
+
+    p = client.get_project(name=name, create=True, desc="this is super cool")
+    assert p.name == name
+    assert p.description == "this is super cool"
+
+    p.delete()
+
+    with pytest.raises(BadRequest):
+        too_long = "".join([uuid.uuid4().hex for _ in range(20)])
+        client.get_project(name=name, create=True, desc=too_long)
+
 
 def test_install_transformers(client: Client):
     client.install_transformers()

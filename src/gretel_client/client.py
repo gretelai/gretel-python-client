@@ -85,6 +85,7 @@ class WriteSummary:
 class Client:
     """A single client connection to the Gretel API.
     """
+
     def __init__(self, *, host: str, api_key: str = None):
         """Create a connection to the Gretel API
 
@@ -131,7 +132,7 @@ class Client:
 
     def _get_entities(self, project):
         ents = self._get(f"fields/entities/{project}", None)
-        return ents
+        return ents["data"]["entities"]
 
     def _get_fields(self, project, detail="yes", count=500, field_filter: dict = None):
         params = {"detail": detail, "count": count}
@@ -187,7 +188,7 @@ class Client:
                 # logger.warning(f"Received, BadRequest response: {str(e)}, halting...")
                 error_list.append(err.as_str())
                 thread_event.set()
-            except Exception as e:
+            except Exception as e:  # pragma: no cover
                 logger.warning(str(e))
             write_queue.task_done()
 
@@ -200,7 +201,7 @@ class Client:
         worker_threads: int = 10,
         max_inflight_batches: int = 100,
         disable_progress: bool = False,
-        use_progress_widget: bool = False
+        use_progress_widget: bool = False,
     ) -> WriteSummary:
         """
         Write a stream of input records to Gretel's API.
@@ -236,12 +237,12 @@ class Client:
         for _ in range(worker_threads):
             t = threading.Thread(
                 target=self._write_record_batch,
-                args=(project, write_queue, error_list, thread_event)
+                args=(project, write_queue, error_list, thread_event),
             )
             t.start()
             threads.append(t)
 
-        if use_progress_widget:
+        if use_progress_widget:  # pragma: no cover
             from tqdm.notebook import tqdm
         else:
             from tqdm import tqdm
@@ -256,7 +257,7 @@ class Client:
                 # we can break out of the sampler loop
                 # early
                 if thread_event.is_set():
-                    logger.info("Exiting record processing loop")
+                    # logger.info("Exiting record processing loop")
                     break
                 write_queue.put(acc)
                 acc = []
@@ -265,17 +266,10 @@ class Client:
         # if we exited the sampler loop and the error list
         # is empty, we should process any last partial
         # batches
-        if not error_list:
+        if not thread_event.is_set():
             if acc:  # flush remaining records from accumulator
                 write_queue.put(acc)
                 t.update()
-
-            # wait for all threads to drain the queue
-            write_queue.join()
-
-        # this will cause all threads to break
-        # out of their while loops
-        thread_event.set()
 
         # unblock any threads that are waiting
         # on a queue item to be popped
@@ -288,14 +282,11 @@ class Client:
         t.close()
 
         if error_list:
-            return WriteSummary(
-                success=False,
-                api_errors=list(set(error_list))
-            )
+            return WriteSummary(success=False, api_errors=list(set(error_list)))
 
         return WriteSummary()
 
-    def _build_callback(self, post_process):
+    def _build_callback(self, post_process):  # pragma: no cover
         if callable(post_process):
             callback = post_process
         else:
@@ -307,7 +298,7 @@ class Client:
         return callback
 
     def _get_records_sync(self, project: str, params: dict, count: int = None):
-        if count is not None:
+        if count is not None:  # pragma: no cover
             params["count"] = count
         return (
             self._get(f"streams/records/{project}", params).get(DATA).get(RECORDS, [])
@@ -321,7 +312,7 @@ class Client:
         direction: str = "forward",
         wait_for: int = -1,
     ):
-        if direction not in ("forward", "backward"):
+        if direction not in ("forward", "backward"):  # pragma: no cover
             raise AttributeError("direction parameter is invalid.")
         callback = self._build_callback(post_process)
         forward = direction == "forward"
@@ -335,7 +326,7 @@ class Client:
             params = {"with_meta": "yes", "flatten": "yes"}
             if last is not None:
                 params.update({start_key: last})
-            # print(self._get(f'streams/records/{project}', params))
+
             records = self._get_records_sync(project, params)
 
             # if we're going backwards we'll eventually
@@ -356,7 +347,7 @@ class Client:
             if not records:
                 if forward:
                     continue
-                else:
+                else:  # pragma: no cover
                     return
             next_last = records[0][ID] if forward else records[-1][ID]
             record_iterator = reversed(records) if forward else records
@@ -445,16 +436,20 @@ class Client:
             params.update({"query": query})
         projects = self._get("projects", params=params)["data"]["projects"]
         return [
-            Project(name=p["name"], client=self, project_id=p["_id"]) for p in projects
+            Project(name=p["name"], client=self, project_id=p["_id"], desc=p["description"]) for p in projects
         ]
 
-    def _create_get_project(self, name=None):
-        res = self._create_project(name=name)
+    def _create_get_project(self, name=None, desc=None):
+        res = self._create_project(name=name, desc=desc)
         _id = res["data"]["id"]
         p = self._get_project(_id)["project"]
-        return Project(name=p["name"], client=self, project_id=_id)
+        return Project(
+            name=p["name"], client=self, project_id=_id, desc=p["description"]
+        )
 
-    def get_project(self, *, name: str = None, create: bool = False) -> Project:
+    def get_project(
+        self, *, name: str = None, create: bool = False, desc: str = None
+    ) -> Project:
         """
         Create or get a project.  By default, this method will try
         and fetch an existing Gretel project. If the project does not
@@ -475,6 +470,9 @@ class Client:
             name: The unique name of the project to get or create.
             create: If the project does not exist, try and create it. If no project name
                 is provided, create a unique name based on the authenticated user.
+            desc: If project gets created, set the description to this value. This will only
+                get used when a project gets newly created. If the project already exists,
+                nothing will happen with this value.
 
         Returns:
             A ``Project`` instnace.
@@ -483,15 +481,17 @@ class Client:
             ``Unauthorized`` or ``BadRequest``
         """
         if not name and not create:  # pragma: no cover
-            raise ValueError('Must provide a name or create flag!')
+            raise ValueError("Must provide a name or create flag!")
 
         if name:
             try:
                 p = self._get_project(name)["project"]
-                return Project(name=name, client=self, project_id=p["_id"])
+                return Project(
+                    name=name, client=self, project_id=p["_id"], desc=p["description"]
+                )
             except NotFound:
                 if create:
-                    return self._create_get_project(name=name)
+                    return self._create_get_project(name=name, desc=desc)
                 else:
                     raise
 
@@ -521,5 +521,5 @@ def get_cloud_client(prefix: str, api_key: str) -> Client:
     """
     return Client(
         host=f"{prefix}.gretel.cloud",
-        api_key=getpass("Enter Gretel API key: ") if api_key == PROMPT else api_key
+        api_key=getpass("Enter Gretel API key: ") if api_key == PROMPT else api_key,
     )

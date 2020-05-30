@@ -30,7 +30,7 @@ class SeekableStreamBuffer(Iterable):
     def seek(self, position: int = 0):
         self.buffered_source.seek(position)
 
-    def __iter__(self) -> Iterator:
+    def __iter__(self) -> Iterator:  # pragma: no cover
         return self
 
     def __next__(self) -> str:
