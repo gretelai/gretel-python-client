@@ -35,7 +35,7 @@ class Project:
 
     def __init__(self, *, name: str, client: "Client", project_id: str, desc: str = None):
         self.name = name
-        """The unique name of the project. This is either set by you or auto 
+        """The unique name of the project. This is either set by you or auto
         managed by Gretel
         """
 
@@ -144,7 +144,7 @@ class Project:
         are queued and send in parallel for performance. API
         reponses are not returned.
 
-        NOTE: 
+        NOTE:
             Since a queue and threading is used here, you
             can send any number of records in the ``data`` param.
             The records will automatically be chunked up into
