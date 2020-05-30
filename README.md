@@ -1,5 +1,9 @@
 # Gretel Python Client
 
+![Run Test Suite](https://github.com/gretelai/gretel-python-client/workflows/Run%20Test%20Suite/badge.svg)
+
+[![Documentation Status](https://readthedocs.org/projects/gretel-client/badge/?version=latest)](https://gretel-client.readthedocs.io/en/stable/?badge=stable)
+
 The Gretel Python Client allows you to interact with the Gretel REST API.  Where possible, we have added specific conveinence to help auto-manage things like ingest of large amounts of records. Please see the getting started section and the module documentation for more details.
 
 In order to use this client, you must have a valid API key. Please login to [our console](https://console.gretel.cloud) in order to get one.
