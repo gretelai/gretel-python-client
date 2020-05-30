@@ -106,7 +106,7 @@ celerybeat.pid
 .env
 .venv
 env/
-venv/
+venv*/
 ENV/
 env.bak/
 venv.bak/
@@ -133,3 +133,5 @@ dmypy.json
 .idea
 
 docs/_build
+
+tests/gretel_client/unit/helpers/training_data.csv

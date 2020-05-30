@@ -11,16 +11,16 @@ class Sampler(Iterator):
         self._name = name
 
     @property
-    def name(self) -> str:
+    def name(self) -> str:  # pragma: no cover
         return self._name
 
     def set_source(self, data_source):
         self.data_source = data_source
 
-    def __iter__(self) -> Iterator:
+    def __iter__(self) -> Iterator:  # pragma: no cover
         return self
 
-    def __next__(self):
+    def __next__(self):  # pragma: no cover
         return next(self.data_source)
 
 

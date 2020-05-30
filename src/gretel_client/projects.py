@@ -1,48 +1,80 @@
 """
 High level API for interacting with a Gretel Project
 """
-from __future__ import annotations
 from typing import TYPE_CHECKING, List, Union, Tuple
 from functools import partial
-import pandas as pd
+from copy import deepcopy
 
 from gretel_client.readers import JsonReader, DataFrameReader
 
 
-# Avoid circular import
-if TYPE_CHECKING:
-    from gretel_client.client import Client
+try:
+    import pandas as pd
+    from pandas import DataFrame as _DataFrameT
+except ImportError:  # pragma: no cover
+    pd = None
+    class _DataFrameT: ... # noqa
+
+
+if TYPE_CHECKING:  # pragma: no cover
+    from gretel_client.client import Client, WriteSummary
 
 
 class Project:
+    """Representation of a single Gretel project. In general you should not have
+    to init this class directly, but can make use of the factory method from a
+    ``Client`` instnace.
 
-    def __init__(self, *, name: str, client: Client, project_id: str):
+    Using the factory method::
+
+        from gretel_client import get_cloud_client
+
+        client = get_cloud_client('api', 'your_api_key')
+        project = client.get_project(create=True)  # creates a project with an auto-named slug
+    """
+
+    def __init__(self, *, name: str, client: "Client", project_id: str, desc: str = None):
         self.name = name
+        """The unique name of the project. This is either set by you or auto
+        managed by Gretel
+        """
+
         self.client = client  # type: Client
+
         self.project_id = project_id
+        """The unique Project ID for your project. This is auto-managed by Gretel
+        """
+
+        self.description = desc
+        """A short description of the project
+        """
 
         self._iter_records = partial(self.client._iter_records, project=self.name)
 
         self._get_field_count = partial(
-            self.client._get_fields,
-            self.name,
-            detail='no',
-            count=1
+            self.client._get_fields, self.name, detail="no", count=1
         )
 
     @property
-    def field_count(self):
+    def field_count(self) -> int:
         """Return the total number of fields (as an int) in
-        the project
+        the project.
         """
-        return self._get_field_count()['total_field_count']
+        return self._get_field_count()["total_field_count"]
 
     @property
-    def record_count(self):
+    def record_count(self) -> int:
         """Return the total number of records that have been
-        ingested (as an int) for the project
+        ingested (as an int) for the project.
         """
-        return self._get_field_count()['project_record_count']
+        return self._get_field_count()["project_record_count"]
+
+    @property
+    def entities(self) -> List[dict]:
+        """Return all entities that have been observed in
+        this project
+        """
+        return self.client._get_entities(self.name)
 
     def iter_records(self, **kwargs):
         """Iterate forwards (optionally waiting) or backwards in
@@ -81,14 +113,22 @@ class Project:
 
         This includes all Field, Entity, and cached Record information
 
-        NOTE: This command runs asyncronously. When it returns, it
-        means it has only triggered the flush operation in Gretel. This
-        full operations may take several seconds to complete.
+        NOTE:
+            This command runs asyncronously. When it returns, it
+            means it has only triggered the flush operation in Gretel. This
+            full operations may take several seconds to complete.
         """
         self.client._flush_project(self.project_id)
 
     def send(self, data: Union[List[dict], dict]) -> Tuple[list, list]:
-        """Write one or more records syncronously.
+        """Write one or more records syncronously. This is similar
+        to making a single API call to the records endpoint. You will also
+        receive the success and failure arrays back which contain the Gretel IDs
+        that were generated for each ingested record.
+
+        NOTE:
+            Because this is just like making a single call to the Records
+            endpoint, the maximum record count per-call will be enforced.
 
         Args:
             data: a dict or a list of dicts
@@ -96,38 +136,77 @@ class Project:
         Returns:
             A tuple of (success, failure) lists
         """
-        ret = self.client._write_record_sync(self.name, data)['data']
-        return ret['success'], ret['failure']
+        ret = self.client._write_record_sync(self.name, data)["data"]
+        return ret["success"], ret["failure"]
 
-    def send_async(self, data: Union[List[dict], dict]):
+    def send_bulk(self, data: Union[List[dict], dict]) -> "WriteSummary":
         """Send a dict or list of dicts to the project.  Records
         are queued and send in parallel for performance. API
-        reponses are not returned
+        reponses are not returned.
+
+        NOTE:
+            Since a queue and threading is used here, you
+            can send any number of records in the ``data`` param.
+            The records will automatically be chunked up into
+            appropiately sized buffers to send to the Records API.
 
         Args:
-            data: a dict or a list of dicts
+            data: A dict or a list of dicts.
+
+        Returns:
+            A ``WriteSummary`` instance.
         """
         reader = JsonReader(data)
-        return self.client._write_records(
-            project=self.name,
-            reader=reader
-        )
+        return self.client._write_records(project=self.name, reader=reader)
 
-    def send_dataframe(self, df: pd.DataFrame):
+    def send_dataframe(self, df: _DataFrameT, sample=None) -> "WriteSummary":
         """Send the contents of a DataFrame
 
         This will convert each row of the DataFrame
         into a dictionary and send it as a record.  This
-        operation happens using the async writer so no
-        results from the API calls are returned
-        """
-        reader = DataFrameReader(df)
-        self.client.write_records(
-            project=self.name,
-            reader=reader
-        )
+        operation happens using the bulk writer so no
+        results from the API calls are returned.
 
-    def head(self, n: int = 5) -> pd.DataFrame:
+        Args:
+            df: A pandas DataFrame
+            sample: Specify a subset of the DataFrame rows to be sent. If ``sample``
+                is > 1, then ``sample`` number of rows will be queued for sending. If
+                ``sample`` is between 0 and 1, then a fraction of the DataFrame's rows
+                will be queued for sending. So a ``sample`` of .5 will queue up half
+                of the DataFrame's rows.
+
+        NOTE:
+            Sampling is randomized, not done by first N.
+
+        Returns:
+            An instance of ``WriteSummary``
+
+        Raises:
+            ``RuntimeError`` if Pandas is not installed
+            ``ValueError`` if a Pandas DataFrame was not provided
+        """
+        if not pd:  # pragma: no cover
+            raise RuntimeError('pandas must be installed for this feature')
+
+        if not isinstance(df, pd.DataFrame):  # pragma: no cover
+            raise ValueError("A Pandas DataFrame is required!")
+
+        new_df = df
+
+        if sample is not None:
+            if sample <= 0:
+                raise ValueError("Sample must be greater than 1")
+            elif sample < 1:
+                new_df = df.sample(frac=sample)
+            else:
+                if sample > len(df):
+                    raise ValueError("Sample size cannot be larger than DataFrame")
+                new_df = df.sample(n=sample)
+
+        reader = DataFrameReader(new_df)
+        return self.client._write_records(project=self.name, reader=reader)
+
+    def head(self, n: int = 5) -> _DataFrameT:
         """Get the top N records, flattened,
         and return them as a DataFrame. This
         mimics the DataFrame.head() method
@@ -137,14 +216,13 @@ class Project:
 
         Returns a Pandas DataFrame
         """
-        recs = self.client._get_records_sync(
-            self.name,
-            {'flatten': 'yes', 'count': n}
-        )
-        recs = [item['data'] for item in recs]
+        if not pd:  # pragma: no cover
+            raise RuntimeError('pandas must be installed to use this feature')
+        recs = self.client._get_records_sync(self.name, {"flatten": "yes", "count": n})
+        recs = [item["data"] for item in recs]
         return pd.DataFrame(recs)
 
-    def sample(self, n=10) -> list:
+    def sample(self, n=10) -> List[dict]:
         """Return the top N records. These records
         will be in the raw format that they were received
         and will have all Gretel metadata attached.
@@ -152,42 +230,90 @@ class Project:
         Returns a list that matches the response
         from the REST API.
 
-        NOTE: The outter keys from the API response
-        are removed and the list of records is only returned
+        NOTE:
+            The outter keys from the API response
+            are removed and the list of records is only returned
         """
         return self.client._get_records_sync(
-            self.name,
-            {'with_meta': 'yes', 'count': n}
+            self.name, {"with_meta": "yes", "count": n, "flatten": "yes"}
         )
 
-    def get_field_details(self, *, entity: str = None) -> List[dict]:
+    def get_field_details(self, *, entity: str = None, count=500) -> List[dict]:
         """Return details for all fields in the project.
 
         Args:
             entity: if an entity label is supplied, then
                 only return fields that contain that entity
+            count: how many fields to retrieve
 
         Returns:
             A list of dictionaries that match the Fields API
             schema from the Gretel REST API
-
-        NOTE: We don't do any automatic pagination here yet. So we'll
-        actually make an API call to first find the number of fields
-        in the project, and use that as the ``count`` parameter to the
-        Fields API call
         """
         field_filter = None
         if entity:
-            field_filter = {'filter': 'entity', 'value': entity}
-        return self.client.get_fields(
-            self.name, count=self.field_count, field_filter=field_filter
-        )['data']['fields']
+            field_filter = {"filter": "entity", "value": entity}
+        return self.client._get_fields(
+            self.name, count=count, field_filter=field_filter
+        )["data"]["fields"]
+
+    def get_field_entities(
+        self, *, as_df=False, entity: str = None
+    ) -> Union[List[dict], _DataFrameT]:
+        """Download all fields from the Metastore and create
+        flat rows of all field + entity relationships.
+
+        Normally, the list of all entities for a given field is
+        stored in an array attached to the field level, here we
+        will de-normalize this and create a single record
+        for each field and entity combination.
+
+        So if a field called "foo" has 3 entities embedded inside
+        its metadata, we'll create 3 new rows out of this field
+        metadata. We can then easily return this as a DataFrame.
+
+        Args:
+            as_df: Return this dataset as a Pandas DataFrame
+            entity: Filter on a specific entity, if None, we'll
+                use all fields
+
+        Returns:
+            A Pandas DataFrame or a list of dicts
+        """
+        field_meta = self.get_field_details(entity=entity)
+        recs = []
+        for field in field_meta:
+            # if there are no entities, skip
+            if not field["entities"]:
+                continue
+
+            # remove the types
+            field.pop("types")
+
+            # store the entities
+            ents = field.pop("entities")
+
+            for ent in ents:
+                # make a clean copy of the current
+                # top level field data
+                tmp = deepcopy(field)
+                for k, v in ent.items():
+                    tmp[f"entity_{k}"] = v
+                recs.append(tmp)
+
+        if not as_df:  # pragma: no cover
+            return recs
+        else:
+            if not pd:  # pragma: no cover
+                raise RuntimeError('cannot export as a DF without pandas installed')
+            return pd.DataFrame(recs)
 
     def delete(self):
         """Deletes this project. After this is called, this
         object can be discarded or deleted itself.
 
-        NOTE: If you attempt to use other methods on this project
-        instance after deletion, you will receive API errors.
+        NOTE:
+            If you attempt to use other methods on this project
+            instance after deletion, you will receive API errors.
         """
         self.client._delete_project(self.project_id)

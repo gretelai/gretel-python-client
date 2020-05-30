@@ -18,6 +18,7 @@ VERSION=$(shell $(PYTHON) -c "import setuptools_scm;print(setuptools_scm.get_ver
 setup:
 	$(PIP) install -U -e .
 	$(PIP) install -r dev-requirements.txt
+	$(PIP) install dataclasses
 
 
 .PHONY: lint
@@ -28,12 +29,17 @@ lint:
 
 .PHONY: test
 test:
-	$(PYTEST) -s -vv --cov src --cov-report term-missing tests/gretel_client/unit
+	$(PYTEST) -s -vv --cov src --cov-report term-missing tests/src/gretel_client/unit
 
 
-.PHONY: int-test
-int-test:
-	$(PYTEST) -s -vv --cov src --cov-report term-missing tests/gretel_client/integration
+.PHONY: test-int
+test-int:
+	$(PYTEST) -s -vv --cov src --cov-report term-missing tests/src/gretel_client/integration
+
+
+.PHONY: test-all
+test-all:
+	$(PYTEST) -s -vv --cov src --cov-report term-missing tests/src/gretel_client/
 
 
 .PHONY: clean
