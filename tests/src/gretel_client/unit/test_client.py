@@ -2,7 +2,6 @@ import io
 import csv
 import json
 from unittest.mock import Mock, patch
-from typing import TYPE_CHECKING
 
 import pytest
 import faker
@@ -60,7 +59,7 @@ def records():
             "data": "foo_1",
             "metadata": {},
             "ingest_time": "2020-05-10T12:41:55.585538",
-        }
+        },
     ]
 
     chunk3 = []
@@ -148,32 +147,28 @@ def records_rev():
     ]
 
 
-def test_get_cloud_client_prompt(monkeypatch):
-    import gretel_client.client as client
-    client.Client = Mock()
-    client.getpass = Mock()
+@patch("gretel_client.client.Client")
+@patch("gretel_client.client.getpass")
+@patch("gretel_client.client.os.getenv")
+def test_get_cloud_client_prompt(getenv, getpass, Client):
+    # # when no env is set and prompt is true, ask for gretel key
+    getenv.side_effect =None
+    get_cloud_client("api", "prompt")
+    getpass.call_count == 0
 
-    # when no env is set and prompt is true, ask for gretel key
-    monkeypatch.delenv(client.DEFAULT_API_ENV_KEY, "abcd123")
-    client.get_cloud_client("api", "prompt")
+    # # when api key is set, and prompt is true
+    getenv.side_effect = "abcd123"
+    get_cloud_client("api", "prompt")
+    Client.assert_called_with(host="api.gretel.cloud", api_key="prompt")
+    getpass.call_count == 1
 
-    client.getpass.call_count == 0
+    # # when api key is set and prompt always is true, ask for api key
+    get_cloud_client("api", "prompt_always")
+    getpass.call_count == 2
 
-    # when api key is set, and prompt is true
-    monkeypatch.setenv(client.DEFAULT_API_ENV_KEY, "abcd123")
-    client.get_cloud_client("api", "prompt")
-    client.Client.assert_called_with(host="api.gretel.cloud", api_key="prompt")
-    client.getpass.call_count == 1
-
-    # when api key is set and prompt always is true, ask for api key
-    client.get_cloud_client("api", "prompt_always")
-    client.getpass.call_count == 2
-
-
-    # use api key env variable
-    client.get_cloud_client("api", "abc123")
-    client.Client.assert_called_with(host="api.gretel.cloud", api_key="abc123")
-
+    # # use api key env variable
+    get_cloud_client("api", "abc123")
+    Client.assert_called_with(host="api.gretel.cloud", api_key="abc123")
 
 
 def test_iter_records(records):
@@ -300,7 +295,9 @@ def test_constant_sampler(fake):
 
 
 def test_get_project(client: Client):
-    client._get = Mock(return_value={"data": {"project": {"_id": 123, "description": ""}}})
+    client._get = Mock(
+        return_value={"data": {"project": {"_id": 123, "description": ""}}}
+    )
     check = client.get_project(name="proj")
     assert check.name == "proj"
     assert check.client == client
@@ -310,7 +307,13 @@ def test_get_project(client: Client):
         return_value={"data": {"id": "5eb07df99294fd2dbc3dbe6a"}}
     )
     client._get_project = Mock(
-        return_value={"project": {"name": "random", "id": "5eb07df99294fd2dbc3dbe6a", "description": ""}}
+        return_value={
+            "project": {
+                "name": "random",
+                "id": "5eb07df99294fd2dbc3dbe6a",
+                "description": "",
+            }
+        }
     )
     check = client.get_project(create=True)
     client._get_project.assert_called_with("5eb07df99294fd2dbc3dbe6a")
@@ -348,4 +351,3 @@ def test_api_4xx_errors(client: Client):
 
     with pytest.raises(Unauthorized):
         client._get("foo", None)
-
