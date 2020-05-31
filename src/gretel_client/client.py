@@ -533,7 +533,7 @@ def get_cloud_client(prefix: str, api_key: str) -> Client:
         prompt = True
     if api_key == PROMPT:
         if os.getenv(DEFAULT_API_ENV_KEY):
-            api_key = os.getenv(DEFAULT_API_ENV_KEY)
+            api_key = os.getenv(DEFAULT_API_ENV_KEY)  # type: ignore
             prompt = False
         else:
             prompt = True
