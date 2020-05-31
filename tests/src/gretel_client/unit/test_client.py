@@ -1,7 +1,8 @@
 import io
 import csv
 import json
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
+from typing import TYPE_CHECKING
 
 import pytest
 import faker
@@ -145,6 +146,34 @@ def records_rev():
         {"data": {"records": chunk2}},
         {"data": {"records": chunk3}},
     ]
+
+
+def test_get_cloud_client_prompt(monkeypatch):
+    import gretel_client.client as client
+    client.Client = Mock()
+    client.getpass = Mock()
+
+    # when no env is set and prompt is true, ask for gretel key
+    monkeypatch.delenv(client.DEFAULT_API_ENV_KEY, "abcd123")
+    client.get_cloud_client("api", "prompt")
+
+    client.getpass.call_count == 0
+
+    # when api key is set, and prompt is true
+    monkeypatch.setenv(client.DEFAULT_API_ENV_KEY, "abcd123")
+    client.get_cloud_client("api", "prompt")
+    client.Client.assert_called_with(host="api.gretel.cloud", api_key="prompt")
+    client.getpass.call_count == 1
+
+    # when api key is set and prompt always is true, ask for api key
+    client.get_cloud_client("api", "prompt_always")
+    client.getpass.call_count == 2
+
+
+    # use api key env variable
+    client.get_cloud_client("api", "abc123")
+    client.Client.assert_called_with(host="api.gretel.cloud", api_key="abc123")
+
 
 
 def test_iter_records(records):

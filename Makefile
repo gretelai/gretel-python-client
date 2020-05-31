@@ -51,13 +51,3 @@ clean:
 build: clean
 	$(PIP) install wheel setuptools_scm
 	$(PYTHON) setup.py sdist bdist_wheel
-
-
-.PHONY: release
-release: build
-	$(AWS) s3 cp --acl public-read \
-		dist/$(PKG_WHL)-$(VERSION)-py3-none-any.whl \
-		s3://gretel-opt-$(STAGE)/pub/$(PKG_WHL)/$(PKG_WHL)-latest-py3-none-any.whl
-	$(AWS) s3 cp --acl public-read \
-		dist/$(PKG_TAR)-$(VERSION).tar.gz \
-		s3://gretel-opt-$(STAGE)/pub/$(PKG_TAR)/$(PKG_TAR)-latest.tar.gz
