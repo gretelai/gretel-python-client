@@ -514,20 +514,16 @@ def get_cloud_client(prefix: str, api_key: str) -> Client:
     """
     Factory function that creates a ``Client`` instance.
 
-    Note:
-        If ``api_key`` is set to "prompt" or "prompt_always", you
-        will be asked to enter an api key. This is useful for
-        Jupyter Notebooks, etc.
-
-
-        If ``api_key`` is "prompt", and your GRETEL_API_KEY is unset,
-        you will be prompted to input an api key. If "prompt_always" is set,
-        you will always be prompted for an api key, even if a key is
-        already set on the environment.
-
     Args:
         prefix: The API designator, such as "api"
         api_key: Your Gretel API key
+
+    Note:
+        If ``api_key`` is "prompt", and your GRETEL_API_KEY is unset,
+        you will be prompted to enter an api key. If "prompt_always" is set,
+        you will always be prompted for an api key, even if a key is
+        already set on the environment. This is useful for
+        Jupyter Notebooks, etc.
 
     Returns:
         A ``Client`` instance
