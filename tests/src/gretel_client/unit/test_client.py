@@ -154,7 +154,7 @@ def test_get_cloud_client_prompt(getenv, getpass, Client):
     # when no env is set and prompt is true, ask for gretel key
     getenv.return_value = None
     get_cloud_client("api", "prompt")
-    getpass.call_count == 1
+    assert getpass.call_count == 1
 
     # when api key is set, and prompt is true, use api key
     getenv.return_value = "abcd123"
