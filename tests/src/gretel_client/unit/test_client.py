@@ -152,19 +152,19 @@ def records_rev():
 @patch("gretel_client.client.os.getenv")
 def test_get_cloud_client_prompt(getenv, getpass, Client):
     # when no env is set and prompt is true, ask for gretel key
-    getenv.side_effect =None
+    getenv.return_value = None
     get_cloud_client("api", "prompt")
-    getpass.call_count == 0
-
-    # when api key is set, and prompt is true
-    getenv.side_effect = "abcd123"
-    get_cloud_client("api", "prompt")
-    Client.assert_called_with(host="api.gretel.cloud", api_key="prompt")
     getpass.call_count == 1
+
+    # when api key is set, and prompt is true, use api key
+    getenv.return_value = "abcd123"
+    get_cloud_client("api", "prompt")
+    Client.assert_called_with(host="api.gretel.cloud", api_key="abcd123")
+    assert getpass.call_count == 1
 
     # when api key is set and prompt always is true, ask for api key
     get_cloud_client("api", "prompt_always")
-    getpass.call_count == 2
+    assert getpass.call_count == 2
 
     # use api key env variable
     get_cloud_client("api", "abc123")

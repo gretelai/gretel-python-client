@@ -514,16 +514,20 @@ def get_cloud_client(prefix: str, api_key: str) -> Client:
     """
     Factory function that creates a ``Client`` instance.
 
+    Note:
+        If ``api_key`` is set to "prompt" or "prompt_always", you
+        will be asked to enter an api key. This is useful for
+        Jupyter Notebooks, etc.
+
+
+        If ``api_key`` is "prompt", and your GRETEL_API_KEY is unset,
+        you will be prompted to input an api key. If "prompt_always" is set,
+        you will always be prompted for an api key, even if a key is
+        already set on the environment.
+
     Args:
         prefix: The API designator, such as "api"
         api_key: Your Gretel API key
-
-    NOTE:
-        If ``api_key`` is "prompt" then you will be prompted to
-        input your API Key if the GRETEL_API_KEY environment variable
-        is not set. If ``api_key`` is set to "prompt_alway" the input
-        prompt will show even if GRETEL_API_KEY is not set. This is
-        useful for Jupyter Notebooks, etc.
 
     Returns:
         A ``Client`` instance
@@ -531,8 +535,12 @@ def get_cloud_client(prefix: str, api_key: str) -> Client:
     prompt = False
     if api_key == PROMPT_ALWAYS:
         prompt = True
-    if api_key == PROMPT and not os.getenv(DEFAULT_API_ENV_KEY):
-        prompt = True
+    if api_key == PROMPT:
+        if os.getenv(DEFAULT_API_ENV_KEY):
+            api_key = os.getenv(DEFAULT_API_ENV_KEY)
+            prompt = False
+        else:
+            prompt = True
 
     return Client(
         host=f"{prefix}.gretel.cloud",
