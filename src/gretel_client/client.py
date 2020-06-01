@@ -1,6 +1,7 @@
 """
 Low level API for interacting directly with the Gretel API
 """
+import os
 import json
 from functools import wraps
 import time
@@ -33,6 +34,8 @@ DATA = "data"
 ID = "id"
 INGEST_TIME = "ingest_time"
 PROMPT = "prompt"
+PROMPT_ALWAYS = "prompt_always"
+DEFAULT_API_ENV_KEY = "GRETEL_API_KEY"
 
 MAX_BATCH_SIZE = 50
 
@@ -436,7 +439,10 @@ class Client:
             params.update({"query": query})
         projects = self._get("projects", params=params)["data"]["projects"]
         return [
-            Project(name=p["name"], client=self, project_id=p["_id"], desc=p["description"]) for p in projects
+            Project(
+                name=p["name"], client=self, project_id=p["_id"], desc=p["description"]
+            )
+            for p in projects
         ]
 
     def _create_get_project(self, name=None, desc=None):
@@ -499,7 +505,7 @@ class Client:
             return self._create_get_project()
 
     def install_transformers(self):
-        """Installs the latest version of the Gretel Tranfsormers package
+        """Installs the latest version of the Gretel Transformers package
         """
         pkg.install_transformers(self.api_key, self.host)
 
@@ -512,14 +518,27 @@ def get_cloud_client(prefix: str, api_key: str) -> Client:
         prefix: The API designator, such as "api"
         api_key: Your Gretel API key
 
-    NOTE:
-        If ``api_key`` is "prompt" then you will be prompted to
-        input your API Key. This is useful for Jupyter Notebooks, etc.
+    Note:
+        If ``api_key`` is "prompt", and your GRETEL_API_KEY is unset,
+        you will be prompted to enter an api key. If "prompt_always" is set,
+        you will always be prompted for an api key, even if a key is
+        already set on the environment. This is useful for
+        Jupyter Notebooks, etc.
 
     Returns:
         A ``Client`` instance
     """
+    prompt = False
+    if api_key == PROMPT_ALWAYS:
+        prompt = True
+    if api_key == PROMPT:
+        if os.getenv(DEFAULT_API_ENV_KEY):
+            api_key = os.getenv(DEFAULT_API_ENV_KEY)  # type: ignore
+            prompt = False
+        else:
+            prompt = True
+
     return Client(
         host=f"{prefix}.gretel.cloud",
-        api_key=getpass("Enter Gretel API key: ") if api_key == PROMPT else api_key,
+        api_key=getpass("Enter Gretel API key: ") if prompt else api_key,
     )

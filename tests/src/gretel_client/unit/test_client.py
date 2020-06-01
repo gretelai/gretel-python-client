@@ -1,7 +1,7 @@
 import io
 import csv
 import json
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 import faker
@@ -59,7 +59,7 @@ def records():
             "data": "foo_1",
             "metadata": {},
             "ingest_time": "2020-05-10T12:41:55.585538",
-        }
+        },
     ]
 
     chunk3 = []
@@ -145,6 +145,30 @@ def records_rev():
         {"data": {"records": chunk2}},
         {"data": {"records": chunk3}},
     ]
+
+
+@patch("gretel_client.client.Client")
+@patch("gretel_client.client.getpass")
+@patch("gretel_client.client.os.getenv")
+def test_get_cloud_client_prompt(getenv, getpass, Client):
+    # when no env is set and prompt is true, ask for gretel key
+    getenv.return_value = None
+    get_cloud_client("api", "prompt")
+    assert getpass.call_count == 1
+
+    # when api key is set, and prompt is true, use api key
+    getenv.return_value = "abcd123"
+    get_cloud_client("api", "prompt")
+    Client.assert_called_with(host="api.gretel.cloud", api_key="abcd123")
+    assert getpass.call_count == 1
+
+    # when api key is set and prompt always is true, ask for api key
+    get_cloud_client("api", "prompt_always")
+    assert getpass.call_count == 2
+
+    # use api key env variable
+    get_cloud_client("api", "abc123")
+    Client.assert_called_with(host="api.gretel.cloud", api_key="abc123")
 
 
 def test_iter_records(records):
@@ -271,7 +295,9 @@ def test_constant_sampler(fake):
 
 
 def test_get_project(client: Client):
-    client._get = Mock(return_value={"data": {"project": {"_id": 123, "description": ""}}})
+    client._get = Mock(
+        return_value={"data": {"project": {"_id": 123, "description": ""}}}
+    )
     check = client.get_project(name="proj")
     assert check.name == "proj"
     assert check.client == client
@@ -281,7 +307,13 @@ def test_get_project(client: Client):
         return_value={"data": {"id": "5eb07df99294fd2dbc3dbe6a"}}
     )
     client._get_project = Mock(
-        return_value={"project": {"name": "random", "id": "5eb07df99294fd2dbc3dbe6a", "description": ""}}
+        return_value={
+            "project": {
+                "name": "random",
+                "id": "5eb07df99294fd2dbc3dbe6a",
+                "description": "",
+            }
+        }
     )
     check = client.get_project(create=True)
     client._get_project.assert_called_with("5eb07df99294fd2dbc3dbe6a")
@@ -319,4 +351,3 @@ def test_api_4xx_errors(client: Client):
 
     with pytest.raises(Unauthorized):
         client._get("foo", None)
-
