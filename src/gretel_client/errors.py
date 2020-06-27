@@ -80,3 +80,10 @@ class Unauthorized(Exception):
 
     def __str__(self):
         return self.message
+
+
+class Forbidden(Exception):
+    """HTTP 403. The only time this is returned
+    is during rate limiting of API calls
+    """
+    pass

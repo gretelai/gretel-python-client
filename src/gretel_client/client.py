@@ -13,12 +13,19 @@ import logging
 from dataclasses import dataclass, field
 
 import requests
+import tenacity
 
 from gretel_client.readers import Reader
 from gretel_client.samplers import ConstantSampler, Sampler, get_default_sampler
 from gretel_client.projects import Project
 import gretel_client.pkg_installers as pkg
-from gretel_client.errors import ClientError, BadRequest, Unauthorized, NotFound
+from gretel_client.errors import (
+    ClientError,
+    BadRequest,
+    Unauthorized,
+    NotFound,
+    Forbidden
+)
 
 
 logging.basicConfig()
@@ -38,6 +45,7 @@ PROMPT_ALWAYS = "prompt_always"
 DEFAULT_API_ENV_KEY = "GRETEL_API_KEY"
 
 MAX_BATCH_SIZE = 50
+MAX_RATE_LIMIT_RETRY = 20
 
 
 def _api_call(method):
@@ -55,6 +63,8 @@ def _api_call(method):
                     raise NotFound(res.json())
                 if res.status_code == 401:
                     raise Unauthorized(res.json())
+                if res.status_code == 403:
+                    raise Forbidden("Rate limiting in place for API call.")
                 raise BadRequest(res.json())
 
             if method in ("get", "post", "delete"):
@@ -163,6 +173,11 @@ class Client:
     def _flush_project(self, project_id: str):
         return self._post(f"projects/{project_id}/flush", None, None)
 
+    @tenacity.retry(
+        retry=tenacity.retry_if_exception_type(Forbidden),
+        stop=tenacity.stop_after_attempt(MAX_RATE_LIMIT_RETRY),
+        wait=tenacity.wait_exponential(multiplier=1, min=2, max=10)
+    )
     def _write_record_sync(self, project: str, records: Union[list, dict]):
         """Write a batch of records to Gretel's API
 
