@@ -7,7 +7,14 @@ import pytest
 import faker
 from faker.providers import misc
 
-from gretel_client import get_cloud_client, Client, NotFound, Unauthorized, BadRequest
+from gretel_client import (
+    get_cloud_client,
+    Client,
+    NotFound,
+    Unauthorized,
+    BadRequest,
+    Forbidden
+)
 from gretel_client.samplers import ConstantSampler
 from gretel_client.readers import CsvReader, JsonReader
 
@@ -241,7 +248,7 @@ def test_json_writer(test_records, client):
     input_json.seek(0)
     client._post = Mock()
     client._write_records(project="test-project", reader=JsonReader(input_json))
-    client._post.called_with("test-proj", {}, test_records)
+    client._post.assert_called_with("records/send/test-project", {}, test_records)
 
 
 def test_write_unauthorized(test_records, client):
@@ -252,7 +259,7 @@ def test_write_unauthorized(test_records, client):
         input_json.write(json.dumps({"foo": "bar"}) + "\n")
     input_json.seek(0)
     client._write_record_sync = Mock(
-        side_effect=Unauthorized({"message": "Unauthorized"})
+        side_effect=[{}, {}, Unauthorized({"message": "Unauthorized"})]
     )
     check = client._write_records(project="test-project", reader=JsonReader(input_json))
     assert not check
@@ -272,6 +279,17 @@ def test_write_badrequest(test_records, client):
     check = client._write_records(project="test-project", reader=JsonReader(input_json))
     assert not check
     assert check.api_errors == ['Unauthorized: {"field": ["bad"]}']
+
+
+def test_write_forbidden(test_records, client):
+    input_json = io.StringIO()
+    for record in test_records:
+        input_json.write(json.dumps(record) + "\n")
+    input_json.seek(0)
+    client._write_record_sync = Mock(side_effect=[{}, Forbidden(), {}])
+    check = client._write_records(project="test-project", reader=JsonReader(input_json))
+    assert check
+    assert check.api_errors == []
 
 
 def test_constant_sampler(fake):

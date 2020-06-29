@@ -1,1 +1,1 @@
-from .client import get_cloud_client, Client, BadRequest, NotFound, Unauthorized  # noqa
+from .client import get_cloud_client, Client, BadRequest, NotFound, Unauthorized, Forbidden  # noqa

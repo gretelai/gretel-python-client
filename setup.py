@@ -28,10 +28,12 @@ setup(
     packages=find_packages('src'),
     install_requires=[
         'requests',
-        'smart_open==1.10.0'
+        'smart_open==1.10.0',
+        'tqdm==4.45.0',
+        'tenacity==6.2.0'
     ],
     extras_require={
         'pandas': ['pandas==1.0.3'],
-        'viz': ['ipywidgets==7.5.1', 'tqdm==4.45.0']
+        'viz': ['ipywidgets==7.5.1']
     }
 )
