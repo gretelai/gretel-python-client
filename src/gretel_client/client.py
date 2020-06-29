@@ -315,6 +315,11 @@ class Client:
             callback = noop
         return callback
 
+    @tenacity.retry(
+        retry=tenacity.retry_if_exception_type(Forbidden),
+        stop=tenacity.stop_after_attempt(MAX_RATE_LIMIT_RETRY),
+        wait=tenacity.wait_exponential(multiplier=1, min=2, max=10)
+    )
     def _get_records_sync(self, project: str, params: dict, count: int = None):
         if count is not None:  # pragma: no cover
             params["count"] = count
