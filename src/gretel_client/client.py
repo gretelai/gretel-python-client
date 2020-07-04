@@ -11,6 +11,8 @@ from queue import Queue
 from getpass import getpass
 import logging
 from dataclasses import dataclass, field
+from urllib.parse import urlparse
+from contextlib import contextmanager
 
 import requests
 import tenacity
@@ -562,3 +564,61 @@ def get_cloud_client(prefix: str, api_key: str) -> Client:
         host=f"{prefix}.gretel.cloud",
         api_key=getpass("Enter Gretel API key: ") if prompt else api_key,
     )
+
+
+def project_from_uri(uri: str) -> Project:
+    """
+    Get a Project instance from a Gretel URI string, the
+    URI string must have the following format: 
+    gretel://[API_KEY]@HOSTNAME/PROJECT
+
+    Example::
+
+        gretel://grtu12345@api.gretel.cloud/my_project
+
+    If your API key is set as an environment variable, you may
+    omit the API key portion of the URI::
+
+        gretel://api.gretel.cloud/my_project
+    """
+    parts = urlparse(uri)
+
+    if parts.scheme != "gretel":
+        raise ValueError("URI must start with gretel://")
+
+    if not parts.netloc:
+        raise ValueError("API hostname not found")
+
+    if not parts.username:
+        username = os.getenv(DEFAULT_API_ENV_KEY)
+        if not username:
+            raise ValueError("No API key found in URI or environment")
+
+    if not parts.path or parts.path == "/":
+        raise ValueError("No project name found")
+
+    client = get_cloud_client(
+        parts.hostname.split(".")[0],
+        parts.username or username
+    )
+
+    return client.get_project(name=parts.path.strip("/"))
+
+
+@contextmanager
+def temporary_project(client: Client):
+    """Create a new project that can be used inside of a "with"
+    statement for temporary purposes. The project will be deleted
+    from Gretel Cloud when the scope is exited.
+
+    Example::
+
+        with temporary_project(client) as proj:
+            proj.send(my_record_list)
+            print(proj.entities)
+    """
+    project = client.get_project(create=True)
+    try:
+        yield project
+    finally:
+        project.delete()
