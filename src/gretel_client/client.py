@@ -607,9 +607,9 @@ def project_from_uri(uri: str) -> Project:
 
 @contextmanager
 def temporary_project(client: Client):
-    """Create a new project that can be used inside of a "with"
-    statement for temporary purposes. The project will be deleted
-    from Gretel Cloud when the scope is exited.
+    """A temporary project context manager.  Create a new project
+    that can be used inside of a "with" statement for temporary purposes.
+    The project will be deleted from Gretel Cloud when the scope is exited.
 
     Example::
 
