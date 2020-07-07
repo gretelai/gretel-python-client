@@ -13,10 +13,12 @@ from gretel_client import (
     NotFound,
     Unauthorized,
     BadRequest,
-    Forbidden
+    Forbidden,
+    project_from_uri
 )
 from gretel_client.samplers import ConstantSampler
 from gretel_client.readers import CsvReader, JsonReader
+from gretel_client.client import DEFAULT_API_ENV_KEY
 
 
 @pytest.fixture
@@ -358,8 +360,12 @@ class Fake401:
         return {"message": "Unauthorized"}
 
 
+class Fake403:
+    status_code = 403
+
+
 def test_api_4xx_errors(client: Client):
-    client.session.get = Mock(side_effect=[Fake404(), Fake400(), Fake401()])
+    client.session.get = Mock(side_effect=[Fake404(), Fake400(), Fake401(), Fake403()])
 
     with pytest.raises(NotFound):
         client._get("foo", None)
@@ -369,3 +375,62 @@ def test_api_4xx_errors(client: Client):
 
     with pytest.raises(Unauthorized):
         client._get("foo", None)
+
+    with pytest.raises(Forbidden):
+        client._get("foo", None)
+
+
+def test_project_from_uri_bad_string():
+    with pytest.raises(ValueError) as err:
+        project_from_uri("nope")
+    assert "URI must start with" in str(err)
+
+    with pytest.raises(ValueError) as err:
+        project_from_uri("gretel://api.gretel.cloud/my_project")
+    assert "No API key" in str(err)
+
+    with pytest.raises(ValueError) as err:
+        project_from_uri("gretel:/api.gretel.cloud/my_project")
+    assert "API hostname" in str(err)
+
+    with pytest.raises(ValueError) as err:
+        project_from_uri("gretel://token@api.gretel.cloud/")
+    assert "No project" in str(err)
+
+    with pytest.raises(ValueError) as err:
+        project_from_uri("gretel://token@api.gretel.cloud")
+    assert "No project" in str(err)
+
+
+def test_project_from_uri_env_api_key(monkeypatch):
+    monkeypatch.setenv(DEFAULT_API_ENV_KEY, "abc123")
+
+    with patch("gretel_client.client.get_cloud_client") as mock_get_client:
+        mock_client = Mock()
+        mock_get_client.return_value = mock_client
+        project_from_uri(
+            "gretel://api.gretel.cloud/my_project"
+        )
+        mock_get_client.assert_called_with(
+            "api",
+            "abc123"
+        )
+        mock_client.get_project.assert_called_with(
+            name="my_project"
+        )
+
+
+def test_project_from_uri(monkeypatch):
+    with patch("gretel_client.client.get_cloud_client") as mock_get_client:
+        mock_client = Mock()
+        mock_get_client.return_value = mock_client
+        project_from_uri(
+            "gretel://tokentoken@api.gretel.cloud/my_project"
+        )
+        mock_get_client.assert_called_with(
+            "api",
+            "tokentoken"
+        )
+        mock_client.get_project.assert_called_with(
+            name="my_project"
+        )

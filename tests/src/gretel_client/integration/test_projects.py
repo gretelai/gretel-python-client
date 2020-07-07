@@ -5,20 +5,27 @@ from functools import wraps
 
 import pytest
 
-from gretel_client.client import get_cloud_client, Client, BadRequest, Unauthorized
+from gretel_client.client import (
+    get_cloud_client,
+    Client,
+    BadRequest,
+    Unauthorized,
+    temporary_project,
+    NotFound
+)
 from gretel_client.projects import Project
 
 
-API_KEY = os.getenv('GRETEL_TEST_API_KEY')
+API_KEY = os.getenv("GRETEL_TEST_API_KEY")
 
 
 if not API_KEY:
-    raise AttributeError('GRETEL_TEST_API_KEY must be set!')
+    raise AttributeError("GRETEL_TEST_API_KEY must be set!")
 
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope="module")
 def client():
-    client = get_cloud_client('api-dev', API_KEY)
+    client = get_cloud_client("api-dev", API_KEY)
     # clear out any old projects that got leftover
     for p in client.search_projects():
         try:
@@ -26,6 +33,7 @@ def client():
         except Unauthorized:  # only delete projects that are owned
             pass
     return client
+
 
 @pytest.fixture
 def project(client):
@@ -50,8 +58,10 @@ def poll(func):
             else:
                 time.sleep(1)
                 count += 1
-        raise RuntimeError('Timeout while polling API')
+        raise RuntimeError("Timeout while polling API")
+
     return handler
+
 
 @poll
 def assert_check_for_records(project: Project, count=1):
@@ -59,10 +69,12 @@ def assert_check_for_records(project: Project, count=1):
     if len(recs) >= count:
         return True
 
+
 @poll
 def assert_check_record_count(project: Project, count):
     if project.record_count >= count:
         return True
+
 
 @poll
 def assert_check_field_count(project: Project, count):
@@ -90,12 +102,12 @@ def assert_field_entity(project: Project, field, entity):
 
     if len(fields) < 2:
         return
-    
+
     found_ent = False
     for f in fields:
-        if f['field'] == field:
-            for ent in f['entities']:
-                if ent['label'] == entity:
+        if f["field"] == field:
+            for ent in f["entities"]:
+                if ent["label"] == entity:
                     found_ent = True
 
     if not found_ent:
@@ -107,6 +119,7 @@ def assert_field_entity(project: Project, field, entity):
         return
 
     return True
+
 
 @poll
 def assert_entity_count(project: Project, count: int):
@@ -130,11 +143,11 @@ def test_simple_project_flow(client: Client, project: Project):
     assert not project.sample()
 
     # send via bulk
-    project.send_bulk({'foo': 'bar'})
+    project.send_bulk({"foo": "bar"})
     assert_check_for_records(project)
 
     # send a record sync
-    s, f = project.send({'foo2': 'bar2'})
+    s, f = project.send({"foo2": "bar2"})
     assert not f
     assert len(s) == 1
     assert_check_record_count(project, 2)
@@ -148,11 +161,11 @@ def test_simple_project_flow(client: Client, project: Project):
     assert_check_record_count(project, count=2)
 
     # easy entity detection
-    project.send({'foo': 'user@domain.com'})
-    assert_field_entity(project, 'foo', 'email_address')
+    project.send({"foo": "user@domain.com"})
+    assert_field_entity(project, "foo", "email_address")
 
     # field filter
-    check = project.get_field_details(entity='email_address')
+    check = project.get_field_details(entity="email_address")
     assert len(check) == 1
 
     assert_entity_count(project, 1)
@@ -187,3 +200,11 @@ def test_create_named_project(client: Client):
 
 def test_install_transformers(client: Client):
     client.install_transformers()
+
+
+def test_temporary_project(client: Client):
+    with temporary_project(client) as proj:
+        proj.send([{"foo": "bar"}] * 3)
+        assert_check_record_count(proj, 3)
+    with pytest.raises(NotFound):
+        client.get_project(name=proj.name)
