@@ -14,10 +14,14 @@ class GretelInstallError(Exception):
     pass
 
 
-def read_pipe(section, p, verbose, collect=False):
-    out = [f"\n\n{section}\n{''.join(['=' for _ in range(len(section)+1)])}"]
+def read_pipe(section, cmd, p, verbose, collect=False):
+    out = [
+        f"\n{section}\n{''.join(['=' for _ in range(len(section)+1)])}",
+        " ".join(cmd),
+    ]
     if verbose and not collect:
-        print(out[0])
+        for line in out:
+            print(line)
     for line in iter(p.readline, b""):
         if isinstance(line, bytes):
             line = line.decode("utf-8").strip()  # type: ignore
@@ -26,20 +30,28 @@ def read_pipe(section, p, verbose, collect=False):
         if collect:
             out.append(line)
 
-    if verbose and collect and len(out) > 1:
+    if verbose and collect and len(out) > 2:
         for line in out:
             print(line)
+        print("")
 
 
 def _install_pip_dependency(dep: str, verbose: bool = True):
     """Install pip dependency via a subprocess"""
-    cmd = [sys.executable, "-m", "pip", "--disable-pip-version-check", "install", dep]
+    cmd = [
+        sys.executable,
+        "-m",
+        "pip",
+        "--disable-pip-version-check",
+        "install",
+        dep,
+    ]
     if verbose:
         print(f"running: {' '.join(cmd)}")
     results = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    read_pipe("Install Output", results.stdout, verbose)
-    read_pipe("Errors & Warnings", results.stderr, verbose=True, collect=True)
+    read_pipe("pip: Install Output", cmd, results.stdout, verbose)
+    read_pipe("pip: Errors & Warnings", cmd, results.stderr, verbose=True, collect=True)
 
 
 def _get_package_endpoint(package_identifier: str, api_key: str, host: str) -> str:
@@ -63,4 +75,4 @@ def install_transformers(api_key: str, host: str, verbose: bool = False):
 
     print("Installing packages (this might take a while)")
     _install_pip_dependency(package_endpoint, verbose)
-    print("Completed installing Gretel packages")
+    print("Finished installing Gretel packages")
