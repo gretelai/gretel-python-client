@@ -45,7 +45,7 @@ INGEST_TIME = "ingest_time"
 PROMPT = "prompt"
 PROMPT_ALWAYS = "prompt_always"
 DEFAULT_API_ENV_KEY = "GRETEL_API_KEY"
-DEFAULT_PROJECT_URI = "GRETEL_PROJECT_URI"
+DEFAULT_PROJECT_URI = "GRETEL_URI"
 
 MAX_BATCH_SIZE = 50
 MAX_RATE_LIMIT_RETRY = 20
@@ -625,7 +625,7 @@ def project_from_uri(uri: str) -> Project:
         gretel://api.gretel.cloud/my_project
 
     Note:
-        If ``uri`` is "prompt", and your GRETEL_PROJECT_URI is unset,
+        If ``uri`` is "prompt", and your GRETEL_URI is unset,
         you will be prompted to enter a URI. If "prompt_always" is set,
         you will always be prompted for a project URI, even if a URI is
         already set on the environment. This is useful for
