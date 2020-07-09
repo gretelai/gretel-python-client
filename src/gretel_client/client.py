@@ -531,7 +531,7 @@ class Client:
 
         Prefer ``install_packages`` instead.
         """
-        logger.warn(
+        logger.warning(
             "The method, install_transformers is deprecated. Please use install_packages instead."
         )
         pkg.install_packages(self.api_key, self.host)

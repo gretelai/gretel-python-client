@@ -1,7 +1,8 @@
-import pytest
 import io
 from dataclasses import dataclass
 from unittest.mock import patch
+
+import pytest
 
 from gretel_client import pkg_installers
 
