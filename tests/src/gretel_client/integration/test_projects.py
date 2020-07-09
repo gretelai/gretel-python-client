@@ -198,9 +198,6 @@ def test_create_named_project(client: Client):
         client.get_project(name=name, create=True, desc=too_long)
 
 
-def test_install_transformers(client: Client):
-    client.install_transformers()
-
 
 def test_temporary_project(client: Client):
     with temporary_project(client) as proj:

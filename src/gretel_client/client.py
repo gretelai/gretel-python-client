@@ -26,7 +26,7 @@ from gretel_client.errors import (
     BadRequest,
     Unauthorized,
     NotFound,
-    Forbidden
+    Forbidden,
 )
 
 
@@ -178,7 +178,7 @@ class Client:
     @tenacity.retry(
         retry=tenacity.retry_if_exception_type(Forbidden),
         stop=tenacity.stop_after_attempt(MAX_RATE_LIMIT_RETRY),
-        wait=tenacity.wait_exponential(multiplier=1, min=2, max=10)
+        wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
     )
     def _write_record_sync(self, project: str, records: Union[list, dict]):
         """Write a batch of records to Gretel's API
@@ -320,7 +320,7 @@ class Client:
     @tenacity.retry(
         retry=tenacity.retry_if_exception_type(Forbidden),
         stop=tenacity.stop_after_attempt(MAX_RATE_LIMIT_RETRY),
-        wait=tenacity.wait_exponential(multiplier=1, min=2, max=10)
+        wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
     )
     def _get_records_sync(self, project: str, params: dict, count: int = None):
         if count is not None:  # pragma: no cover
@@ -503,7 +503,7 @@ class Client:
                 nothing will happen with this value.
 
         Returns:
-            A ``Project`` instnace.
+            A ``Project`` instance.
 
         Raises:
             ``Unauthorized`` or ``BadRequest``
@@ -543,9 +543,22 @@ class Client:
         return self._post("records/detect_entities", None, data=records).get(DATA).get(RECORDS, [])
 
     def install_transformers(self):
-        """Installs the latest version of the Gretel Transformers package
+        """Deprecated: Installs the latest version of the Gretel Transformers package
+
+        Prefer ``install_packages`` instead.
         """
-        pkg.install_transformers(self.api_key, self.host)
+        logger.warning(
+            "The method, install_transformers is deprecated. Please use install_packages instead."
+        )
+        pkg.install_packages(self.api_key, self.host)
+
+    def install_packages(self, verbose: bool = False):
+        """Installs the latest version of the Gretel Transformers package
+
+        Args:
+            verbose: Will print all package installation messages.
+        """
+        pkg.install_packages(self.api_key, self.host, verbose)
 
 
 def get_cloud_client(prefix: str, api_key: str) -> Client:
@@ -613,10 +626,7 @@ def project_from_uri(uri: str) -> Project:
     if not parts.path or parts.path == "/":
         raise ValueError("No project name found")
 
-    client = get_cloud_client(
-        parts.hostname.split(".")[0],
-        parts.username or username
-    )
+    client = get_cloud_client(parts.hostname.split(".")[0], parts.username or username)
 
     return client.get_project(name=parts.path.strip("/"))
 
