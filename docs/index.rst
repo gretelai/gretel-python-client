@@ -8,14 +8,12 @@
    :caption: Contents:
 
 
-Modules
-=======
+API Reference
+--------------
 .. toctree::
    :maxdepth: 2
 
-   api/client
-   api/projects
-   api/errors
+   api/api_ref
 
 CLI Tool
 ========

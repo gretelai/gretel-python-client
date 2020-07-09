@@ -42,6 +42,7 @@ class BadRequest(ClientError):
         request that was made.
 
         Example POST payload with invalid field::
+
             {'foo': ['Unknown field.']}
         """
 
@@ -53,6 +54,7 @@ class BadRequest(ClientError):
         and serializing the ``context`` to a JSON string.
 
         Example::
+
             'Invalid JSON Payload: {"foo": ["Unknown field."]}'
         """
         return f"{self.message}: {json.dumps(self.context)}"
