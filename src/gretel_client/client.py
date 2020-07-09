@@ -526,6 +526,11 @@ class Client:
         if not name and create:
             return self._create_get_project()
 
+    def detect_entities(self, records: Union[List[dict], dict]):
+        if isinstance(records, dict):
+            records = [records]
+        return self._post("records/detect_entities", None, data=records).get(DATA).get(RECORDS, [])
+
     def install_transformers(self):
         """Installs the latest version of the Gretel Transformers package
         """
@@ -569,7 +574,7 @@ def get_cloud_client(prefix: str, api_key: str) -> Client:
 def project_from_uri(uri: str) -> Project:
     """
     Get a Project instance from a Gretel URI string, the
-    URI string must have the following format: 
+    URI string must have the following format:
     gretel://[API_KEY]@HOSTNAME/PROJECT
 
     Example::
