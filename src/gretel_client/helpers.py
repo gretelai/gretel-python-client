@@ -81,3 +81,8 @@ def build_df_csv(
             df.to_csv(fp, index=False, header=headers, sep=",")
 
     return df
+
+
+def _is_running_from_ipython():
+    from IPython import get_ipython
+    return get_ipython() is not None
