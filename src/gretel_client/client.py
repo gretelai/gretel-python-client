@@ -526,7 +526,18 @@ class Client:
         if not name and create:
             return self._create_get_project()
 
-    def detect_entities(self, records: Union[List[dict], dict]):
+    def detect_entities(self, records: Union[List[dict], dict]) -> List[dict]:
+        """Do real-time entity detection from a small batch of records.  This function operates
+        outside the scope of a Gretel Project. It uses the Gretel API to do real-time entity detection
+        on JSON records (dicts).
+
+        Args:
+            records: A single or small list of records.
+
+        Returns:
+            A list of dictionaries similar to the records received when consuming from
+            a project stream.
+        """
         if isinstance(records, dict):
             records = [records]
         return self._post("records/detect_entities", None, data=records).get(DATA).get(RECORDS, [])
