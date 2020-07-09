@@ -569,7 +569,14 @@ class Client:
 def _get_or_prompt(
     input_key: str, prompt_message: str, env_fallback: str
 ) -> Optional[str]:
-    """Helper function used to prompt for secrets based on env conditions."""
+    """Helper function used to prompt for secrets based on env conditions.
+
+    Args:
+        input_key: User provided input string to evaluate.
+        prompt_message: Message to display on getpass prompt based on ``input_key`` logic.
+        env_fallback: environment variable lookup key to use as fallback to ``prompt``
+            and ``input_key``.
+    """
     if input_key == PROMPT_ALWAYS:
         return getpass(prompt_message)
     if input_key == PROMPT:
@@ -616,6 +623,13 @@ def project_from_uri(uri: str) -> Project:
     omit the API key portion of the URI::
 
         gretel://api.gretel.cloud/my_project
+
+    Note:
+        If ``uri`` is "prompt", and your GRETEL_PROJECT_URI is unset,
+        you will be prompted to enter a URI. If "prompt_always" is set,
+        you will always be prompted for a project URI, even if a URI is
+        already set on the environment. This is useful for
+        Jupyter Notebooks, etc.
     """
     uri = _get_or_prompt(uri, "Enter Gretel Project URI: ", DEFAULT_PROJECT_URI)
     parts = urlparse(uri)
