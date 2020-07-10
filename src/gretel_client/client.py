@@ -45,6 +45,7 @@ INGEST_TIME = "ingest_time"
 PROMPT = "prompt"
 PROMPT_ALWAYS = "prompt_always"
 DEFAULT_API_ENV_KEY = "GRETEL_API_KEY"
+DEFAULT_PROJECT_URI = "GRETEL_URI"
 
 MAX_BATCH_SIZE = 50
 MAX_RATE_LIMIT_RETRY = 20
@@ -540,7 +541,11 @@ class Client:
         """
         if isinstance(records, dict):
             records = [records]
-        return self._post("records/detect_entities", None, data=records).get(DATA).get(RECORDS, [])
+        return (
+            self._post("records/detect_entities", None, data=records)
+            .get(DATA)
+            .get(RECORDS, [])
+        )
 
     def install_transformers(self):
         """Deprecated: Installs the latest version of the Gretel Transformers package
@@ -561,6 +566,25 @@ class Client:
         pkg.install_packages(self.api_key, self.host, verbose)
 
 
+def _get_or_prompt(
+    input_key: str, prompt_message: str, env_fallback: str
+) -> Optional[str]:
+    """Helper function used to prompt for secrets based on env conditions.
+
+    Args:
+        input_key: User provided input string to evaluate.
+        prompt_message: Message to display on getpass prompt based on ``input_key`` logic.
+        env_fallback: environment variable lookup key to use as fallback to ``prompt``
+            and ``input_key``.
+    """
+    if input_key == PROMPT:
+        if os.getenv(env_fallback):
+            return os.getenv(env_fallback)
+    if input_key == PROMPT_ALWAYS or input_key == PROMPT:
+        return getpass(prompt_message)
+    return input_key
+
+
 def get_cloud_client(prefix: str, api_key: str) -> Client:
     """
     Factory function that creates a ``Client`` instance.
@@ -579,20 +603,8 @@ def get_cloud_client(prefix: str, api_key: str) -> Client:
     Returns:
         A ``Client`` instance
     """
-    prompt = False
-    if api_key == PROMPT_ALWAYS:
-        prompt = True
-    if api_key == PROMPT:
-        if os.getenv(DEFAULT_API_ENV_KEY):
-            api_key = os.getenv(DEFAULT_API_ENV_KEY)  # type: ignore
-            prompt = False
-        else:
-            prompt = True
-
-    return Client(
-        host=f"{prefix}.gretel.cloud",
-        api_key=getpass("Enter Gretel API key: ") if prompt else api_key,
-    )
+    api_key = _get_or_prompt(api_key, "Enter Gretel API key: ", DEFAULT_API_ENV_KEY)
+    return Client(host=f"{prefix}.gretel.cloud", api_key=api_key)
 
 
 def project_from_uri(uri: str) -> Project:
@@ -609,7 +621,15 @@ def project_from_uri(uri: str) -> Project:
     omit the API key portion of the URI::
 
         gretel://api.gretel.cloud/my_project
+
+    Note:
+        If ``uri`` is "prompt", and your GRETEL_URI is unset,
+        you will be prompted to enter a URI. If "prompt_always" is set,
+        you will always be prompted for a project URI, even if a URI is
+        already set on the environment. This is useful for
+        Jupyter Notebooks, etc.
     """
+    uri = _get_or_prompt(uri, "Enter Gretel Project URI: ", DEFAULT_PROJECT_URI)
     parts = urlparse(uri)
 
     if parts.scheme != "gretel":

@@ -180,6 +180,34 @@ def test_get_cloud_client_prompt(getenv, getpass, Client):
     Client.assert_called_with(host="api.gretel.cloud", api_key="abc123")
 
 
+@patch("gretel_client.client.get_cloud_client")
+@patch("gretel_client.client.getpass")
+@patch("gretel_client.client.os.getenv")
+def test_get_project_from_uri_prompt(getenv, getpass, gcc):
+    test_uri = "gretel://token@api.gretel.cloud/test_proj"
+    # when no env is set and prompt is true, ask for gretel key
+    getenv.return_value = None
+    getpass.return_value = test_uri
+    project_from_uri("prompt")
+    assert getpass.call_count == 1
+
+    # when api key is set, and prompt is true, use api key
+    getenv.return_value = test_uri
+    project_from_uri("prompt")
+    gcc.assert_called_with('api', 'token')
+    assert getpass.call_count == 1
+
+    # when api key is set and prompt always is true, ask for api key
+    project_from_uri("prompt_always")
+    assert getpass.call_count == 2
+
+    # use api key env variable
+    gcc.reset_mock()
+    project_from_uri(test_uri)
+    gcc.assert_called_with('api', 'token')
+
+
+
 def test_iter_records(records):
     client = get_cloud_client("api", "abc123xyz")
     client._get = Mock(side_effect=records)
@@ -380,7 +408,8 @@ def test_api_4xx_errors(client: Client):
         client._get("foo", None)
 
 
-def test_project_from_uri_bad_string():
+def test_project_from_uri_bad_string(monkeypatch):
+    monkeypatch.delenv(DEFAULT_API_ENV_KEY, raising=False)
     with pytest.raises(ValueError) as err:
         project_from_uri("nope")
     assert "URI must start with" in str(err)
