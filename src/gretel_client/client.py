@@ -577,13 +577,11 @@ def _get_or_prompt(
         env_fallback: environment variable lookup key to use as fallback to ``prompt``
             and ``input_key``.
     """
-    if input_key == PROMPT_ALWAYS:
-        return getpass(prompt_message)
     if input_key == PROMPT:
         if os.getenv(env_fallback):
             return os.getenv(env_fallback)
-        else:
-            return getpass(prompt_message)
+    if input_key == PROMPT_ALWAYS or input_key == PROMPT:
+        return getpass(prompt_message)
     return input_key
 
 
