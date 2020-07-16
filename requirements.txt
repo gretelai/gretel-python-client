@@ -5,4 +5,4 @@ ipywidgets==7.5.1
 tqdm==4.45.0
 faker==4.1.1
 dateparser==0.7.6
-pycryptodome==3.9.7
+pycryptodome==3.9.8

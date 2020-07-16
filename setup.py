@@ -29,7 +29,7 @@ setup(
     install_requires=[
         'dateparser==0.7.6',
         'faker==4.1.1',
-        'pycryptodome==3.9.7',
+        'pycryptodome==3.9.8',
         'requests',
         'smart_open==1.10.0',
         'tqdm==4.45.0',
