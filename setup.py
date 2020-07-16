@@ -27,10 +27,13 @@ setup(
     package_dir={'': 'src'},
     packages=find_packages('src'),
     install_requires=[
+        'dateparser==0.7.6',
+        'faker==4.1.1',
+        'pycryptodome==3.9.7',
         'requests',
         'smart_open==1.10.0',
         'tqdm==4.45.0',
-        'tenacity==6.2.0'
+        'tenacity==6.2.0',
     ],
     extras_require={
         'pandas': ['pandas==1.0.3'],

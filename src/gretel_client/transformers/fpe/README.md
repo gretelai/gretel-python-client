@@ -1,0 +1,2 @@
+Some functions in this sub-package are modified from Capital One's https://github.com/capitalone/fpe implementation 
+for specific Gretel use cases. The copy of these functions’ license is found in LICENSE (Apache).

@@ -1,0 +1,62 @@
+from gretel_client.transformers.fpe.crypto_aes import AESCipher, Mode
+
+
+def test_crypto_aes():
+    test_object = memoryview(b"I am a not so fancy test object!")
+    test_object2 = memoryview(b"I am another fancirt tst object!")
+    # test_object = memoryview(b"I am a not so fa")
+    test_cipher = memoryview(bytearray(len(test_object)))
+    test_decipher = memoryview(bytearray(len(test_object)))
+    test_cipher2 = memoryview(bytearray(len(test_object)))
+    test_decipher2 = memoryview(bytearray(len(test_object)))
+
+    aes_cipher = AESCipher(
+        "12345678901234567890123456789012".encode(), mode=Mode.CBC_FAST
+    )
+    aes_cipher2 = AESCipher(
+        "12345678901234567890123456789012".encode(), mode=Mode.CBC_FAST
+    )
+    aes_cipher.encrypt_blocks(test_cipher, test_object)
+    aes_cipher.reset_cipher()
+    aes_cipher.encrypt_blocks(test_cipher2, test_object2)
+    aes_cipher.reset_cipher()
+    aes_cipher.decrypt_blocks(test_decipher2, test_cipher2)
+    aes_cipher.reset_cipher()
+    aes_cipher.decrypt_blocks(test_decipher, test_cipher)
+    assert test_decipher.tobytes() == test_object.tobytes()
+    aes_cipher2.encrypt_blocks(test_cipher2, test_object)
+    aes_cipher2.decrypt_blocks(test_decipher2, test_cipher2)
+    assert test_decipher2.tobytes() == test_object.tobytes()
+    assert test_cipher2.tobytes() == test_cipher.tobytes()
+    aes_cipher.reset_cipher()
+    aes_cipher.encrypt(test_cipher, test_object)
+    aes_cipher.decrypt(test_decipher, test_cipher)
+    assert test_decipher.tobytes() == test_object.tobytes()
+
+    aes_cipher = AESCipher("12345678901234567890123456789012".encode(), mode=Mode.ECB)
+    aes_cipher2 = AESCipher("12345678901234567890123456789012".encode(), mode=Mode.ECB)
+    aes_cipher.encrypt_blocks(test_cipher, test_object)
+    aes_cipher.decrypt_blocks(test_decipher, test_cipher)
+    assert test_decipher.tobytes() == test_object.tobytes()
+    aes_cipher2.encrypt_blocks(test_cipher2, test_object)
+    aes_cipher2.decrypt_blocks(test_decipher2, test_cipher2)
+    assert test_decipher2.tobytes() == test_object.tobytes()
+    assert test_cipher2.tobytes() == test_cipher.tobytes()
+    aes_cipher.encrypt(test_cipher, test_object)
+    aes_cipher.decrypt(test_decipher, test_cipher)
+    assert test_decipher.tobytes() == test_object.tobytes()
+
+    aes_cipher = AESCipher("12345678901234567890123456789012".encode(), mode=Mode.CBC)
+    aes_cipher2 = AESCipher("12345678901234567890123456789012".encode(), mode=Mode.CBC)
+    aes_cipher.encrypt_blocks(test_cipher, test_object)
+    aes_cipher.encrypt_blocks(test_cipher2, test_object2)
+    aes_cipher.decrypt_blocks(test_decipher2, test_cipher2)
+    aes_cipher.decrypt_blocks(test_decipher, test_cipher)
+    assert test_decipher.tobytes() == test_object.tobytes()
+    aes_cipher2.encrypt_blocks(test_cipher2, test_object)
+    aes_cipher2.decrypt_blocks(test_decipher2, test_cipher2)
+    assert test_decipher2.tobytes() == test_object.tobytes()
+    assert test_cipher2.tobytes() == test_cipher.tobytes()
+    aes_cipher.encrypt(test_cipher, test_object)
+    aes_cipher.decrypt(test_decipher, test_cipher)
+    assert test_decipher.tobytes() == test_object.tobytes()
