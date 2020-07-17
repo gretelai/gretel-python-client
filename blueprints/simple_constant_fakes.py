@@ -17,7 +17,11 @@ SOURCE = [
         "guest": "Seamus O'Toole",
         "location": "Washington DC",
     },
-    {"activity": "Wedding Crasher", "guest": "Bobby O'Shea", "location": "Baltimore"},
+    {
+        "activity": "Wedding Crasher",
+        "guest": "Bobby O'Shea",
+        "location": "Baltimore"
+    },
 ]
 
 guest_xf = FakeConstantConfig(seed=SEED, fake_method="name")
@@ -37,7 +41,11 @@ for record in SOURCE:
     results.append(pipe.transform_record(record))
 
 assert results == [
-    {"activity": "Wedding Crasher", "guest": "Sean Johnson", "location": "Smithtown"},
+    {
+        "activity": "Wedding Crasher",
+        "guest": "Sean Johnson",
+        "location": "Smithtown"
+    },
     {
         "activity": "Wedding Crasher",
         "guest": "Christopher Obrien",

@@ -10,8 +10,8 @@ class BucketError(Exception):
 
 
 class BucketRange:
-    def __init__(self, buckets: List[Tuple], *, labels: List[str] = None, min_label='MIN_BUCKET',
-                 max_label='MAX_BUCKET',
+    def __init__(self, buckets: List[Tuple], *, labels: Union[List[Number], List[str]] = None, min_label=None,
+                 max_label=None,
                  auto_label_prefix='BUCKET_'):
         # buckets should be all strings or all numbers
         str_check = [isinstance(item[0], str) and isinstance(item[1], str) for item in buckets]
@@ -22,8 +22,8 @@ class BucketRange:
         if not labels:
             labels = [auto_label_prefix + str(x) for x in range(len(buckets))]
         self.labels = labels
-        self.min_bucket = min_label
-        self.max_bucket = max_label
+        self.min_bucket = min_label if min_label is not None else labels[0]
+        self.max_bucket = max_label if max_label is not None else labels[-1]
 
 
 @dataclass(frozen=True)
