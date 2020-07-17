@@ -114,5 +114,8 @@ class DataRestorePipeline(DataPipeline):
             sorted([(k, v) for k, v in xform_payload_record.items()])
         )
         return DataTransformPipeline.build_return_record(
-            xform_payload_record, record_key, xform_payload_metadata_fields, gretel_id
+            dict(xform_payload_record),
+            record_key,
+            xform_payload_metadata_fields,
+            gretel_id
         )
