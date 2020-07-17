@@ -8,7 +8,7 @@ try:
 except ImportError:
     from typing import Pattern
 
-from gretel_client.transformers.base import Transformer, TransformerConfig
+from gretel_client.transformers.base import Transformer, TransformerConfig, factory
 
 GRETEL_ID = "gretel_id"
 FIELDS = "fields"
@@ -63,7 +63,7 @@ class DataPath:
         self.output_field = output
         if xforms:
             transform_configs = list(flatten(xforms))
-            self.transformations = [Transformer(config) for config in transform_configs]
+            self.transformations = [factory(config) for config in transform_configs]
 
 
 class _DataPathLight:

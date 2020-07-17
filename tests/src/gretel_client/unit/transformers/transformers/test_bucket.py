@@ -1,7 +1,7 @@
 import pytest
 
 from gretel_client.transformers.base import factory
-from gretel_client.transformers.data_transform_pipeline import DataTransformPipeline, DataPath
+from gretel_client.transformers import DataTransformPipeline, DataPath
 from gretel_client.transformers.transformers.bucket import BucketRange, BucketConfig
 
 

@@ -1,15 +1,8 @@
 import collections
-import fnmatch
-import re
 from typing import List, Union
 
 from gretel_client.transformers.data_pipeline import DataPipeline
-from gretel_client.transformers.base import Transformer, TransformerConfig, factory
-
-try:
-    from re import Pattern
-except ImportError:
-    from typing import Pattern
+from gretel_client.transformers.base import Transformer
 
 
 GRETEL_ID = "gretel_id"
@@ -30,41 +23,6 @@ def flatten(container):
                 yield i
     else:
         yield container
-
-
-class DataPath:
-    """This class is a container for transformers describing each records transformations. It can also be used to
-    transform the output field name.
-
-    It constructs the transformer instances from a list of transformer config objects and is used to process records
-    based on the order of transformations as specified by the order of the transformer config object list.
-
-    Args:
-        input: input field name. Can be glob patterns similar to file path matching.
-        xforms: list of transformer config objects. These transformations will be applied to the data.
-        output: output field name. The output value will be written into this key.
-    Returns:
-        An instance of ``DataPath``
-    """
-
-    input_field_matcher: Pattern
-    input_field: str
-    output_field: str
-    transformations: List[Transformer] = None
-
-    def __init__(
-        self,
-        *,
-        input: str,
-        xforms: Union[List[TransformerConfig], TransformerConfig] = None,
-        output: str = None
-    ):
-        self.input_field_matcher = re.compile(fnmatch.translate(input))
-        self.input_field = input
-        self.output_field = output
-        if xforms:
-            transform_configs = list(flatten(xforms))
-            self.transformations = [factory(config) for config in transform_configs]
 
 
 class _DataPathLight:

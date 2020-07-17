@@ -17,9 +17,8 @@ VERSION=$(shell $(PYTHON) -c "import setuptools_scm;print(setuptools_scm.get_ver
 
 .PHONY: setup
 setup:
-	$(PIP) install -U -e .
+	$(PIP) install -U -e ".[fpe]"
 	$(PIP) install -r dev-requirements.txt
-	$(PIP) install dataclasses
 
 
 .PHONY: lint

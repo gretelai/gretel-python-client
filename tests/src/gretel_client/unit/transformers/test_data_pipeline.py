@@ -1,6 +1,6 @@
 from gretel_client.transformers.base import FieldRef
 from gretel_client.transformers.data_restore_pipeline import DataRestorePipeline
-from gretel_client.transformers.data_transform_pipeline import DataTransformPipeline, DataPath
+from gretel_client.transformers import DataTransformPipeline, DataPath
 from gretel_client.transformers.data_transform_pipeline import RECORD_KEYS
 from gretel_client.transformers.fpe import crypto_aes
 from gretel_client.transformers.transformers.bucket import BucketRange, BucketConfig
