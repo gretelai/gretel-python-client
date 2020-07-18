@@ -23,7 +23,6 @@ class RestoreTransformerConfig(TransformerConfig):
 
     Should not need to be used directly.
     """
-    ...
 
 
 class RestoreTransformer(Transformer):

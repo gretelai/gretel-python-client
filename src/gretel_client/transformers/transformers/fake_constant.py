@@ -3,60 +3,7 @@ from numbers import Number
 from typing import Tuple, Optional, Union, List
 
 from gretel_client.transformers.base import TransformerConfig, Transformer
-from gretel_client.transformers.fakers import Fakers
-
-# this maps Gretel Entity labels => Faker methods
-
-
-FAKER_MAP = {
-    "aba_routing_number": None,
-    "age": None,
-    "city": "city",
-    "credit_card_number": "credit_card_number",
-    "date": "date_between",
-    "datetime": "date_time",
-    "date_of_birth": "date_between",
-    "domain_name": "domain_name",
-    "email_address": "email",
-    "ethnic_group": None,
-    "first_name": "first_name",
-    "gcp_credentials": None,
-    "gender": None,
-    "hostname": "hostname",
-    "iban_code": "iban",
-    "icd9_code": None,
-    "icd10_code": None,
-    "imei_hardware_id": None,
-    "imsi_subscriber_id": None,
-    "ip_address": "ipv4_public",
-    "last_name": "last_name",
-    "latitude": "latitude",
-    "transform_latlon_1km": None,
-    "transform_latitude_1km": None,
-    "location": None,
-    "longitude": "longitude",
-    "transform_longitude_1km": None,
-    "mac_address": "mac_address",
-    "passport": None,
-    "person_name": "name",
-    "norp_group": None,
-    "phone_number": "phone_number",
-    "phone_number_namer": "phone_number",
-    "organization_name": "company",
-    "swift_code": None,
-    "time": "time",
-    "url": "url",
-    "us_social_security_number": "ssn",
-    "us_state": None,
-    "us_zip_code": "postcode",
-    "gpe": None,
-    "user_id": None,
-}
-"""A mapping of Gretel Entities to Faker methods that are used to generate
-fake values.  The keys of this mapping should be used as the ``fake_method``
-param when creating a configuration.  If the value is ``None`` then that entity
-is currently not suported for fake generation. """
-
+from gretel_client.transformers.fakers import _Fakers, FAKER_MAP
 
 VALID_LABELS = [key for key, value in FAKER_MAP.items() if value]
 
@@ -87,7 +34,7 @@ class FakeConstant(Transformer):
 
     def __init__(self, config: FakeConstantConfig):
         super().__init__(config)
-        self.faker = Fakers(
+        self.faker = _Fakers(
             seed=config.seed, locales=config.locales, locale_seed=config.locale_seed
         )
         self.fake_method = config.fake_method

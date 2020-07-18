@@ -2,7 +2,7 @@ import pytest
 from faker import Faker
 
 from gretel_client.transformers.base import factory
-from gretel_client.transformers.fakers import Fakers
+from gretel_client.transformers.fakers import _Fakers
 from gretel_client.transformers.transformers.fake_constant import (
     FakeConstantConfig,
     FAKER_MAP,
@@ -38,7 +38,7 @@ def test_fake_constant():
 
 def test_faker_map():
     faker_lib = Faker()
-    fakers = Fakers(seed=54321, locales=None, locale_seed=0)
+    fakers = _Fakers(seed=54321, locales=None, locale_seed=0)
     new_fake_value = {}
     num_fakers = sum(1 for _ in filter(None.__ne__, FAKER_MAP.values()))
     for key, val in FAKER_MAP.items():
@@ -63,7 +63,7 @@ def test_faker_locales():
 def test_faker_locales_seed_randomize():
     name_set = set()
     locales = ["tr-TR", "es-MX"]
-    for i in range(10):
+    for _ in range(10):
         fake_config = FakeConstantConfig(
             locales=locales, seed=12345, fake_method="name", locale_seed=None
         )

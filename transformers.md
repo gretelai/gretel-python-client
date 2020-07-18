@@ -1,11 +1,11 @@
-# Gretel Transformers
+# Introduction: Gretel Transformers
 
 Welcome to the Gretel Transformers documentation!  Here we will introduce you to the concepts in the Transformers sub-package and
 provide some basic tutorials for getting started.
 
 For more advanced usage, please refer to our tutorials / guides on [our blog](https://www.medium.com/gretel-ai).
 
-## Introduction
+## Basics
 
 Our Transformers SDK allows the transformation of data records, generally in the form of a Python dictionary, at two different levels:
 

@@ -1,10 +1,14 @@
+"""This module contains the interfaces for transformation restore pipelines.  The primary interface here
+for users is the ``DataRestorePipeline`` which can be used to reverse the transforms done in a previous
+transform pipeline. It will only restore transforms for the transformers that have explicit restore
+capabilities.
+"""
 import collections
 from typing import List
 
-from gretel_client.transformers.data_pipeline import DataPipeline
+from gretel_client.transformers.data_pipeline import DataPipeline, _DataPathLight
 from gretel_client.transformers.data_transform_pipeline import (
     DataTransformPipeline,
-    _DataPathLight,
     METADATA,
     FIELDS,
 )
@@ -12,16 +16,19 @@ from gretel_client.transformers.restore import RestoreTransformer
 
 
 class DataRestorePipeline(DataPipeline):
-    """This class is a container for data paths describing a records transformations.
+    """This class is a container for data paths describing a record restore transformation.
+
+    This class is used to reverse the transformations that were made previously. Not all transformations
+    are reversable. This pipeline only acts on transformers that have a restore capability.
 
     It constructs a data pipeline from a list of ``DataPath`` objects and is used to process records
     based on the order of the data path list. You can think of it as a bundle of data paths.
 
-    Returns:
-        An instance of ``DataTransformPipeline``
+    Args:
+        data_paths: A list of ``DataPath`` instances.
     """
 
-    def build_datapath_list_restore(self, data_fields) -> List[_DataPathLight]:
+    def _build_datapath_list_restore(self, data_fields) -> List[_DataPathLight]:
         data_path_list = []
         record_fields = set(data_fields.keys())
         fields_to_process = []
@@ -55,17 +62,23 @@ class DataRestorePipeline(DataPipeline):
         return data_path_list
 
     def transform_record(self, payload: dict):
+        """Restore elligible fields to their original values. Only Transformations that have
+        restore capabilities will be reversed. Any other transforms that were done that
+        do not have a restore mode will remain the same.
+
+        Originally un-transformed fields will also remain the same
+        """
         (
             data_fields,
             record_key,
             _,
             gretel_id,
-        ) = DataTransformPipeline.get_data_and_schema(payload)
+        ) = DataTransformPipeline._get_data_and_schema(payload)
         if not data_fields:
             raise ValueError("Record does not seem to contain data.")
         xform_payload_record = {}
         xform_payload_metadata_fields = {}
-        data_path_list = self.build_datapath_list_restore(data_fields)
+        data_path_list = self._build_datapath_list_restore(data_fields)
 
         meta_fields = payload.get(METADATA, {}).get(FIELDS, {})
         for data_path in data_path_list:
@@ -113,7 +126,7 @@ class DataRestorePipeline(DataPipeline):
         xform_payload_record = collections.OrderedDict(
             sorted([(k, v) for k, v in xform_payload_record.items()])
         )
-        return DataTransformPipeline.build_return_record(
+        return DataTransformPipeline._build_return_record(
             dict(xform_payload_record),
             record_key,
             xform_payload_metadata_fields,

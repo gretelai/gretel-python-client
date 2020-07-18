@@ -1,6 +1,11 @@
+"""
+This module contains the base class for both "forward" and "reverse" transformer pipelines.
+
+The primary interface that this module makes available to users is the ``DataPath`` class.
+"""
 import fnmatch
 import re
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import List, Union, Tuple
 
 try:
@@ -19,11 +24,11 @@ DATA = "data"
 RECORD_KEYS = [RECORD, DATA]
 
 
-def flatten(container):
+def _flatten(container):
     if isinstance(container, (list, tuple)):
         for i in container:
             if isinstance(i, (list, tuple)):
-                yield from flatten(i)
+                yield from _flatten(i)
             else:
                 yield i
     else:
@@ -62,7 +67,7 @@ class DataPath:
         self.input_field = input
         self.output_field = output
         if xforms:
-            transform_configs = list(flatten(xforms))
+            transform_configs = list(_flatten(xforms))
             self.transformations = [factory(config) for config in transform_configs]
 
 
@@ -81,6 +86,9 @@ class _DataPathLight:
         self.output_field = output_field
         self.transformations = transformations
 
+    def get_data_path_transformations(self):
+        return self.transformations or []
+
 
 class DataPipeline(ABC):
     """This class is a container for data paths describing a records transformations.
@@ -90,8 +98,6 @@ class DataPipeline(ABC):
 
     Args:
         data_paths: a list of data paths containing the desired input fields for processing.
-    Returns:
-        An instance of ``DataTransformPipeline``
     """
 
     data_paths: List[DataPath]
@@ -100,7 +106,7 @@ class DataPipeline(ABC):
         self.data_paths = data_paths
 
     @staticmethod
-    def get_data_and_schema(input_payload) -> Tuple[dict, str, dict, str]:
+    def _get_data_and_schema(input_payload) -> Tuple[dict, str, dict, str]:
         """Given the payload to transform, check if the payload came from the Gretel
         API or is just a vanilla dict payload to transform.
 
@@ -129,7 +135,7 @@ class DataPipeline(ABC):
         return record_data, record_key, meta_data, gretel_id
 
     @staticmethod
-    def build_return_record(record_data, record_key, meta_data_fields, gretel_id):
+    def _build_return_record(record_data, record_key, meta_data_fields, gretel_id):
         if record_key in RECORD_KEYS:
             return {
                 record_key: record_data,
@@ -138,7 +144,7 @@ class DataPipeline(ABC):
         else:
             return record_data
 
-    def build_datapath_list(self, data_fields):
+    def _build_datapath_list(self, data_fields) -> List[_DataPathLight]:
         data_path_list = []
         fields_to_process = set(data_fields.keys())
         for data_path in self.data_paths:
@@ -155,5 +161,6 @@ class DataPipeline(ABC):
                 )
         return data_path_list
 
-    def transform_record(self, payload: dict):
+    @abstractmethod
+    def transform_record(self, payload: dict) -> dict:
         pass

@@ -8,12 +8,20 @@
    :caption: Contents:
 
 
-API Reference
---------------
+Client API Bindings
+---------------------
 .. toctree::
    :maxdepth: 2
 
-   api/api_ref
+   api_bindings/api_ref
+
+
+Gretel Transformers
+--------------------
+.. toctree::
+   :maxdepth: 2
+
+   transformers/api_ref
 
 CLI Tool
 ========

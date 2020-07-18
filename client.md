@@ -1,10 +1,10 @@
-# API Bindings
+# Introduction: Client
 
 The Gretel Python Client allows you to interact with the Gretel REST API.  Where possible, we have added specific conveinence to help auto-manage things like ingest of large amounts of records. Please see the getting started section and the module documentation for more details.
 
 In order to use this client, you must have a valid API key. Please login to [our console](https://console.gretel.cloud) in order to get one.
 
-# Installation
+## Installation
 
 For basic installation:
 
@@ -18,7 +18,7 @@ If you are working with Pandas and wish to enable the features for working with 
 $ pip install gretel-client[pandas]
 ```
 
-# Getting Started
+## Getting Started
 
 The easiest way to get started is by creating a `Project` instance that allows you to directly interface with a Gretel project.
 
