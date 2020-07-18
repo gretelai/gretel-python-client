@@ -4,6 +4,7 @@ from .conditional import ConditionalConfig
 from .date_shift import DateShiftConfig
 from .drop import DropConfig
 from .fake_constant import FakeConstantConfig
+from .format import FormatConfig
 from .redact_with_char import RedactWithCharConfig
 from .redact_with_label import RedactWithLabelConfig
 from .redact_with_string import RedactWithStringConfig
@@ -19,6 +20,7 @@ __all__ = [
     "DateShiftConfig",
     "DropConfig",
     "FakeConstantConfig",
+    "FormatConfig",
     "RedactWithCharConfig",
     "RedactWithLabelConfig",
     "RedactWithStringConfig",
