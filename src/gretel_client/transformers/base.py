@@ -13,7 +13,16 @@ import copy
 from abc import ABC
 from dataclasses import dataclass
 from numbers import Number
-from typing import Mapping, Optional, Tuple, Union, List
+from typing import Mapping, Optional, Tuple, Union, List, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from gretel_client.transformers.restore import (
+        RestoreTransformerConfig,
+        RestoreTransformer,
+    )
+else:
+    RestoreTransformer = None
+    RestoreTransformerConfig = None
 
 
 @dataclass(frozen=True)
@@ -23,6 +32,7 @@ class TransformerConfig(ABC):
 
     Should not need to be used directly.
     """
+
     labels: List[str] = None
 
     def __getstate__(self):
@@ -42,6 +52,7 @@ class FieldRef:
     This object can be used as input to the ``tweak``
     param for certain transformer configs.
     """
+
     field_name: Union[List[str], str]
     radix: int = 10
     value: Union[List[str], List[Number], str, Number] = None
@@ -60,7 +71,7 @@ class Transformer:
     will use. Does not need to be modified or used directly
     """
 
-    entity_sort_criterion = 'start'
+    entity_sort_criterion = "start"
 
     def __init__(self, config: TransformerConfig):
         """Create a Transformer.
@@ -75,13 +86,20 @@ class Transformer:
         """
         self.transform_entity_func = None
         self.labels = frozenset(config.labels or [])
-        self.field_ref_dict = dict([(item[0], item[1]) for item in config.__dict__.items()
-                                    if isinstance(item[1], FieldRef)])
+        self.field_ref_dict = dict(
+            [
+                (item[0], item[1])
+                for item in config.__dict__.items()
+                if isinstance(item[1], FieldRef)
+            ]
+        )
 
     def _get_field_ref(self, ref: str) -> FieldRef:
         return self.field_ref_dict.get(ref)
 
-    def transform_entities(self, value: Union[Number, str], meta: dict) -> Tuple[Optional[str], dict]:
+    def transform_entities(
+        self, value: Union[Number, str], meta: dict
+    ) -> Tuple[Optional[str], dict]:
         """
          Transforms all, labeled entities that occur within a field. This is the primary entrypoint
          and should not be overloaded. We maintain this as the single entrypoint so that we can check if the
@@ -104,16 +122,20 @@ class Transformer:
 
         self.transform_entity_func = self.transform_entity
         # Sort NER entities according to the criterion.
-        entities = sorted(meta.get('ner', {}).get('labels', []),
-                          key=lambda lbl: lbl[Transformer.entity_sort_criterion])
+        entities = sorted(
+            meta.get("ner", {}).get("labels", []),
+            key=lambda lbl: lbl[Transformer.entity_sort_criterion],
+        )
 
         return self._transform_entities_base(value, meta, entities)
 
-    def _transform_entities_base(self, value: Union[Number, str], meta: dict, entities) -> Tuple[Optional[str], dict]:
+    def _transform_entities_base(
+        self, value: Union[Number, str], meta: dict, entities
+    ) -> Tuple[Optional[str], dict]:
         # check if any entities should trigger a total field drop
-        all_ents = frozenset(e['label'] for e in entities)
+        all_ents = frozenset(e["label"] for e in entities)
 
-        if self.__class__.__name__ == 'Drop':
+        if self.__class__.__name__ == "Drop":
             if not self.labels.isdisjoint(all_ents):
                 return None, {}
 
@@ -123,7 +145,9 @@ class Transformer:
 
         if isinstance(value, Number):
             for ent_label in all_ents:  # unlikely this is > 1, but just incase
-                transformed_value_entities = self.transform_entity_func(ent_label, value)
+                transformed_value_entities = self.transform_entity_func(
+                    ent_label, value
+                )
                 if transformed_value_entities is not None:
                     # NOTE(jm): take the first successful transform
                     # if we run into a situation where a number
@@ -133,12 +157,16 @@ class Transformer:
                 else:
                     return str(value), copy.deepcopy(meta)
 
-        transformed_value, transformed_entities = self._transform_recursive(value, entities, None)
+        transformed_value, transformed_entities = self._transform_recursive(
+            value, entities, None
+        )
         transformed_meta = copy.deepcopy(meta)
-        transformed_meta['ner']['labels'] = transformed_entities
+        transformed_meta["ner"]["labels"] = transformed_entities
         return transformed_value, transformed_meta
 
-    def transform_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[str, str]]:
+    def transform_entity(
+        self, label: str, value: Union[Number, str]
+    ) -> Optional[Tuple[str, str]]:
         """
         Transforms a single, labeled entity that occurs within a field. This is the primary entrypoint
         and should not be overloaded. We maintain this as the single entrypoint so that we can check if the
@@ -155,17 +183,23 @@ class Transformer:
             or if the transformer does not apply to the provided label.
         """
         if label and label in self.labels:
-            new_label, new_value = self._transform_entity(label, value)  # pylint: disable=assignment-from-no-return
+            new_label, new_value = self._transform_entity(  # pylint: disable=assignment-from-no-return
+                label, value
+            )
             if new_value:
                 return new_label, new_value
         return label, value
 
-    def _transform_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
+    def _transform_entity(
+        self, label: str, value: Union[Number, str]
+    ) -> Optional[Tuple[Optional[str], str]]:
         """This method should be overloaded by subclasses as it implements the actual logic
         """
         ...
 
-    def transform_field(self, field: str, value: Union[Number, str], field_meta: Optional[dict]) -> Mapping[str, str]:
+    def transform_field(
+        self, field: str, value: Union[Number, str], field_meta: Optional[dict]
+    ) -> Mapping[str, str]:
         """
         Transforms a field within a record. The result of the transform can be multiple fields (including None),
         represented as a dict mapping each field name to its value.
@@ -182,9 +216,12 @@ class Transformer:
     def _transform_field(self, field: str, value: Union[Number, str], field_meta):
         return {}
 
-    def _transform_recursive(self, value: Union[Number, str], entities: List[dict],
-                             transformed_entities: Union[List[dict], None]) -> (
-            Union[Number, str], dict):
+    def _transform_recursive(
+        self,
+        value: Union[Number, str],
+        entities: List[dict],
+        transformed_entities: Union[List[dict], None],
+    ) -> (Union[Number, str], dict):
         """
         Performs a recursive transformation.
 
@@ -203,39 +240,55 @@ class Transformer:
         while entities:
             current_entity, *entities = entities
             current_entity = copy.deepcopy(current_entity)
-            transform_result = self.transform_entity_func(current_entity['label'], current_entity['text'])
+            transform_result = self.transform_entity_func(
+                current_entity["label"], current_entity["text"]
+            )
             new_label, new_text = transform_result
 
             # Partition the entity list into a left and right part.
             # This may drop entities which are not fully contained in the left or right part, respectively, which is
             # okay.
-            left_entities = [ent for ent in entities if ent['end'] <= current_entity['start']]
+            left_entities = [
+                ent for ent in entities if ent["end"] <= current_entity["start"]
+            ]
             right_entities = [
-                {**ent, 'start': ent['start'] - current_entity['end'], 'end': ent['end'] - current_entity['end']}
-                for ent in entities if ent['start'] >= current_entity['end']
+                {
+                    **ent,
+                    "start": ent["start"] - current_entity["end"],
+                    "end": ent["end"] - current_entity["end"],
+                }
+                for ent in entities
+                if ent["start"] >= current_entity["end"]
             ]
 
-            left_transformed_value, left_transformed_entity = self._transform_recursive(value[:current_entity['start']],
-                                                                                        left_entities,
-                                                                                        transformed_entities)
+            left_transformed_value, left_transformed_entity = self._transform_recursive(
+                value[: current_entity["start"]], left_entities, transformed_entities
+            )
             if len(left_transformed_entity) > 0:
-                raise Exception("_transform_recursive was called with an unsorted entity list.")
+                raise Exception(
+                    "_transform_recursive was called with an unsorted entity list."
+                )
 
-            right_transformed_value, right_transformed_entity = self._transform_recursive(value[current_entity['end']:],
-                                                                                          right_entities,
-                                                                                          transformed_entities)
+            (
+                right_transformed_value,
+                right_transformed_entity,
+            ) = self._transform_recursive(
+                value[current_entity["end"]:], right_entities, transformed_entities
+            )
 
             # Stitch together the new field value.
-            transformed_value = left_transformed_value + new_text + right_transformed_value
+            transformed_value = (
+                left_transformed_value + new_text + right_transformed_value
+            )
 
             right_offset = len(left_transformed_value) + len(new_text)
             for entity in right_transformed_entity:
-                entity['start'] += right_offset
-                entity['end'] += right_offset
+                entity["start"] += right_offset
+                entity["end"] += right_offset
 
-            current_entity['end'] = len(new_text) + current_entity['start']
-            current_entity['text'] = new_text
-            current_entity['label'] = new_label
+            current_entity["end"] = len(new_text) + current_entity["start"]
+            current_entity["text"] = new_text
+            current_entity["label"] = new_label
             transformed_entities.insert(0, current_entity)
             return transformed_value, transformed_entities
 
@@ -254,7 +307,9 @@ def _build_config_map(cls, _map=None):
     return _map
 
 
-def factory(config: TransformerConfig) -> Transformer:
+def factory(
+    config: Union[TransformerConfig, RestoreTransformerConfig]
+) -> Union[Transformer, RestoreTransformer]:
     """Factory that returns a ``Transformer`` subclass instance.
 
     Given a specific config, we will enumerate all of the mappings
