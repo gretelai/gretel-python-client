@@ -12,8 +12,4 @@ The Gretel REST API provides automated data labeling that generates a metadata r
 
 The transformer interfaces may be used with un-labeled data as well and operate directly on Python dictionaries if desired.
 
-Get [started here](client.md) with our REST API bindings.
-
-**OR**
-
-Dive into our [Gretel Transformer](transformers.md) interfaces.
+Please check out `client.md` or `transformers.md` for a quick start on these packages or check them out in [our documentation.]((https://gretel-client.readthedocs.io/en/stable/?badge=stable))
