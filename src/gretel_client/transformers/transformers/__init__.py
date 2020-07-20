@@ -1,4 +1,4 @@
-from .bucket import BucketConfig, BucketRange
+from .bucket import BucketConfig
 from .combine import CombineConfig
 from .conditional import ConditionalConfig
 from .date_shift import DateShiftConfig
@@ -14,7 +14,6 @@ from .secure_hash import SecureHashConfig
 
 __all__ = [
     "BucketConfig",
-    "BucketRange",
     "CombineConfig",
     "ConditionalConfig",
     "DateShiftConfig",

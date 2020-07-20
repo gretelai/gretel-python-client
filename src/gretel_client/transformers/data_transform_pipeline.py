@@ -43,8 +43,10 @@ class DataTransformPipeline(DataPipeline):
             field = data_path.input_field
             value = data_fields.get(field)
             meta = meta_fields.get(field)
+            print(f"field, value, meta: {field}, {value}, {meta}")
             for transformation in data_path.get_data_path_transformations():
                 if transformation.labels:
+                    print("in if trs.labels")
                     if meta:
                         value, meta = transformation.transform_entities(value, meta)
                         if not value:
