@@ -660,3 +660,60 @@ def test_record_fpe_base62():
     assert check == '5931468769662449'
     check = rf.transform_record(xf_payload)
     assert check == rec
+
+
+def test_record_fpe_mask():
+    rec = {'latitude': -70.783, 'longitude': -112.221, 'credit_card': '4123 5678 9123 4567', 'the_dude': 100000000,
+           'the_hotness': "convertme", "the_sci_notation": 1.23E-7}
+    cc_xf = [FormatConfig(pattern=r'\s+', replacement=''),
+             SecureFpeConfig(
+                 secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94", radix=10,
+                 mask='*XXXXXXXXXXXXXXX', mask_fpe_char='X')]
+
+    data_paths = [DataPath(input='credit_card', xforms=cc_xf)]
+    xf = DataTransformPipeline(data_paths)
+    rf = DataRestorePipeline(data_paths)
+    xf_payload = xf.transform_record(rec)
+    check = xf_payload.get('credit_card')
+    assert check == '4599631908097107'
+    rf_payload = rf.transform_record(xf_payload)
+    check = rf_payload.get('credit_card')
+    assert check == '4123567891234567'
+    cc_xf = [SecureFpeConfig(
+        secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94", radix=10,
+        mask='1000 0000 0000 0000')]
+    data_paths = [DataPath(input='credit_card', xforms=cc_xf)]
+    xf = DataTransformPipeline(data_paths)
+    rf = DataRestorePipeline(data_paths)
+    xf_payload = xf.transform_record(rec)
+    check = xf_payload.get('credit_card')
+    assert check == '4599 6319 0809 7107'
+    rf_payload = rf.transform_record(xf_payload)
+    check = rf_payload.get('credit_card')
+    assert check == '4123 5678 9123 4567'
+    cc_xf = [FormatConfig(pattern=r'\s+', replacement=''),
+             SecureFpeConfig(
+                 secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94", radix=10,
+                 mask='1000000000000000')]
+
+    data_paths = [DataPath(input='credit_card', xforms=cc_xf)]
+    xf = DataTransformPipeline(data_paths)
+    rf = DataRestorePipeline(data_paths)
+    xf_payload = xf.transform_record(rec)
+    check = xf_payload.get('credit_card')
+    assert check == '4599631908097107'
+    rf_payload = rf.transform_record(xf_payload)
+    check = rf_payload.get('credit_card')
+    assert check == '4123567891234567'
+    cc_xf = [SecureFpeConfig(
+        secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94", radix=10,
+        mask='1000 0000 0000 0000')]
+    data_paths = [DataPath(input='credit_card', xforms=cc_xf)]
+    xf = DataTransformPipeline(data_paths)
+    rf = DataRestorePipeline(data_paths)
+    xf_payload = xf.transform_record(rec)
+    check = xf_payload.get('credit_card')
+    assert check == '4599 6319 0809 7107'
+    rf_payload = rf.transform_record(xf_payload)
+    check = rf_payload.get('credit_card')
+    assert check == '4123 5678 9123 4567'
