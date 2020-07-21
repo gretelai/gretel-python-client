@@ -7,13 +7,18 @@ from gretel_client.transformers.base import TransformerConfig, Transformer
 
 @dataclass(frozen=True)
 class RedactWithStringConfig(TransformerConfig):
+    """Redact a string with another custom string.
+
+    Args:
+        string: The string to replace the entire matched span with.
+
+    NOTE:
+        This will redact an entire field or entire matched entity, it does not go char by char
+    """
     string: str = None
 
 
 class RedactWithString(Transformer):
-    """
-    RedactWithString transformer replaces text with a string representation of the field/label it occurs in.
-    """
     config_class = RedactWithStringConfig
 
     def __init__(self, config: RedactWithStringConfig):

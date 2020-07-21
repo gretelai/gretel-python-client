@@ -47,6 +47,11 @@ test-all:
 	$(PYTEST) -s -vv --cov src --cov-report term-missing tests/src/gretel_client/
 
 
+.PHONY: blueprints
+blueprints:
+	ls blueprints/*.py|xargs -n 1 -P 4 python
+
+
 .PHONY: clean
 clean:
 	@rm -rf dist/ build/
