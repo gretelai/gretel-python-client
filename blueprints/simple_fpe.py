@@ -1,7 +1,7 @@
 """
 Basic Format Preserving Encryption
 """
-from gretel_client.transformers.transformers import SecureFpeConfig
+from gretel_client.transformers import SecureFpeConfig
 from gretel_client.transformers import DataPath, DataTransformPipeline
 
 xf = SecureFpeConfig(secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94", radix=10,

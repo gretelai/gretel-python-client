@@ -1,8 +1,7 @@
 import datetime
 
+from gretel_client.transformers import DateShiftConfig
 from gretel_client.transformers.base import FieldRef, factory
-from gretel_client.transformers.restore import RestoreTransformer
-from gretel_client.transformers.transformers.date_shift import DateShiftConfig
 
 
 def test_date_shift():

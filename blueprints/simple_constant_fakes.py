@@ -7,7 +7,7 @@ A seed value is required for the transformers. Using the same seed will
 help ensure that you get the same fake value for any given input value
 """
 from gretel_client.transformers import DataPath, DataTransformPipeline
-from gretel_client.transformers.transformers import FakeConstantConfig
+from gretel_client.transformers import FakeConstantConfig
 
 SEED = 8675309
 

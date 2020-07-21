@@ -2,7 +2,7 @@
 Bucket your data and return a single value for that bucket.
 """
 from gretel_client.transformers import DataPath, DataTransformPipeline
-from gretel_client.transformers.transformers import BucketConfig, BucketRange
+from gretel_client.transformers import BucketConfig, BucketRange
 
 numeric_bucketing_xf = BucketConfig(
     bucket_range=BucketRange(

@@ -1,7 +1,7 @@
 """
 Basic Character Redaction
 """
-from gretel_client.transformers.transformers import RedactWithCharConfig
+from gretel_client.transformers import RedactWithCharConfig
 from gretel_client.transformers import DataPath, DataTransformPipeline
 
 

@@ -10,65 +10,43 @@ from gretel_client.transformers.fpe.crypto_aes import Mode
 from gretel_client.transformers.fpe.fpe_ff1 import FpeFf1
 from gretel_client.transformers.restore import RestoreTransformerConfig, RestoreTransformer
 
+FPE_XFORM_CHAR = '0'
+
 
 @dataclass(frozen=True)
-class SecureFpeConfig(RestoreTransformerConfig):
+class FpeBaseConfig(RestoreTransformerConfig):
+    """
+    FpeBase transformer applies a format preserving encryption as defined by https://www.nist.gov/ to the data value.
+    The encryption works on strings and float values. The result is stateless and given the correct key, the original
+    value can be restored.
+    """
     radix: int = None
-    type: type = None
     secret: str = None
     mask: str = None
-    mask_fpe_char: chr = '0'
     float_precision: int = None
     aes_mode: Mode = Mode.CBC
-
-
-class SecureFpe(RestoreTransformer):
     """
-    SecureFpe transformer applies a reversible encryption that does not change the data format to the incoming fields
-    and/or labels.
-    """
-    config_class = SecureFpeConfig
+     Args:
+        radix: Base from 2 to 62, determines base of incoming data types. Base2 = binary, Base62 = alphanumeric 
+        including upper and lower case characters.
+        secret: 256bit AES encryption string specified as 64 hexadecimal characters.
+        mask: String to specify a mask of which characters should be transformed. Any character in the mask that is
+        specified as '0' will be encrypted in the data string. E.g.: mask='0011' value='1234' -> 'EE34' ('E'ncrypted)
+        float_precision: This value only matters if the incoming data value is of type float.
+     NOTE:
+         Example configuration:
+     """
 
-    def __init__(self, config: SecureFpeConfig):
+
+class FpeBase(RestoreTransformer):
+    config_class = FpeBaseConfig
+
+    def __init__(self, config: FpeBaseConfig):
         super().__init__(config)
-        self._fpe_ff1 = SecureFpeFf1Common(config.secret, config.radix, config.aes_mode)
+        self._fpe_ff1 = FpeBaseFf1Common(config.secret, config.radix, config.aes_mode)
         self.radix = config.radix
         self.mask = config.mask
-        self.mask_fpe_char = config.mask_fpe_char
         self.float_precision = config.float_precision
-        if self.float_precision is not None:
-            self._transform_entity = self._transform_entity_prec
-            self._restore_entity = self._restore_entity_prec
-            self._transform_field = self._transform_field_prec
-            self._restore_field = self._restore_field_prec
-
-    def _transform_entity_prec(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
-        clean, dirt_mask = cleanup_value(value, self.radix)
-        if isinstance(value, float):
-            return label, dirtyup_value(self._fpe_ff1.encrypt((clean, self.float_precision)), dirt_mask)
-        else:
-            return label, dirtyup_value(self._fpe_ff1.encrypt(clean), dirt_mask)
-
-    def _restore_entity_prec(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
-        clean, dirt_mask = cleanup_value(value, self.radix)
-        if isinstance(value, float):
-            return label, dirtyup_value(self._fpe_ff1.decrypt((clean, self.float_precision)), dirt_mask)
-        else:
-            return label, dirtyup_value(self._fpe_ff1.decrypt(clean), dirt_mask)
-
-    def _transform_field_prec(self, field: str, value: Union[Number, str], field_meta):
-        clean, dirt_mask = cleanup_value(value, self.radix)
-        if isinstance(value, float):
-            return {field: dirtyup_value(self._fpe_ff1.encrypt((clean, self.float_precision)), dirt_mask)}
-        else:
-            return {field: dirtyup_value(self._fpe_ff1.encrypt(clean), dirt_mask)}
-
-    def _restore_field_prec(self, field, value: Union[Number, str], field_meta):
-        clean, dirt_mask = cleanup_value(value, self.radix)
-        if isinstance(value, float):
-            return {field: dirtyup_value(self._fpe_ff1.decrypt((clean, self.float_precision)), dirt_mask)}
-        else:
-            return {field: dirtyup_value(self._fpe_ff1.decrypt(clean), dirt_mask)}
 
     def _transform_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
         clean, dirt_mask, fpe_mask = self._clean_and_mask_value(value)
@@ -94,8 +72,8 @@ class SecureFpe(RestoreTransformer):
         fpe_mask = None
         if self.mask and isinstance(value, str):
             if len(self.mask) == len(value):
-                fpe_mask = ''.join(map(lambda x, v: v if (x != self.mask_fpe_char) else '\0', self.mask, value))
-                value = ''.join(map(lambda x, v: v if (x == self.mask_fpe_char) else '', self.mask, value))
+                fpe_mask = ''.join(map(lambda x, v: v if (x != FPE_XFORM_CHAR) else '\0', self.mask, value))
+                value = ''.join(map(lambda x, v: v if (x == FPE_XFORM_CHAR) else '', self.mask, value))
         clean, dirt_mask = cleanup_value(value, self.radix)
         return clean, dirt_mask, fpe_mask
 
@@ -128,7 +106,7 @@ RADIX_TO_DIRTY_STR_DICT = {
 }
 
 
-class SecureFpeFf1Common:
+class FpeBaseFf1Common:
     def __init__(self, secret_key: str, radix: int, mode: Mode):
         self._cipher = FpeFf1(radix=radix,
                               maxTLen=0,

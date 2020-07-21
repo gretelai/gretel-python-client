@@ -1,7 +1,7 @@
 """
 Drop a field from the input record, or all the fields matching a blob.
 """
-from gretel_client.transformers.transformers import DropConfig
+from gretel_client.transformers import DropConfig
 from gretel_client.transformers import DataPath, DataTransformPipeline
 
 xf = [DropConfig()]

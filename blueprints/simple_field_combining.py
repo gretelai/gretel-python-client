@@ -1,7 +1,7 @@
 """
 Drop a field from the input record, or all the fields matching a blob.
 """
-from gretel_client.transformers.transformers import CombineConfig
+from gretel_client.transformers import CombineConfig
 from gretel_client.transformers import DataPath, DataTransformPipeline, FieldRef
 
 xf_combine = CombineConfig(combine=FieldRef(['first_name', 'city', 'state']), separator=", ")

@@ -9,7 +9,7 @@ from gretel_client.transformers.base import FieldRef
 from gretel_client.transformers.fpe.crypto_aes import Mode
 from gretel_client.transformers.fpe.fpe_ff1 import FpeFf1
 from gretel_client.transformers.restore import RestoreTransformer, RestoreTransformerConfig
-from gretel_client.transformers.transformers import secure_fpe
+from gretel_client.transformers.transformers import fpe_base
 
 
 @dataclass(frozen=True)
@@ -56,7 +56,7 @@ class DateShift(RestoreTransformer):
     def _get_date_delta(self, date_val: str):
         field_ref = self._get_field_ref('tweak')
         if field_ref:
-            tweak, _ = secure_fpe.cleanup_value(field_ref.value, field_ref.radix)
+            tweak, _ = fpe_base.cleanup_value(field_ref.value, field_ref.radix)
             tweak = str(tweak).zfill(16)
             tweak_val = self._fpe_ff1.encrypt(tweak.encode(), field_ref.radix)
         else:
