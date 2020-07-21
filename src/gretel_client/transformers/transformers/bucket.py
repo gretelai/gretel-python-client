@@ -75,16 +75,14 @@ class Bucket(Transformer):
         try:
             return {field_name: self._mutate(field_value)}
         except (TypeError, ValueError):
-            # return the actual field if an error happened
-            # most likely value not being a number
+            # Return the original field if an error based on bad input happened
             return {field_name: field_value}
 
     def _transform_entity(self, label: str, value: Union[float, int]) -> Optional[Tuple[Optional[str], Union[float, int, str]]]:
         try:
             return None, self._mutate(value)
         except (TypeError, ValueError):
-            # return the original value if an error happened
-            # most likely value not being a number
+            # Return the original field if an error based on bad input happened
             return None, value
 
     def _mutate(self, value: Union[float, int]) -> Union[float, int, str]:

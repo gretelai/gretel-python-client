@@ -1,5 +1,6 @@
 """
-Bucket your data and return a single value for that bucket.
+Bucket your numeric data and return a single value or sting label for each bucket.
+You can also specify a value or label for outlying values.
 """
 from gretel_client.transformers import DataPath, DataTransformPipeline
 from gretel_client.transformers.transformers import BucketConfig
