@@ -7,13 +7,16 @@ from gretel_client.transformers.base import Transformer, TransformerConfig
 
 @dataclass(frozen=True)
 class DropConfig(TransformerConfig):
+    """Drop a field. This transformer drops any field that gets matched in a ``DataPath`` that
+    uses this transform.
+
+    Args:
+        None
+    """
     pass
 
 
 class Drop(Transformer):
-    """
-    Drop transformer completely removes an entity or field (text and semantic metadata).
-    """
     config_class = DropConfig
 
     def __init__(self, config: DropConfig):
