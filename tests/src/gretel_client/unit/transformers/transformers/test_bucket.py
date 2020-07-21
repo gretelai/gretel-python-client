@@ -1,18 +1,16 @@
 import pytest
 
-from gretel_client.transformers.base import factory
 from gretel_client.transformers import DataTransformPipeline, DataPath
-from gretel_client.transformers.transformers.bucket import BucketRange, BucketConfig
+from gretel_client.transformers.transformers.bucket import BucketConfig
 
 
 def test_bucket(safecast_test_bucket):
-    bucket_range = BucketRange(
-        [(22.0, 23.0), (23.0, 24.0), (24.0, 25.0)],
-        min_label="YEET",
-        max_label="WOOT",
-        auto_label_prefix="FEET_",
+    bucket_config = BucketConfig(
+        buckets=(22.0, 25.0, 1.0),
+        bucket_labels=BucketConfig.get_bucket_labels_from_tuple((22.0, 25.0, 1.0)),
+        lower_outlier_label="YEET",
+        upper_outlier_label="WOOT"
     )
-    bucket_config = BucketConfig(bucket_range=bucket_range)
     data_paths = [
         DataPath(input="payload.loc_lat", xforms=bucket_config),
         DataPath(input="payload.loc_lon", xforms=bucket_config),
@@ -102,82 +100,166 @@ def test_bucket(safecast_test_bucket):
     ]
 
 
-def test_string_bucket():
-    bucket_range = BucketRange(
-        [("a", "l"), ("m", "s")], labels=["A-L", "M-S"], max_label="T-Z"
-    )
-    xf = factory(BucketConfig(bucket_range=bucket_range, labels=["person_name"]))
-
-    _, check = xf.transform_entity("person_name", "myers")
-    assert check == "M-S"
-    _, check = xf.transform_entity("person_name", "ehrath")
-    assert check == "A-L"
-
-
-def test_type_mismatch():
-    bucket_range = BucketRange(
-        [("a", "l"), ("m", "s")], labels=["A-L", "M-S"], max_label="T-Z"
-    )
-    xf = factory(BucketConfig(bucket_range=bucket_range, labels=["person_name"]))
-    with pytest.raises(TypeError):
-        assert not xf.transform_entity("person_name", 123)
+def test_value_errors():
+    with pytest.raises(ValueError):
+        DataPath(input="foo", xforms=BucketConfig(buckets=[]))
+    with pytest.raises(ValueError):
+        DataPath(input="foo", xforms=BucketConfig())
+    with pytest.raises(ValueError):
+        BucketConfig.bucket_tuple_to_list()
+    with pytest.raises(ValueError):
+        BucketConfig.get_bucket_labels_from_tuple((0.0, 1.0, 0.5), method="foo")
+    with pytest.raises(ValueError):
+        DataPath(input="foo", xforms=BucketConfig(buckets=[0.0, 1.0, 2.0], bucket_labels=[0.0, 1.0, 2.0]))
 
 
-def test_bucket2(safecast_test_bucket2):
-    bucket_range = BucketRange(
-        [(22.0, 23.0), (23.0, 24.0), (24.0, 25.0)],
-        min_label="YEET",
-        max_label="WOOT",
-        auto_label_prefix="FEET_",
-    )
-    bucket_config = [BucketConfig(bucket_range=bucket_range)]
-    data_paths = [
-        DataPath(input="payload.env_temp", xforms=bucket_config),
-        DataPath(input="*"),
+def test_config_helpers():
+    buckets = BucketConfig.bucket_tuple_to_list((0.0, 10.0, 2.5))
+    bucket_labels = BucketConfig.get_bucket_labels_from_tuple((0.0, 10.0, 2.5))
+    bucket_vals = [0.0, 2.5, 5.0, 7.5, 10.0]
+    bucket_label_vals = [1.25, 3.75, 6.25, 8.75]
+    for idx in range(len(buckets)):
+        assert abs(buckets[idx] - bucket_vals[idx]) < 0.01
+    for idx in range(len(bucket_labels)):
+        assert abs(bucket_labels[idx] - bucket_label_vals[idx]) < 0.01
+    assert len(buckets) == 5
+    assert len(bucket_labels) == 4
+
+    buckets = BucketConfig.bucket_tuple_to_list((0.0, 10.0, 2.8))
+    bucket_labels = BucketConfig.get_bucket_labels_from_tuple((0.0, 10.0, 2.8))
+    bucket_vals = [0.0, 2.8, 5.6, 8.4, 10.0]
+    bucket_label_vals = [1.4, 4.2, 7.0, 9.8]
+    for idx in range(len(buckets)):
+        assert abs(buckets[idx] - bucket_vals[idx]) < 0.01
+    for idx in range(len(bucket_labels)):
+        assert abs(bucket_labels[idx] - bucket_label_vals[idx]) < 0.01
+    assert len(buckets) == 5
+    assert len(bucket_labels) == 4
+
+
+def test_type_error():
+    tup = (0.0, 1.0, 0.5)
+    paths = [DataPath(
+        input="foo",
+        xforms=BucketConfig(buckets=tup, bucket_labels=BucketConfig.get_bucket_labels_from_tuple(tup)))]
+    pipe = DataTransformPipeline(paths)
+    r = {"foo": "bar"}
+    # String throws a TypeError.  We catch it and return original record.
+    assert r == pipe.transform_record(r)
+
+
+def test_bucketing():
+    tup = (0.0, 1.0, 0.5)
+    paths = [DataPath(
+        input="foo",
+        xforms=BucketConfig(
+            buckets=tup,
+            bucket_labels=BucketConfig.get_bucket_labels_from_tuple(tup),
+            lower_outlier_label=0.0,
+            upper_outlier_label=1.0
+        ))]
+    pipe = DataTransformPipeline(paths)
+    r = [
+        {
+            "foo": "bar"
+        },
+        {
+            "foo": -1
+        },
+        {
+            "foo": 0.1
+        },
+        {
+            "foo": 0.9
+        },
+        {
+            "foo": 1.1
+        }
     ]
-    xf = DataTransformPipeline(data_paths)
-
-    recs = []
-    for rec in safecast_test_bucket2.get("data", {}).get("records"):
-        recs.append(xf.transform_record(rec.get("data")).get("payload.env_temp"))
-    assert recs == [
-        "YEET",
-        None,
-        None,
-        None,
-        "FEET_1",
-        None,
-        None,
-        "WOOT",
-        None,
-        None,
-        None,
+    out = [pipe.transform_record(rec) for rec in r]
+    assert out == [
+        {
+            "foo": "bar"
+        },
+        {
+            "foo": 0.0
+        },
+        {
+            "foo": 0.25
+        },
+        {
+            "foo": 0.75
+        },
+        {
+            "foo": 1.0
+        }
     ]
 
-    bucket_labels = ["bearable", "perfect", "toasty", "volcano", "nuke"]
-    bucket_range = BucketRange(
-        [(21.0, 22.0), (22.0, 23.0), (23.0, 24.0), (24.0, 25.0), (25.0, 26.0)],
-        labels=bucket_labels,
-    )
-    bucket_config = BucketConfig(bucket_range=bucket_range)
-    data_paths = [
-        DataPath(input="payload.env_temp", xforms=bucket_config),
-        DataPath(input="*"),
-    ]
-    xf = DataTransformPipeline(data_paths)
-    recs = []
-    for rec in safecast_test_bucket2.get("data", {}).get("records"):
-        recs.append(xf.transform_record(rec.get("data")).get("payload.env_temp"))
-    assert recs == [
-        "bearable",
-        None,
-        None,
-        None,
-        "toasty",
-        None,
-        None,
-        "nuke",
-        None,
-        None,
-        None,
-    ]
+
+# def test_type_mismatch():
+#     bucket_range = BucketRange(
+#         [("a", "l"), ("m", "s")], labels=["A-L", "M-S"], max_label="T-Z"
+#     )
+#     xf = factory(BucketConfig(bucket_range=bucket_range, labels=["person_name"]))
+#     with pytest.raises(TypeError):
+#         assert not xf.transform_entity("person_name", 123)
+#
+#
+# def test_bucket2(safecast_test_bucket2):
+#     bucket_range = BucketRange(
+#         [(22.0, 23.0), (23.0, 24.0), (24.0, 25.0)],
+#         min_label="YEET",
+#         max_label="WOOT",
+#         auto_label_prefix="FEET_",
+#     )
+#     bucket_config = [BucketConfig(bucket_range=bucket_range)]
+#     data_paths = [
+#         DataPath(input="payload.env_temp", xforms=bucket_config),
+#         DataPath(input="*"),
+#     ]
+#     xf = DataTransformPipeline(data_paths)
+#
+#     recs = []
+#     for rec in safecast_test_bucket2.get("data", {}).get("records"):
+#         recs.append(xf.transform_record(rec.get("data")).get("payload.env_temp"))
+#     assert recs == [
+#         "YEET",
+#         None,
+#         None,
+#         None,
+#         "FEET_1",
+#         None,
+#         None,
+#         "WOOT",
+#         None,
+#         None,
+#         None,
+#     ]
+#
+#     bucket_labels = ["bearable", "perfect", "toasty", "volcano", "nuke"]
+#     bucket_range = BucketRange(
+#         [(21.0, 22.0), (22.0, 23.0), (23.0, 24.0), (24.0, 25.0), (25.0, 26.0)],
+#         labels=bucket_labels,
+#     )
+#     bucket_config = BucketConfig(bucket_range=bucket_range)
+#     data_paths = [
+#         DataPath(input="payload.env_temp", xforms=bucket_config),
+#         DataPath(input="*"),
+#     ]
+#     xf = DataTransformPipeline(data_paths)
+#     recs = []
+#     for rec in safecast_test_bucket2.get("data", {}).get("records"):
+#         recs.append(xf.transform_record(rec.get("data")).get("payload.env_temp"))
+#     assert recs == [
+#         "bearable",
+#         None,
+#         None,
+#         None,
+#         "toasty",
+#         None,
+#         None,
+#         "nuke",
+#         None,
+#         None,
+#         None,
+#     ]
