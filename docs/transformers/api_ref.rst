@@ -16,3 +16,16 @@ Module Reference: Transformers
    data_pipeline
    transform_pipeline
    restore_pipeline
+   fakers
+   xf_bucket
+   xf_char_redact
+   xf_combine
+   xf_conditional
+   xf_date_shift
+   xf_drop
+   xf_fake_constant
+   xf_format
+   xf_fpe
+   xf_label_redact
+   xf_secure_hash
+   xf_string_redact

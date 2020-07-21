@@ -15,6 +15,29 @@ except ImportError:
 
 @dataclass(frozen=True)
 class ConditionalConfig(RestoreTransformerConfig):
+    """Run a transform based on checking the value of another field. You may use a regex
+    to check that the value of a field matches or not. If the regex matches, then the
+    ``true_xform`` transform will run, otherwise, the ``false_xform`` will run.
+
+    If either the true or false transform configurations are ``None`` then the record
+    will not be transformed depending on the matched case.
+
+    In this example we'll redact with X if the conditional field contains "foo" and
+    Y if it does not::
+
+        xf = ConditionalConfig(
+            conditional_value=FieldRef("check_me"),
+            regex=r"foo",
+            true_xform=RedactWithChar(char="X"),
+            false_xform=RedactWithChar(char="Y")
+        )
+
+    Args:
+        conditional_value: A ``FieldRef`` that defines what field to check for the regex match
+        regex: A regex string that is used to check the value of the ``conditional_value`` field
+        true_xform: A transform config that will be run if the regex matches, if `None`, no transform is run
+        false_xform: A transform config that will run if the regex does not match, if `None`, no transform is run
+    """
     conditional_value: FieldRef = None
     regex: Union[str, Pattern] = None
     true_xform: TransformerConfig = None
@@ -22,10 +45,6 @@ class ConditionalConfig(RestoreTransformerConfig):
 
 
 class Conditional(RestoreTransformer):
-    """
-    Conditional transformer give a value compared to a regex, it calls one or another transformer based on the result.
-    The true or false case transformer parameters default to pass the data through if not passed in.
-    """
     config_class = ConditionalConfig
     true_xform: Transformer = None
     false_xform: Transformer = None

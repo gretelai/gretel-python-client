@@ -21,10 +21,6 @@ class SecureFpeConfig(RestoreTransformerConfig):
 
 
 class SecureFpe(RestoreTransformer):
-    """
-    SecureFpe transformer applies a reversible encryption that does not change the data format to the incoming fields
-    and/or labels.
-    """
     config_class = SecureFpeConfig
 
     def __init__(self, config: SecureFpeConfig):
