@@ -3,12 +3,15 @@ Bucket your numeric data and return a single value or sting label for each bucke
 You can also specify a value or label for outlying values.
 """
 from gretel_client.transformers import DataPath, DataTransformPipeline
-from gretel_client.transformers.transformers import BucketConfig
+from gretel_client.transformers.transformers import BucketConfig, get_bucket_labels_from_tuple
 
+# Use a tuple for configuration.  Values are minimum, maximum and bucket width.
 min_max_width_tuple = (0.0, 3.0, 1.0)
 numeric_bucketing_xf = BucketConfig(
     buckets=min_max_width_tuple,
-    bucket_labels=BucketConfig.get_bucket_labels_from_tuple(min_max_width_tuple),
+    # Use a helper method to generate numeric labels.  By default, new field value is the average value of each bucket.
+    bucket_labels=get_bucket_labels_from_tuple(min_max_width_tuple),
+    # Specify output labels for field values outside the bucket range.
     lower_outlier_label=0.0,
     upper_outlier_label=3.5)
 

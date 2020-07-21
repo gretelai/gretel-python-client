@@ -1,13 +1,14 @@
 import pytest
 
 from gretel_client.transformers import DataTransformPipeline, DataPath
-from gretel_client.transformers.transformers.bucket import BucketConfig
+from gretel_client.transformers.transformers.bucket import \
+    BucketConfig, bucket_tuple_to_list, get_bucket_labels_from_tuple
 
 
 def test_bucket(safecast_test_bucket):
     bucket_config = BucketConfig(
         buckets=(22.0, 25.0, 1.0),
-        bucket_labels=BucketConfig.get_bucket_labels_from_tuple((22.0, 25.0, 1.0)),
+        bucket_labels=get_bucket_labels_from_tuple((22.0, 25.0, 1.0)),
         lower_outlier_label="YEET",
         upper_outlier_label="WOOT"
     )
@@ -106,16 +107,16 @@ def test_value_errors():
     with pytest.raises(ValueError):
         DataPath(input="foo", xforms=BucketConfig())
     with pytest.raises(ValueError):
-        BucketConfig.bucket_tuple_to_list()
+        bucket_tuple_to_list()
     with pytest.raises(ValueError):
-        BucketConfig.get_bucket_labels_from_tuple((0.0, 1.0, 0.5), method="foo")
+        get_bucket_labels_from_tuple((0.0, 1.0, 0.5), method="foo")
     with pytest.raises(ValueError):
         DataPath(input="foo", xforms=BucketConfig(buckets=[0.0, 1.0, 2.0], bucket_labels=[0.0, 1.0, 2.0]))
 
 
 def test_config_helpers():
-    buckets = BucketConfig.bucket_tuple_to_list((0.0, 10.0, 2.5))
-    bucket_labels = BucketConfig.get_bucket_labels_from_tuple((0.0, 10.0, 2.5))
+    buckets = bucket_tuple_to_list((0.0, 10.0, 2.5))
+    bucket_labels = get_bucket_labels_from_tuple((0.0, 10.0, 2.5))
     bucket_vals = [0.0, 2.5, 5.0, 7.5, 10.0]
     bucket_label_vals = [1.25, 3.75, 6.25, 8.75]
     for idx in range(len(buckets)):
@@ -125,8 +126,8 @@ def test_config_helpers():
     assert len(buckets) == 5
     assert len(bucket_labels) == 4
 
-    buckets = BucketConfig.bucket_tuple_to_list((0.0, 10.0, 2.8))
-    bucket_labels = BucketConfig.get_bucket_labels_from_tuple((0.0, 10.0, 2.8))
+    buckets = bucket_tuple_to_list((0.0, 10.0, 2.8))
+    bucket_labels = get_bucket_labels_from_tuple((0.0, 10.0, 2.8))
     bucket_vals = [0.0, 2.8, 5.6, 8.4, 10.0]
     bucket_label_vals = [1.4, 4.2, 7.0, 9.8]
     for idx in range(len(buckets)):
@@ -141,7 +142,7 @@ def test_type_error():
     tup = (0.0, 1.0, 0.5)
     paths = [DataPath(
         input="foo",
-        xforms=BucketConfig(buckets=tup, bucket_labels=BucketConfig.get_bucket_labels_from_tuple(tup)))]
+        xforms=BucketConfig(buckets=tup, bucket_labels=get_bucket_labels_from_tuple(tup)))]
     pipe = DataTransformPipeline(paths)
     r = {"foo": "bar"}
     # String throws a TypeError.  We catch it and return original record.
@@ -154,7 +155,7 @@ def test_bucketing():
         input="foo",
         xforms=BucketConfig(
             buckets=tup,
-            bucket_labels=BucketConfig.get_bucket_labels_from_tuple(tup),
+            bucket_labels=get_bucket_labels_from_tuple(tup),
             lower_outlier_label=0.0,
             upper_outlier_label=1.0
         ))]
