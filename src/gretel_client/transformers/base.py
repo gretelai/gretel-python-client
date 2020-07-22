@@ -98,7 +98,7 @@ class Transformer(ABC):
         return self.field_ref_dict.get(ref)
 
     def transform_entities(
-            self, value: Union[Number, str], meta: dict
+        self, value: Union[Number, str], meta: dict
     ) -> Tuple[Optional[str], dict]:
         """
          Transforms all, labeled entities that occur within a field. This is the primary entrypoint
@@ -130,7 +130,7 @@ class Transformer(ABC):
         return self._transform_entities_base(value, meta, entities)
 
     def _transform_entities_base(
-            self, value: Union[Number, str], meta: dict, entities
+        self, value: Union[Number, str], meta: dict, entities
     ) -> Tuple[Optional[str], dict]:
         # check if any entities should trigger a total field drop
         all_ents = frozenset(e["label"] for e in entities)
@@ -165,7 +165,7 @@ class Transformer(ABC):
         return transformed_value, transformed_meta
 
     def transform_entity(
-            self, label: str, value: Union[Number, str]
+        self, label: str, value: Union[Number, str]
     ) -> Optional[Tuple[str, str]]:
         """
         Transforms a single, labeled entity that occurs within a field. This is the primary entrypoint
@@ -221,10 +221,10 @@ class Transformer(ABC):
         return {field: self._transform(value)}
 
     def _transform_recursive(
-            self,
-            value: Union[Number, str],
-            entities: List[dict],
-            transformed_entities: Union[List[dict], None],
+        self,
+        value: Union[Number, str],
+        entities: List[dict],
+        transformed_entities: Union[List[dict], None],
     ) -> (Union[Number, str], dict):
         """
         Performs a recursive transformation.
@@ -282,7 +282,7 @@ class Transformer(ABC):
 
             # Stitch together the new field value.
             transformed_value = (
-                    left_transformed_value + new_text + right_transformed_value
+                left_transformed_value + new_text + right_transformed_value
             )
 
             right_offset = len(left_transformed_value) + len(new_text)
@@ -312,7 +312,7 @@ def _build_config_map(cls, _map=None):
 
 
 def factory(
-        config: Union[TransformerConfig, RestoreTransformerConfig]
+    config: Union[TransformerConfig, RestoreTransformerConfig]
 ) -> Union[Transformer, RestoreTransformer]:
     """Factory that returns a ``Transformer`` subclass instance.
 

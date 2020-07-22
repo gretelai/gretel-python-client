@@ -70,7 +70,11 @@ class MaskedTransformer(ABC):
                 masked_value, m_slice = mask.get_masked_chars_slice(_value)
                 new_value = _value_func(masked_value)
                 _value = _value[:m_slice.start] + new_value[:] + (_value[m_slice.stop:] if m_slice.stop else '')
-        _value = revert_str_to_type(value, _value)
+        try:
+            _value = revert_str_to_type(value, _value)
+        # if the value cannot be reverted to the original value (ex: float 1.23 -> x.xx with char_redaction)
+        except ValueError:
+            pass
         return _value
 
     @abstractmethod

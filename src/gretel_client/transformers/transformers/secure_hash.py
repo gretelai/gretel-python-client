@@ -9,13 +9,15 @@ from gretel_client.transformers.base import TransformerConfig, Transformer
 
 @dataclass(frozen=True)
 class SecureHashConfig(TransformerConfig):
+    """Replace a string with a HMAC derived from that string and a secret key.
+
+    Args:
+        secret: The encryption key to use for the HMAC
+    """
     secret: str = None
 
 
 class SecureHash(Transformer):
-    """
-    SecureHash transformer replaces a value with its hash based on a secret.
-    """
     config_class = SecureHashConfig
 
     def __init__(self, config: SecureHashConfig):

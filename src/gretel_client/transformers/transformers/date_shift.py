@@ -22,10 +22,6 @@ class DateShiftConfig(RestoreTransformerConfig):
 
 
 class DateShift(RestoreTransformer):
-    """
-    DateShift transformer applies a reversible date shift based on a 256bit AES key, that can be "tweaked" by another
-    field of the same record.
-    """
     config_class = DateShiftConfig
 
     def __init__(self, config: DateShiftConfig):

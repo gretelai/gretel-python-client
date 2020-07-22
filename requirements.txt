@@ -1,7 +1,7 @@
 requests
 smart_open==2.1.0
 pandas==1.0.3
-ipywidgets==7.5.1
+tenacity==6.2.0
 tqdm==4.45.0
 faker==4.1.1
 dateparser==0.7.6

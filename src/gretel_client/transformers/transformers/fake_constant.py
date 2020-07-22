@@ -16,8 +16,10 @@ class FakeConstantConfig(TransformerConfig):
         seed: A required starting seed for the underlying fake generator. Use the same seed in order
             to get the same fake values for a given input.
         fake_method: A string of what kind of fake entity to create. One of the keys from the ``FAKER_MAP`` mapping.
-        locales: A list of locales to use for generating fake values
-        locale_seed: An optional seed to use for init'ing the order of locales to be used for creating fake values
+            Please see the ``faker`` module docs for the available methods to use.
+        locales: A list of locales to use for generating fake values. Please see the ``faker`` module docs
+            for the available locales to use.
+        locale_seed: An optional seed to use for initializing the order of locales to be used for creating fake values
     """
     seed: int = None
     fake_method: str = None
@@ -26,10 +28,6 @@ class FakeConstantConfig(TransformerConfig):
 
 
 class FakeConstant(Transformer):
-    """
-    FakeConstant transformer replaces the value with a new fake value.
-    """
-
     config_class = FakeConstantConfig
 
     def __init__(self, config: FakeConstantConfig):

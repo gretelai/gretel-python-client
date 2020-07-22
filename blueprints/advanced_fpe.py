@@ -1,55 +1,24 @@
-"""
-Basic Format Preserving Encryption
-"""
-from gretel_client.transformers import SecureFpeConfig
-from gretel_client.transformers import DataPath, DataTransformPipeline, DataRestorePipeline
+from gretel_client.transformers import FpeStringConfig, DataPath, DataTransformPipeline, DataRestorePipeline
 
-xf = [SecureFpeConfig(secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94",
-                      mask="1000 0000 0000 0000", radix=10)]
-xf2 = [SecureFpeConfig(secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94", radix=62)]
-
-paths = [
-    DataPath(input="l", xforms=xf),
-    DataPath(input="name", xforms=xf2),
-    DataPath(input="*")
+rec = {'Address': '317 Massa. Av.',
+        'City': 'Didim',
+        'Country': 'Eritrea',
+        'Credit Card': '601128 2195205 818',
+        'Customer ID': '169/61*009 38-34',
+        'Date': '2019-10-08',
+        'Name': 'Grimes, Bo H.',
+        'Zipcode': '745558'
+        }
+field_xf = FpeStringConfig(secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94", radix=10)
+data_paths = [
+    DataPath(input='Credit Card', xforms=field_xf),
+    DataPath(input='Customer ID', xforms=field_xf),
+    DataPath(input='*')
 ]
-
-transform_pipe = DataTransformPipeline(paths)
-restore_pipe = DataRestorePipeline(paths)
-
-records = [
-    {
-        "foo": "hello",
-        "name": "adam yauch",
-        "score": 1.234
-    },
-    {
-        "name": "jerome horowitz",
-        "score": 2.234
-    },
-    {
-        "foo": "hello",
-        "name": "quincy jones",
-        "score": 3.234
-    },
-    {
-        "name": "zeppo marx",
-        "score": -1.234
-    },
-]
-
-
-out = transform_pipe.transform_record(rec)
-
-assert out == {
-    "name": "2DZv ZmN",
-    "credit_card": "4521 1021 2994 9272"
-}
-
-print(out)
-
-restored = restore_pipe.transform_record(out)
-
-assert rec == restored
-
-print(restored)
+xf = DataTransformPipeline(data_paths)
+rf = DataRestorePipeline(data_paths)
+transformed = xf.transform_record(rec)
+assert transformed['Credit Card'] == '447158 5942734 458'
+assert transformed['Customer ID'] == '747/52*232 83-19'
+restored = rf.transform_record(transformed)
+assert restored == rec

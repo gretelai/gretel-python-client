@@ -8,13 +8,16 @@ from gretel_client.transformers.masked import MaskedTransformerConfig, MaskedTra
 
 @dataclass(frozen=True)
 class RedactWithCharConfig(MaskedTransformerConfig, TransformerConfig):
+    """Redact a string with a constant character. Alphanumeric characters will
+    be redacted.
+
+    Args:
+        char: The character to redact with
+    """
     char: str = 'X'
 
 
 class RedactWithChar(MaskedTransformer, Transformer):
-    """
-    RedactWithChar transformer replaces text with a string representation of the field/label it occurs in.
-    """
     config_class = RedactWithCharConfig
 
     def __init__(self, config: RedactWithCharConfig):

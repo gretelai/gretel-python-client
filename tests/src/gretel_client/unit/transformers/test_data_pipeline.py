@@ -3,7 +3,7 @@ from gretel_client.transformers.data_restore_pipeline import DataRestorePipeline
 from gretel_client.transformers import DataTransformPipeline, DataPath
 from gretel_client.transformers.data_transform_pipeline import RECORD_KEYS
 from gretel_client.transformers.fpe import crypto_aes
-from gretel_client.transformers import FormatConfig, BucketRange, BucketConfig, CombineConfig, ConditionalConfig, \
+from gretel_client.transformers import FormatConfig, CombineConfig, ConditionalConfig, \
     DateShiftConfig, DropConfig, FakeConstantConfig, RedactWithCharConfig, RedactWithLabelConfig, \
     RedactWithStringConfig, FpeFloatConfig, FpeStringConfig, SecureHashConfig
 from gretel_client.transformers.string_mask import StringMask
@@ -307,18 +307,6 @@ def test_pipe_date_shift_cbc_fast(records_date_tweak):
     assert check_aw['created'] == '2016-06-17'
     assert check_ae['created'] == '2016-06-17'
 
-
-def test_pipe_bucket(records_date_tweak):
-    bucket_range = BucketRange([('A', 'L'), ('M', 'Z')], labels=['A-L', 'M-Z'])
-    bucket_xf = BucketConfig(bucket_range=bucket_range)
-    data_paths = [DataPath(input='last_name', xforms=bucket_xf),
-                  DataPath(input='*')]
-
-    xf = DataTransformPipeline(data_paths)
-    check_aw = xf.transform_record(records_date_tweak[0])
-    check_ae = xf.transform_record(records_date_tweak[1])
-    assert check_aw['last_name'] == 'M-Z'
-    assert check_ae['last_name'] == 'A-L'
 
 
 def test_meta_data_transform(record_meta_data_check):
