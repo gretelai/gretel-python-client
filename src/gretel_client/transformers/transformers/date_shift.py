@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import timedelta
 from numbers import Number
-from typing import Optional, Tuple, Union
+from typing import Union
 
 from dateparser.date import DateDataParser
 
@@ -41,18 +41,6 @@ class DateShift(RestoreTransformer):
         if self.range < 1:
             raise ValueError
 
-    def _transform_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
-        return None, self.mutate(value)
-
-    def _restore_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
-        return None, self.restore(value)
-
-    def _transform_field(self, field: str, value: Union[Number, str], field_meta):
-        return {field: self.mutate(value)}
-
-    def _restore_field(self, field, value: Union[Number, str], field_meta):
-        return {field: self.restore(value)}
-
     def _get_date_delta(self, date_val: str):
         field_ref = self._get_field_ref('tweak')
         if field_ref:
@@ -69,12 +57,12 @@ class DateShift(RestoreTransformer):
         date_val = date_val['date_obj'].date()
         return days, date_val
 
-    def mutate(self, date_val: str):
-        days, date_val = self._get_date_delta(date_val)
+    def _transform(self, value: Union[Number, str]) -> Union[Number, str]:
+        days, date_val = self._get_date_delta(value)
         date_val += timedelta(days=days)
         return str(date_val)
 
-    def restore(self, date_val: str):
-        days, date_val = self._get_date_delta(date_val)
+    def _restore(self, value: Union[Number, str]) -> Union[Number, str]:
+        days, date_val = self._get_date_delta(value)
         date_val -= timedelta(days=days)
         return str(date_val)

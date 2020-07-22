@@ -1,5 +1,5 @@
 from gretel_client.transformers import FpeStringConfig
-from gretel_client.transformers.base import FieldRef, factory
+from gretel_client.transformers.base import factory
 from gretel_client.transformers.string_mask import StringMask
 
 

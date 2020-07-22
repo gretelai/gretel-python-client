@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from functools import singledispatch
 from math import log2, ceil
 from numbers import Number
-from typing import Union, Optional, Tuple
+from typing import Union
 
 from gretel_client.transformers.fpe.crypto_aes import Mode
 from gretel_client.transformers.fpe.fpe_ff1 import FpeFf1
@@ -46,16 +46,6 @@ class FpeBase(RestoreTransformer):
         self.radix = config.radix
         self.float_precision = config.float_precision
 
-    def _transform_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
-        clean, dirt_mask, fpe_mask = self._clean_and_mask_value(value)
-        dirty = self._dirty_and_un_mask_value(self._fpe_ff1.encrypt(clean), dirt_mask, fpe_mask)
-        return label, dirty
-
-    def _restore_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
-        clean, dirt_mask, fpe_mask = self._clean_and_mask_value(value)
-        dirty = self._dirty_and_un_mask_value(self._fpe_ff1.decrypt(clean), dirt_mask, fpe_mask)
-        return label, dirty
-
     def _clean_and_mask_value(self, value):
         fpe_mask = None
         clean, dirt_mask = cleanup_value(value, self.radix)
@@ -68,11 +58,11 @@ class FpeBase(RestoreTransformer):
             dirty = ''.join(map(lambda v: next(it) if (v == '\0') else v, fpe_mask))
         return dirty
 
-    def _transform(self, value) -> Union[Number, str]:
+    def _transform(self, value: Union[Number, str]) -> Union[Number, str]:
         clean, dirt_mask, fpe_mask = self._clean_and_mask_value(value)
         return self._dirty_and_un_mask_value(self._fpe_ff1.encrypt(clean), dirt_mask, fpe_mask)
 
-    def _restore(self, value) -> Union[Number, str]:
+    def _restore(self, value: Union[Number, str]) -> Union[Number, str]:
         clean, dirt_mask, fpe_mask = self._clean_and_mask_value(value)
         return self._dirty_and_un_mask_value(self._fpe_ff1.decrypt(clean), dirt_mask, fpe_mask)
 

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from numbers import Number
-from typing import Union, Optional, Tuple
+from typing import Union
 
 from gretel_client.transformers.transformers.fpe_base import FpeBase, FpeBaseConfig, cleanup_value, dirtyup_value
 
@@ -32,34 +32,18 @@ class FpeFloat(FpeBase):
         super().__init__(config)
         self.float_precision = config.float_precision
 
-    def _transform_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
+    def _transform(self, value: Union[Number, str]) -> Union[Number, str]:
         clean, dirt_mask = cleanup_value(value, self.radix)
         if isinstance(value, float):
             _clean = clean if self.float_precision is None else (clean, self.float_precision)
-            return label, dirtyup_value(self._fpe_ff1.encrypt(_clean), dirt_mask)
+            return dirtyup_value(self._fpe_ff1.encrypt(_clean), dirt_mask)
         else:
-            return label, str(dirtyup_value(self._fpe_ff1.encrypt((float(clean), self.float_precision)), dirt_mask))
+            return str(dirtyup_value(self._fpe_ff1.encrypt((float(clean), self.float_precision)), dirt_mask))
 
-    def _restore_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
+    def _restore(self, value: Union[Number, str]) -> Union[Number, str]:
         clean, dirt_mask = cleanup_value(value, self.radix)
         if isinstance(value, float):
             _clean = clean if self.float_precision is None else (clean, self.float_precision)
-            return label, dirtyup_value(self._fpe_ff1.decrypt(_clean), dirt_mask)
+            return dirtyup_value(self._fpe_ff1.decrypt(_clean), dirt_mask)
         else:
-            return label, str(dirtyup_value(self._fpe_ff1.decrypt((float(clean), self.float_precision)), dirt_mask))
-
-    def _transform_field(self, field: str, value: Union[Number, str], field_meta):
-        clean, dirt_mask = cleanup_value(value, self.radix)
-        if isinstance(value, float):
-            _clean = clean if self.float_precision is None else (clean, self.float_precision)
-            return {field: dirtyup_value(self._fpe_ff1.encrypt(_clean), dirt_mask)}
-        else:
-            return {field: str(dirtyup_value(self._fpe_ff1.encrypt((float(clean), self.float_precision)), dirt_mask))}
-
-    def _restore_field(self, field, value: Union[Number, str], field_meta):
-        clean, dirt_mask = cleanup_value(value, self.radix)
-        if isinstance(value, float):
-            _clean = clean if self.float_precision is None else (clean, self.float_precision)
-            return {field: dirtyup_value(self._fpe_ff1.decrypt(_clean), dirt_mask)}
-        else:
-            return {field: str(dirtyup_value(self._fpe_ff1.decrypt((float(clean), self.float_precision)), dirt_mask))}
+            return str(dirtyup_value(self._fpe_ff1.decrypt((float(clean), self.float_precision)), dirt_mask))

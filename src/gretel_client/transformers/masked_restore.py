@@ -4,19 +4,20 @@ from functools import singledispatch
 from numbers import Number
 from typing import Union, Optional, Tuple, List
 
+from gretel_client.transformers.masked import MaskedTransformerConfig, MaskedTransformer
 from gretel_client.transformers.string_mask import StringMask
 
 FPE_XFORM_CHAR = '0'
 
 
 @dataclass(frozen=True)
-class MaskedTransformerConfig(ABC):
+class MaskedRestoreTransformerConfig(MaskedTransformerConfig, ABC):
     """
     FpeBase transformer applies a format preserving encryption as defined by https://www.nist.gov/ to the data value.
     The encryption works on strings and float values. The result is stateless and given the correct key, the original
     value can be restored.
     """
-    mask: List[StringMask] = None
+    ...
     """
      Args:
         radix: Base from 2 to 62, determines base of incoming data types. Base2 = binary, Base62 = alphanumeric 
@@ -50,29 +51,18 @@ def _(type_data, data):
     return int(data)
 
 
-class MaskedTransformer(ABC):
-    config_class = MaskedTransformerConfig
+class MaskedRestoreTransformer(MaskedTransformer, ABC):
+    config_class = MaskedRestoreTransformerConfig
 
     def __init__(self, config: MaskedTransformerConfig):
         super().__init__(config)
-        self.mask = config.mask or [StringMask()]
 
-    def _transform_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
-        return label, self._mask_value(value, None, self._transform)
+    def _restore_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
+        return label, self._mask_value(value, None, self._restore)
 
-    def _transform_field(self, field: str, value: Union[Number, str], field_meta):
-        return {field: self._mask_value(value, field_meta, self._transform)}
-
-    def _mask_value(self, value: Union[Number, str], field_meta, _value_func):
-        _value = value if isinstance(value, str) else str(value)
-        if self.mask:
-            for mask in reversed(self.mask):
-                masked_value, m_slice = mask.get_masked_chars_slice(_value)
-                new_value = _value_func(masked_value)
-                _value = _value[:m_slice.start] + new_value[:] + (_value[m_slice.stop:] if m_slice.stop else '')
-        _value = revert_str_to_type(value, _value)
-        return _value
+    def _restore_field(self, field: str, value: Union[Number, str], field_meta):
+        return {field: self._mask_value(value, field_meta, self._restore)}
 
     @abstractmethod
-    def _transform(self, value: Union[Number, str]) -> Union[Number, str]:
+    def _restore(self, value) -> Union[Number, str]:
         pass

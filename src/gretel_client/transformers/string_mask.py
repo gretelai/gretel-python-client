@@ -1,6 +1,3 @@
-from opt_einsum.paths import greedy
-
-
 class StringMask():
     start_pos: int = None
     end_pos: int = None

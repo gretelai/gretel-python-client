@@ -22,14 +22,15 @@ class Combine(Transformer):
         self.separator = config.separator or ""
 
     def _transform_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
-        return None, self.mutate(value)
+        return None, self._transform(value)
 
     def _transform_field(self, field: str, value: Union[Number, str], field_meta):
-        return {field: self.mutate(value)}
+        return {field: self._transform(value)}
 
     def _get_combiners(self):
         combine_list = self._get_field_ref('combine')
-        return combine_list.value
+        combine_list = [val if isinstance(val, str) else str(val) for val in combine_list.value ]
+        return combine_list
 
-    def mutate(self, value: str):
+    def _transform(self, value: Union[Number, str]) -> Union[Number, str]:
         return value + self.separator + self.separator.join(self._get_combiners())

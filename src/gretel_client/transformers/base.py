@@ -10,7 +10,7 @@ NOTE:
     which is the primary / preferred interface.
 """
 import copy
-from abc import ABC
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from numbers import Number
 from typing import Mapping, Optional, Tuple, Union, List, TYPE_CHECKING
@@ -58,7 +58,7 @@ class FieldRef:
     value: Union[List[str], List[Number], str, Number] = None
 
 
-class Transformer:
+class Transformer(ABC):
     """The base class for all transformers that can act on input data.
 
     This class should be used direclty to created sub-classes of itself that contain
@@ -98,7 +98,7 @@ class Transformer:
         return self.field_ref_dict.get(ref)
 
     def transform_entities(
-        self, value: Union[Number, str], meta: dict
+            self, value: Union[Number, str], meta: dict
     ) -> Tuple[Optional[str], dict]:
         """
          Transforms all, labeled entities that occur within a field. This is the primary entrypoint
@@ -130,7 +130,7 @@ class Transformer:
         return self._transform_entities_base(value, meta, entities)
 
     def _transform_entities_base(
-        self, value: Union[Number, str], meta: dict, entities
+            self, value: Union[Number, str], meta: dict, entities
     ) -> Tuple[Optional[str], dict]:
         # check if any entities should trigger a total field drop
         all_ents = frozenset(e["label"] for e in entities)
@@ -165,7 +165,7 @@ class Transformer:
         return transformed_value, transformed_meta
 
     def transform_entity(
-        self, label: str, value: Union[Number, str]
+            self, label: str, value: Union[Number, str]
     ) -> Optional[Tuple[str, str]]:
         """
         Transforms a single, labeled entity that occurs within a field. This is the primary entrypoint
@@ -190,15 +190,17 @@ class Transformer:
                 return new_label, new_value
         return label, value
 
-    def _transform_entity(
-        self, label: str, value: Union[Number, str]
-    ) -> Optional[Tuple[Optional[str], str]]:
-        """This method should be overloaded by subclasses as it implements the actual logic
-        """
-        ...
+    @abstractmethod
+    def _transform(self, value: Union[Number, str]) -> Union[Number, str]:
+        """This method should be overloaded by subclasses as it implements the actual logic"""
+        pass
+
+    def _transform_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
+        """This method can be overloaded by subclasses if the logic needs to return a label other than None"""
+        return None, self._transform(value)
 
     def transform_field(
-        self, field: str, value: Union[Number, str], field_meta: Optional[dict]
+            self, field: str, value: Union[Number, str], field_meta: Optional[dict]
     ) -> Mapping[str, str]:
         """
         Transforms a field within a record. The result of the transform can be multiple fields (including None),
@@ -214,13 +216,15 @@ class Transformer:
         return self._transform_field(field, value, field_meta)
 
     def _transform_field(self, field: str, value: Union[Number, str], field_meta):
-        return {}
+        """This method can be overloaded by subclasses if the logic needs to return a field name other than the original
+        field name"""
+        return {field: self._transform(value)}
 
     def _transform_recursive(
-        self,
-        value: Union[Number, str],
-        entities: List[dict],
-        transformed_entities: Union[List[dict], None],
+            self,
+            value: Union[Number, str],
+            entities: List[dict],
+            transformed_entities: Union[List[dict], None],
     ) -> (Union[Number, str], dict):
         """
         Performs a recursive transformation.
@@ -278,7 +282,7 @@ class Transformer:
 
             # Stitch together the new field value.
             transformed_value = (
-                left_transformed_value + new_text + right_transformed_value
+                    left_transformed_value + new_text + right_transformed_value
             )
 
             right_offset = len(left_transformed_value) + len(new_text)
@@ -308,7 +312,7 @@ def _build_config_map(cls, _map=None):
 
 
 def factory(
-    config: Union[TransformerConfig, RestoreTransformerConfig]
+        config: Union[TransformerConfig, RestoreTransformerConfig]
 ) -> Union[Transformer, RestoreTransformer]:
     """Factory that returns a ``Transformer`` subclass instance.
 

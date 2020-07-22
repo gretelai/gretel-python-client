@@ -9,6 +9,7 @@ NOTE:
     with it, generally the individual objects are inserted into a ``RecordTransformerPipeline``
     which is the primary interface.
 """
+from abc import abstractmethod
 from dataclasses import dataclass
 from numbers import Number
 from typing import Mapping, Optional, Tuple, Union
@@ -105,29 +106,9 @@ class RestoreTransformer(Transformer):
                 return new_label, new_value
         return label, value
 
-    def _restore_entity(
-        self, label: str, value: Union[Number, str]
-    ) -> Optional[Tuple[Optional[str], str]]:
-        """This method should be overloaded by subclasses as it implements the actual logic
-        """
-        pass
-
-    def transform_field(
-        self, field: str, value: Union[Number, str], field_meta: Optional[dict]
-    ) -> Mapping[str, str]:
-        """
-        Transforms a field within a record. The result of the transform can be multiple fields (including None),
-        represented as a dict mapping each field name to its value.
-
-        Args:
-            field: the name of the field to be transformed.
-            value: the value of the field to be transformed.
-            field_meta: the metadata of the field to be transformed (may be None).
-
-        Returns:
-            dict: with all transformed fields.
-        """
-        return self._transform_field(field, value, field_meta)
+    def _restore_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
+        """This method can be overloaded by subclasses if the logic needs to return a label other than label"""
+        return label, self._restore(value)
 
     def restore_field(
         self, field: str, value: Union[Number, str], field_meta: Optional[dict]
@@ -147,4 +128,8 @@ class RestoreTransformer(Transformer):
         return self._restore_field(field, value, field_meta)
 
     def _restore_field(self, field, value: Union[Number, str], field_meta):
-        return {}
+        return {field: self._restore(value)}
+
+    @abstractmethod
+    def _restore(self, value: Union[Number, str]) -> Union[Number, str]:
+        pass

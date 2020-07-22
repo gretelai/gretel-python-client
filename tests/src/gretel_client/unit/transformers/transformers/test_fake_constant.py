@@ -1,6 +1,6 @@
 import pytest
 from faker import Faker
-from gretel_transformers.transformers.fake_constant import VALID_LABELS
+from gretel_client.transformers.transformers.fake_constant import VALID_LABELS
 from gretel_client.transformers.base import factory
 from gretel_client.transformers.fakers import _Fakers, FAKER_MAP
 from gretel_client.transformers import FakeConstantConfig

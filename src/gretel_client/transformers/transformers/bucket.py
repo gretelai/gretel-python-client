@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from numbers import Number
-from typing import Union, List, Optional, Tuple
+from typing import Union, List, Tuple
 
 from gretel_client.transformers.base import TransformerConfig, Transformer
 
@@ -41,31 +41,16 @@ class Bucket(Transformer):
         super().__init__(config)
         self.bucket_range = config.bucket_range
 
-    def _transform_field(self, field_name: str, field_value: Union[Number, str], field_meta):
-        try:
-            return {field_name: mutate(field_value, self.bucket_range)}
-        except (BucketError, TypeError):
-            # return the actual field if an error happened
-            # most likely value not being a number
-            return {field_name: field_value}
-
-    def _transform_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
-        try:
-            return None, mutate(value, self.bucket_range)
-        except BucketError:
-            return label, value
-
-
-def mutate(value: Union[str, Number], bucket_range):
-    buckets = bucket_range.buckets
-    if isinstance(value, str):  # We cannot reliably compare strings of different lengths, better to make them same
-        value = value[:len(buckets[0][0])]
-    if value < buckets[0][0]:
-        return bucket_range.min_bucket
-    elif value > buckets[-1][1]:
-        return bucket_range.max_bucket
-    for num, b_range in enumerate(buckets, start=0):
-        if b_range[0] <= value <= b_range[1]:
-            return bucket_range.labels[num]
-    else:
-        raise ValueError
+    def _transform(self, value: Union[Number, str]) -> Union[Number, str]:
+        buckets = self.bucket_range.buckets
+        if isinstance(value, str):  # We cannot reliably compare strings of different lengths, better to make them same
+            value = value[:len(buckets[0][0])]
+        if value < buckets[0][0]:
+            return self.bucket_range.min_bucket
+        elif value > buckets[-1][1]:
+            return self.bucket_range.max_bucket
+        for num, b_range in enumerate(buckets, start=0):
+            if b_range[0] <= value <= b_range[1]:
+                return self.bucket_range.labels[num]
+        else:
+            raise ValueError
