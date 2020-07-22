@@ -40,7 +40,7 @@ def bucket_tuple_to_list(
         Explicit list of bucket boundaries.
     """
     if buckets is None:
-        raise ValueError(f"buckets must be a 3-Tuple (min, max, width)")
+        raise ValueError("buckets must be a 3-Tuple (min, max, width)")
     b = []
     current_min = buckets[0]
     while current_min < buckets[1]:
@@ -67,7 +67,7 @@ def get_bucket_labels_from_tuple(
         List of numeric bucket labels.
     """
     if buckets is None:
-        raise ValueError(f"buckets must be a 3-Tuple (min, max, width)")
+        raise ValueError("buckets must be a 3-Tuple (min, max, width)")
     # Use average by default
     method = method or "avg"
     if method not in ["min", "max", "avg"]:
@@ -95,16 +95,15 @@ class Bucket(Transformer):
     def __init__(self, config: BucketConfig):
         super().__init__(config)
         # Expand tuple to list
-        if type(config.buckets) == tuple:
+        if isinstance(config.buckets, tuple):
             self.buckets = bucket_tuple_to_list(config.buckets)
         else:
             self.buckets = config.buckets
         self.bucket_labels = config.bucket_labels
-        # Sanity check parameters
         if self.buckets is None or len(self.buckets) == 0:
-            raise ValueError(f"Empty buckets not permitted.")
+            raise ValueError("Empty buckets not permitted.")
         if len(self.buckets) - 1 != len(self.bucket_labels):
-            raise ValueError(f"Number of bucket_labels must match number of buckets.")
+            raise ValueError("Number of bucket_labels must match number of buckets.")
         self.lower_outlier_label = self.bucket_labels[0] if config.lower_outlier_label is None \
             else config.lower_outlier_label
         self.upper_outlier_label = self.bucket_labels[-1] if config.upper_outlier_label is None \
