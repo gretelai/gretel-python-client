@@ -26,9 +26,11 @@ class BucketConfig(TransformerConfig):
     upper_outlier_label: Union[float, int, str] = None
 
 
-def bucket_tuple_to_list(buckets: Tuple[Union[float, int], Union[float, int], Union[float, int]] = None):
+def bucket_tuple_to_list(
+        buckets: Tuple[Union[float, int], Union[float, int], Union[float, int]] = None) \
+        -> Union[List[float], List[int]]:
     """
-    Helper method.  Convert a min/max/width tuple used by BucketConfig into an explicit list of values.  Use it,
+    Helper function.  Convert a min/max/width tuple used by BucketConfig into an explicit list of values.  Use it,
     for example, to start with a standard list and then modify it to have varying width buckets.
 
     Args:
@@ -53,7 +55,7 @@ def get_bucket_labels_from_tuple(
         method: str = None) \
         -> Union[List[float], List[int]]:
     """
-    Helper method.  Convert a min/max/width tuple used by BucketConfig into a list of bucket labels.  The
+    Helper function.  Convert a min/max/width tuple used by BucketConfig into a list of bucket labels.  The
     labels can be the minimum, average or maximum value for each bucket.
 
     Args:
@@ -115,7 +117,8 @@ class Bucket(Transformer):
             # Return the original field if an error based on bad input happened
             return {field_name: field_value}
 
-    def _transform_entity(self, label: str, value: Union[float, int]) -> Optional[Tuple[Optional[str], Union[float, int, str]]]:
+    def _transform_entity(
+            self, label: str, value: Union[float, int]) -> Optional[Tuple[Optional[str], Union[float, int, str]]]:
         try:
             return None, self._mutate(value)
         except (TypeError, ValueError):
