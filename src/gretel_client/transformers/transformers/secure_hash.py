@@ -23,10 +23,10 @@ class SecureHash(Transformer):
         self.secret = config.secret.encode()
 
     def _transform_field(self, field_name: str, field_value: Union[Number, str], field_meta):
-        return {field_name: self._mutate(field_value)}
+        return {field_name: self._transform(field_value)}
 
     def _transform_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
-        return None, self._mutate(value)
+        return None, self._transform(value)
 
-    def _mutate(self, in_data: str):
+    def _transform(self, in_data: str):
         return hmac.new(self.secret, str(in_data).encode(), hashlib.sha256).hexdigest()

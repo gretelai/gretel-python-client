@@ -6,6 +6,7 @@ from gretel_client.transformers.fpe import crypto_aes
 from gretel_client.transformers import FormatConfig, BucketRange, BucketConfig, CombineConfig, ConditionalConfig, \
     DateShiftConfig, DropConfig, FakeConstantConfig, RedactWithCharConfig, RedactWithLabelConfig, \
     RedactWithStringConfig, FpeFloatConfig, FpeStringConfig, SecureHashConfig
+from gretel_client.transformers.string_mask import StringMask
 
 SEED = 8675309
 
@@ -119,14 +120,15 @@ def test_record_zero_fpe():
     text_xf = [
         FpeStringConfig(secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94", radix=36)]
 
-    data_paths = [DataPath(input='credit_card', xforms=numbers_xf),
-                  DataPath(input='latitude', xforms=float_xf),
+    data_paths = [
+        DataPath(input='credit_card', xforms=numbers_xf),
+        DataPath(input='latitude', xforms=float_xf),
 
-                  DataPath(input='longitude', xforms=float_xf),
-                  DataPath(input='the_dude', xforms=numbers_xf),
-                  DataPath(input='the_sci_notation', xforms=float_xf),
-                  DataPath(input='the_hotness', xforms=text_xf)
-                  ]
+        DataPath(input='longitude', xforms=float_xf),
+        DataPath(input='the_dude', xforms=numbers_xf),
+        DataPath(input='the_sci_notation', xforms=float_xf),
+        DataPath(input='the_hotness', xforms=text_xf)
+    ]
     xf = DataTransformPipeline(data_paths)
     rf = DataRestorePipeline(data_paths)
     xf_payload = xf.transform_record(rec)
@@ -139,7 +141,7 @@ def test_record_zero_fpe():
     check = xf_payload.get('the_hotness')
     assert check == '2qjuxg7ju'
     check = xf_payload.get('the_dude')
-    assert check == 150991404
+    assert check == 128994144
     check = xf_payload.get('the_sci_notation')
     assert check == 1.229570610794763e-07
     check = rf.transform_record(xf_payload)
@@ -177,7 +179,7 @@ def test_record_fpe():
     # check = xf_payload.get('the_hotness')
     # assert check == '2qjuxg7ju'
     # check = xf_payload.get('the_dude')
-    # assert check == 150991404
+    # assert check == 128994144
     # check = xf_payload.get('the_sci_notation')
     # assert check == 1.229570610794763e-07
     check = rf.transform_record(xf_payload)
@@ -185,8 +187,8 @@ def test_record_fpe():
 
 
 def test_pipe_record_fpe(record_and_meta_2):
-    xf_fpe = FpeStringConfig(secret='2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94', radix=2,
-                             labels=['latitude'])
+    xf_fpe = FpeFloatConfig(secret='2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94', radix=10,
+                            labels=['latitude'])
     data_paths = [DataPath(input='latitude', xforms=xf_fpe),
                   DataPath(input='*')]
 
@@ -419,7 +421,7 @@ def test_record_fpe_precision():
     check = xf_payload.get('the_hotness')
     assert check == '2qjuxg7ju'
     check = xf_payload.get('the_dude')
-    assert check == 150991404
+    assert check == 128994144
     check = xf_payload.get('the_sci_notation')
     assert check == 1.2342967235924508e-07
     check = rf.transform_record(xf_payload)
@@ -432,7 +434,7 @@ def test_record_output_map_and_schemas():
     test_payloads = [(rec, record_key) for record_key in RECORD_KEYS]
     test_payloads.append((rec, None))
     for payload, record_key in test_payloads:
-        xf_list = FpeStringConfig(secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94", radix=10)
+        xf_list = FpeFloatConfig(secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94", radix=10)
 
         data_paths = [
             DataPath(input='a', output='x'),
@@ -494,7 +496,7 @@ def test_pipe_combine(records_date_tweak):
 
 
 def test_conditional_transformer(records_conditional):
-    xf_fpe = FpeStringConfig(secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94", radix=10)
+    xf_fpe = FpeFloatConfig(secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94", radix=10)
     xf_consent = ConditionalConfig(conditional_value=FieldRef('user_consent'), regex=r"['1']",
                                    true_xform=xf_fpe,
                                    false_xform=RedactWithLabelConfig())
@@ -524,7 +526,7 @@ def test_conditional_transformer(records_conditional):
     assert check_aw['record']['lat'] == 112.22134
     assert check_aw['record']['lon'] == 135.76433
 
-    xf_fpe = FpeStringConfig(secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94", radix=10)
+    xf_fpe = FpeFloatConfig(secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94", radix=10)
     xf_consent = ConditionalConfig(conditional_value=FieldRef('user_consent'), regex=r"['1']",
                                    true_xform=xf_fpe)
 
@@ -553,7 +555,7 @@ def test_conditional_transformer(records_conditional):
     assert check_aw['record']['lat'] == 112.22134
     assert check_aw['record']['lon'] == 135.76433
 
-    xf_fpe = FpeStringConfig(secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94", radix=10)
+    xf_fpe = FpeFloatConfig(secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94", radix=10)
     xf_consent = ConditionalConfig(conditional_value=FieldRef('user_consent'), regex=r"['1']",
                                    false_xform=xf_fpe)
 
@@ -670,11 +672,11 @@ def test_record_fpe_base62():
 def test_record_fpe_mask():
     rec = {'latitude': -70.783, 'longitude': -112.221, 'credit_card': '4123 5678 9123 4567', 'the_dude': 100000000,
            'the_hotness': "convertme", "the_sci_notation": 1.23E-7}
-
+    mask = StringMask(start_pos=1)
     cc_xf = [FormatConfig(pattern=r'\s+', replacement=''),
              FpeStringConfig(
                  secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94", radix=10,
-                 mask='1000000000000000')]
+                 mask=[mask])]
 
     data_paths = [DataPath(input='credit_card', xforms=cc_xf)]
     xf = DataTransformPipeline(data_paths)
@@ -687,7 +689,7 @@ def test_record_fpe_mask():
     assert check == '4123567891234567'
     cc_xf = [FpeStringConfig(
         secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94", radix=10,
-        mask='1000 0000 0000 0000')]
+        mask=[mask])]
     data_paths = [DataPath(input='credit_card', xforms=cc_xf)]
     xf = DataTransformPipeline(data_paths)
     rf = DataRestorePipeline(data_paths)

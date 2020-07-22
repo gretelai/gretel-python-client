@@ -22,7 +22,6 @@ class FpeBaseConfig(RestoreTransformerConfig):
     """
     radix: int = None
     secret: str = None
-    mask: str = None
     float_precision: int = None
     aes_mode: Mode = Mode.CBC
     """
@@ -45,7 +44,6 @@ class FpeBase(RestoreTransformer):
         super().__init__(config)
         self._fpe_ff1 = FpeBaseFf1Common(config.secret, config.radix, config.aes_mode)
         self.radix = config.radix
-        self.mask = config.mask
         self.float_precision = config.float_precision
 
     def _transform_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
@@ -58,22 +56,8 @@ class FpeBase(RestoreTransformer):
         dirty = self._dirty_and_un_mask_value(self._fpe_ff1.decrypt(clean), dirt_mask, fpe_mask)
         return label, dirty
 
-    def _transform_field(self, field: str, value: Union[Number, str], field_meta):
-        clean, dirt_mask, fpe_mask = self._clean_and_mask_value(value)
-        dirty = self._dirty_and_un_mask_value(self._fpe_ff1.encrypt(clean), dirt_mask, fpe_mask)
-        return {field: dirty}
-
-    def _restore_field(self, field, value: Union[Number, str], field_meta):
-        clean, dirt_mask, fpe_mask = self._clean_and_mask_value(value)
-        dirty = self._dirty_and_un_mask_value(self._fpe_ff1.decrypt(clean), dirt_mask, fpe_mask)
-        return {field: dirty}
-
     def _clean_and_mask_value(self, value):
         fpe_mask = None
-        if self.mask and isinstance(value, str):
-            if len(self.mask) == len(value):
-                fpe_mask = ''.join(map(lambda x, v: v if (x != FPE_XFORM_CHAR) else '\0', self.mask, value))
-                value = ''.join(map(lambda x, v: v if (x == FPE_XFORM_CHAR) else '', self.mask, value))
         clean, dirt_mask = cleanup_value(value, self.radix)
         return clean, dirt_mask, fpe_mask
 
@@ -83,6 +67,14 @@ class FpeBase(RestoreTransformer):
             it = iter(dirty)
             dirty = ''.join(map(lambda v: next(it) if (v == '\0') else v, fpe_mask))
         return dirty
+
+    def _transform(self, value) -> Union[Number, str]:
+        clean, dirt_mask, fpe_mask = self._clean_and_mask_value(value)
+        return self._dirty_and_un_mask_value(self._fpe_ff1.encrypt(clean), dirt_mask, fpe_mask)
+
+    def _restore(self, value) -> Union[Number, str]:
+        clean, dirt_mask, fpe_mask = self._clean_and_mask_value(value)
+        return self._dirty_and_un_mask_value(self._fpe_ff1.decrypt(clean), dirt_mask, fpe_mask)
 
 
 RADIX_TO_CLEAN_STR_DICT = {
