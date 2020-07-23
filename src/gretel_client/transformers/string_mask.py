@@ -16,7 +16,7 @@ class StringMask:
         mask_until: Scan for this character, and once found, mask until it is reached, inclusive.
         greedy: When using ``mask_after`` or ``mask_until``, if True, will scan as far as possible
             to find the matching character. For example given the string: "this.is.the.string", if
-            ``mask_after`` is "." and ``greedy`` is ``False`` then masking will start after "this.". 
+            ``mask_after`` is "." and ``greedy`` is ``False`` then masking will start after "this.".
             If ``greedy`` is ``True``, then masking will start after "this.is.the."
     """
     start_pos: int = None
@@ -49,7 +49,7 @@ class StringMask:
         if self.mask_after is None:
             start = self.start_pos
         else:
-            start = value.rfind(self.mask_after) if self.greedy else value.find(self.mask_after)+1
+            start = value.rfind(self.mask_after) if self.greedy else value.find(self.mask_after) + 1
         if start is None:
             start = 0
         if self.mask_until is None:

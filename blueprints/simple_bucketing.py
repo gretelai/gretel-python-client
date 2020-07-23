@@ -9,8 +9,7 @@ from gretel_client.transformers import BucketConfig, get_bucket_labels_from_tupl
 from gretel_client.transformers.transformers.bucket import bucket_tuple_to_list
 
 min_max_width_tuple = (0.0, 3.0, 1.0)
-bucket_labels = get_bucket_labels_from_tuple(min_max_width_tuple)
-buckets = bucket_tuple_to_list(min_max_width_tuple, bucket_labels)
+buckets = bucket_tuple_to_list(min_max_width_tuple, label_method="avg")
 numeric_bucketing_xf = BucketConfig(
     buckets=buckets,
     # Use a helper method to generate numeric labels.  By default, new field value is the average value of each bucket.

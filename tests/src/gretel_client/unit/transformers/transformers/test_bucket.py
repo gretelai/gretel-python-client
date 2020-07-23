@@ -91,8 +91,8 @@ def test_bucket2(safecast_test_bucket2):
 
 
 def test_config_helpers():
-    buckets = bucket_tuple_to_list((0.0, 10.0, 2.5))
-    bucket_labels = get_bucket_labels_from_tuple((0.0, 10.0, 2.5))
+    buckets = bucket_tuple_to_list((0.0, 10.0, 2.5), label_method="avg")
+    bucket_labels = get_bucket_labels_from_tuple((0.0, 10.0, 2.5), label_method="avg")
     bucket_vals = [0.0, 2.5, 5.0, 7.5, 10.0]
     bucket_label_vals = [1.25, 3.75, 6.25, 8.75]
     for idx in range(len(buckets)):
@@ -102,8 +102,8 @@ def test_config_helpers():
     assert len(buckets) == 4
     assert len(bucket_labels) == 4
 
-    buckets = bucket_tuple_to_list((0.0, 10.0, 2.8))
-    bucket_labels = get_bucket_labels_from_tuple((0.0, 10.0, 2.8))
+    buckets = bucket_tuple_to_list((0.0, 10.0, 2.8), label_method="avg")
+    bucket_labels = get_bucket_labels_from_tuple((0.0, 10.0, 2.8), label_method="avg")
     bucket_vals = [0.0, 2.8, 5.6, 8.4, 10.0]
     bucket_label_vals = [1.4, 4.2, 7.0, 9.8]
     for idx in range(len(buckets)):
@@ -116,8 +116,7 @@ def test_config_helpers():
 
 def test_type_error():
     tup = (0.0, 1.0, 0.5)
-    bucket_labels = get_bucket_labels_from_tuple(tup)
-    buckets = bucket_tuple_to_list(tup, bucket_labels)
+    buckets = bucket_tuple_to_list(tup)
     paths = [DataPath(
         input="foo",
         xforms=BucketConfig(buckets=buckets))]
@@ -129,8 +128,7 @@ def test_type_error():
 
 def test_bucketing():
     tup = (0.0, 1.0, 0.5)
-    bucket_labels = get_bucket_labels_from_tuple(tup)
-    buckets = bucket_tuple_to_list(tup, bucket_labels)
+    buckets = bucket_tuple_to_list(tup, label_method="avg")
     paths = [DataPath(
         input="foo",
         xforms=BucketConfig(

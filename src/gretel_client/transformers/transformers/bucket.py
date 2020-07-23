@@ -13,23 +13,23 @@ class BucketConfig(TransformerConfig):
     Args:
         buckets: Tuple of three floats or ints to specify minimum, maximum and bucket width.
             List of int or float to explicitly specify bucket boundaries.  Bucket boundaries are left inclusive.
-        bucket_labels: List of floats, ints or strings.  The label to attach to each bucket.  The length of this
-            list must match the number of buckets, i.e. one less than the length of a list passed to the
-            buckets argument. The field value will be changed to the corresponding label after bucketing.
         lower_outlier_label: Float, int or string.  This label will be applied to values greater or equal to the
             maximum bucketed value.  If None, use the first bucket label.
         upper_outlier_label: Float, int or string.  This label will be applied to values less than the
             minimum bucketed value.  If None, use the last bucket label.
     """
 
-    buckets: List[Tuple[Union[Number, str], Union[Number, str], Union[Number, str]]] = None
+    buckets: List[
+        Tuple[Union[Number, str], Union[Number, str], Union[Number, str]]
+    ] = None
     lower_outlier_label: Union[Number, str] = None
     upper_outlier_label: Union[Number, str] = None
 
 
 def bucket_tuple_to_list(
-        buckets: Tuple[Number, Number, Number] = None,
-        labels: List[Union[Number, str]] = None
+    buckets: Tuple[Number, Number, Number] = None,
+    labels: List[Union[Number, str]] = None,
+    label_method: str = None,
 ) -> List[Tuple[Union[Number, str], Union[Number, str], Union[Number, str]]]:
     """
     Helper function.  Convert a min/max/width tuple used by BucketConfig into an explicit list of values.  Use it,
@@ -38,16 +38,24 @@ def bucket_tuple_to_list(
     Args:
         buckets: Tuple of three floats or ints to specify minimum, maximum and bucket width.
         labels: (Optional) List of labels, must match length of resulting bucket list.
+        label_method: (Optional) if labels is None, one of 'min', 'max' or 'avg' can be specified, so that each
+            bucket uses either the left or right endpoint or the average of the two as the bucket label. Default: "min"
     Returns:
         Explicit list of bucket boundaries.
     """
     if buckets is None:
         raise ValueError("buckets must be a 3-Tuple (min, max, width)")
+    if labels is None:
+        labels = get_bucket_labels_from_tuple(buckets, label_method)
     b = []
     current_min = buckets[0]
     idx = 0
     while current_min < buckets[1]:
-        current_max = current_min + buckets[2] if current_min + buckets[2] < buckets[1] else buckets[1]
+        current_max = (
+            current_min + buckets[2]
+            if current_min + buckets[2] < buckets[1]
+            else buckets[1]
+        )
         b.append((current_min, current_max, None if not labels else labels[idx]))
         current_min += buckets[2]
         idx += 1
@@ -55,37 +63,41 @@ def bucket_tuple_to_list(
 
 
 def get_bucket_labels_from_tuple(
-        buckets: Tuple[Number, Number, Number] = None,
-        method: str = None,
-) -> Union[List[float], List[int]]:
+    bucket_creation_params: Tuple[Number, Number, Number] = None,
+    label_method: str = None,
+) -> List[Number]:
     """
     Helper function.  Convert a min/max/width tuple used by BucketConfig into a list of bucket labels.  The
     labels can be the minimum, average or maximum value for each bucket.
 
     Args:
-        buckets: Tuple of three floats or ints to specify minimum, maximum and bucket width.
-        method: One of 'min', 'max' or 'avg'.  For each bucket, use either the left or right endpoint or the
-            average of the two as the bucket label.
+        bucket_creation_params: Tuple of three floats or ints to specify minimum, maximum and bucket width.
+        label_method: One of 'min', 'max' or 'avg'.  For each bucket, use either the left or right endpoint or the
+            average of the two as the bucket label. Default: "min"
 
     Returns:
         List of numeric bucket labels.
     """
-    if buckets is None:
+    if bucket_creation_params is None:
         raise ValueError("buckets must be a 3-Tuple (min, max, width)")
-    # Use average by default
-    method = method or "avg"
-    if method not in ["min", "max", "avg"]:
-        raise ValueError(f"method must be one of 'min', 'max', 'avg': {method}")
+    # Use minimum by default
+    label_method = label_method or "min"
+    if label_method not in ["min", "max", "avg"]:
+        raise ValueError(
+            f"label_method must be one of 'min', 'max', 'avg': {label_method}"
+        )
     bucket_labels = []
-    current_min = buckets[0]
-    while current_min < buckets[1]:
-        if method == "min":
+    current_min = bucket_creation_params[0]
+    while current_min < bucket_creation_params[1]:
+        if label_method == "min":
             bucket_labels.append(current_min)
-        elif method == "max":
-            bucket_labels.append(min(current_min + buckets[2], buckets[1]))
-        elif method == "avg":
-            bucket_labels.append(current_min + (buckets[2] / 2))
-        current_min += buckets[2]
+        elif label_method == "max":
+            bucket_labels.append(
+                min(current_min + bucket_creation_params[2], bucket_creation_params[1])
+            )
+        elif label_method == "avg":
+            bucket_labels.append(current_min + (bucket_creation_params[2] / 2))
+        current_min += bucket_creation_params[2]
     return bucket_labels
 
 

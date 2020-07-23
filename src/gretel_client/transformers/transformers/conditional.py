@@ -14,7 +14,6 @@ from gretel_client.transformers.base import (
     factory,
 )
 
-
 try:
     from re import Pattern
 except ImportError:
@@ -85,7 +84,7 @@ class Conditional(RestoreTransformer):
                 self._false_xform_restore_entity = self.false_xform.transform_entity
 
     def _transform_entity(
-        self, label: str, value: Union[Number, str]
+            self, label: str, value: Union[Number, str]
     ) -> Optional[Tuple[Optional[str], str]]:
         if self.regex.match(self._get_field_ref("conditional_value").value):
             if self.true_xform:
@@ -111,8 +110,8 @@ class Conditional(RestoreTransformer):
                 return {field: value}
 
     def _restore_entity(
-        self, label: str, value: Union[Number, str]
-    ) -> Optional[Tuple[Optional[str], str]]:
+            self, label: str, value: Union[Number, str]
+            ) -> Optional[Tuple[Optional[str], str]]:
         if self.regex.match(self._get_field_ref("conditional_value").value):
             if self.true_xform:
                 return self._true_xform_restore_entity(label, value)
@@ -145,4 +144,3 @@ class Conditional(RestoreTransformer):
         raise ValueError(
             "_restore method was called even though the Combine transformer does not implement this!"
         )
-
