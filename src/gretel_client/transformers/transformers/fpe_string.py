@@ -15,14 +15,15 @@ FPE_XFORM_CHAR = "0"
 class FpeStringConfig(MaskedRestoreTransformerConfig, FpeBaseConfig):
     """
     FpeString transformer applies a format preserving encryption as defined by https://www.nist.gov/ to the data value.
-    The encryption works on strings and float values. The result is stateless and given the correct key, the original
+    The encryption works on strings. The result is stateless and given the correct key, the original
     value can be restored.
 
     Args:
-        radix: Base from 2 to 62, determines base of incoming data types. Base2 = binary, Base62 = alphanumeric 
+        radix: Base from 2 to 62, determines base of incoming data types. Base2 = binary, Base62 = alphanumeric
             including upper and lower case characters.
         secret: 256bit AES encryption string specified as 64 hexadecimal characters.
-        mask: An optioan list of ``StringMask`` objects
+        mask: An optional list of ``StringMask`` objects. If provided only the parts of the string defined by the masks
+            will be encrypted.
      """
 
 

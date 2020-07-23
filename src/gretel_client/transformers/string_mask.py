@@ -6,7 +6,18 @@ from typing import Tuple
 
 class StringMask:
     """
-    TODO
+    Specify a masking strategy for a string. When provided to transformers that accept masks, the mask
+    will determine what parts of the string are redacted, encrypted, etc.
+
+    Args:
+        start_pos: What index position in the string to start masking after, non-inclusive.
+        end_pos: What index position in the string to stop masking at, inclusive.
+        mask_after: Scan for this character, and once observed, start masking after it, non-inclusive.
+        mask_until: Scan for this character, and once found, mask until it is reached, inclusive.
+        greedy: When using ``mask_after`` or ``mask_until``, if True, will scan as far as possible
+            to find the matching character. For example given the string: "this.is.the.string", if
+            ``mask_after`` is "." and ``greedy`` is ``False`` then masking will start after "this.". 
+            If ``greedy`` is ``True``, then masking will start after "this.is.the."
     """
     start_pos: int = None
     end_pos: int = None

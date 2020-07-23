@@ -17,6 +17,14 @@ from gretel_client.transformers.transformers import fpe_base
 
 @dataclass(frozen=True)
 class DateShiftConfig(RestoreTransformerConfig):
+    """Adjust a date/time string within a certain amount of bounds, using FPE.
+
+    Args:
+        lower_range_days: The maximum number of days to adjust backwards in time.
+        upper_range_days: The maximum number of days to adjust forwards in time.
+        secret: Encryption key to use
+        tweak: Optionally base the time shift on another field in the record
+    """
     lower_range_days: int = None
     upper_range_days: int = None
     secret: str = None

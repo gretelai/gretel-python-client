@@ -18,10 +18,11 @@ class FpeFloatConfig(FpeBaseConfig):
     transform gets applied. The result is stateless and given the correct key, the original value can be restored.
     
     Args:
-        radix: Base from 2 to 62, determines base of incoming data types. Base2 = binary, Base62 = alphanumeric 
+        radix: Base from 2 to 62, determines base of incoming data types. Base2 = binary, Base62 = alphanumeric
             including upper and lower case characters.
         secret: 256bit AES encryption string specified as 64 hexadecimal characters.
-        float_precision: What precision should be kept during encryption
+        float_precision: What precision should be kept during encryption. For example, if "2" is provided
+            then all digits beyond the second decimal place will be encrypted.
     """
 
     float_precision: int = None

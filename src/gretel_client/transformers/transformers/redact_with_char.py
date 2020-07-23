@@ -13,6 +13,9 @@ class RedactWithCharConfig(MaskedTransformerConfig, TransformerConfig):
 
     Args:
         char: The character to redact with
+        mask: An optioan list of ``StringMask`` objects. If provided, only the parts of the string defined
+            in the masks will be redacted.
+
     """
     char: str = 'X'
 

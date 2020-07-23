@@ -1,3 +1,7 @@
+"""
+Demonstration on how to use String-based Format Preserving Encryption
+"""
+
 from gretel_client.transformers import (
     FpeStringConfig,
     DataPath,
