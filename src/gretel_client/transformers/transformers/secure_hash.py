@@ -2,7 +2,7 @@ import hashlib
 import hmac
 from dataclasses import dataclass
 from numbers import Number
-from typing import Optional, Tuple, Union
+from typing import Union
 
 from gretel_client.transformers.base import TransformerConfig, Transformer
 
@@ -24,11 +24,5 @@ class SecureHash(Transformer):
         super().__init__(config)
         self.secret = config.secret.encode()
 
-    def _transform_field(self, field_name: str, field_value: Union[Number, str], field_meta):
-        return {field_name: self._mutate(field_value)}
-
-    def _transform_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
-        return None, self._mutate(value)
-
-    def _mutate(self, in_data: str):
-        return hmac.new(self.secret, str(in_data).encode(), hashlib.sha256).hexdigest()
+    def _transform(self, value: Union[Number, str]) -> Union[Number, str]:
+        return hmac.new(self.secret, str(value).encode(), hashlib.sha256).hexdigest()

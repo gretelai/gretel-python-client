@@ -21,6 +21,7 @@ class FakeConstantConfig(TransformerConfig):
             for the available locales to use.
         locale_seed: An optional seed to use for initializing the order of locales to be used for creating fake values
     """
+
     seed: int = None
     fake_method: str = None
     locales: List[str] = None
@@ -46,21 +47,18 @@ class FakeConstant(Transformer):
                 "No fake methods or labels which map to fake methods are specified!"
             )
 
-    def _transform_field(self, field: str, value: Union[Number, str], field_meta):
-        return {field: self.mutate(value, self.fake_method)}
-
     def _transform_entity(
         self, label: str, value: Union[Number, str]
     ) -> Optional[Tuple[Optional[str], str]]:
         fake_method = FAKER_MAP.get(label)
         if fake_method is None:
             return None
-        new_value = self.mutate(value, fake_method)
+        new_value = self.faker.constant_fake(value, fake_method)
         if isinstance(value, float):
             new_value = float(new_value)
         elif isinstance(value, str):
             new_value = str(new_value)
         return None, new_value
 
-    def mutate(self, value, fake_method: str):
-        return self.faker.constant_fake(value, fake_method)
+    def _transform(self, value: Union[Number, str]) -> Union[Number, str]:
+        return self.faker.constant_fake(value, self.fake_method)

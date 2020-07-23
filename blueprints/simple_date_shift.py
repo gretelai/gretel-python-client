@@ -1,7 +1,7 @@
 """
 Drop a field from the input record, or all the fields matching a blob.
 """
-from gretel_client.transformers.transformers import DateShiftConfig
+from gretel_client.transformers import DateShiftConfig
 from gretel_client.transformers import DataPath, DataRestorePipeline, DataTransformPipeline, FieldRef
 
 xf_date = DateShiftConfig(secret='2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94',

@@ -38,3 +38,7 @@ class RedactWithLabel(Transformer):
 
     def _transform_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
         return None, label.upper()
+
+    def _transform(self, value) -> Union[Number, str]:
+        raise ValueError(
+            "_transform method was called even though _transform_field and _transform_entity are overloaded!")

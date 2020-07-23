@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from numbers import Number
-from typing import Tuple, Optional, Union
+from typing import Union
 import re
 
 from gretel_client.transformers.base import TransformerConfig, Transformer
@@ -40,11 +40,5 @@ class Format(Transformer):
             self.pattern = re.compile(config.pattern)
         self.replacement = config.replacement
 
-    def _transform_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
-        return None, self.mutate(value)
-
-    def _transform_field(self, field: str, value: Union[Number, str], field_meta):
-        return {field: self.mutate(value)}
-
-    def mutate(self, value: str):
+    def _transform(self, value: Union[Number, str]) -> Union[Number, str]:
         return re.sub(self.pattern, self.replacement, value)

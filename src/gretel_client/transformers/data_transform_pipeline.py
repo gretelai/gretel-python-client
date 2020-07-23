@@ -66,6 +66,8 @@ class DataTransformPipeline(DataPipeline):
                             ) or data_fields.get(
                                 field_ref.field_name
                             )
+                    if transformation.__class__.__name__ == "Drop":
+                        break
                     field_value = transformation.transform_field(field, value, meta)
                     if not field_value:
                         break

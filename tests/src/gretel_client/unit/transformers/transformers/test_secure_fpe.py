@@ -3,12 +3,10 @@ from pstats import Stats
 
 from gretel_client.transformers.fpe.crypto_aes import Mode
 from gretel_client.transformers.fpe.fpe_ff1 import FpeFf1
-from gretel_client.transformers.transformers.secure_fpe import _cipher_ff1_fpe
+from gretel_client.transformers.transformers.fpe_base import _cipher_ff1_fpe
 
 
 # Added profiling code. Uncomment the last line of each test if you like to profile FPE calls.
-
-
 def test_secure_fpe_ecb():
     profiler = Profile()
     profiler.enable()

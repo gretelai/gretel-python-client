@@ -1,9 +1,6 @@
 import jsonpickle
 
-from gretel_client.transformers.transformers.fake_constant import FakeConstantConfig
-from gretel_client.transformers.transformers.redact_with_char import RedactWithCharConfig
-from gretel_client.transformers.transformers.redact_with_label import RedactWithLabelConfig
-from gretel_client.transformers.transformers.secure_hash import SecureHashConfig
+from gretel_client.transformers import FakeConstantConfig, RedactWithCharConfig, RedactWithLabelConfig, SecureHashConfig
 
 SEED = 8675309
 

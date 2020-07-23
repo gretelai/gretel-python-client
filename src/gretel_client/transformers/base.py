@@ -10,7 +10,7 @@ NOTE:
     which is the primary / preferred interface.
 """
 import copy
-from abc import ABC
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from numbers import Number
 from typing import Mapping, Optional, Tuple, Union, List, TYPE_CHECKING
@@ -58,12 +58,16 @@ class FieldRef:
     value: Union[List[str], List[Number], str, Number] = None
 
 
-class Transformer:
+class Transformer(ABC):
     """The base class for all transformers that can act on input data.
 
     This class should be used direclty to created sub-classes of itself that contain
     transformer-specific logic. The only input to the constructor of this
     class is a config object.
+
+    Args:
+        config: Configuration object, which inherits from ``TransformerConfig`` describing the
+            transformer type and parameters. See the specific configuration docs for the
     """
 
     config_class: TransformerConfig = None
@@ -74,16 +78,6 @@ class Transformer:
     entity_sort_criterion = "start"
 
     def __init__(self, config: TransformerConfig):
-        """Create a Transformer.
-
-        Args:
-            config: Configuration object, which inherits from ``TransformerConfig`` describing the
-                transformer type and parameters. See the specific configuration docs for the
-                type of transformer being created.
-
-        Returns:
-            An instance of ``Transformer``
-        """
         self.transform_entity_func = None
         self.labels = frozenset(config.labels or [])
         self.field_ref_dict = dict(
@@ -190,15 +184,17 @@ class Transformer:
                 return new_label, new_value
         return label, value
 
-    def _transform_entity(
-        self, label: str, value: Union[Number, str]
-    ) -> Optional[Tuple[Optional[str], str]]:
-        """This method should be overloaded by subclasses as it implements the actual logic
-        """
-        ...
+    @abstractmethod
+    def _transform(self, value: Union[Number, str]) -> Union[Number, str]:
+        """This method should be overloaded by subclasses as it implements the actual logic"""
+        pass
+
+    def _transform_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
+        """This method can be overloaded by subclasses if the logic needs to return a label other than None"""
+        return None, self._transform(value)
 
     def transform_field(
-        self, field: str, value: Union[Number, str], field_meta: Optional[dict]
+            self, field: str, value: Union[Number, str], field_meta: Optional[dict]
     ) -> Mapping[str, str]:
         """
         Transforms a field within a record. The result of the transform can be multiple fields (including None),
@@ -214,14 +210,16 @@ class Transformer:
         return self._transform_field(field, value, field_meta)
 
     def _transform_field(self, field: str, value: Union[Number, str], field_meta):
-        return {}
+        """This method can be overloaded by subclasses if the logic needs to return a field name other than the original
+        field name"""
+        return {field: self._transform(value)}
 
     def _transform_recursive(
         self,
         value: Union[Number, str],
         entities: List[dict],
         transformed_entities: Union[List[dict], None],
-    ) -> (Union[Number, str], dict):
+    ) -> Tuple[Union[Number, str], dict]:
         """
         Performs a recursive transformation.
 
