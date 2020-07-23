@@ -12,7 +12,7 @@ from gretel_client.transformers.restore import RestoreTransformerConfig, Restore
 
 FPE_XFORM_CHAR = '0'
 
-# NOTE: no docstrings, not user facing
+# NOTE(jm): no docstrings, not user facing
 
 
 @dataclass(frozen=True)
@@ -29,7 +29,7 @@ class FpeBase(RestoreTransformer):
         super().__init__(config)
         self._fpe_ff1 = FpeBaseFf1Common(config.secret, config.radix, config.aes_mode)
         self.radix = config.radix
-        self.float_precision = config.float_precision
+        self.float_precision = getattr(config, "float_precision", None)
 
     def _clean_and_mask_value(self, value):
         fpe_mask = None
