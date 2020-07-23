@@ -1,6 +1,6 @@
 from gretel_client.transformers.base import FieldRef
 from gretel_client.transformers.data_restore_pipeline import DataRestorePipeline
-from gretel_client.transformers import DataTransformPipeline, DataPath
+from gretel_client.transformers import DataTransformPipeline, DataPath, BucketConfig
 from gretel_client.transformers.data_transform_pipeline import RECORD_KEYS
 from gretel_client.transformers.fpe import crypto_aes
 from gretel_client.transformers import FormatConfig, CombineConfig, ConditionalConfig, \
@@ -686,3 +686,17 @@ def test_record_fpe_mask():
     rf_payload = rf.transform_record(xf_payload)
     check = rf_payload.get('credit_card')
     assert check == '4123 5678 9123 4567'
+
+
+def test_pipe_bucket(records_date_tweak):
+    bucket_list = [('A', 'L', 'A-L'), ('M', 'Z', 'M-Z')]
+    bucket_xf = BucketConfig(buckets=bucket_list)
+
+    data_paths = [DataPath(input='last_name', xforms=bucket_xf),
+                  DataPath(input='*')]
+
+    xf = DataTransformPipeline(data_paths)
+    check_aw = xf.transform_record(records_date_tweak[0])
+    check_ae = xf.transform_record(records_date_tweak[1])
+    assert check_aw['last_name'] == 'M-Z'
+    assert check_ae['last_name'] == 'A-L'

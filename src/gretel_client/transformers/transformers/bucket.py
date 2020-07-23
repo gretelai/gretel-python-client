@@ -22,26 +22,22 @@ class BucketConfig(TransformerConfig):
             minimum bucketed value.  If None, use the last bucket label.
     """
 
-    buckets: Union[
-        List[float],
-        List[int],
-        Tuple[Union[float, int], Union[float, int], Union[float, int]],
-    ] = None
-    bucket_labels: Union[List[float], List[int], List[str]] = None
-    lower_outlier_label: Union[float, int, str] = None
-    upper_outlier_label: Union[float, int, str] = None
+    buckets: List[Tuple[Union[Number, str], Union[Number, str], Union[Number, str]]] = None
+    lower_outlier_label: Union[Number, str] = None
+    upper_outlier_label: Union[Number, str] = None
 
 
 def bucket_tuple_to_list(
-    buckets: Tuple[Union[float, int], Union[float, int], Union[float, int]] = None
-) -> Union[List[float], List[int]]:
+        buckets: Tuple[Number, Number, Number] = None,
+        labels: List[Union[Number, str]] = None
+) -> List[Tuple[Union[Number, str], Union[Number, str], Union[Number, str]]]:
     """
     Helper function.  Convert a min/max/width tuple used by BucketConfig into an explicit list of values.  Use it,
     for example, to start with a standard list and then modify it to have varying width buckets.
 
     Args:
         buckets: Tuple of three floats or ints to specify minimum, maximum and bucket width.
-
+        labels: (Optional) List of labels, must match length of resulting bucket list.
     Returns:
         Explicit list of bucket boundaries.
     """
@@ -49,16 +45,18 @@ def bucket_tuple_to_list(
         raise ValueError("buckets must be a 3-Tuple (min, max, width)")
     b = []
     current_min = buckets[0]
+    idx = 0
     while current_min < buckets[1]:
-        b.append(current_min)
+        current_max = current_min + buckets[2] if current_min + buckets[2] < buckets[1] else buckets[1]
+        b.append((current_min, current_max, None if not labels else labels[idx]))
         current_min += buckets[2]
-    b.append(buckets[1])
+        idx += 1
     return b
 
 
 def get_bucket_labels_from_tuple(
-    buckets: Tuple[Union[float, int], Union[float, int], Union[float, int]] = None,
-    method: str = None,
+        buckets: Tuple[Number, Number, Number] = None,
+        method: str = None,
 ) -> Union[List[float], List[int]]:
     """
     Helper function.  Convert a min/max/width tuple used by BucketConfig into a list of bucket labels.  The
@@ -102,37 +100,31 @@ class Bucket(Transformer):
     def __init__(self, config: BucketConfig):
         super().__init__(config)
         # Expand tuple to list
-        if isinstance(config.buckets, tuple):
-            self.buckets = bucket_tuple_to_list(config.buckets)
-        else:
-            self.buckets = config.buckets
-        self.bucket_labels = config.bucket_labels
+        self.buckets = config.buckets
         if self.buckets is None or len(self.buckets) == 0:
             raise ValueError("Empty buckets not permitted.")
-        if len(self.buckets) - 1 != len(self.bucket_labels):
-            raise ValueError("Number of bucket_labels must match number of buckets.")
         self.lower_outlier_label = (
-            self.bucket_labels[0]
+            self.buckets[0][2]
             if config.lower_outlier_label is None
             else config.lower_outlier_label
         )
         self.upper_outlier_label = (
-            self.bucket_labels[-1]
+            self.buckets[-1][2]
             if config.upper_outlier_label is None
             else config.upper_outlier_label
         )
 
     def _transform(self, value: Union[Number, str]) -> Union[Number, str]:
-        if isinstance(value, float) or isinstance(value, int):
+        try:
             return self._mutate_num(value)
-        else:
+        except (TypeError, ValueError):
             return value
 
-    def _mutate_num(self, value: Union[float, int]) -> Union[float, int, str]:
-        if value < self.buckets[0]:
+    def _mutate_num(self, value: Union[Number, str]) -> Union[Number, str]:
+        if value < self.buckets[0][0]:
             return self.lower_outlier_label
-        elif value >= self.buckets[-1]:
+        elif value >= self.buckets[-1][1]:
             return self.upper_outlier_label
-        for idx in range(len(self.buckets) - 1):
-            if self.buckets[idx] <= value < self.buckets[idx + 1]:
-                return self.bucket_labels[idx]
+        for idx in range(len(self.buckets)):
+            if self.buckets[idx][0] <= value < self.buckets[idx][1]:
+                return self.buckets[idx][2]
