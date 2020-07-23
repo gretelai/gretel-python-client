@@ -2,14 +2,19 @@
 Shift a date by a random range and then shift it back to the original date with given key.
 """
 from gretel_client.transformers import DateShiftConfig
-from gretel_client.transformers import DataPath, DataRestorePipeline, DataTransformPipeline, FieldRef
+from gretel_client.transformers import (
+    DataPath,
+    DataRestorePipeline,
+    DataTransformPipeline,
+    FieldRef,
+)
 
 xf_date = DateShiftConfig(
     secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94",
     lower_range_days=-10,
     upper_range_days=25,
-    format='%m/%d/%Y',
-    tweak=FieldRef("user_id")
+    date_format="%m/%d/%Y",
+    tweak=FieldRef("user_id"),
 )
 
 data_paths = [DataPath(input="birthday", xforms=xf_date), DataPath(input="*")]
@@ -37,6 +42,7 @@ print(f"Transformed output: {out}\n")
 
 restored = [restore_pipe.transform_record(rec) for rec in out]
 
+# Please note the format!
 assert restored == [
     {"user_id": "michaelj@dabulls.com", "birthday": "02/17/1963"},
     {"user_id": "michaelj@twinpinesmall.com", "birthday": "06/09/1961"},
