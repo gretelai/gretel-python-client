@@ -308,7 +308,6 @@ def test_pipe_date_shift_cbc_fast(records_date_tweak):
     assert check_ae['created'] == '2016-06-17'
 
 
-
 def test_meta_data_transform(record_meta_data_check):
     entity_xf = [
         RedactWithLabelConfig(labels=['date']),
