@@ -12,12 +12,13 @@ from gretel_client.transformers.restore import RestoreTransformerConfig, Restore
 
 FPE_XFORM_CHAR = '0'
 
+# NOTE: no docstrings, not user facing
+
 
 @dataclass(frozen=True)
 class FpeBaseConfig(RestoreTransformerConfig):
     radix: int = None
     secret: str = None
-    float_precision: int = None
     aes_mode: Mode = Mode.CBC
 
 

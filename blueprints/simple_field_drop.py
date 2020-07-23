@@ -18,7 +18,7 @@ rec = {
     "foo": "hello",
     "trash": "old fish",
     "trash_again": "bad milk",
-    "barry": "manilow",
+    "not": "trash",
 }
 
 # Time to take out the trash

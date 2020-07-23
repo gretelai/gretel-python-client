@@ -2,6 +2,7 @@ from .base import FieldRef
 from .data_pipeline import DataPath
 from .data_transform_pipeline import DataTransformPipeline
 from .data_restore_pipeline import DataRestorePipeline
+from .string_mask import StringMask
 from gretel_client.transformers.transformers.bucket import BucketConfig, get_bucket_labels_from_tuple
 from gretel_client.transformers.transformers.combine import CombineConfig
 from gretel_client.transformers.transformers.conditional import ConditionalConfig
@@ -23,6 +24,7 @@ __all__ = [
     "DataTransformPipeline",
     "DataRestorePipeline",
     "FieldRef",
+    "StringMask",
 
     # transformers implementations
     "BucketConfig",
@@ -40,5 +42,3 @@ __all__ = [
     "RedactWithStringConfig",
     "SecureHashConfig",
 ]
-
-

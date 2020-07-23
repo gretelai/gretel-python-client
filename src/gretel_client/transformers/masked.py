@@ -8,6 +8,8 @@ from gretel_client.transformers.string_mask import StringMask
 
 FPE_XFORM_CHAR = '0'
 
+# NOTE(jm): Internally used, no docstrings required
+
 
 @dataclass(frozen=True)
 class MaskedTransformerConfig(ABC):

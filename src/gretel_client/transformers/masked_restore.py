@@ -9,6 +9,9 @@ from gretel_client.transformers.masked import MaskedTransformerConfig, MaskedTra
 FPE_XFORM_CHAR = '0'
 
 
+# NOTE(jm): no docstrings required, not user facing
+
+
 @dataclass(frozen=True)
 class MaskedRestoreTransformerConfig(MaskedTransformerConfig, ABC):
     pass
