@@ -170,18 +170,18 @@ def test_record_fpe():
     xf = DataTransformPipeline(data_paths)
     rf = DataRestorePipeline(data_paths)
     xf_payload = xf.transform_record(rec)
-    # check = xf_payload.get('credit_card')
-    # assert check == '5931468769662449'
-    # check = xf_payload.get('longitude')
-    # assert check == -112.22154173039645
-    # check = xf_payload.get('latitude')
-    # assert check == -70.78287074710897
-    # check = xf_payload.get('the_hotness')
-    # assert check == '2qjuxg7ju'
-    # check = xf_payload.get('the_dude')
-    # assert check == 128994144
-    # check = xf_payload.get('the_sci_notation')
-    # assert check == 1.229570610794763e-07
+    check = xf_payload.get('credit_card')
+    assert check == '5931468769662449'
+    check = xf_payload.get('longitude')
+    assert check == -112.22154173039645
+    check = xf_payload.get('latitude')
+    assert check == -70.78287074710897
+    check = xf_payload.get('the_hotness')
+    assert check == '2qjuxg7ju'
+    check = xf_payload.get('the_dude')
+    assert check == 128994144
+    check = xf_payload.get('the_sci_notation')
+    assert check == 1.229570610794763e-07
     check = rf.transform_record(xf_payload)
     assert check == rec
 
@@ -270,7 +270,7 @@ def test_pipe_date_shift_cbc_fast(records_date_tweak):
                                  aes_mode=crypto_aes.Mode.CBC_FAST)
     xf_date = DateShiftConfig(secret='2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94',
                               lower_range_days=-10, upper_range_days=25,
-                              tweak=FieldRef('user_id'), aes_mode=crypto_aes.Mode.CBC_FAST)
+                              tweak=FieldRef('user_id'))
 
     data_paths = [DataPath(input='user_id', xforms=xf_user_id),
                   DataPath(input='created', xforms=xf_date),
@@ -281,8 +281,8 @@ def test_pipe_date_shift_cbc_fast(records_date_tweak):
     rf = DataRestorePipeline(data_paths)
     check_aw = xf.transform_record(records_date_tweak[0])
     check_ae = xf.transform_record(records_date_tweak[1])
-    assert check_aw['created'] == '2016-06-09'
-    assert check_ae['created'] == '2016-07-11'
+    assert check_aw['created'] == '2016-06-18'
+    assert check_ae['created'] == '2016-06-18'
     check_ae = rf.transform_record(check_ae)
     check_aw = rf.transform_record(check_aw)
     assert check_aw['created'] == '2016-06-17'
@@ -693,7 +693,7 @@ def test_date_shift_format():
         secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94",
         lower_range_days=-10,
         upper_range_days=25,
-        format='%m/%d/%Y',
+        date_format='%m/%d/%Y',
         tweak=FieldRef("user_id")
     )
     data_paths = [DataPath(input="birthday", xforms=xf_date), DataPath(input="*")]

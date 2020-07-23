@@ -1,8 +1,7 @@
 from dataclasses import dataclass
-from datetime import timedelta
 from datetime import datetime
+from datetime import timedelta
 from numbers import Number
-from time import strftime
 from typing import Union
 
 from dateparser.date import DateDataParser
@@ -24,15 +23,18 @@ class DateShiftConfig(RestoreTransformerConfig):
     Args:
         lower_range_days: The maximum number of days to adjust backwards in time.
         upper_range_days: The maximum number of days to adjust forwards in time.
-        secret: Encryption key to use
-        tweak: Optionally base the time shift on another field in the record
+        secret: Encryption key to use.
+        tweak: Optionally base the time shift on another field in the record.
+        date_format: (Optional) Specify desired input/output format in https://strftime.org/ syntax. If None, then the
+            output format will always be formatted to "%m/%d/%Y". If you specify a date_format string, it will first
+            attempt to read the incoming value using this date format and fall back to a generic date parser if it
+            fails. The output format however, will always be the one specified here or the default.
     """
     lower_range_days: int = None
     upper_range_days: int = None
     secret: str = None
     tweak: FieldRef = None
-    format: str = None
-    aes_mode: Mode = Mode.CBC
+    date_format: str = None
 
 
 class DateShift(RestoreTransformer):
@@ -45,14 +47,14 @@ class DateShift(RestoreTransformer):
             maxTLen=0,
             key=bytearray.fromhex(config.secret),
             tweak=b"",
-            mode=config.aes_mode
+            mode=Mode.CBC
         )
         self.lower_range_days = config.lower_range_days
         self.upper_range_days = config.upper_range_days
         self.range = config.upper_range_days - config.lower_range_days
         if self.range < 1:
             raise ValueError("Lower/upper range needs to be greater than 1")
-        self.format = config.format
+        self.format = config.date_format
 
     def _get_date_delta(self, date_val: str):
         field_ref = self._get_field_ref("tweak")
