@@ -64,6 +64,10 @@ class Transformer(ABC):
     This class should be used direclty to created sub-classes of itself that contain
     transformer-specific logic. The only input to the constructor of this
     class is a config object.
+
+    Args:
+        config: Configuration object, which inherits from ``TransformerConfig`` describing the
+            transformer type and parameters. See the specific configuration docs for the
     """
 
     config_class: TransformerConfig = None
@@ -74,16 +78,6 @@ class Transformer(ABC):
     entity_sort_criterion = "start"
 
     def __init__(self, config: TransformerConfig):
-        """Create a Transformer.
-
-        Args:
-            config: Configuration object, which inherits from ``TransformerConfig`` describing the
-                transformer type and parameters. See the specific configuration docs for the
-                type of transformer being created.
-
-        Returns:
-            An instance of ``Transformer``
-        """
         self.transform_entity_func = None
         self.labels = frozenset(config.labels or [])
         self.field_ref_dict = dict(

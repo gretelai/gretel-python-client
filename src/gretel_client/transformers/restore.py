@@ -24,6 +24,7 @@ class RestoreTransformerConfig(TransformerConfig):
 
     Should not need to be used directly.
     """
+    pass
 
 
 class RestoreTransformer(Transformer):

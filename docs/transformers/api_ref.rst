@@ -17,6 +17,7 @@ Module Reference: Transformers
    transform_pipeline
    restore_pipeline
    fakers
+   string_mask
    xf_bucket
    xf_char_redact
    xf_combine
@@ -25,7 +26,8 @@ Module Reference: Transformers
    xf_drop
    xf_fake_constant
    xf_format
-   xf_fpe
+   xf_fpe_float
+   xf_fpe_string
    xf_label_redact
    xf_secure_hash
    xf_string_redact

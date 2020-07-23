@@ -2,10 +2,13 @@ from dataclasses import dataclass
 from numbers import Number
 from typing import Union
 
-from gretel_client.transformers.masked_restore import MaskedRestoreTransformerConfig, MaskedRestoreTransformer
+from gretel_client.transformers.masked_restore import (
+    MaskedRestoreTransformerConfig,
+    MaskedRestoreTransformer,
+)
 from gretel_client.transformers.transformers.fpe_base import FpeBase, FpeBaseConfig
 
-FPE_XFORM_CHAR = '0'
+FPE_XFORM_CHAR = "0"
 
 
 @dataclass(frozen=True)
@@ -14,17 +17,13 @@ class FpeStringConfig(MaskedRestoreTransformerConfig, FpeBaseConfig):
     FpeString transformer applies a format preserving encryption as defined by https://www.nist.gov/ to the data value.
     The encryption works on strings and float values. The result is stateless and given the correct key, the original
     value can be restored.
-    """
-    """
-     Args:
+
+    Args:
         radix: Base from 2 to 62, determines base of incoming data types. Base2 = binary, Base62 = alphanumeric 
-        including upper and lower case characters.
+            including upper and lower case characters.
         secret: 256bit AES encryption string specified as 64 hexadecimal characters.
-        mask: String to specify a mask of which characters should be transformed. Any character in the mask that is
-        specified as '0' will be encrypted in the data string. E.g.: mask='0011' value='1234' -> 'EE34' ('E'ncrypted)
+        mask: An optioan list of ``StringMask`` objects
         float_precision: This value only matters if the incoming data value is of type float.
-     NOTE:
-         Example configuration:
      """
 
 

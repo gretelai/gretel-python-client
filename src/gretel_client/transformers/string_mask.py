@@ -1,4 +1,12 @@
-class StringMask():
+"""
+Module that contains masking tools for strings.
+"""
+
+
+class StringMask:
+    """
+    TODO
+    """
     start_pos: int = None
     end_pos: int = None
     mask_after: str = None
