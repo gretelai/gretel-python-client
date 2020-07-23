@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from datetime import timedelta
+from datetime import datetime
 from numbers import Number
+from time import strftime
 from typing import Union
 
 from dateparser.date import DateDataParser
@@ -29,6 +31,7 @@ class DateShiftConfig(RestoreTransformerConfig):
     upper_range_days: int = None
     secret: str = None
     tweak: FieldRef = None
+    format: str = None
     aes_mode: Mode = Mode.CBC
 
 
@@ -42,13 +45,14 @@ class DateShift(RestoreTransformer):
             maxTLen=0,
             key=bytearray.fromhex(config.secret),
             tweak=b"",
-            mode=config.aes_mode,
+            mode=config.aes_mode
         )
         self.lower_range_days = config.lower_range_days
         self.upper_range_days = config.upper_range_days
         self.range = config.upper_range_days - config.lower_range_days
         if self.range < 1:
-            raise ValueError
+            raise ValueError("Lower/upper range needs to be greater than 1")
+        self.format = config.format
 
     def _get_date_delta(self, date_val: str):
         field_ref = self._get_field_ref("tweak")
@@ -62,18 +66,29 @@ class DateShift(RestoreTransformer):
 
         tweak_val = self._fpe_ff1.decode(tweak_val)
         days = int(tweak_val) % self.range + self.lower_range_days
-        date_val = DateDataParser(settings={"STRICT_PARSING": True}).get_date_data(
-            date_val
-        )
-        date_val = date_val["date_obj"].date()
-        return days, date_val
+        _date_val = None
+        if self.format:
+            try:
+                _date_val = datetime.strptime(date_val, self.format).date()
+            except ValueError:
+                pass
+        if not _date_val:
+            _date_val = DateDataParser(settings={"STRICT_PARSING": True}).get_date_data(date_val)
+            _date_val = _date_val["date_obj"].date()
+        return days, _date_val
 
     def _transform(self, value: Union[Number, str]) -> Union[Number, str]:
         days, date_val = self._get_date_delta(value)
         date_val += timedelta(days=days)
-        return str(date_val)
+        if self.format:
+            return date_val.strftime(self.format)
+        else:
+            return str(date_val)
 
     def _restore(self, value: Union[Number, str]) -> Union[Number, str]:
         days, date_val = self._get_date_delta(value)
         date_val -= timedelta(days=days)
-        return str(date_val)
+        if self.format:
+            return date_val.strftime(self.format)
+        else:
+            return str(date_val)
