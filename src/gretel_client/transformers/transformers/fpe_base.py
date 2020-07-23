@@ -29,6 +29,8 @@ class FpeBase(RestoreTransformer):
         super().__init__(config)
         self._fpe_ff1 = FpeBaseFf1Common(config.secret, config.radix, config.aes_mode)
         self.radix = config.radix
+
+        # Only used when ``FpeFloat`` class config was used`
         self.float_precision = getattr(config, "float_precision", None)
 
     def _clean_and_mask_value(self, value):
