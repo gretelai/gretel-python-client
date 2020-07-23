@@ -1,6 +1,7 @@
 """
 Module that contains masking tools for strings.
 """
+from typing import Tuple
 
 
 class StringMask:
@@ -50,6 +51,6 @@ class StringMask:
     def get_masked_chars(self, value: str) -> str:
         return value[self.get_mask_slice(value)]
 
-    def get_masked_chars_slice(self, value: str) -> (str, slice):
+    def get_masked_chars_slice(self, value: str) -> Tuple[str, slice]:
         _slice = self.get_mask_slice(value)
         return value[_slice], _slice

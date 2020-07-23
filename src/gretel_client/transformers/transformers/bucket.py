@@ -21,15 +21,20 @@ class BucketConfig(TransformerConfig):
         upper_outlier_label: Float, int or string.  This label will be applied to values less than the
             minimum bucketed value.  If None, use the last bucket label.
     """
-    buckets: Union[List[float], List[int], Tuple[Union[float, int], Union[float, int], Union[float, int]]] = None
+
+    buckets: Union[
+        List[float],
+        List[int],
+        Tuple[Union[float, int], Union[float, int], Union[float, int]],
+    ] = None
     bucket_labels: Union[List[float], List[int], List[str]] = None
     lower_outlier_label: Union[float, int, str] = None
     upper_outlier_label: Union[float, int, str] = None
 
 
 def bucket_tuple_to_list(
-        buckets: Tuple[Union[float, int], Union[float, int], Union[float, int]] = None) \
-        -> Union[List[float], List[int]]:
+    buckets: Tuple[Union[float, int], Union[float, int], Union[float, int]] = None
+) -> Union[List[float], List[int]]:
     """
     Helper function.  Convert a min/max/width tuple used by BucketConfig into an explicit list of values.  Use it,
     for example, to start with a standard list and then modify it to have varying width buckets.
@@ -52,9 +57,9 @@ def bucket_tuple_to_list(
 
 
 def get_bucket_labels_from_tuple(
-        buckets: Tuple[Union[float, int], Union[float, int], Union[float, int]] = None,
-        method: str = None) \
-        -> Union[List[float], List[int]]:
+    buckets: Tuple[Union[float, int], Union[float, int], Union[float, int]] = None,
+    method: str = None,
+) -> Union[List[float], List[int]]:
     """
     Helper function.  Convert a min/max/width tuple used by BucketConfig into a list of bucket labels.  The
     labels can be the minimum, average or maximum value for each bucket.
@@ -91,6 +96,7 @@ class Bucket(Transformer):
     Bucket transformer.  Sort numeric fields into buckets.  The field value is changed into the numeric or string
     label for that bucket.  Extra labels can be specified for values falling outside of the bucket range.
     """
+
     config_class = BucketConfig
 
     def __init__(self, config: BucketConfig):
@@ -105,10 +111,16 @@ class Bucket(Transformer):
             raise ValueError("Empty buckets not permitted.")
         if len(self.buckets) - 1 != len(self.bucket_labels):
             raise ValueError("Number of bucket_labels must match number of buckets.")
-        self.lower_outlier_label = self.bucket_labels[0] if config.lower_outlier_label is None \
+        self.lower_outlier_label = (
+            self.bucket_labels[0]
+            if config.lower_outlier_label is None
             else config.lower_outlier_label
-        self.upper_outlier_label = self.bucket_labels[-1] if config.upper_outlier_label is None \
+        )
+        self.upper_outlier_label = (
+            self.bucket_labels[-1]
+            if config.upper_outlier_label is None
             else config.upper_outlier_label
+        )
 
     def _transform(self, value: Union[Number, str]) -> Union[Number, str]:
         if isinstance(value, float) or isinstance(value, int):

@@ -23,7 +23,6 @@ class FpeStringConfig(MaskedRestoreTransformerConfig, FpeBaseConfig):
             including upper and lower case characters.
         secret: 256bit AES encryption string specified as 64 hexadecimal characters.
         mask: An optioan list of ``StringMask`` objects
-        float_precision: This value only matters if the incoming data value is of type float.
      """
 
 

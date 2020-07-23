@@ -219,7 +219,7 @@ class Transformer(ABC):
         value: Union[Number, str],
         entities: List[dict],
         transformed_entities: Union[List[dict], None],
-    ) -> (Union[Number, str], dict):
+    ) -> Tuple[Union[Number, str], dict]:
         """
         Performs a recursive transformation.
 

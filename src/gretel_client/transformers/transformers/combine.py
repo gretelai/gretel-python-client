@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from numbers import Number
-from typing import Optional, Tuple, Union
+from typing import Union
 
 from gretel_client.transformers.base import Transformer, TransformerConfig, FieldRef
 
@@ -20,6 +20,7 @@ class CombineConfig(TransformerConfig):
         create the ``DataPath`` for this transform, the ``input`` field to the path would be
         set to match on "foo".
     """
+
     combine: FieldRef = None
     separator: str = None
 
@@ -32,8 +33,10 @@ class Combine(Transformer):
         self.separator = config.separator or ""
 
     def _get_combiners(self):
-        combine_list = self._get_field_ref('combine')
-        combine_list = [val if isinstance(val, str) else str(val) for val in combine_list.value ]
+        combine_list = self._get_field_ref("combine")
+        combine_list = [
+            val if isinstance(val, str) else str(val) for val in combine_list.value
+        ]
         return combine_list
 
     def _transform(self, value: Union[Number, str]) -> Union[Number, str]:

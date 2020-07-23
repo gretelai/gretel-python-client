@@ -21,6 +21,7 @@ class FakeConstantConfig(TransformerConfig):
             for the available locales to use.
         locale_seed: An optional seed to use for initializing the order of locales to be used for creating fake values
     """
+
     seed: int = None
     fake_method: str = None
     locales: List[str] = None

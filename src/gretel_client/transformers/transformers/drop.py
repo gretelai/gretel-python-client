@@ -13,6 +13,7 @@ class DropConfig(TransformerConfig):
     Args:
         None
     """
+
     pass
 
 
@@ -24,5 +25,6 @@ class Drop(Transformer):
 
     def _transform(self, value: Union[Number, str]) -> Union[Number, str]:
         raise ValueError(
-            "_transform method was called even though the Drop transformer does not implement this!")
+            "_transform method was called even though the Drop transformer does not implement this!"
+        )
 

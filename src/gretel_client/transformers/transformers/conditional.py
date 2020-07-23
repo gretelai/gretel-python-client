@@ -3,8 +3,16 @@ from dataclasses import dataclass
 from numbers import Number
 from typing import Optional, Tuple, Union
 
-from gretel_client.transformers.restore import RestoreTransformer, RestoreTransformerConfig
-from gretel_client.transformers.base import Transformer, TransformerConfig, FieldRef, factory
+from gretel_client.transformers.restore import (
+    RestoreTransformer,
+    RestoreTransformerConfig,
+)
+from gretel_client.transformers.base import (
+    Transformer,
+    TransformerConfig,
+    FieldRef,
+    factory,
+)
 
 
 try:
@@ -38,6 +46,7 @@ class ConditionalConfig(RestoreTransformerConfig):
         true_xform: A transform config that will be run if the regex matches, if `None`, no transform is run
         false_xform: A transform config that will run if the regex does not match, if `None`, no transform is run
     """
+
     conditional_value: FieldRef = None
     regex: Union[str, Pattern] = None
     true_xform: TransformerConfig = None
@@ -75,8 +84,10 @@ class Conditional(RestoreTransformer):
                 self._false_xform_restore_field = self.false_xform.transform_field
                 self._false_xform_restore_entity = self.false_xform.transform_entity
 
-    def _transform_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
-        if self.regex.match(self._get_field_ref('conditional_value').value):
+    def _transform_entity(
+        self, label: str, value: Union[Number, str]
+    ) -> Optional[Tuple[Optional[str], str]]:
+        if self.regex.match(self._get_field_ref("conditional_value").value):
             if self.true_xform:
                 return self.true_xform.transform_entity(label, value)
             else:
@@ -88,7 +99,7 @@ class Conditional(RestoreTransformer):
                 return label, value
 
     def _transform_field(self, field: str, value: Union[Number, str], field_meta):
-        if self.regex.match(self._get_field_ref('conditional_value').value):
+        if self.regex.match(self._get_field_ref("conditional_value").value):
             if self.true_xform:
                 return self.true_xform.transform_field(field, value, field_meta)
             else:
@@ -99,8 +110,10 @@ class Conditional(RestoreTransformer):
             else:
                 return {field: value}
 
-    def _restore_entity(self, label: str, value: Union[Number, str]) -> Optional[Tuple[Optional[str], str]]:
-        if self.regex.match(self._get_field_ref('conditional_value').value):
+    def _restore_entity(
+        self, label: str, value: Union[Number, str]
+    ) -> Optional[Tuple[Optional[str], str]]:
+        if self.regex.match(self._get_field_ref("conditional_value").value):
             if self.true_xform:
                 return self._true_xform_restore_entity(label, value)
             else:
@@ -112,7 +125,7 @@ class Conditional(RestoreTransformer):
                 return label, value
 
     def _restore_field(self, field: str, value: Union[Number, str], field_meta):
-        if self.regex.match(self._get_field_ref('conditional_value').value):
+        if self.regex.match(self._get_field_ref("conditional_value").value):
             if self.true_xform:
                 return self._true_xform_restore_field(field, value, field_meta)
             else:
@@ -125,9 +138,11 @@ class Conditional(RestoreTransformer):
 
     def _transform(self, value: Union[Number, str]) -> Union[Number, str]:
         raise ValueError(
-            "_transform method was called even though the Combine transformer does not implement this!")
+            "_transform method was called even though the Combine transformer does not implement this!"
+        )
 
     def _restore(self, value: Union[Number, str]) -> Union[Number, str]:
         raise ValueError(
-            "_restore method was called even though the Combine transformer does not implement this!")
+            "_restore method was called even though the Combine transformer does not implement this!"
+        )
 
