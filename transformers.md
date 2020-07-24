@@ -5,6 +5,15 @@ provide some basic tutorials for getting started.
 
 For more advanced usage, please refer to our tutorials / guides on [our blog](https://www.medium.com/gretel-ai).
 
+## Installation
+
+Most transformers are installed with installing the client. For transformers that utilize Format Preserving Encryption,
+you will need to intstall the extras for that:
+
+```
+$ pip install gretel-client[fpe]
+```
+
 ## Basics
 
 Our Transformers SDK allows the transformation of data records, generally in the form of a Python dictionary, at two different levels:
