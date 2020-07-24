@@ -5,10 +5,10 @@ You can also specify a value or label for outlying values.
 from gretel_client.transformers import BucketConfig
 from gretel_client.transformers import DataPath, DataTransformPipeline
 # Use a tuple for configuration.  Values are minimum, maximum and bucket width.
-from gretel_client.transformers.transformers.bucket import bucket_tuple_to_list
+from gretel_client.transformers.transformers.bucket import bucket_creation_params_to_list, BucketCreationParams
 
-min_max_width_tuple = (0.0, 3.0, 1.0)
-buckets = bucket_tuple_to_list(min_max_width_tuple, label_method="avg")
+min_max_width_tuple = BucketCreationParams(0.0, 3.0, 1.0)
+buckets = bucket_creation_params_to_list(min_max_width_tuple, label_method="avg")
 numeric_bucketing_xf = BucketConfig(
     buckets=buckets,
     # Use a helper method to generate numeric labels.  By default, new field value is the average value of each bucket.
