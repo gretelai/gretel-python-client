@@ -4,11 +4,16 @@ from gretel_client.transformers.transformers.bucket import (
     BucketConfig,
     bucket_tuple_to_list,
     get_bucket_labels_from_tuple,
+    Bucket,
 )
 
 
 def test_bucket(safecast_test_bucket2):
-    bucket_list = [(20.0, 23.0, "Low"), (23.0, 24.0, "Med"), (24.0, 25.0, "High")]
+    bucket_list = [
+        Bucket(20.0, 23.0, "Low"),
+        Bucket(23.0, 24.0, "Med"),
+        Bucket(24.0, 25.0, "High"),
+    ]
     bucket_config = BucketConfig(buckets=bucket_list)
     data_paths = [
         DataPath(input="payload.env_temp", xforms=bucket_config),
@@ -25,7 +30,7 @@ def test_bucket(safecast_test_bucket2):
 
 
 def test_string_bucket():
-    bucket_list = [("a", "l", "a-l"), ("m", "s", "m-s")]
+    bucket_list = [Bucket("a", "l", "a-l"), Bucket("m", "s", "m-s")]
     xf = factory(
         BucketConfig(
             buckets=bucket_list, labels=["person_name"], upper_outlier_label="t-z"
@@ -39,7 +44,7 @@ def test_string_bucket():
 
 
 def test_type_mismatch():
-    bucket_list = [("a", "l", "a-l"), ("m", "s", "m-s")]
+    bucket_list = [Bucket("a", "l", "a-l"), Bucket("m", "s", "m-s")]
     xf = factory(
         BucketConfig(
             buckets=bucket_list, labels=["person_name"], upper_outlier_label="t-z"
@@ -50,9 +55,9 @@ def test_type_mismatch():
 
 def test_bucket2(safecast_test_bucket2):
     bucket_list = [
-        (22.0, 23.0, "FEET_0"),
-        (23.0, 24.0, "FEET_1"),
-        (24.0, 25.0, "FEET_2"),
+        Bucket(22.0, 23.0, "FEET_0"),
+        Bucket(23.0, 24.0, "FEET_1"),
+        Bucket(24.0, 25.0, "FEET_2"),
     ]
     bucket_config = [
         BucketConfig(
@@ -83,11 +88,11 @@ def test_bucket2(safecast_test_bucket2):
     ]
 
     bucket_list = [
-        (21.0, 22.0, "nice"),
-        (22.0, 23.0, "bearable"),
-        (23.0, 24.0, "toasty"),
-        (24.0, 25.0, "volcano"),
-        (25.0, 26.0, "nuke"),
+        Bucket(21.0, 22.0, "nice"),
+        Bucket(22.0, 23.0, "bearable"),
+        Bucket(23.0, 24.0, "toasty"),
+        Bucket(24.0, 25.0, "volcano"),
+        Bucket(25.0, 26.0, "nuke"),
     ]
     bucket_config = BucketConfig(buckets=bucket_list)
     data_paths = [
@@ -119,7 +124,7 @@ def test_config_helpers():
     bucket_vals = [0.0, 2.5, 5.0, 7.5, 10.0]
     bucket_label_vals = [1.25, 3.75, 6.25, 8.75]
     for idx in range(len(buckets)):
-        assert abs(buckets[idx][0] - bucket_vals[idx]) < 0.01
+        assert abs(buckets[idx].min - bucket_vals[idx]) < 0.01
     for idx in range(len(bucket_labels)):
         assert abs(bucket_labels[idx] - bucket_label_vals[idx]) < 0.01
     assert len(buckets) == 4
@@ -130,7 +135,7 @@ def test_config_helpers():
     bucket_vals = [0.0, 2.8, 5.6, 8.4, 10.0]
     bucket_label_vals = [1.4, 4.2, 7.0, 9.8]
     for idx in range(len(buckets)):
-        assert abs(buckets[idx][0] - bucket_vals[idx]) < 0.01
+        assert abs(buckets[idx].min - bucket_vals[idx]) < 0.01
     for idx in range(len(bucket_labels)):
         assert abs(bucket_labels[idx] - bucket_label_vals[idx]) < 0.01
     assert len(buckets) == 4

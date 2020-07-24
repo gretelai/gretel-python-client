@@ -6,6 +6,13 @@ from gretel_client.transformers.base import TransformerConfig, Transformer
 
 
 @dataclass(frozen=True)
+class Bucket:
+    min: Union[Number, str] = None
+    max: Union[Number, str] = None
+    label: Union[Number, str] = None
+
+
+@dataclass(frozen=True)
 class BucketConfig(TransformerConfig):
     """
     Sort numeric data into buckets.  Each bucket has a numeric or string label.
@@ -19,9 +26,7 @@ class BucketConfig(TransformerConfig):
             minimum bucketed value.  If None, use the last bucket label.
     """
 
-    buckets: List[
-        Tuple[Union[Number, str], Union[Number, str], Union[Number, str]]
-    ] = None
+    buckets: List[Bucket] = None
     lower_outlier_label: Union[Number, str] = None
     upper_outlier_label: Union[Number, str] = None
 
@@ -30,7 +35,7 @@ def bucket_tuple_to_list(
     bucket_creation_params: Tuple[Number, Number, Number] = None,
     labels: List[Union[Number, str]] = None,
     label_method: str = None,
-) -> List[Tuple[Union[Number, str], Union[Number, str], Union[Number, str]]]:
+) -> List[Bucket]:
     """
     Helper function.  Convert a min/max/width tuple used by BucketConfig into an explicit list of values.  Use it,
     for example, to start with a standard list and then modify it to have varying width buckets.
@@ -56,7 +61,7 @@ def bucket_tuple_to_list(
             if current_min + bucket_creation_params[2] < bucket_creation_params[1]
             else bucket_creation_params[1]
         )
-        b.append((current_min, current_max, None if not labels else labels[idx]))
+        b.append(Bucket(current_min, current_max, None if not labels else labels[idx]))
         current_min += bucket_creation_params[2]
         idx += 1
     return b
@@ -101,7 +106,7 @@ def get_bucket_labels_from_tuple(
     return bucket_labels
 
 
-class Bucket(Transformer):
+class BucketTransformer(Transformer):
     """
     Bucket transformer.  Sort numeric fields into buckets.  The field value is changed into the numeric or string
     label for that bucket.  Extra labels can be specified for values falling outside of the bucket range.
@@ -116,27 +121,27 @@ class Bucket(Transformer):
         if self.buckets is None or len(self.buckets) == 0:
             raise ValueError("Empty buckets not permitted.")
         self.lower_outlier_label = (
-            self.buckets[0][2]
+            self.buckets[0].label
             if config.lower_outlier_label is None
             else config.lower_outlier_label
         )
         self.upper_outlier_label = (
-            self.buckets[-1][2]
+            self.buckets[-1].label
             if config.upper_outlier_label is None
             else config.upper_outlier_label
         )
 
     def _transform(self, value: Union[Number, str]) -> Union[Number, str]:
         try:
-            return self._mutate_num(value)
+            return self._mutate(value)
         except (TypeError, ValueError):
             return value
 
-    def _mutate_num(self, value: Union[Number, str]) -> Union[Number, str]:
-        if value < self.buckets[0][0]:
+    def _mutate(self, value: Union[Number, str]) -> Union[Number, str]:
+        if value < self.buckets[0].min:
             return self.lower_outlier_label
-        elif value >= self.buckets[-1][1]:
+        elif value >= self.buckets[-1].max:
             return self.upper_outlier_label
         for idx in range(len(self.buckets)):
-            if self.buckets[idx][0] <= value < self.buckets[idx][1]:
-                return self.buckets[idx][2]
+            if self.buckets[idx].min <= value < self.buckets[idx].max:
+                return self.buckets[idx].label

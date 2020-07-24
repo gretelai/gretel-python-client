@@ -7,6 +7,7 @@ from gretel_client.transformers import FormatConfig, CombineConfig, ConditionalC
     DateShiftConfig, DropConfig, FakeConstantConfig, RedactWithCharConfig, RedactWithLabelConfig, \
     RedactWithStringConfig, FpeFloatConfig, FpeStringConfig, SecureHashConfig
 from gretel_client.transformers.string_mask import StringMask
+from gretel_client.transformers.transformers.bucket import Bucket
 
 SEED = 8675309
 
@@ -689,7 +690,7 @@ def test_record_fpe_mask():
 
 
 def test_pipe_bucket(records_date_tweak):
-    bucket_list = [('A', 'L', 'A-L'), ('M', 'Z', 'M-Z')]
+    bucket_list = [Bucket('A', 'L', 'A-L'), Bucket('M', 'Z', 'M-Z')]
     bucket_xf = BucketConfig(buckets=bucket_list)
 
     data_paths = [DataPath(input='last_name', xforms=bucket_xf),

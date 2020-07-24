@@ -2,9 +2,8 @@
 Bucket your numeric data and return a single value or string label for each bucket.
 You can also specify a value or label for outlying values.
 """
+from gretel_client.transformers import BucketConfig
 from gretel_client.transformers import DataPath, DataTransformPipeline
-from gretel_client.transformers import BucketConfig, get_bucket_labels_from_tuple
-
 # Use a tuple for configuration.  Values are minimum, maximum and bucket width.
 from gretel_client.transformers.transformers.bucket import bucket_tuple_to_list
 
