@@ -4,7 +4,8 @@ from gretel_client.transformers.transformers.bucket import (
     BucketConfig,
     bucket_creation_params_to_list,
     get_bucket_labels_from_creation_params,
-    Bucket, BucketCreationParams,
+    Bucket,
+    BucketCreationParams,
 )
 
 
@@ -119,8 +120,12 @@ def test_bucket2(safecast_test_bucket2):
 
 
 def test_config_helpers():
-    buckets = bucket_creation_params_to_list(BucketCreationParams(0.0, 10.0, 2.5), label_method="avg")
-    bucket_labels = get_bucket_labels_from_creation_params(BucketCreationParams(0.0, 10.0, 2.5), label_method="avg")
+    buckets = bucket_creation_params_to_list(
+        BucketCreationParams(0.0, 10.0, 2.5), label_method="avg"
+    )
+    bucket_labels = get_bucket_labels_from_creation_params(
+        BucketCreationParams(0.0, 10.0, 2.5), label_method="avg"
+    )
     bucket_vals = [0.0, 2.5, 5.0, 7.5, 10.0]
     bucket_label_vals = [1.25, 3.75, 6.25, 8.75]
     for idx in range(len(buckets)):
@@ -130,8 +135,12 @@ def test_config_helpers():
     assert len(buckets) == 4
     assert len(bucket_labels) == 4
 
-    buckets = bucket_creation_params_to_list(BucketCreationParams(0.0, 10.0, 2.8), label_method="avg")
-    bucket_labels = get_bucket_labels_from_creation_params(BucketCreationParams(0.0, 10.0, 2.8), label_method="avg")
+    buckets = bucket_creation_params_to_list(
+        BucketCreationParams(0.0, 10.0, 2.8), label_method="avg"
+    )
+    bucket_labels = get_bucket_labels_from_creation_params(
+        BucketCreationParams(0.0, 10.0, 2.8), label_method="avg"
+    )
     bucket_vals = [0.0, 2.8, 5.6, 8.4, 10.0]
     bucket_label_vals = [1.4, 4.2, 7.0, 9.8]
     for idx in range(len(buckets)):

@@ -9,7 +9,8 @@ from gretel_client.transformers.base import TransformerConfig, Transformer
 class BucketCreationParams:
     """
     Bucket creation parameter container. Stores minimum-, maximum-value of range to cover and width for each bucket.
-        Used to automatically create a list of buckets covering the range specified.
+    Used to automatically create a list of buckets covering the range specified.
+
     Args:
         min: float or int specifying bottom of range to cover
         max: float or int specifying top of range to cover
@@ -62,16 +63,18 @@ def bucket_creation_params_to_list(
     label_method: str = None,
 ) -> List[Bucket]:
     """
-    Helper function.  Use a ``BucketCreationParams`` container to create a list of ``Bucket`` objects used by
-        ``BucketConfig``. Use it to create a concise list of buckets covering a range of integers or floats.
+    Helper function.  Use a ``BucketCreationParams`` instance to create a list of ``Bucket`` objects used by
+    ``BucketConfig``. Use it to create a concise list of buckets covering a range of integers or floats.
 
     Args:
         bucket_creation_params: ``BucketCreationParams`` object to specify minimum, maximum and bucket width.
-        labels: (Optional) List of labels, must match length of resulting bucket list.
+        labels: (Optional) List of labels, must match length of resulting bucket list. If missing, labels
+            will be automatically created.
         label_method: (Optional) if labels is None, one of 'min', 'max' or 'avg' can be specified, so that each
             bucket uses either the left or right endpoint or the average of the two as the bucket label. Default: "min"
+    
     Returns:
-        Explicit list of Bucket objects.
+        Explicit list of ``Bucket`` instances.
     """
     if bucket_creation_params is None:
         raise ValueError(
@@ -173,7 +176,7 @@ class BucketTransformer(Transformer):
     def _mutate(self, value: Union[Number, str]) -> Union[Number, str]:
         if value < self.buckets[0].min:
             return self.lower_outlier_label
-        elif value >= self.buckets[-1].max:
+        if value >= self.buckets[-1].max:
             return self.upper_outlier_label
         for idx in range(len(self.buckets)):
             if self.buckets[idx].min <= value < self.buckets[idx].max:
