@@ -27,4 +27,3 @@ class Drop(Transformer):
         raise ValueError(
             "_transform method was called even though the Drop transformer does not implement this!"
         )
-
