@@ -27,7 +27,7 @@ class BucketConfig(TransformerConfig):
 
 
 def bucket_tuple_to_list(
-    buckets: Tuple[Number, Number, Number] = None,
+    bucket_creation_params: Tuple[Number, Number, Number] = None,
     labels: List[Union[Number, str]] = None,
     label_method: str = None,
 ) -> List[Tuple[Union[Number, str], Union[Number, str], Union[Number, str]]]:
@@ -36,28 +36,28 @@ def bucket_tuple_to_list(
     for example, to start with a standard list and then modify it to have varying width buckets.
 
     Args:
-        buckets: Tuple of three floats or ints to specify minimum, maximum and bucket width.
+        bucket_creation_params: Tuple of three floats or ints to specify minimum, maximum and bucket width.
         labels: (Optional) List of labels, must match length of resulting bucket list.
         label_method: (Optional) if labels is None, one of 'min', 'max' or 'avg' can be specified, so that each
             bucket uses either the left or right endpoint or the average of the two as the bucket label. Default: "min"
     Returns:
         Explicit list of bucket boundaries.
     """
-    if buckets is None:
-        raise ValueError("buckets must be a 3-Tuple (min, max, width)")
+    if bucket_creation_params is None:
+        raise ValueError("bucket_creation_params must be a 3-Tuple (min, max, width)")
     if labels is None:
-        labels = get_bucket_labels_from_tuple(buckets, label_method)
+        labels = get_bucket_labels_from_tuple(bucket_creation_params, label_method)
     b = []
-    current_min = buckets[0]
+    current_min = bucket_creation_params[0]
     idx = 0
-    while current_min < buckets[1]:
+    while current_min < bucket_creation_params[1]:
         current_max = (
-            current_min + buckets[2]
-            if current_min + buckets[2] < buckets[1]
-            else buckets[1]
+            current_min + bucket_creation_params[2]
+            if current_min + bucket_creation_params[2] < bucket_creation_params[1]
+            else bucket_creation_params[1]
         )
         b.append((current_min, current_max, None if not labels else labels[idx]))
-        current_min += buckets[2]
+        current_min += bucket_creation_params[2]
         idx += 1
     return b
 
@@ -79,7 +79,7 @@ def get_bucket_labels_from_tuple(
         List of numeric bucket labels.
     """
     if bucket_creation_params is None:
-        raise ValueError("buckets must be a 3-Tuple (min, max, width)")
+        raise ValueError("bucket_creation_params must be a 3-Tuple (min, max, width)")
     # Use minimum by default
     label_method = label_method or "min"
     if label_method not in ["min", "max", "avg"]:

@@ -1,11 +1,14 @@
 from gretel_client.transformers.base import factory
 from gretel_client.transformers import DataTransformPipeline, DataPath
-from gretel_client.transformers.transformers.bucket import BucketConfig, bucket_tuple_to_list, \
-    get_bucket_labels_from_tuple
+from gretel_client.transformers.transformers.bucket import (
+    BucketConfig,
+    bucket_tuple_to_list,
+    get_bucket_labels_from_tuple,
+)
 
 
 def test_bucket(safecast_test_bucket2):
-    bucket_list = [(20.0, 23.0, 'Low'), (23.0, 24.0, 'Med'), (24.0, 25.0, 'High')]
+    bucket_list = [(20.0, 23.0, "Low"), (23.0, 24.0, "Med"), (24.0, 25.0, "High")]
     bucket_config = BucketConfig(buckets=bucket_list)
     data_paths = [
         DataPath(input="payload.env_temp", xforms=bucket_config),
@@ -16,14 +19,18 @@ def test_bucket(safecast_test_bucket2):
 
     for rec in safecast_test_bucket2.get("data", {}).get("records"):
         recs.append(dict(xf.transform_record(rec.get("data"))))
-    assert recs[0]["payload.env_temp"] == 'Low'
-    assert recs[4]["payload.env_temp"] == 'Med'
-    assert recs[7]["payload.env_temp"] == 'High'
+    assert recs[0]["payload.env_temp"] == "Low"
+    assert recs[4]["payload.env_temp"] == "Med"
+    assert recs[7]["payload.env_temp"] == "High"
 
 
 def test_string_bucket():
     bucket_list = [("a", "l", "a-l"), ("m", "s", "m-s")]
-    xf = factory(BucketConfig(buckets=bucket_list, labels=["person_name"], upper_outlier_label="t-z"))
+    xf = factory(
+        BucketConfig(
+            buckets=bucket_list, labels=["person_name"], upper_outlier_label="t-z"
+        )
+    )
 
     _, check = xf.transform_entity("person_name", "myers")
     assert check == "m-s"
@@ -33,13 +40,25 @@ def test_string_bucket():
 
 def test_type_mismatch():
     bucket_list = [("a", "l", "a-l"), ("m", "s", "m-s")]
-    xf = factory(BucketConfig(buckets=bucket_list, labels=["person_name"], upper_outlier_label="t-z"))
+    xf = factory(
+        BucketConfig(
+            buckets=bucket_list, labels=["person_name"], upper_outlier_label="t-z"
+        )
+    )
     assert (None, 123) == xf.transform_entity("person_name", 123)
 
 
 def test_bucket2(safecast_test_bucket2):
-    bucket_list = [(22.0, 23.0, 'FEET_0'), (23.0, 24.0, 'FEET_1'), (24.0, 25.0, 'FEET_2')]
-    bucket_config = [BucketConfig(buckets=bucket_list, lower_outlier_label="YEET", upper_outlier_label="WOOT")]
+    bucket_list = [
+        (22.0, 23.0, "FEET_0"),
+        (23.0, 24.0, "FEET_1"),
+        (24.0, 25.0, "FEET_2"),
+    ]
+    bucket_config = [
+        BucketConfig(
+            buckets=bucket_list, lower_outlier_label="YEET", upper_outlier_label="WOOT"
+        )
+    ]
     data_paths = [
         DataPath(input="payload.env_temp", xforms=bucket_config),
         DataPath(input="*"),
@@ -63,9 +82,13 @@ def test_bucket2(safecast_test_bucket2):
         None,
     ]
 
-    bucket_list = [(21.0, 22.0, 'nice'), (22.0, 23.0, 'bearable'),
-                   (23.0, 24.0, 'toasty'), (24.0, 25.0, 'volcano'),
-                   (25.0, 26.0, 'nuke')]
+    bucket_list = [
+        (21.0, 22.0, "nice"),
+        (22.0, 23.0, "bearable"),
+        (23.0, 24.0, "toasty"),
+        (24.0, 25.0, "volcano"),
+        (25.0, 26.0, "nuke"),
+    ]
     bucket_config = BucketConfig(buckets=bucket_list)
     data_paths = [
         DataPath(input="payload.env_temp", xforms=bucket_config),
@@ -117,9 +140,7 @@ def test_config_helpers():
 def test_type_error():
     tup = (0.0, 1.0, 0.5)
     buckets = bucket_tuple_to_list(tup)
-    paths = [DataPath(
-        input="foo",
-        xforms=BucketConfig(buckets=buckets))]
+    paths = [DataPath(input="foo", xforms=BucketConfig(buckets=buckets))]
     pipe = DataTransformPipeline(paths)
     r = {"foo": "bar"}
     # String throws a TypeError.  We catch it and return original record.
@@ -129,46 +150,21 @@ def test_type_error():
 def test_bucketing():
     tup = (0.0, 1.0, 0.5)
     buckets = bucket_tuple_to_list(tup, label_method="avg")
-    paths = [DataPath(
-        input="foo",
-        xforms=BucketConfig(
-            buckets=buckets,
-            lower_outlier_label=0.0,
-            upper_outlier_label=1.0
-        ))]
-    pipe = DataTransformPipeline(paths)
-    r = [
-        {
-            "foo": "bar"
-        },
-        {
-            "foo": -1
-        },
-        {
-            "foo": 0.1
-        },
-        {
-            "foo": 0.9
-        },
-        {
-            "foo": 1.1
-        }
+    paths = [
+        DataPath(
+            input="foo",
+            xforms=BucketConfig(
+                buckets=buckets, lower_outlier_label=0.0, upper_outlier_label=1.0
+            ),
+        )
     ]
+    pipe = DataTransformPipeline(paths)
+    r = [{"foo": "bar"}, {"foo": -1}, {"foo": 0.1}, {"foo": 0.9}, {"foo": 1.1}]
     out = [pipe.transform_record(rec) for rec in r]
     assert out == [
-        {
-            "foo": "bar"
-        },
-        {
-            "foo": 0.0
-        },
-        {
-            "foo": 0.25
-        },
-        {
-            "foo": 0.75
-        },
-        {
-            "foo": 1.0
-        }
+        {"foo": "bar"},
+        {"foo": 0.0},
+        {"foo": 0.25},
+        {"foo": 0.75},
+        {"foo": 1.0},
     ]
