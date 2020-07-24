@@ -1,6 +1,7 @@
 from gretel_client.transformers.base import FieldRef
 from gretel_client.transformers.data_restore_pipeline import DataRestorePipeline
 from gretel_client.transformers import DataTransformPipeline, DataPath, BucketConfig
+from gretel_client.transformers import DataTransformPipeline, DataPath
 from gretel_client.transformers.data_transform_pipeline import RECORD_KEYS
 from gretel_client.transformers.fpe import crypto_aes
 from gretel_client.transformers import FormatConfig, CombineConfig, ConditionalConfig, \
@@ -171,18 +172,18 @@ def test_record_fpe():
     xf = DataTransformPipeline(data_paths)
     rf = DataRestorePipeline(data_paths)
     xf_payload = xf.transform_record(rec)
-    # check = xf_payload.get('credit_card')
-    # assert check == '5931468769662449'
-    # check = xf_payload.get('longitude')
-    # assert check == -112.22154173039645
-    # check = xf_payload.get('latitude')
-    # assert check == -70.78287074710897
-    # check = xf_payload.get('the_hotness')
-    # assert check == '2qjuxg7ju'
-    # check = xf_payload.get('the_dude')
-    # assert check == 128994144
-    # check = xf_payload.get('the_sci_notation')
-    # assert check == 1.229570610794763e-07
+    check = xf_payload.get('credit_card')
+    assert check == '5931468769662449'
+    check = xf_payload.get('longitude')
+    assert check == -112.22154173039645
+    check = xf_payload.get('latitude')
+    assert check == -70.78287074710897
+    check = xf_payload.get('the_hotness')
+    assert check == '2qjuxg7ju'
+    check = xf_payload.get('the_dude')
+    assert check == 128994144
+    check = xf_payload.get('the_sci_notation')
+    assert check == 1.229570610794763e-07
     check = rf.transform_record(xf_payload)
     assert check == rec
 
@@ -271,7 +272,7 @@ def test_pipe_date_shift_cbc_fast(records_date_tweak):
                                  aes_mode=crypto_aes.Mode.CBC_FAST)
     xf_date = DateShiftConfig(secret='2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94',
                               lower_range_days=-10, upper_range_days=25,
-                              tweak=FieldRef('user_id'), aes_mode=crypto_aes.Mode.CBC_FAST)
+                              tweak=FieldRef('user_id'))
 
     data_paths = [DataPath(input='user_id', xforms=xf_user_id),
                   DataPath(input='created', xforms=xf_date),
@@ -282,8 +283,8 @@ def test_pipe_date_shift_cbc_fast(records_date_tweak):
     rf = DataRestorePipeline(data_paths)
     check_aw = xf.transform_record(records_date_tweak[0])
     check_ae = xf.transform_record(records_date_tweak[1])
-    assert check_aw['created'] == '2016-06-09'
-    assert check_ae['created'] == '2016-07-11'
+    assert check_aw['created'] == '2016-06-18'
+    assert check_ae['created'] == '2016-06-18'
     check_ae = rf.transform_record(check_ae)
     check_aw = rf.transform_record(check_aw)
     assert check_aw['created'] == '2016-06-17'
@@ -701,3 +702,51 @@ def test_pipe_bucket(records_date_tweak):
     check_ae = xf.transform_record(records_date_tweak[1])
     assert check_aw['last_name'] == 'M-Z'
     assert check_ae['last_name'] == 'A-L'
+
+
+def test_date_shift_format():
+    xf_date = DateShiftConfig(
+        secret="2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94",
+        lower_range_days=-10,
+        upper_range_days=25,
+        date_format='%m/%d/%Y',
+        tweak=FieldRef("user_id")
+    )
+    data_paths = [DataPath(input="birthday", xforms=xf_date), DataPath(input="*")]
+    pipe = DataTransformPipeline(data_paths)
+    restore_pipe = DataRestorePipeline(data_paths)
+    records = [
+        {"user_id": "michaelj@dabulls.com", "birthday": "02/17/1963"},
+        {"user_id": "michaelj@twinpinesmall.com", "birthday": "06/09/1961"},
+        {"user_id": "michaelj@titostacos.com", "birthday": "08/29/1958"},
+    ]
+    out = [pipe.transform_record(rec) for rec in records]
+    assert out == [
+        {"user_id": "michaelj@dabulls.com", "birthday": "02/13/1963"},
+        {"user_id": "michaelj@twinpinesmall.com", "birthday": "06/05/1961"},
+        {"user_id": "michaelj@titostacos.com", "birthday": "08/25/1958"},
+    ]
+    restored = [restore_pipe.transform_record(rec) for rec in out]
+    assert restored == [
+        {"user_id": "michaelj@dabulls.com", "birthday": "02/17/1963"},
+        {"user_id": "michaelj@twinpinesmall.com", "birthday": "06/09/1961"},
+        {"user_id": "michaelj@titostacos.com", "birthday": "08/29/1958"},
+    ]
+    records = [
+        {"user_id": "michaelj@dabulls.com", "birthday": "1963-02-17"},
+        {"user_id": "michaelj@twinpinesmall.com", "birthday": "1961-06-09"},
+        {"user_id": "michaelj@titostacos.com", "birthday": "1958-08-29"},
+    ]
+    out = [pipe.transform_record(rec) for rec in records]
+    assert out == [
+        {"user_id": "michaelj@dabulls.com", "birthday": "02/13/1963"},
+        {"user_id": "michaelj@twinpinesmall.com", "birthday": "06/05/1961"},
+        {"user_id": "michaelj@titostacos.com", "birthday": "08/25/1958"},
+    ]
+    restored = [restore_pipe.transform_record(rec) for rec in out]
+    # Please note the format!
+    assert restored == [
+        {"user_id": "michaelj@dabulls.com", "birthday": "02/17/1963"},
+        {"user_id": "michaelj@twinpinesmall.com", "birthday": "06/09/1961"},
+        {"user_id": "michaelj@titostacos.com", "birthday": "08/29/1958"},
+    ]
