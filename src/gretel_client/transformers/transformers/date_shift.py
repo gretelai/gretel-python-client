@@ -83,7 +83,10 @@ class DateShift(RestoreTransformer):
         return days, _date_val
 
     def _transform(self, value: Union[Number, str]) -> Union[Number, str]:
-        days, date_val = self._get_date_delta(value)
+        try:
+            days, date_val = self._get_date_delta(value)
+        except Exception:
+            return value
         date_val += timedelta(days=days)
         if self.format:
             return date_val.strftime(self.format)
