@@ -11,6 +11,7 @@ from gretel_client.transformers.fpe.fpe_ff1 import FpeFf1
 from gretel_client.transformers.restore import RestoreTransformerConfig, RestoreTransformer
 
 FPE_XFORM_CHAR = '0'
+MAX_STR_LEN = 512
 
 # NOTE(jm): no docstrings, not user facing
 
@@ -46,6 +47,8 @@ class FpeBase(RestoreTransformer):
         return dirty
 
     def _transform(self, value: Union[Number, str]) -> Union[Number, str]:
+        if isinstance(value, str) and len(value) >= MAX_STR_LEN:
+            return value
         clean, dirt_mask, fpe_mask = self._clean_and_mask_value(value)
         return self._dirty_and_un_mask_value(self._fpe_ff1.encrypt(clean), dirt_mask, fpe_mask)
 

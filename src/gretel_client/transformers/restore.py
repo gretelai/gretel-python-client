@@ -13,8 +13,13 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from numbers import Number
 from typing import Mapping, Optional, Tuple, Union
+import logging
 
 from gretel_client.transformers.base import TransformerConfig, Transformer
+
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 @dataclass(frozen=True)
@@ -126,7 +131,11 @@ class RestoreTransformer(Transformer):
         Returns:
             dict: with all transformed fields.
         """
-        return self._restore_field(field, value, field_meta)
+        try:
+            return self._restore_field(field, value, field_meta)
+        except Exception as err:
+            logger.warning(f"Could not restore {field}:{value}. Error: {str(err)}")
+            return {field: value}
 
     def _restore_field(self, field, value: Union[Number, str], field_meta):
         return {field: self._restore(value)}

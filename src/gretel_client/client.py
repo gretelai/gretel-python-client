@@ -525,7 +525,7 @@ class Client:
                     raise
 
         if not name and create:
-            return self._create_get_project()
+            return self._create_get_project(desc=desc)
 
     def detect_entities(self, records: Union[List[dict], dict]) -> List[dict]:
         """Do real-time entity detection from a small batch of records.  This function operates
