@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from numbers import Number
+import re
 from typing import Tuple, Optional, Union, List
 
 from gretel_client.transformers.base import TransformerConfig, Transformer
@@ -55,6 +56,7 @@ class FakeConstant(Transformer):
             return None
         new_value = self.faker.constant_fake(value, fake_method)
         if isinstance(value, float):
+            new_value = re.sub("[^0-9.]", "", new_value)
             new_value = float(new_value)
         elif isinstance(value, str):
             new_value = str(new_value)
