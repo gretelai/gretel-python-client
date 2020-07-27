@@ -2,6 +2,7 @@
 Module for misc demo helpers
 """
 from typing import List
+import logging
 import random
 import pprint
 import difflib
@@ -10,7 +11,6 @@ from gretel_client.projects import Project
 from gretel_client.transformers import (
     DropConfig,
     FakeConstantConfig,
-    FpeStringConfig,
     RedactWithCharConfig,
     RedactWithLabelConfig,
     RedactWithStringConfig,
@@ -22,6 +22,12 @@ from gretel_client.transformers import (
     DateShiftConfig
 )
 from gretel_client.transformers.fakers import FAKER_MAP
+
+try:
+    from gretel_client.transformers import FpeStringConfig
+except ImportError:
+    logging.warn(f'Cannot load gretel_client.transformers.FpeStringConfig.'
+                 f'Gretel Format Preserving Encryption module is not installed.')
 
 pp = pprint.PrettyPrinter(indent=2)
 
