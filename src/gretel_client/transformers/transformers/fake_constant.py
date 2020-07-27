@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from decimal import Decimal
 from numbers import Number
 import re
 from typing import Tuple, Optional, Union, List
@@ -56,6 +57,9 @@ class FakeConstant(Transformer):
         if fake_method is None:
             return None
         new_value = self.faker.constant_fake(value, fake_method)
+
+        if isinstance(new_value, Decimal):
+            new_value = float(new_value)
         return None, new_value
 
     def _transform(self, value: Union[Number, str]) -> Union[Number, str]:
