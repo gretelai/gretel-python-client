@@ -58,6 +58,7 @@ class FakeConstant(Transformer):
             return None
         new_value = self.faker.constant_fake(value, fake_method)
 
+        # Convert Faker Decimal return type to Python float
         if isinstance(new_value, Decimal):
             new_value = float(new_value)
         return None, new_value
