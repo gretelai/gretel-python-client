@@ -17,6 +17,7 @@ class FakeConstantConfig(TransformerConfig):
         seed: A required starting seed for the underlying fake generator. Use the same seed in order
             to get the same fake values for a given input.
         fake_method: A string of what kind of fake entity to create. One of the keys from the ``FAKER_MAP`` mapping.
+            The return type from Faker is retained and used to replace the source value.
             Please see the ``faker`` module docs for the available methods to use.
         locales: A list of locales to use for generating fake values. Please see the ``faker`` module docs
             for the available locales to use.
@@ -55,13 +56,6 @@ class FakeConstant(Transformer):
         if fake_method is None:
             return None
         new_value = self.faker.constant_fake(value, fake_method)
-        if isinstance(value, float):
-            try:
-                new_value = float(new_value)
-            except ValueError:
-                new_value = str(new_value)
-        elif isinstance(value, str):
-            new_value = str(new_value)
         return None, new_value
 
     def _transform(self, value: Union[Number, str]) -> Union[Number, str]:
