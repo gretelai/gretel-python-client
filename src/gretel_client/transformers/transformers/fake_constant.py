@@ -56,8 +56,10 @@ class FakeConstant(Transformer):
             return None
         new_value = self.faker.constant_fake(value, fake_method)
         if isinstance(value, float):
-            new_value = re.sub("[^0-9.]", "", new_value)
-            new_value = float(new_value)
+            try:
+                new_value = float(new_value)
+            except ValueError:
+                new_value = str(new_value)
         elif isinstance(value, str):
             new_value = str(new_value)
         return None, new_value
