@@ -4,6 +4,7 @@ Module for misc demo helpers
 from typing import List
 import random
 import pprint
+import difflib
 
 from gretel_client.projects import Project
 from gretel_client.transformers import (
@@ -18,7 +19,7 @@ from gretel_client.transformers import (
     bucket_creation_params_to_list,
     BucketCreationParams,
     BucketConfig,
-    DateShiftConfig,
+    DateShiftConfig
 )
 from gretel_client.transformers.fakers import FAKER_MAP
 
@@ -27,6 +28,14 @@ pp = pprint.PrettyPrinter(indent=2)
 
 SEED = 6251
 SECRET = "2B7E151628AED2A6ABF7158809CF4F3CEF4359D8D580AA4F7F036D6F04FC6A94"
+
+
+def show_record_diff(original: dict, transformed: dict):
+    old = '\n'.join([f'{key}:{value}' for key, value in sorted(original.items())])
+    new = '\n'.join([f'{key}:{value}' for key, value in sorted(transformed.items())])
+
+    for diffs in difflib.unified_diff(old.splitlines(), new.splitlines(), fromfile="original", tofile="transformed"):
+        print(diffs)
 
 
 class RandomTransformerPipeline:
