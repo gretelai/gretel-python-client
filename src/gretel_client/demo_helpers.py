@@ -25,8 +25,9 @@ from gretel_client.transformers.fakers import FAKER_MAP
 
 try:
     from gretel_client.transformers import FpeStringConfig
+    from gretel_client.transformers import DateShiftConfig
 except ImportError:
-    logging.warn(f'Cannot load gretel_client.transformers.FpeStringConfig.'
+    logging.warn(f'Cannot load Fpe and DateShift libraries.'
                  f'Gretel Format Preserving Encryption module is not installed.')
 
 pp = pprint.PrettyPrinter(indent=2)
