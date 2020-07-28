@@ -47,6 +47,10 @@ class MaskedTransformer(ABC):
         return label, self._mask_value(value, None, self._transform)
 
     def _transform_field(self, field: str, value: Union[Number, str], field_meta):
+        if value is None:
+            return {field: value}
+        if isinstance(value, str) and not value:
+            return {field: value}
         return {field: self._mask_value(value, field_meta, self._transform)}
 
     def _mask_value(self, value: Union[Number, str], field_meta, _value_func):

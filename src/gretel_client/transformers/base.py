@@ -212,6 +212,10 @@ class Transformer(ABC):
     def _transform_field(self, field: str, value: Union[Number, str], field_meta):
         """This method can be overloaded by subclasses if the logic needs to return a field name other than the original
         field name"""
+        if value is None:
+            return {field: value}
+        if isinstance(value, str) and not value:
+            return {field: value}
         return {field: self._transform(value)}
 
     def _transform_recursive(

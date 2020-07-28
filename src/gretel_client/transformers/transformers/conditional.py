@@ -98,6 +98,10 @@ class Conditional(RestoreTransformer):
                 return label, value
 
     def _transform_field(self, field: str, value: Union[Number, str], field_meta):
+        if value is None:
+            return {field: value}
+        if isinstance(value, str) and not value:
+            return {field: value}
         if self.regex.match(self._get_field_ref("conditional_value").value):
             if self.true_xform:
                 return self.true_xform.transform_field(field, value, field_meta)
