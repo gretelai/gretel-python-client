@@ -33,7 +33,9 @@ try:
     from gretel_client.transformers.transformers.fpe_string import FpeStringConfig
     from gretel_client.transformers.transformers.date_shift import DateShiftConfig
 except ImportError:
-    pass
+    FpeFloatConfig = None
+    FpeStringConfig = None
+    DateShiftConfig = None
 
 
 __all__ = [
