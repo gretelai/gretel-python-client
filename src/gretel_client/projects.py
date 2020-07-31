@@ -176,7 +176,8 @@ class Project:
 
     def _patch_params(self, kwargs: dict, key: str, value: str) -> dict:
         """Patch in named arguments into query param **kwarg type dictionary"""
-        assert isinstance(kwargs, dict)
+        if not isinstance(kwargs, dict):
+            raise ValueError("kwargs must be a dictionary")
         if "params" in kwargs:
             kwargs["params"][key] = value
         else:

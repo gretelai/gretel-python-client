@@ -377,7 +377,7 @@ class Client:
     def __iter_records(
         self,
         project: str,
-        entity_stream: str = None,
+        entity_stream: Optional[str] = None,
         position: Optional[str] = None,
         post_process: Callable = None,
         direction: str = "forward",
@@ -395,7 +395,7 @@ class Client:
         # setup base params for streams request
         headers, params = self._headers_params_from_kwargs(**kwargs)
         params.update({"with_meta": "yes", "flatten": "yes"})
-        if entity_stream:
+        if entity_stream is not None:
             params["entity_stream"] = entity_stream
 
         stream_start_time = time.time()
@@ -450,9 +450,9 @@ class Client:
         self,
         *,
         project: str,
-        entity_stream: str = None,
+        entity_stream: Optional[str] = None,
         position: Optional[str] = None,
-        post_process: Callable = None,
+        post_process: Optional[Callable] = None,
         direction: str = "forward",
         record_limit: int = -1,
         wait_for: int = -1,
