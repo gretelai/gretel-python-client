@@ -1,7 +1,7 @@
 """
 High level API for interacting with a Gretel Project
 """
-from typing import Dict, TYPE_CHECKING, List, Union, Tuple
+from typing import TYPE_CHECKING, List, Union, Tuple
 from functools import partial
 from copy import deepcopy
 
@@ -41,7 +41,7 @@ class Project:
 
     The ``Project`` class wraps Gretel's REST api under the hood. While most query params
     are represented as named keyword arguments, it's possible to pass in custom query
-    parameters via ``params``, or headers via ``headers``.
+    parameters via ``params``, or http headers via ``headers``.
 
     For example::
 
@@ -114,8 +114,8 @@ class Project:
             wait_for: Time in seconds to wait for new records to arrive
                 before closing the iterator. If the number is set to a
                 value less than 0, the iterator will wait indefinitely.
-            headers: (dict) Pass in custom http headers to the request.
-            params: (dict) Pass custom query parameters to the request.
+            headers: (dict) Define additional http request headers.
+            params: (dict) Pass custom request query parameters.
 
         Yields:
             An individual record object. If no `record_limit` is passed and
@@ -138,7 +138,7 @@ class Project:
             means it has only triggered the flush operation in Gretel. This
             full operations may take several seconds to complete.
         """
-        self.client._flush_project(self.project_id, **kwargs)
+        self.client._flush_project(self.project_id)
 
     def send(
         self,
@@ -162,16 +162,24 @@ class Project:
                 Selecting "all" will pass the records through a NLP pipeline, but
                 may increase processing latency. Selecting "none" will skip the
                 detection pipeline entirely.
-            headers: (dict) Pass in custom http headers to the request.
-            params: (dict) Pass custom query parameters to the request.
+            headers: (dict) Define additional http request headers.
+            params: (dict) Pass custom request query parameters.
 
         Returns:
             A tuple of (success, failure) lists
         """
-        ret = self.client._write_record_sync(
-            self.name, data, detection_mode=detection_mode, *kwargs
-        )["data"]
+        kwargs = self._patch_params(kwargs, "detection_mode", detection_mode)
+        ret = self.client._write_record_sync(self.name, data, **kwargs)["data"]
         return ret["success"], ret["failure"]
+
+    def _patch_params(self, kwargs: dict, key: str, value: str) -> dict:
+        """Patch in named arguments into query param **kwarg type dictionary"""
+        assert isinstance(kwargs, dict)
+        if "params" in kwargs:
+            kwargs["params"][key] = value
+        else:
+            kwargs["params"] = {key: value}
+        return kwargs
 
     def send_bulk(
         self,
@@ -180,31 +188,30 @@ class Project:
         **kwargs,
     ) -> "WriteSummary":
         """Send a dict or list of dicts to the project.  Records
-        are queued and send in parallel for performance. API
-        reponses are not returned.
+        are queued and sent in parallel for performance. API
+        responses are not returned.
 
         NOTE:
             Since a queue and threading is used here, you
             can send any number of records in the ``data`` param.
             The records will automatically be chunked up into
-            appropiately sized buffers to send to the Records API.
+            appropriately sized buffers to send to the Records API.
 
         Args:
             data: A dict or a list of dicts.
             detection_mode: Determines how to route the record through Gretel's entity
                 detection pipeline. Valid options include "fast", "all" and "none".
-                Selecting "all" will pass the records through a NLP pipeline, but
+                Selecting "all" will pass the record through a NLP pipeline, but
                 may increase processing latency. Selecting "none" will skip the
-                detection pipeline entirely.
+                entity detection pipeline entirely.
             headers: (dict) Pass in custom http headers to the request.
             params: (dict) Pass custom query parameters to the request.
         Returns:
             A ``WriteSummary`` instance.
         """
         reader = JsonReader(data)
-        return self.client._write_records(
-            project=self.name, reader=reader, detection_mode=detection_mode, **kwargs
-        )
+        kwargs = self._patch_params(kwargs, "detection_mode", detection_mode)
+        return self.client._write_records(project=self.name, reader=reader, **kwargs)
 
     def send_dataframe(
         self,
@@ -264,9 +271,8 @@ class Project:
                 new_df = df.sample(n=sample)
 
         reader = DataFrameReader(new_df)
-        return self.client._write_records(
-            project=self.name, reader=reader, detection_mode=detection_mode, **kwargs
-        )
+        kwargs = self._patch_params(kwargs, "detection_mode", detection_mode)
+        return self.client._write_records(project=self.name, reader=reader, **kwargs)
 
     def head(self, n: int = 5) -> _DataFrameT:
         """Get the top N records, flattened,
@@ -280,7 +286,9 @@ class Project:
         """
         if not pd:  # pragma: no cover
             raise RuntimeError("pandas must be installed to use this feature")
-        recs = self.client._get_records_sync(self.name, params={"flatten": "yes", "count": n})
+        recs = self.client._get_records_sync(
+            self.name, params={"flatten": "yes", "count": n}
+        )
         recs = [item["data"] for item in recs]
         return pd.DataFrame(recs)
 

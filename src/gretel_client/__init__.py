@@ -1,3 +1,4 @@
+# flake8: noqa: F401
 from .client import (
     get_cloud_client,
     Client,
@@ -6,4 +7,4 @@ from .client import (
     Unauthorized,
     Forbidden,
     project_from_uri
-)  # noqa
+)

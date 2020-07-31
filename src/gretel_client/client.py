@@ -129,14 +129,14 @@ class Client:
             self.session.headers.update({"Authorization": self.api_key})
 
     @_api_call("get")
-    def _get(self, resource, *args, **kwargs):
+    def _get(self, resource: str, *args, **kwargs):
         headers, params = self._headers_params_from_kwargs(**kwargs)
         return self.session.get(
             self.base_url + resource, params=params, timeout=TIMEOUT, headers=headers
         )
 
     @_api_call("post")
-    def _post(self, resource, data: dict, **kwargs):
+    def _post(self, resource: str, *, data: dict, **kwargs):
         if data is not None:
             data = json.dumps(data)
         headers, params = self._headers_params_from_kwargs(**kwargs)
@@ -191,7 +191,8 @@ class Client:
         Raises:
             AttributeError if extracted header or param object is not of type dict.
         """
-        headers, params = kwargs.get("headers", {}), kwargs.get("params", {})
+        headers = kwargs.get("headers", {})
+        params = kwargs.get("params", {})
 
         if not isinstance(headers, dict):
             raise AttributeError("headers kwarg is not of type dict")
@@ -212,6 +213,8 @@ class Client:
         Args:
             project: Target Gretel project identifier.
             records: An array of records to write to the api.
+            headers: supports custom header params via kwargs
+            params: supports custom query params via kwargs
         """
         if isinstance(records, dict):
             records = [records]
@@ -279,8 +282,8 @@ class Client:
             use_progress_widget: For use inside a jupyter notebook
                 environment. If set to `true` it will try and use tqdm's
                 ipywidget instead of a text based progress indicator.
-            params:
-            headers:
+            headers: supports custom header params via kwargs
+            params: supports custom query params via kwargs
         """
         sampler.set_source(iter(reader))
         write_queue = Queue(max_inflight_batches)  # backpressured worker queue
@@ -358,6 +361,13 @@ class Client:
         wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
     )
     def _get_records_sync(self, project: str, *args, **kwargs):
+        """Returns a list of records from the streams api
+
+        Args:
+            project: project to stream records from
+            headers: supports custom header params via kwargs
+            params: supports custom query params via kwargs
+        """
         return (
             self._get(f"streams/records/{project}", **kwargs)
             .get(DATA)
@@ -469,6 +479,8 @@ class Client:
             wait_for: Time in seconds to wait for new records to arrive
                 before closing the iterator. If the number is set to a
                 value less than 0, the iterator will wait indefinitely.
+            headers: supports custom header params via kwargs
+            params: supports custom query params via kwargs
 
         Yields:
             An individual record object. If no `record_limit` is passed and

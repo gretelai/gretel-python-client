@@ -1,9 +1,10 @@
 import pytest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pandas as pd
 
 from gretel_client.client import get_cloud_client, Client
+from gretel_client import projects
 from gretel_client.projects import Project
 
 
@@ -28,16 +29,15 @@ def test_send_dataframe(client: Client):
     p.send_dataframe(
         df,
         sample=25,
-        detection_mode="all",
+        detection_mode="none",
         headers={"X-Test-Gretel": "one"},
         params={"test-param": "two"},
     )
     _, _, kwargs = client._write_records.mock_calls[0]
     check_df = kwargs["reader"]
     assert len(check_df.df) == 25
-    assert kwargs["detection_mode"] == "all"
     assert kwargs["headers"] == {"X-Test-Gretel": "one"}
-    assert kwargs["params"] == {"test-param": "two"}
+    assert kwargs["params"] == {"test-param": "two", "detection_mode": "none"}
 
     with pytest.raises(ValueError):
         p.send_dataframe(df, sample=0)
@@ -57,3 +57,38 @@ def test_send_dataframe(client: Client):
     _, _, kwargs = client._write_records.mock_calls[2]
     check_df = kwargs["reader"]
     assert len(check_df.df) == 50
+
+
+@patch.object(projects, "JsonReader")
+def test_send_bulk(reader, client: Client):
+    client._write_records = Mock()
+    records = [{"one": "test", "two": "test"}]
+    p = Project(name="proj", client=client, project_id=123)
+    p.send_bulk(
+        records, detection_mode="all", params={"test": "param"}, headers={"test": "two"}
+    )
+
+    client._write_records.assert_called_with(
+        project="proj",
+        reader=reader.return_value,
+        headers={"test": "two"},
+        params={"test": "param", "detection_mode": "all"},
+    )
+
+
+def test_send(client: Client):
+    client._write_record_sync = Mock(
+        return_value={"data": {"success": [], "failure": []}}
+    )
+    records = [{"one": "test", "two": "test"}]
+    p = Project(name="proj", client=client, project_id=123)
+    p.send(
+        records, detection_mode="all", params={"test": "param"}, headers={"test": "two"}
+    )
+
+    client._write_record_sync.assert_called_with(
+        "proj",
+        records,
+        headers={"test": "two"},
+        params={"test": "param", "detection_mode": "all"},
+    )
