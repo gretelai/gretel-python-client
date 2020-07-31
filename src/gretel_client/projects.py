@@ -114,6 +114,8 @@ class Project:
             wait_for: Time in seconds to wait for new records to arrive
                 before closing the iterator. If the number is set to a
                 value less than 0, the iterator will wait indefinitely.
+            entity_stream: Return a record stream that only contains records
+                containing a specifc entity label.
             headers: (dict) Define additional http request headers.
             params: (dict) Pass custom request query parameters.
 
@@ -159,7 +161,7 @@ class Project:
             data: a dict or a list of dicts
             detection_mode: Determines how to route the record through Gretel's entity
                 detection pipeline. Valid options include "fast", "all" and "none".
-                Selecting "all" will pass the records through a NLP pipeline, but
+                Selecting "all" will pass the records through a ML/NLP pipeline, but
                 may increase processing latency. Selecting "none" will skip the
                 detection pipeline entirely.
             headers: (dict) Define additional http request headers.
@@ -201,7 +203,7 @@ class Project:
             data: A dict or a list of dicts.
             detection_mode: Determines how to route the record through Gretel's entity
                 detection pipeline. Valid options include "fast", "all" and "none".
-                Selecting "all" will pass the record through a NLP pipeline, but
+                Selecting "all" will pass the record through a ML/NLP pipeline, but
                 may increase processing latency. Selecting "none" will skip the
                 entity detection pipeline entirely.
             headers: (dict) Pass in custom http headers to the request.
@@ -236,7 +238,7 @@ class Project:
                 of the DataFrame's rows.
             detection_mode: Determines how to route the record through Gretel's entity
                 detection pipeline. Valid options include "fast", "all" and "none".
-                Selecting "all" will pass the records through a NLP pipeline, but
+                Selecting "all" will pass the records through a ML/NLP pipeline, but
                 may increase processing latency. Selecting "none" will skip the
                 detection pipeline entirely.
             headers: (dict) Pass in custom http headers to the request.

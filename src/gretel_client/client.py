@@ -189,7 +189,7 @@ class Client:
             A tuple containing headers, params
 
         Raises:
-            AttributeError if extracted header or param object is not of type dict.
+            AttributeError if extracted header or param object is not of type ``dict``.
         """
         headers = kwargs.get("headers", {})
         params = kwargs.get("params", {})

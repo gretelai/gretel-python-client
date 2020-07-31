@@ -11,7 +11,7 @@ from gretel_client.client import (
     BadRequest,
     Unauthorized,
     temporary_project,
-    NotFound
+    NotFound,
 )
 from gretel_client.projects import Project
 
@@ -53,8 +53,9 @@ def poll(func):
     def handler(*args, **kwargs):
         count = 0
         while count < 10:
-            if func(*args, **kwargs):
-                return True
+            result = func(*args, **kwargs)
+            if result:
+                return result
             else:
                 time.sleep(1)
                 count += 1
@@ -93,6 +94,16 @@ def assert_head(project: Project):
     check = project.head()
     if len(check) >= 2:
         return True
+
+
+@poll
+def get_records(project: Project, entity_stream: str = None):
+    check = project.iter_records(
+        entity_stream=entity_stream, wait_for=3, record_limit=2
+    )
+    records = [r for r in check]
+    if len(records) >= 2:
+        return records
 
 
 @poll
@@ -198,10 +209,28 @@ def test_create_named_project(client: Client):
         client.get_project(name=name, create=True, desc=too_long)
 
 
-
 def test_temporary_project(client: Client):
     with temporary_project(client) as proj:
         proj.send([{"foo": "bar"}] * 3, detection_mode="all")
         assert_check_record_count(proj, 3)
     with pytest.raises(NotFound):
         client.get_project(name=proj.name)
+
+
+def test_entity_stream(client: Client):
+    with temporary_project(client) as proj:
+        success, failure = proj.send(
+            [{"foo": "user@domain.com"}, {"foo": "test@domain.com"}],
+            headers={"X-Text-Gretel": "true"},  # lets make sure extra heads dont kill session headers
+        )
+        records = get_records(proj, entity_stream="email_address")
+
+        entities = set(
+            [
+                e
+                for r in records
+                for e in r["metadata"]["entities"]["fields_by_entity"].keys()
+            ]
+        )
+
+        assert "email_address" in entities
