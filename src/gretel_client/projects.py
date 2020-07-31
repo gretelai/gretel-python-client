@@ -13,17 +13,21 @@ try:
     from pandas import DataFrame as _DataFrameT
 except ImportError:  # pragma: no cover
     pd = None
-    class _DataFrameT: ... # noqa
+
+    class _DataFrameT:
+        ...  # noqa
 
 
 if TYPE_CHECKING:  # pragma: no cover
     from gretel_client.client import Client, WriteSummary
 
+DEFAULT_DETECTION_MODE = "fast"
+
 
 class Project:
     """Representation of a single Gretel project. In general you should not have
     to init this class directly, but can make use of the factory method from a
-    ``Client`` instnace.
+    ``Client`` instance.
 
     Using the factory method::
 
@@ -31,9 +35,23 @@ class Project:
 
         client = get_cloud_client('api', 'your_api_key')
         project = client.get_project(create=True)  # creates a project with an auto-named slug
+
+
+    **Customizing the request**
+
+    The ``Project`` class wraps Gretel's REST api under the hood. While most query params
+    are represented as named keyword arguments, it's possible to pass in custom query
+    parameters via ``params``, or http headers via ``headers``.
+
+    For example::
+
+        project.iter_records(project="test", params={"regex_query": "(cc|credit_card)"})
+
     """
 
-    def __init__(self, *, name: str, client: "Client", project_id: str, desc: str = None):
+    def __init__(
+        self, *, name: str, client: "Client", project_id: str, desc: str = None
+    ):
         self.name = name
         """The unique name of the project. This is either set by you or auto
         managed by Gretel
@@ -96,6 +114,10 @@ class Project:
             wait_for: Time in seconds to wait for new records to arrive
                 before closing the iterator. If the number is set to a
                 value less than 0, the iterator will wait indefinitely.
+            entity_stream: Return a record stream that only contains records
+                containing a specifc entity label.
+            headers: (dict) Define additional http request headers.
+            params: (dict) Pass custom request query parameters.
 
         Yields:
             An individual record object. If no `record_limit` is passed and
@@ -108,20 +130,25 @@ class Project:
         """
         return self._iter_records(**kwargs)
 
-    def flush(self):
+    def flush(self, **kwargs):
         """This will flush all project data from the Gretel metastore.
 
         This includes all Field, Entity, and cached Record information
 
         NOTE:
-            This command runs asyncronously. When it returns, it
+            This command runs asynchronously. When it returns, it
             means it has only triggered the flush operation in Gretel. This
             full operations may take several seconds to complete.
         """
         self.client._flush_project(self.project_id)
 
-    def send(self, data: Union[List[dict], dict]) -> Tuple[list, list]:
-        """Write one or more records syncronously. This is similar
+    def send(
+        self,
+        data: Union[List[dict], dict],
+        detection_mode: str = DEFAULT_DETECTION_MODE,
+        **kwargs,
+    ) -> Tuple[list, list]:
+        """Write one or more records synchronously. This is similar
         to making a single API call to the records endpoint. You will also
         receive the success and failure arrays back which contain the Gretel IDs
         that were generated for each ingested record.
@@ -132,34 +159,70 @@ class Project:
 
         Args:
             data: a dict or a list of dicts
+            detection_mode: Determines how to route the record through Gretel's entity
+                detection pipeline. Valid options include "fast", "all" and "none".
+                Selecting "all" will pass the records through a ML/NLP pipeline, but
+                may increase processing latency. Selecting "none" will skip the
+                detection pipeline entirely.
+            headers: (dict) Define additional http request headers.
+            params: (dict) Pass custom request query parameters.
 
         Returns:
             A tuple of (success, failure) lists
         """
-        ret = self.client._write_record_sync(self.name, data)["data"]
+        kwargs = self._patch_params(kwargs, "detection_mode", detection_mode)
+        ret = self.client._write_record_sync(self.name, data, **kwargs)["data"]
         return ret["success"], ret["failure"]
 
-    def send_bulk(self, data: Union[List[dict], dict]) -> "WriteSummary":
+    def _patch_params(self, kwargs: dict, key: str, value: str) -> dict:
+        """Patch in named arguments into query param **kwarg type dictionary"""
+        if not isinstance(kwargs, dict):
+            raise ValueError("kwargs must be a dictionary")
+        if "params" in kwargs:
+            kwargs["params"][key] = value
+        else:
+            kwargs["params"] = {key: value}
+        return kwargs
+
+    def send_bulk(
+        self,
+        data: Union[List[dict], dict],
+        detection_mode: str = DEFAULT_DETECTION_MODE,
+        **kwargs,
+    ) -> "WriteSummary":
         """Send a dict or list of dicts to the project.  Records
-        are queued and send in parallel for performance. API
-        reponses are not returned.
+        are queued and sent in parallel for performance. API
+        responses are not returned.
 
         NOTE:
             Since a queue and threading is used here, you
             can send any number of records in the ``data`` param.
             The records will automatically be chunked up into
-            appropiately sized buffers to send to the Records API.
+            appropriately sized buffers to send to the Records API.
 
         Args:
             data: A dict or a list of dicts.
-
+            detection_mode: Determines how to route the record through Gretel's entity
+                detection pipeline. Valid options include "fast", "all" and "none".
+                Selecting "all" will pass the record through a ML/NLP pipeline, but
+                may increase processing latency. Selecting "none" will skip the
+                entity detection pipeline entirely.
+            headers: (dict) Pass in custom http headers to the request.
+            params: (dict) Pass custom query parameters to the request.
         Returns:
             A ``WriteSummary`` instance.
         """
         reader = JsonReader(data)
-        return self.client._write_records(project=self.name, reader=reader)
+        kwargs = self._patch_params(kwargs, "detection_mode", detection_mode)
+        return self.client._write_records(project=self.name, reader=reader, **kwargs)
 
-    def send_dataframe(self, df: _DataFrameT, sample=None) -> "WriteSummary":
+    def send_dataframe(
+        self,
+        df: _DataFrameT,
+        detection_mode: str = DEFAULT_DETECTION_MODE,
+        sample=None,
+        **kwargs,
+    ) -> "WriteSummary":
         """Send the contents of a DataFrame
 
         This will convert each row of the DataFrame
@@ -174,6 +237,13 @@ class Project:
                 ``sample`` is between 0 and 1, then a fraction of the DataFrame's rows
                 will be queued for sending. So a ``sample`` of .5 will queue up half
                 of the DataFrame's rows.
+            detection_mode: Determines how to route the record through Gretel's entity
+                detection pipeline. Valid options include "fast", "all" and "none".
+                Selecting "all" will pass the records through a ML/NLP pipeline, but
+                may increase processing latency. Selecting "none" will skip the
+                detection pipeline entirely.
+            headers: (dict) Pass in custom http headers to the request.
+            params: (dict) Pass custom query parameters to the request.
 
         NOTE:
             Sampling is randomized, not done by first N.
@@ -186,7 +256,7 @@ class Project:
             ``ValueError`` if a Pandas DataFrame was not provided
         """
         if not pd:  # pragma: no cover
-            raise RuntimeError('pandas must be installed for this feature')
+            raise RuntimeError("pandas must be installed for this feature")
 
         if not isinstance(df, pd.DataFrame):  # pragma: no cover
             raise ValueError("A Pandas DataFrame is required!")
@@ -204,7 +274,8 @@ class Project:
                 new_df = df.sample(n=sample)
 
         reader = DataFrameReader(new_df)
-        return self.client._write_records(project=self.name, reader=reader)
+        kwargs = self._patch_params(kwargs, "detection_mode", detection_mode)
+        return self.client._write_records(project=self.name, reader=reader, **kwargs)
 
     def head(self, n: int = 5) -> _DataFrameT:
         """Get the top N records, flattened,
@@ -217,8 +288,10 @@ class Project:
         Returns a Pandas DataFrame
         """
         if not pd:  # pragma: no cover
-            raise RuntimeError('pandas must be installed to use this feature')
-        recs = self.client._get_records_sync(self.name, {"flatten": "yes", "count": n})
+            raise RuntimeError("pandas must be installed to use this feature")
+        recs = self.client._get_records_sync(
+            self.name, params={"flatten": "yes", "count": n}
+        )
         recs = [item["data"] for item in recs]
         return pd.DataFrame(recs)
 
@@ -235,7 +308,7 @@ class Project:
             are removed and the list of records is only returned
         """
         return self.client._get_records_sync(
-            self.name, {"with_meta": "yes", "count": n, "flatten": "yes"}
+            self.name, params={"with_meta": "yes", "count": n, "flatten": "yes"}
         )
 
     def get_field_details(self, *, entity: str = None, count=500) -> List[dict]:
@@ -305,7 +378,7 @@ class Project:
             return recs
         else:
             if not pd:  # pragma: no cover
-                raise RuntimeError('cannot export as a DF without pandas installed')
+                raise RuntimeError("cannot export as a DF without pandas installed")
             return pd.DataFrame(recs)
 
     def delete(self):

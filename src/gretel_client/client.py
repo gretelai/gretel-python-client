@@ -5,7 +5,7 @@ import os
 import json
 from functools import wraps
 import time
-from typing import Iterator, Callable, Optional, Union, List
+from typing import Iterator, Callable, Optional, Tuple, Union, List
 import threading
 from queue import Queue
 from getpass import getpass
@@ -129,17 +129,23 @@ class Client:
             self.session.headers.update({"Authorization": self.api_key})
 
     @_api_call("get")
-    def _get(self, resource, params):
+    def _get(self, resource: str, *args, **kwargs):
+        headers, params = self._headers_params_from_kwargs(**kwargs)
         return self.session.get(
-            self.base_url + resource, params=params, timeout=TIMEOUT
+            self.base_url + resource, params=params, timeout=TIMEOUT, headers=headers
         )
 
     @_api_call("post")
-    def _post(self, resource, params: dict, data: dict):
+    def _post(self, resource: str, *, data: dict, **kwargs):
         if data is not None:
             data = json.dumps(data)
+        headers, params = self._headers_params_from_kwargs(**kwargs)
         return self.session.post(
-            self.base_url + resource, params=params, data=data, timeout=TIMEOUT
+            self.base_url + resource,
+            params=params,
+            data=data,
+            timeout=TIMEOUT,
+            headers=headers,
         )
 
     @_api_call("delete")
@@ -168,39 +174,66 @@ class Client:
         if desc is not None:
             payload["description"] = desc
 
-        return self._post("projects", None, data=payload)
+        return self._post("projects", data=payload)
 
     def _delete_project(self, project_id):
         return self._delete(f"projects/{project_id}")
 
     def _flush_project(self, project_id: str):
-        return self._post(f"projects/{project_id}/flush", None, None)
+        return self._post(f"projects/{project_id}/flush", data=None)
+
+    def _headers_params_from_kwargs(self, **kwargs) -> Tuple[dict, dict]:
+        """Extracts headers and query params from kwargs
+
+        Returns:
+            A tuple containing headers, params
+
+        Raises:
+            AttributeError if extracted header or param object is not of type ``dict``.
+        """
+        headers = kwargs.get("headers", {})
+        params = kwargs.get("params", {})
+
+        if not isinstance(headers, dict):
+            raise AttributeError("headers kwarg is not of type dict")
+
+        if not isinstance(params, dict):
+            raise AttributeError("params kwarg is not of type dict")
+
+        return headers, params
 
     @tenacity.retry(
         retry=tenacity.retry_if_exception_type(Forbidden),
         stop=tenacity.stop_after_attempt(MAX_RATE_LIMIT_RETRY),
         wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
     )
-    def _write_record_sync(self, project: str, records: Union[list, dict]):
+    def _write_record_sync(self, project: str, records: Union[list, dict], **kwargs):
         """Write a batch of records to Gretel's API
 
         Args:
             project: Target Gretel project identifier.
             records: An array of records to write to the api.
+            headers: supports custom header params via kwargs
+            params: supports custom query params via kwargs
         """
         if isinstance(records, dict):
             records = [records]
-        return self._post(f"records/send/{project}", {}, records)
+        return self._post(f"records/send/{project}", data=records, **kwargs)
 
     def _write_record_batch(
-        self, project, write_queue, error_list: list, thread_event: threading.Event
+        self,
+        project,
+        write_queue,
+        error_list: list,
+        thread_event: threading.Event,
+        **kwargs,
     ):
         while not thread_event.is_set():
             record_batch = write_queue.get()
             if record_batch is None:
                 break
             try:
-                self._write_record_sync(project, record_batch)
+                self._write_record_sync(project, record_batch, **kwargs)
             except Unauthorized as err:
                 # logger.warning("Received Unauthorized response, halting...")
                 error_list.append(str(err))
@@ -223,6 +256,7 @@ class Client:
         max_inflight_batches: int = 100,
         disable_progress: bool = False,
         use_progress_widget: bool = False,
+        **kwargs,
     ) -> WriteSummary:
         """
         Write a stream of input records to Gretel's API.
@@ -248,6 +282,8 @@ class Client:
             use_progress_widget: For use inside a jupyter notebook
                 environment. If set to `true` it will try and use tqdm's
                 ipywidget instead of a text based progress indicator.
+            headers: supports custom header params via kwargs
+            params: supports custom query params via kwargs
         """
         sampler.set_source(iter(reader))
         write_queue = Queue(max_inflight_batches)  # backpressured worker queue
@@ -259,6 +295,7 @@ class Client:
             t = threading.Thread(
                 target=self._write_record_batch,
                 args=(project, write_queue, error_list, thread_event),
+                kwargs=kwargs,
             )
             t.start()
             threads.append(t)
@@ -323,20 +360,29 @@ class Client:
         stop=tenacity.stop_after_attempt(MAX_RATE_LIMIT_RETRY),
         wait=tenacity.wait_exponential(multiplier=1, min=2, max=10),
     )
-    def _get_records_sync(self, project: str, params: dict, count: int = None):
-        if count is not None:  # pragma: no cover
-            params["count"] = count
+    def _get_records_sync(self, project: str, *args, **kwargs):
+        """Returns a list of records from the streams api
+
+        Args:
+            project: project to stream records from
+            headers: supports custom header params via kwargs
+            params: supports custom query params via kwargs
+        """
         return (
-            self._get(f"streams/records/{project}", params).get(DATA).get(RECORDS, [])
+            self._get(f"streams/records/{project}", **kwargs)
+            .get(DATA)
+            .get(RECORDS, [])
         )
 
     def __iter_records(
         self,
         project: str,
+        entity_stream: Optional[str] = None,
         position: Optional[str] = None,
         post_process: Callable = None,
         direction: str = "forward",
         wait_for: int = -1,
+        **kwargs
     ):
         if direction not in ("forward", "backward"):  # pragma: no cover
             raise AttributeError("direction parameter is invalid.")
@@ -345,15 +391,22 @@ class Client:
         start_key = "oldest" if forward else "newest"
         records_seen = 0
         last = position
+
+        # setup base params for streams request
+        headers, params = self._headers_params_from_kwargs(**kwargs)
+        params.update({"with_meta": "yes", "flatten": "yes"})
+        if entity_stream is not None:
+            params["entity_stream"] = entity_stream
+
         stream_start_time = time.time()
         while True:
             if wait_for > 0 and time.time() - stream_start_time > wait_for:
                 return
-            params = {"with_meta": "yes", "flatten": "yes"}
+
             if last is not None:
                 params.update({start_key: last})
 
-            records = self._get_records_sync(project, params)
+            records = self._get_records_sync(project, params=params, headers=headers)
 
             # if we're going backwards we'll eventually
             # hit a point when we just only keep getting
@@ -397,11 +450,13 @@ class Client:
         self,
         *,
         project: str,
+        entity_stream: Optional[str] = None,
         position: Optional[str] = None,
-        post_process: Callable = None,
+        post_process: Optional[Callable] = None,
         direction: str = "forward",
         record_limit: int = -1,
         wait_for: int = -1,
+        **kwargs,
     ) -> Iterator[dict]:
         """
         Provides an iterator for moving backward or forward
@@ -424,6 +479,8 @@ class Client:
             wait_for: Time in seconds to wait for new records to arrive
                 before closing the iterator. If the number is set to a
                 value less than 0, the iterator will wait indefinitely.
+            headers: supports custom header params via kwargs
+            params: supports custom query params via kwargs
 
         Yields:
             An individual record object. If no `record_limit` is passed and
@@ -438,7 +495,7 @@ class Client:
             TypeError: When invalid `direction` parameter supplied.
         """
         record_source = self.__iter_records(
-            project, position, post_process, direction, wait_for
+            project, entity_stream, position, post_process, direction, wait_for, **kwargs
         )
         record_iterator = ConstantSampler(record_limit=record_limit)
         record_iterator.set_source(record_source)
@@ -542,7 +599,7 @@ class Client:
         if isinstance(records, dict):
             records = [records]
         return (
-            self._post("records/detect_entities", None, data=records)
+            self._post("records/detect_entities", data=records)
             .get(DATA)
             .get(RECORDS, [])
         )

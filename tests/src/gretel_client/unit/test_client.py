@@ -14,11 +14,11 @@ from gretel_client import (
     Unauthorized,
     BadRequest,
     Forbidden,
-    project_from_uri
+    project_from_uri,
 )
 from gretel_client.samplers import ConstantSampler
 from gretel_client.readers import CsvReader, JsonReader
-from gretel_client.client import DEFAULT_API_ENV_KEY
+from gretel_client.client import DEFAULT_API_ENV_KEY, TIMEOUT
 
 
 @pytest.fixture
@@ -156,6 +156,15 @@ def records_rev():
     ]
 
 
+@pytest.fixture
+def test_input_json_stream(test_records):
+    input_json = io.StringIO()
+    for record in test_records:
+        input_json.write(json.dumps(record) + "\n")
+    input_json.seek(0)
+    return input_json
+
+
 @patch("gretel_client.client.Client")
 @patch("gretel_client.client.getpass")
 @patch("gretel_client.client.os.getenv")
@@ -194,7 +203,7 @@ def test_get_project_from_uri_prompt(getenv, getpass, gcc):
     # when api key is set, and prompt is true, use api key
     getenv.return_value = test_uri
     project_from_uri("prompt")
-    gcc.assert_called_with('api', 'token')
+    gcc.assert_called_with("api", "token")
     assert getpass.call_count == 1
 
     # when api key is set and prompt always is true, ask for api key
@@ -204,8 +213,7 @@ def test_get_project_from_uri_prompt(getenv, getpass, gcc):
     # use api key env variable
     gcc.reset_mock()
     project_from_uri(test_uri)
-    gcc.assert_called_with('api', 'token')
-
+    gcc.assert_called_with("api", "token")
 
 
 def test_iter_records(records):
@@ -238,6 +246,24 @@ def test_iter_records_does_terminate(records):
         continue
 
 
+def test_iter_entity_stream_custom_params(records):
+    client = get_cloud_client("api", "abc123xyz")
+    client._get = Mock(side_effect=records)
+    resp = list(
+        client._iter_records(
+            project="foo",
+            entity_stream="test_entity",
+            wait_for=1,
+            headers={"X-Gretel-Test": "true"},
+        )
+    )
+    assert client._get.called_with(
+        "streams/records/foo",
+        params={"entity_stream": "test_entity", "flatten": "yes", "with_meta": "yes"},
+        headers={"X-Gretel-Test": "true"},
+    )
+
+
 def test_iter_record_with_limit(records):
     client = get_cloud_client("api", "abc123xyz")
     client._get = Mock(side_effect=records)
@@ -268,17 +294,32 @@ def test_record_writer_csv(fake, client: Client):
 
     expected_payload = [dict(zip(header, row)) for row in rows]
 
-    client._post.assert_called_with("records/send/test-proj", {}, expected_payload)
+    client._post.assert_called_with("records/send/test-proj", data=expected_payload)
 
 
-def test_json_writer(test_records, client):
-    input_json = io.StringIO()
-    for record in test_records:
-        input_json.write(json.dumps(record) + "\n")
-    input_json.seek(0)
+def test_json_writer(test_records, test_input_json_stream, client):
     client._post = Mock()
-    client._write_records(project="test-project", reader=JsonReader(input_json))
-    client._post.assert_called_with("records/send/test-project", {}, test_records)
+    client._write_records(
+        project="test-project", reader=JsonReader(test_input_json_stream)
+    )
+    client._post.assert_called_with("records/send/test-project", data=test_records)
+
+
+def test_writer_params_headers(test_records, test_input_json_stream, client):
+    client.session.post = Mock()
+    client._write_records(
+        project="test-project",
+        reader=JsonReader(test_input_json_stream),
+        params={"detection_mode": "all"},
+        headers={"X-Unit-Test": True},
+    )
+    client.session.post.assert_called_with(
+        "https://api.gretel.cloud/records/send/test-project",
+        data=json.dumps(test_records),
+        params={"detection_mode": "all"},
+        timeout=TIMEOUT,
+        headers={"X-Unit-Test": True},
+    )
 
 
 def test_write_unauthorized(test_records, client):
@@ -437,29 +478,16 @@ def test_project_from_uri_env_api_key(monkeypatch):
     with patch("gretel_client.client.get_cloud_client") as mock_get_client:
         mock_client = Mock()
         mock_get_client.return_value = mock_client
-        project_from_uri(
-            "gretel://api.gretel.cloud/my_project"
-        )
-        mock_get_client.assert_called_with(
-            "api",
-            "abc123"
-        )
-        mock_client.get_project.assert_called_with(
-            name="my_project"
-        )
+        project_from_uri("gretel://api.gretel.cloud/my_project")
+        mock_get_client.assert_called_with("api", "abc123")
+        mock_client.get_project.assert_called_with(name="my_project")
 
 
 def test_project_from_uri(monkeypatch):
     with patch("gretel_client.client.get_cloud_client") as mock_get_client:
         mock_client = Mock()
         mock_get_client.return_value = mock_client
-        project_from_uri(
-            "gretel://tokentoken@api.gretel.cloud/my_project"
-        )
-        mock_get_client.assert_called_with(
-            "api",
-            "tokentoken"
-        )
-        mock_client.get_project.assert_called_with(
-            name="my_project"
-        )
+        project_from_uri("gretel://tokentoken@api.gretel.cloud/my_project")
+        mock_get_client.assert_called_with("api", "tokentoken")
+        mock_client.get_project.assert_called_with(name="my_project")
+
