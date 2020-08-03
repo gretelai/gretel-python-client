@@ -23,4 +23,4 @@ def test_detect_entities(client: Client):
     detected_entities = client.detect_entities(payload)
 
     assert len(detected_entities) == 1
-    assert len(detected_entities[0]["metadata"]["fields"]["email"]["ner"]["labels"]) == 2
+    assert len(detected_entities[0]["metadata"]["fields"]["email"]["ner"]["labels"]) == 3
