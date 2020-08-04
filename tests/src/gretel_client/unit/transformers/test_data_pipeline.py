@@ -1,12 +1,11 @@
 from gretel_client.transformers.base import FieldRef
 from gretel_client.transformers.data_restore_pipeline import DataRestorePipeline
 from gretel_client.transformers import DataTransformPipeline, DataPath, BucketConfig
-from gretel_client.transformers import DataTransformPipeline, DataPath
 from gretel_client.transformers.data_transform_pipeline import RECORD_KEYS
 from gretel_client.transformers.fpe import crypto_aes
 from gretel_client.transformers import FormatConfig, CombineConfig, ConditionalConfig, \
     DateShiftConfig, DropConfig, FakeConstantConfig, RedactWithCharConfig, RedactWithLabelConfig, \
-    RedactWithStringConfig, FpeFloatConfig, FpeStringConfig, SecureHashConfig
+    RedactWithStringConfig, FpeFloatConfig, FpeStringConfig, SecureHashConfig, Score
 from gretel_client.transformers.string_mask import StringMask
 from gretel_client.transformers.transformers.bucket import Bucket
 
@@ -99,6 +98,36 @@ def test_record_xf(record_and_meta_2):
         'state': '8896cd9f38ceac0e98f47c41a2028219f17d8ef41277e4e2138d52a08c24e0aa',
         'stuff': 'nothing labeled here',
         'latitude': -89.3146475}
+
+
+def test_filter_by_score(record_and_meta_2):
+    entity_xf_list = [
+        # Replace names with PERSON_NAME. Should be applied to all.
+        RedactWithLabelConfig(labels=['person_name']),
+
+        # Replace names with COMPANY_NAME. Should be applied to Qualcomm but not Gretel.
+        RedactWithLabelConfig(labels=['company_name'], minimum_score=Score.HIGH),
+    ]
+    data_paths = [
+        DataPath(input='summary', xforms=entity_xf_list),
+        # Transforms should be no-ops for all these, no matching entities.
+        DataPath(input='dni', xforms=entity_xf_list),
+        DataPath(input='city', xforms=entity_xf_list),
+        DataPath(input='state', xforms=entity_xf_list),
+        DataPath(input='stuff', xforms=entity_xf_list),
+        DataPath(input='latitude', xforms=entity_xf_list)
+    ]
+    xf = DataTransformPipeline(data_paths)
+    check = xf.transform_record(record_and_meta_2).get('record')
+    assert check == {
+        'summary': 'PERSON_NAME <alex@gretel.ai> works at Gretel. PERSON_NAME used to work at '
+                   'COMPANY_NAME.',
+        'dni': 'He loves 8.8.8.8 for DNS',
+        'city': 'San Diego',
+        'state': 'California',
+        'stuff': 'nothing labeled here',
+        'latitude': 112.221
+    }
 
 
 def test_record_drop_field():
