@@ -25,15 +25,30 @@ else:
     RestoreTransformerConfig = None
 
 
+class Score:
+    """
+    Standard entity score values to help define minimum_scores for transformers.
+    """
+    LOW = .2
+    MED = .5
+    HIGH = .8
+    MAX = 1.0
+
+
 @dataclass(frozen=True)
 class TransformerConfig(ABC):
     """An abstract dataclass that all Transformer
     Configs will inherit from.
 
     Should not need to be used directly.
+
+    Args:
+        labels: List of entity types that this transformer will be applied to.
+        minimum_score: Any entity must have at least this score for the transformer to be applied.
     """
 
     labels: List[str] = None
+    minimum_score: Optional[float] = None
 
     def __getstate__(self):
         return dict(self.__dict__)
@@ -80,6 +95,7 @@ class Transformer(ABC):
     def __init__(self, config: TransformerConfig):
         self.transform_entity_func = None
         self.labels = frozenset(config.labels or [])
+        self.minimum_score = config.minimum_score
         self.field_ref_dict = dict(
             [
                 (item[0], item[1])
@@ -116,8 +132,12 @@ class Transformer(ABC):
 
         self.transform_entity_func = self.transform_entity
         # Sort NER entities according to the criterion.
+        # Drop entities if their score is below the minimum when the minimum is defined.
+        raw_entities = [elt for elt in meta.get("ner", {}).get("labels", [])
+                        if self.minimum_score is None or
+                        (elt.get("score") is not None and elt.get("score", 0.0) >= self.minimum_score)]
         entities = sorted(
-            meta.get("ner", {}).get("labels", []),
+            raw_entities,
             key=lambda lbl: lbl[Transformer.entity_sort_criterion],
         )
 
