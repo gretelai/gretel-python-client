@@ -103,10 +103,13 @@ def test_record_xf(record_and_meta_2):
 def test_filter_by_score(record_and_meta_2):
     entity_xf_list = [
         # Replace names with PERSON_NAME. Should be applied to all.
-        RedactWithLabelConfig(labels=['person_name']),
+        RedactWithLabelConfig(labels=['person_name'], minimum_score=Score.HIGH),
 
-        # Replace names with COMPANY_NAME. Should be applied to Qualcomm but not Gretel.
-        RedactWithLabelConfig(labels=['company_name'], minimum_score=Score.HIGH),
+        # Replace names with XXXX. Should be applied to Qualcomm but not Gretel.
+        RedactWithCharConfig(labels=['company_name'], minimum_score=Score.HIGH),
+
+        # Replace names with LOCATION_CITY. Should be applied to San Diego.
+        RedactWithLabelConfig(labels=['location_city']),
     ]
     data_paths = [
         DataPath(input='summary', xforms=entity_xf_list),
@@ -121,9 +124,9 @@ def test_filter_by_score(record_and_meta_2):
     check = xf.transform_record(record_and_meta_2).get('record')
     assert check == {
         'summary': 'PERSON_NAME <alex@gretel.ai> works at Gretel. PERSON_NAME used to work at '
-                   'COMPANY_NAME.',
+                   'XXXXXXXX.',
         'dni': 'He loves 8.8.8.8 for DNS',
-        'city': 'San Diego',
+        'city': 'LOCATION_CITY',
         'state': 'California',
         'stuff': 'nothing labeled here',
         'latitude': 112.221
