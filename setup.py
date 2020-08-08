@@ -7,13 +7,8 @@ with open(path.join(this_dir, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 
-with open(path.join(this_dir, "VERSION")) as f:
-    version = f.read()
-
-
 setup(
     name="gretel-client",
-    version=version,
     use_scm_version=True,
     setup_requires=["setuptools_scm"],
     description="Python bindings for the Gretel API",
