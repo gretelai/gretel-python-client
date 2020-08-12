@@ -385,7 +385,7 @@ def test_constant_sampler(fake):
 
 def test_get_project(client: Client):
     client._get = Mock(
-        return_value={"data": {"project": {"_id": 123, "description": ""}}}
+        return_value={"data": {"project": {"_id": 123, "description": "", "display_name": ""}}}
     )
     check = client.get_project(name="proj")
     assert check.name == "proj"
@@ -401,6 +401,7 @@ def test_get_project(client: Client):
                 "name": "random",
                 "id": "5eb07df99294fd2dbc3dbe6a",
                 "description": "",
+                "display_name": ""
             }
         }
     )
