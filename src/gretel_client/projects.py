@@ -50,7 +50,13 @@ class Project:
     """
 
     def __init__(
-        self, *, name: str, client: "Client", project_id: str, desc: str = None
+        self,
+        *,
+        name: str,
+        client: "Client",
+        project_id: str,
+        desc: str = None,
+        display_name: str = None,
     ):
         self.name = name
         """The unique name of the project. This is either set by you or auto
@@ -65,6 +71,10 @@ class Project:
 
         self.description = desc
         """A short description of the project
+        """
+
+        self.display_name = display_name
+        """The main display name used in the Gretel Console for your project
         """
 
         self._iter_records = partial(self.client._iter_records, project=self.name)

@@ -163,7 +163,9 @@ class Client:
         fields = self._get(f"fields/schema/{project}", params=params)
         return fields
 
-    def _create_project(self, name=None, desc=None):
+    def _create_project(
+        self, *, name: str, desc: str, display_name: str
+    ):
         """
         NOTE(jm): not supporting display name or long description
         here yet
@@ -173,6 +175,8 @@ class Client:
             payload["name"] = name
         if desc is not None:
             payload["description"] = desc
+        if display_name is not None:
+            payload["display_name"] = display_name
 
         return self._post("projects", data=payload)
 
@@ -369,9 +373,7 @@ class Client:
             params: supports custom query params via kwargs
         """
         return (
-            self._get(f"streams/records/{project}", **kwargs)
-            .get(DATA)
-            .get(RECORDS, [])
+            self._get(f"streams/records/{project}", **kwargs).get(DATA).get(RECORDS, [])
         )
 
     def __iter_records(
@@ -382,7 +384,7 @@ class Client:
         post_process: Callable = None,
         direction: str = "forward",
         wait_for: int = -1,
-        **kwargs
+        **kwargs,
     ):
         if direction not in ("forward", "backward"):  # pragma: no cover
             raise AttributeError("direction parameter is invalid.")
@@ -495,7 +497,13 @@ class Client:
             TypeError: When invalid `direction` parameter supplied.
         """
         record_source = self.__iter_records(
-            project, entity_stream, position, post_process, direction, wait_for, **kwargs
+            project,
+            entity_stream,
+            position,
+            post_process,
+            direction,
+            wait_for,
+            **kwargs,
         )
         record_iterator = ConstantSampler(record_limit=record_limit)
         record_iterator.set_source(record_source)
@@ -525,16 +533,25 @@ class Client:
             for p in projects
         ]
 
-    def _create_get_project(self, name=None, desc=None):
-        res = self._create_project(name=name, desc=desc)
+    def _create_get_project(self, *, name: str, desc: str, display_name: str):
+        res = self._create_project(name=name, desc=desc, display_name=display_name)
         _id = res["data"]["id"]
         p = self._get_project(_id)["project"]
         return Project(
-            name=p["name"], client=self, project_id=_id, desc=p["description"]
+            name=p["name"],
+            client=self,
+            project_id=_id,
+            desc=p["description"],
+            display_name=p["display_name"]
         )
 
     def get_project(
-        self, *, name: str = None, create: bool = False, desc: str = None
+        self,
+        *,
+        name: str = None,
+        create: bool = False,
+        desc: str = None,
+        display_name: str = None,
     ) -> Project:
         """
         Create or get a project.  By default, this method will try
@@ -559,6 +576,8 @@ class Client:
             desc: If project gets created, set the description to this value. This will only
                 get used when a project gets newly created. If the project already exists,
                 nothing will happen with this value.
+            display_name: If project gets created, set the display name to this value.  This will
+                be the primary name used when looking at the project in the Gretel Console.
 
         Returns:
             A ``Project`` instance.
@@ -573,16 +592,20 @@ class Client:
             try:
                 p = self._get_project(name)["project"]
                 return Project(
-                    name=name, client=self, project_id=p["_id"], desc=p["description"]
+                    name=name,
+                    client=self,
+                    project_id=p["_id"],
+                    desc=p["description"],
+                    display_name=p["display_name"]
                 )
             except NotFound:
                 if create:
-                    return self._create_get_project(name=name, desc=desc)
+                    return self._create_get_project(name=name, desc=desc, display_name=display_name)
                 else:
                     raise
 
         if not name and create:
-            return self._create_get_project(desc=desc)
+            return self._create_get_project(name=None, desc=desc, display_name=display_name)
 
     def detect_entities(self, records: Union[List[dict], dict]) -> List[dict]:
         """Do real-time entity detection from a small batch of records.  This function operates

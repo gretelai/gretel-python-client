@@ -193,14 +193,22 @@ def test_create_named_project(client: Client):
     p = client.get_project(name=name, create=True)
     assert p.name == name
     assert p.description == ""
+    assert p.display_name == ""
 
     # test search
     assert len(client.search_projects(query=name)) == 1
     p.delete()
 
-    p = client.get_project(name=name, create=True, desc="this is super cool")
+    p = client.get_project(name=name, create=True, desc="this is super cool", display_name="the project")
     assert p.name == name
     assert p.description == "this is super cool"
+    assert p.display_name == "the project"
+
+    # fetch the same project
+    p = client.get_project(name=name)
+    assert p.name == name
+    assert p.description == "this is super cool"
+    assert p.display_name == "the project"
 
     p.delete()
 
