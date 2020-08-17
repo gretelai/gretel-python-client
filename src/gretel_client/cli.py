@@ -11,7 +11,7 @@ from gretel_client.samplers import ConstantSampler
 
 
 GRETEL_API_KEY = os.getenv('GRETEL_API_KEY')
-GRETEL_ENV = os.getenv('GRETEL_ENV', 'api-dev')
+GRETEL_ENV = os.getenv('GRETEL_ENV', 'api')
 
 
 class SeekableStreamBuffer(Iterable):
