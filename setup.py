@@ -26,7 +26,7 @@ setup(
         'dataclasses;python_version<"3.7"'
     ],
     extras_require={
-        "pandas": ["pandas==1.0.3"],
+        "pandas": ["pandas==1.0.5"],
         "fpe": ["numpy", "pycryptodome==3.9.8", "dateparser==0.7.6"]
     },
 )
