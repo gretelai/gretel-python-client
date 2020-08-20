@@ -4,6 +4,10 @@
 
 [![Documentation Status](https://readthedocs.org/projects/gretel-client/badge/?version=latest)](https://gretel-client.readthedocs.io/en/stable/?badge=stable)
 
+Check out our [documentation](https://gretel-client.readthedocs.io/en/stable/?badge=stable) for getting started guides and module references.
+
+For more advanced usage, please refer to our [blueprints](blueprints).
+
 The Gretel Python Client provides bindings to the Gretel REST API and a transformation sub-package that provides interfaces to manipulate data based on a variety of use cases.
 
 The REST API bindings and transformer interfaces can be used separately or together to solve a variety of data analysis, anonymization, and other ETL use cases.  

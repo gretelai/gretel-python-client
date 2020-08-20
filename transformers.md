@@ -3,7 +3,7 @@
 Welcome to the Gretel Transformers documentation!  Here we will introduce you to the concepts in the Transformers sub-package and
 provide some basic tutorials for getting started.
 
-For more advanced usage, please refer to our tutorials / guides on [our blog](https://www.medium.com/gretel-ai).
+For more advanced usage, please refer to our [blueprints](https://github.com/gretelai/gretel-python-client/tree/master/blueprints).
 
 ## Installation
 
