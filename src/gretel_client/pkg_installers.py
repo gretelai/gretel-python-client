@@ -6,7 +6,7 @@ import requests
 
 
 PKG_ENDPOINT = "https://{}/opt/pkg"
-TX_PKG = "gretel-helpers"
+HELPER_PKG = "gretel-helpers"
 
 
 logger = logging.getLogger(__name__)
@@ -76,7 +76,7 @@ def _get_package_endpoint(package_identifier: str, api_key: str, host: str) -> s
 
 def install_packages(api_key: str, host: str, verbose: bool = False):
     logger.info("Authenticating with package manager")
-    package_endpoint = _get_package_endpoint(TX_PKG, api_key, host)
+    package_endpoint = _get_package_endpoint(HELPER_PKG, api_key, host)
 
     logger.info("Installing packages (this might take a while)")
     _install_pip_dependency(package_endpoint, verbose)
