@@ -6,7 +6,7 @@ import requests
 
 
 PKG_ENDPOINT = "https://{}/opt/pkg"
-TX_PKG = "gretel-transformers"
+TX_PKG = "gretel-helpers"
 
 
 logger = logging.getLogger(__name__)
