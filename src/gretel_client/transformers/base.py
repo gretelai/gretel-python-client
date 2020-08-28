@@ -129,7 +129,6 @@ class Transformer(ABC):
         # Short-circuit: if there is no metadata, we don't have knowledge about any entities
         if not meta:
             return value, {}
-
         self.transform_entity_func = self.transform_entity
         # Sort NER entities according to the criterion.
         # Drop entities if their score is below the minimum when the minimum is defined.
@@ -140,7 +139,6 @@ class Transformer(ABC):
             raw_entities,
             key=lambda lbl: lbl[Transformer.entity_sort_criterion],
         )
-
         return self._transform_entities_base(value, meta, entities)
 
     def _transform_entities_base(
@@ -152,11 +150,9 @@ class Transformer(ABC):
         if self.__class__.__name__ == "Drop":
             if not self.labels.isdisjoint(all_ents):
                 return None, {}
-
         # if the value is a Number, we won't recurse along a string
         # to do the whole entity overlap game, we just submit the value
         # to the transformers
-
         if isinstance(value, Number):
             for ent_label in all_ents:  # unlikely this is > 1, but just incase
                 transformed_value_entities = self.transform_entity_func(
@@ -167,7 +163,10 @@ class Transformer(ABC):
                     # if we run into a situation where a number
                     # has multiple entities mapped to it
                     # we could go by score, etc.
-                    return transformed_value_entities[1], copy.deepcopy(meta)
+                    new_meta = copy.deepcopy(meta)
+                    new_meta["ner"]["labels"][0]["text"] = str(transformed_value_entities[1])
+                    new_meta["ner"]["labels"][0]["end"] = len(str(transformed_value_entities[1]))
+                    return transformed_value_entities[1], new_meta
                 else:
                     return str(value), copy.deepcopy(meta)
 
@@ -196,6 +195,7 @@ class Transformer(ABC):
             Returns ``None`` if no transformation occurred. This could becaue no label or value was provied
             or if the transformer does not apply to the provided label.
         """
+
         if label and label in self.labels:
             new_label, new_value = self._transform_entity(  # pylint: disable=assignment-from-no-return
                 label, value
