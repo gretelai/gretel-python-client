@@ -9,9 +9,12 @@ with open(path.join(this_dir, "README.md"), encoding="utf-8") as f:
 
 setup(
     name="gretel-client",
+    author='Gretel Labs, Inc.',
+    author_email='open-source@gretel.ai',
     use_scm_version=True,
     setup_requires=["setuptools_scm"],
     description="Python bindings for the Gretel API",
+    url='https://github.com/gretelai/gretel-python-client',
     long_description=long_description,
     long_description_content_type="text/markdown",
     entry_points={"console_scripts": ["gretel=gretel_client.cli:main"]},
@@ -29,4 +32,11 @@ setup(
         "pandas": ["pandas>1.0.0,<1.1.0"],
         "fpe": ["numpy", "pycryptodome==3.9.8", "dateparser==0.7.6"]
     },
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: Apache License",
+        "Operating System :: POSIX :: Linux",
+        "Operating System :: MacOS",
+        "Operating System :: Microsoft :: Windows"
+    ]
 )

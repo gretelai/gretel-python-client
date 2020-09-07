@@ -6,7 +6,7 @@
 
 Check out our [documentation](https://gretel-client.readthedocs.io/en/stable/?badge=stable) for getting started guides and module references.
 
-For more advanced usage, please refer to our [blueprints](blueprints).
+For more advanced usage, please refer to our [blueprints](https://github.com/gretelai/gretel-python-client/tree/master/blueprints).
 
 The Gretel Python Client provides bindings to the Gretel REST API and a transformation sub-package that provides interfaces to manipulate data based on a variety of use cases.
 
