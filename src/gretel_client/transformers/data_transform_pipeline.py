@@ -99,6 +99,9 @@ class DataTransformPipeline(DataPipeline):
         )
 
     def transform_df(self, df: DataFrameT) -> DataFrameT:
+        """Helper method that can consume a DataFrame and iterate over each record
+        as a dictionary, then run the transform pipeline on each record.
+        """
         if pd is None:
             raise RuntimeError("Pandas must be installed to use this feature!")
         records = []
