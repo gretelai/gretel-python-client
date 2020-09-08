@@ -1,3 +1,6 @@
+"""
+Misc data source readers
+"""
 from collections.abc import Iterator
 from typing import List, Any, IO, Union, Callable, TYPE_CHECKING
 import csv

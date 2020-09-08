@@ -2,9 +2,20 @@
 running all transformations.
 """
 import collections
+from typing import TYPE_CHECKING
+
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 
 from gretel_client.transformers.data_pipeline import DataPipeline
+from gretel_client.readers import DataFrameReader
 
+if TYPE_CHECKING:
+    from pandas import DataFrame as DataFrameT
+else:
+    DataFrameT = None
 
 GRETEL_ID = "gretel_id"
 FIELDS = "fields"
@@ -86,3 +97,17 @@ class DataTransformPipeline(DataPipeline):
             xform_payload_metadata_fields,
             gretel_id,
         )
+
+    def transform_df(self, df: DataFrameT) -> DataFrameT:
+        """Helper method that can consume a DataFrame and iterate over each record
+        as a dictionary, then run the transform pipeline on each record.
+        """
+        if pd is None:
+            raise RuntimeError("Pandas must be installed to use this feature!")
+        records = []
+        reader = DataFrameReader(df)
+        for row in reader:
+            records.append(
+                self.transform_record(row)
+            )
+        return pd.DataFrame(records)

@@ -4,7 +4,7 @@ flake8
 pytest-cov
 sphinx==3.0.3
 faker
-pandas==1.0.3
+pandas>1.0,<1.1.0
 ipywidgets==7.5.1
 tqdm==4.45.0
 jsonpickle==1.4.1
