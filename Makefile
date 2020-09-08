@@ -17,7 +17,7 @@ VERSION=$(shell $(PYTHON) -c "import setuptools_scm;print(setuptools_scm.get_ver
 
 .PHONY: setup
 setup:
-	$(PIP) install -U -e ".[fpe]"
+	$(PIP) install -U -e ".[fpe,pandas]"
 	$(PIP) install -r dev-requirements.txt
 
 
