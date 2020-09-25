@@ -401,7 +401,7 @@ class Project:
         """
         self.client._delete_project(self.project_id)
 
-    def get_console_url(self):
-        """Returns a link to view the project from Gretel's console."""
+    def get_console_url(self) -> str:
+        """Returns web link to access the project from Gretel's console."""
         console_base = self.client.base_url.replace("api", "console")
         return f"{console_base}{self.project_id}"
