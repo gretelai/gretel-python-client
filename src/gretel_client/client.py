@@ -598,7 +598,7 @@ class Client:
                     desc=p["description"],
                     display_name=p["display_name"]
                 )
-            except NotFound:
+            except (NotFound, Unauthorized):
                 if create:
                     return self._create_get_project(name=name, desc=desc, display_name=display_name)
                 else:
