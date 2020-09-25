@@ -140,7 +140,7 @@ def assert_entity_count(project: Project, count: int):
 
 
 def test_project_not_found(client: Client):
-    with pytest.raises(BadRequest):
+    with pytest.raises(Unauthorized):
         client.get_project(name=uuid.uuid4().hex)
 
 
