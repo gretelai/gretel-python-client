@@ -400,3 +400,8 @@ class Project:
             instance after deletion, you will receive API errors.
         """
         self.client._delete_project(self.project_id)
+
+    def get_console_url(self):
+        """Returns a link to view the project from Gretel's console."""
+        console_base = self.client.base_url.replace("api", "console")
+        return f"{console_base}/{self.project_id}"
