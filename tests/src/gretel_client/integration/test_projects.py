@@ -221,7 +221,7 @@ def test_temporary_project(client: Client):
     with temporary_project(client) as proj:
         proj.send([{"foo": "bar"}] * 3, detection_mode="all")
         assert_check_record_count(proj, 3)
-    with pytest.raises(NotFound):
+    with pytest.raises(Unauthorized):
         client.get_project(name=proj.name)
 
 
