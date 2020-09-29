@@ -92,3 +92,8 @@ def test_send(client: Client):
         headers={"test": "two"},
         params={"test": "param", "detection_mode": "all"},
     )
+
+
+def test_get_console_link(client: Client):
+    p = Project(name="test-project", client=client, project_id=1234)
+    assert p.get_console_url() == "https://console.gretel.cloud/1234"
