@@ -22,14 +22,14 @@ setup(
     packages=find_packages("src"),
     install_requires=[
         "faker==4.1.1",
-        "requests",
-        "smart_open==2.1.0",
+        "requests>=2.24.0,<3",
+        "smart_open>=2.1.0,<3",
         "tqdm==4.45.0",
         "tenacity==6.2.0",
         'dataclasses;python_version<"3.7"'
     ],
     extras_require={
-        "pandas": ["pandas>1.0.0,<1.1.0"],
+        "pandas": ["pandas>1.1.0,<1.2"],
         "fpe": ["numpy", "pycryptodome==3.9.8", "dateparser==0.7.6"]
     },
     classifiers=[
