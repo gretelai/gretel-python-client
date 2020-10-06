@@ -640,19 +640,20 @@ class Client:
         pkg.install_packages(self.api_key, self.host)
 
     def install_packages(
-        self, verbose: bool = False, version: str = "latest", _track: str = "stable"
+        self, verbose: bool = False, version: str = "latest"
     ):
         """Installs the latest version of the Gretel Transformers package
 
         Args:
             verbose: Will print all package installation messages.
+            version: Eg: ``1.1.0``. Determines package version to install. Specifying
+            "latest" will ensure the latest version of the package is installed.
         """
         pkg.install_packages(
             api_key=self.api_key,
             host=self.host,
             verbose=verbose,
             version=version,
-            _track=_track,
         )
 
 
