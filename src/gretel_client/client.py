@@ -163,9 +163,7 @@ class Client:
         fields = self._get(f"fields/schema/{project}", params=params)
         return fields
 
-    def _create_project(
-        self, *, name: str, desc: str, display_name: str
-    ):
+    def _create_project(self, *, name: str, desc: str, display_name: str):
         """
         NOTE(jm): not supporting display name or long description
         here yet
@@ -542,7 +540,7 @@ class Client:
             client=self,
             project_id=_id,
             desc=p["description"],
-            display_name=p["display_name"]
+            display_name=p["display_name"],
         )
 
     def get_project(
@@ -596,16 +594,20 @@ class Client:
                     client=self,
                     project_id=p["_id"],
                     desc=p["description"],
-                    display_name=p["display_name"]
+                    display_name=p["display_name"],
                 )
             except (NotFound, Unauthorized):
                 if create:
-                    return self._create_get_project(name=name, desc=desc, display_name=display_name)
+                    return self._create_get_project(
+                        name=name, desc=desc, display_name=display_name
+                    )
                 else:
                     raise
 
         if not name and create:
-            return self._create_get_project(name=None, desc=desc, display_name=display_name)
+            return self._create_get_project(
+                name=None, desc=desc, display_name=display_name
+            )
 
     def detect_entities(self, records: Union[List[dict], dict]) -> List[dict]:
         """Do real-time entity detection from a small batch of records.  This function operates
@@ -637,13 +639,22 @@ class Client:
         )
         pkg.install_packages(self.api_key, self.host)
 
-    def install_packages(self, verbose: bool = False):
+    def install_packages(
+        self, verbose: bool = False, version: str = "latest"
+    ):
         """Installs the latest version of the Gretel Transformers package
 
         Args:
             verbose: Will print all package installation messages.
+            version: Eg: ``1.1.0``. Determines package version to install. Specifying
+            "latest" will ensure the latest version of the package is installed.
         """
-        pkg.install_packages(self.api_key, self.host, verbose)
+        pkg.install_packages(
+            api_key=self.api_key,
+            host=self.host,
+            verbose=verbose,
+            version=version,
+        )
 
 
 def _get_or_prompt(

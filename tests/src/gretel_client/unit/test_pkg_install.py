@@ -43,6 +43,7 @@ def test_does_install_packages(popen, get_package):
     get_package.assert_called_with(
         "https://api-dev.gretel.cloud/opt/pkg/gretel-helpers",
         headers={"Authorization": "test123"},
+        params={'version': 'latest'}
     )
 
 

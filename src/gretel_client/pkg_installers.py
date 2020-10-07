@@ -59,24 +59,36 @@ def _install_pip_dependency(dep: str, verbose: bool = True):
     )
 
 
-def _get_package_endpoint(package_identifier: str, api_key: str, host: str) -> str:
+def _get_package_endpoint(
+    package_identifier: str, api_key: str, host: str, version: str = "latest",
+) -> str:
     """Retrieve package installation endpoints from Gretel API"""
     pkg_resp = requests.get(
         f"{PKG_ENDPOINT.format(host)}/{package_identifier}",
+        params={"version": version},
         headers={"Authorization": api_key},
     )
 
     if pkg_resp.status_code != 200:  # pragma: no cover
-        raise GretelInstallError("Could not fetch package details from " "endpoint.")
+        raise GretelInstallError("Could not fetch package details from endpoint.")
 
     details = pkg_resp.json()
     source_pkg = details["data"]["package"]["wheel"]
     return source_pkg
 
 
-def install_packages(api_key: str, host: str, verbose: bool = False):
+def install_packages(
+    api_key: str, host: str, version: str = "latest", verbose: bool = False,
+):
+    """Installs python support packages from Gretel's package repo.
+
+    Args:
+        api_key: Gretel API key.
+        host: API endpoint for authenticating the package installation request.
+        version: Determine what package version to install. The default is "latest".
+    """
     logger.info("Authenticating with package manager")
-    package_endpoint = _get_package_endpoint(HELPER_PKG, api_key, host)
+    package_endpoint = _get_package_endpoint(HELPER_PKG, api_key, host, version)
 
     logger.info("Installing packages (this might take a while)")
     _install_pip_dependency(package_endpoint, verbose)
