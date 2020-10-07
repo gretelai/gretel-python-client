@@ -70,7 +70,7 @@ def _get_package_endpoint(
     )
 
     if pkg_resp.status_code != 200:  # pragma: no cover
-        raise GretelInstallError("Could not fetch package details from " "endpoint.")
+        raise GretelInstallError("Could not fetch package details from endpoint.")
 
     details = pkg_resp.json()
     source_pkg = details["data"]["package"]["wheel"]
