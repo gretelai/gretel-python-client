@@ -1,6 +1,8 @@
 import os
 import pytest
 
+import pandas as pd
+
 from gretel_client.client import (
     get_cloud_client,
     Client,
@@ -41,6 +43,7 @@ def test_get_samples(client: Client):
     assert len(sample) > 0
 
     sample = client.get_sample("safecast", as_df=True)
+    assert isinstance(sample, pd.DataFrame)
     assert len(sample) > 0
 
 def test_get_sample_not_found(client: Client):
