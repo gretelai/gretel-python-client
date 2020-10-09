@@ -667,13 +667,13 @@ class Client:
             version=version,
         )
 
-    def list_samples(self, include_details: bool = False) -> List[Union[str]]:
+    def list_samples(self, include_details: bool = False) -> List[Union[str, dict]]:
         """Gretel provides a number of different sample datasets that can be used to
         populate projects. This method returns a list of available samples.
 
         Args:
-            include_details: If True will include details about each sample being
-                returned. Default ``False``.
+            include_details: If ``True``, the function will return additional sample
+                details. Defult ``False``.
 
         Returns:
             A list of available sample datasets.
@@ -689,7 +689,8 @@ class Client:
     def get_sample(
         self, sample_name: str, as_df=False
     ) -> Union[List[Dict], _DataFrameT]:
-        """Returns a sample dataset by key.
+        """Returns a sample dataset by key. Use ``list_samples`` to get a list of
+        available samples.
 
         Args:
             sample_name: The name of the sample to return.
