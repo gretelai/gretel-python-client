@@ -109,15 +109,6 @@ class WriteSummary:
         return self.success
 
 
-@dataclass
-class SampleDataset:
-    name: str
-    """The name of the dataset. This can be used as the lookup key for fetch the full dataset."""
-
-    description: str
-    """A description of the dataset"""
-
-
 class Client:
     """A single client connection to the Gretel API.
     """
