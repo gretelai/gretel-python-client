@@ -5,7 +5,7 @@ import os
 import json
 from functools import wraps
 import time
-from typing import Iterator, Callable, Optional, Tuple, Union, List
+from typing import Dict, Iterator, Callable, Optional, Tuple, Union, List
 import threading
 from queue import Queue
 from getpass import getpass
@@ -16,6 +16,16 @@ from contextlib import contextmanager
 
 import requests
 import tenacity
+
+try:
+    import pandas as pd
+    from pandas import DataFrame as _DataFrameT
+except ImportError:  # pragma: no cover
+    pd = None
+
+    class _DataFrameT:
+        ...  # noqa
+
 
 from gretel_client.readers import Reader
 from gretel_client.samplers import ConstantSampler, Sampler, get_default_sampler
@@ -41,6 +51,7 @@ RECORDS = "records"
 META = "metadata"
 DATA = "data"
 ID = "id"
+SAMPLES = "samples"
 INGEST_TIME = "ingest_time"
 PROMPT = "prompt"
 PROMPT_ALWAYS = "prompt_always"
@@ -96,6 +107,15 @@ class WriteSummary:
 
     def __bool__(self):
         return self.success
+
+
+@dataclass
+class SampleDataset:
+    name: str
+    """The name of the dataset. This can be used as the lookup key for fetch the full dataset."""
+
+    description: str
+    """A description of the dataset"""
 
 
 class Client:
@@ -655,6 +675,51 @@ class Client:
             verbose=verbose,
             version=version,
         )
+
+    def list_samples(self, include_details: bool = False) -> List[Union[str]]:
+        """Gretel provides a number of different sample datasets that can be used to
+        populate projects. This method returns a list of available samples.
+
+        Args:
+            include_details: If True will include details about each sample being
+                returned. Default ``False``.
+
+        Returns:
+            A list of available sample datasets.
+        """
+        resp = self._get("records/samples")
+        if include_details:
+            return [
+                {"name": name, "description": desc}
+                for name, desc in resp[DATA][SAMPLES].items()
+            ]
+        return list(resp[DATA][SAMPLES].keys())
+
+    def get_sample(
+        self, sample_name: str, as_df=False
+    ) -> Union[List[Dict], _DataFrameT]:
+        """Returns a sample dataset by key.
+
+        Args:
+            sample_name: The name of the sample to return.
+            as_df: If ``True``, will return the sample dataset as a ``DataFrame``. If the
+                sample record contains nested fields, those fields will be flattened
+                before converting to a ``DataFrame``. Defaults to ``False``.
+
+        Returns:
+            A list or DataFrame containing the sample dataset.
+
+        Raises:
+            RuntimeError if a ``DataFrame`` is requested without pandas being installed.
+        """
+        resp = self._get("records/samples", params={"key": sample_name})
+        samples = resp[DATA][SAMPLES]
+        if as_df and not pd:
+            raise RuntimeError("pandas must be installed when as_df is True")
+        if as_df and pd:
+            flattened = pd.json_normalize(samples)
+            return pd.DataFrame(flattened)
+        return samples
 
 
 def _get_or_prompt(
