@@ -654,9 +654,7 @@ class Client:
         )
         pkg.install_packages(self.api_key, self.host)
 
-    def install_packages(
-        self, verbose: bool = False, version: str = "latest"
-    ):
+    def install_packages(self, verbose: bool = False, version: str = "latest"):
         """Installs the latest version of the Gretel Transformers package
 
         Args:
@@ -665,13 +663,12 @@ class Client:
             "latest" will ensure the latest version of the package is installed.
         """
         pkg.install_packages(
-            api_key=self.api_key,
-            host=self.host,
-            verbose=verbose,
-            version=version,
+            api_key=self.api_key, host=self.host, verbose=verbose, version=version,
         )
 
-    def list_samples(self, include_details: bool = False) -> List[Union[str, dict]]:
+    def list_samples(
+        self, include_details: bool = False, **kwargs
+    ) -> List[Union[str, dict]]:
         """Gretel provides a number of different sample datasets that can be used to
         populate projects. This method returns a list of available samples.
 
@@ -682,7 +679,8 @@ class Client:
         Returns:
             A list of available sample datasets.
         """
-        resp = self._get("records/samples")
+        headers, params = self._headers_params_from_kwargs(**kwargs)
+        resp = self._get("records/samples", params=params, headers=headers)
         if include_details:
             return [
                 {"name": name, "description": desc}
@@ -691,7 +689,7 @@ class Client:
         return list(resp[DATA][SAMPLES].keys())
 
     def get_sample(
-        self, sample_name: str, as_df=False
+        self, sample_name: str, as_df=False, **kwargs
     ) -> Union[List[Dict], _DataFrameT]:
         """Returns a sample dataset by key. Use ``list_samples`` to get a list of
         available samples.
@@ -708,7 +706,9 @@ class Client:
         Raises:
             RuntimeError if a ``DataFrame`` is requested without pandas being installed.
         """
-        resp = self._get("records/samples", params={"key": sample_name})
+        headers, params = self._headers_params_from_kwargs(**kwargs)
+        params.update({"key": sample_name})
+        resp = self._get("records/samples", params=params, headers=headers)
         samples = resp[DATA][SAMPLES]
         if as_df and not pd:
             raise RuntimeError("pandas must be installed when as_df is True")
