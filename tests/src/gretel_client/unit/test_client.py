@@ -121,6 +121,12 @@ def records_rev():
 
     chunk2 = [
         {
+            "id": "3",
+            "data": "foo_3",
+            "metadata": {},
+            "ingest_time": "2020-05-10T12:41:55.585538",
+        },
+        {
             "id": "4",
             "data": "foo_4",
             "metadata": {},
@@ -142,6 +148,30 @@ def records_rev():
 
     chunk3 = [
         {
+            "id": "6",
+            "data": "foo_6",
+            "metadata": {},
+            "ingest_time": "2020-05-10T12:41:55.585538",
+        },
+        {
+            "id": "7",
+            "data": "foo_7",
+            "metadata": {},
+            "ingest_time": "2020-05-10T12:41:55.585538",
+        }
+    ]
+
+    chunk4 = [
+            {
+            "id": "7",
+            "data": "foo_7",
+            "metadata": {},
+            "ingest_time": "2020-05-10T12:41:55.585538",
+        }
+    ]
+
+    chunk5 = [
+            {
             "id": "7",
             "data": "foo_7",
             "metadata": {},
@@ -153,6 +183,8 @@ def records_rev():
         {"data": {"records": chunk1}},
         {"data": {"records": chunk2}},
         {"data": {"records": chunk3}},
+        {"data": {"records": chunk4}},
+        {"data": {"records": chunk5}},
     ]
 
 
@@ -237,6 +269,23 @@ def test_iter_records_reverse(records_rev):
         check.append(rec["record"])
 
     assert check == ["foo_1", "foo_2", "foo_3", "foo_4", "foo_5", "foo_6", "foo_7"]
+
+
+def test_iter_records_reverse_single_record(records_rev):
+    records = records_rev
+    client = get_cloud_client("api", "abcd123xyz")
+    _rec = {"data": {"records": [{
+        "id": "7",
+        "data": "foo_7",
+        "metadata": {},
+        "ingest_time": "2020-05-10T12:41:55.585538",
+    }]}}
+    client._get = Mock(side_effect=[_rec, _rec])
+    check = []
+    for rec in client._iter_records(project="foo", direction="backward"):
+        check.append(rec["record"])
+
+    assert check == ["foo_7"]
 
 
 def test_iter_records_does_terminate(records):
