@@ -650,9 +650,7 @@ class Client:
         )
         pkg.install_packages(self.api_key, self.host)
 
-    def install_packages(
-        self, verbose: bool = False, version: str = "latest"
-    ):
+    def install_packages(self, verbose: bool = False, version: str = "latest"):
         """Installs the latest version of the Gretel Transformers package
 
         Args:
@@ -661,13 +659,12 @@ class Client:
             "latest" will ensure the latest version of the package is installed.
         """
         pkg.install_packages(
-            api_key=self.api_key,
-            host=self.host,
-            verbose=verbose,
-            version=version,
+            api_key=self.api_key, host=self.host, verbose=verbose, version=version,
         )
 
-    def list_samples(self, include_details: bool = False) -> List[Union[str, dict]]:
+    def list_samples(
+        self, include_details: bool = False, **kwargs
+    ) -> List[Union[str, dict]]:
         """Gretel provides a number of different sample datasets that can be used to
         populate projects. This method returns a list of available samples.
 
@@ -678,7 +675,8 @@ class Client:
         Returns:
             A list of available sample datasets.
         """
-        resp = self._get("records/samples")
+        headers, params = self._headers_params_from_kwargs(**kwargs)
+        resp = self._get("records/samples", params=params, headers=headers)
         if include_details:
             return [
                 {"name": name, "description": desc}

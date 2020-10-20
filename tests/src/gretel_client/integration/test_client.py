@@ -7,7 +7,7 @@ from gretel_client.client import (
     get_cloud_client,
     Client,
 )
-from gretel_client.errors import NotFound
+from gretel_client.errors import NotFound, BadRequest
 
 API_KEY = os.getenv("GRETEL_TEST_API_KEY")
 
@@ -36,6 +36,10 @@ def test_list_samples(client: Client):
 
     samples = client.list_samples(include_details=True)
     assert all([type(s) == dict for s in samples])
+
+    # check to make sure query params propagate to the request
+    with pytest.raises(BadRequest):
+        client.list_samples(params={"bad_param": "yes"})
 
 
 def test_get_samples(client: Client):
