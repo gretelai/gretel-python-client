@@ -209,6 +209,7 @@ def test_create_named_project(client: Client):
     assert p.name == name
     assert p.description == "this is super cool"
     assert p.display_name == "the project"
+    assert p.get_console_url() == f"https://console-dev.gretel.cloud/{name}"
 
     p.delete()
 

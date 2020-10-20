@@ -404,4 +404,4 @@ class Project:
     def get_console_url(self) -> str:
         """Returns web link to access the project from Gretel's console."""
         console_base = self.client.base_url.replace("api", "console")
-        return f"{console_base}{self.project_id}"
+        return f"{console_base}{self.name}"
