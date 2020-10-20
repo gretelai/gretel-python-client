@@ -405,7 +405,10 @@ class Client:
 
         # setup base params for streams request
         headers, params = self._headers_params_from_kwargs(**kwargs)
-        params.update({"with_meta": "yes", "flatten": "yes"})
+        params.update({
+            "with_meta": params.get("with_meta", "yes"),
+            "flatten": params.get("flatten", "yes")
+        })
         if entity_stream is not None:
             params["entity_stream"] = entity_stream
 
@@ -418,21 +421,23 @@ class Client:
                 params.update({start_key: last})
 
             records = self._get_records_sync(project, params=params, headers=headers)
-
             # if we're going backwards we'll eventually
             # hit a point when we just only keep getting
             # one record back, since the id will just keep
             # being reset to that id
             if not forward and len(records) == 1:
                 # yield the final record
-                yield callback(
-                    {
-                        RECORD: records[0][DATA],
-                        META: records[0][META],
-                        INGEST_TIME: records[0][INGEST_TIME],
-                    }
-                )
-                return
+                if records[0][ID] == last:
+                    return
+                else:
+                    yield callback(
+                        {
+                            RECORD: records[0][DATA],
+                            META: records[0][META],
+                            INGEST_TIME: records[0][INGEST_TIME],
+                        }
+                    )
+                    return
 
             if not records:
                 if forward:
@@ -442,9 +447,8 @@ class Client:
             next_last = records[0][ID] if forward else records[-1][ID]
             record_iterator = reversed(records) if forward else records
             for record in record_iterator:
-                if forward:
-                    if record[ID] == last:
-                        continue
+                if record[ID] == last:
+                    continue
                 yield callback(
                     {
                         RECORD: record[DATA],
