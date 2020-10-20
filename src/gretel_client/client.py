@@ -405,7 +405,10 @@ class Client:
 
         # setup base params for streams request
         headers, params = self._headers_params_from_kwargs(**kwargs)
-        params.update({"with_meta": "yes", "flatten": "yes"})
+        params.update({
+            "with_meta": "yes",
+            "flatten": params.get("flatten", "yes")
+        })
         if entity_stream is not None:
             params["entity_stream"] = entity_stream
 
