@@ -687,7 +687,7 @@ class Client:
         return list(resp[DATA][SAMPLES].keys())
 
     def get_sample(
-        self, sample_name: str, as_df=False
+        self, sample_name: str, as_df=False, **kwargs
     ) -> Union[List[Dict], _DataFrameT]:
         """Returns a sample dataset by key. Use ``list_samples`` to get a list of
         available samples.
@@ -704,7 +704,9 @@ class Client:
         Raises:
             RuntimeError if a ``DataFrame`` is requested without pandas being installed.
         """
-        resp = self._get("records/samples", params={"key": sample_name})
+        headers, params = self._headers_params_from_kwargs(**kwargs)
+        params.update({"key": sample_name})
+        resp = self._get("records/samples", params=params, headers=headers)
         samples = resp[DATA][SAMPLES]
         if as_df and not pd:
             raise RuntimeError("pandas must be installed when as_df is True")

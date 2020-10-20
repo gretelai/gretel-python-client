@@ -42,9 +42,9 @@ def test_get_samples(client: Client):
     sample = client.get_sample("safecast")
     assert len(sample) > 0
 
-    sample = client.get_sample("safecast", as_df=True)
+    sample = client.get_sample("safecast", as_df=True, params={"limit": 10})
     assert isinstance(sample, pd.DataFrame)
-    assert len(sample) > 0
+    assert len(sample) == 10
 
 def test_get_sample_not_found(client: Client):
     with pytest.raises(NotFound):
