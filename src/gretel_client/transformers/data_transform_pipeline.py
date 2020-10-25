@@ -53,7 +53,8 @@ class DataTransformPipeline(DataPipeline):
         for data_path in data_path_list:
             field = data_path.input_field
             value = data_fields.get(field)
-            meta = meta_fields.get(field)
+            meta = meta_fields.get(field, {})
+            meta[GRETEL_ID] = gretel_id
             for transformation in data_path.get_data_path_transformations():
                 if transformation.labels:
                     if meta:

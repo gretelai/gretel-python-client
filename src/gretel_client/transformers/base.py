@@ -126,8 +126,8 @@ class Transformer(ABC):
              or if the transformer does not apply to the provided label.
          """
 
-        # Short-circuit: if there is no metadata, we don't have knowledge about any entities
-        if not meta:
+        # Short-circuit: if there is no ner metadata, we don't have knowledge about any entities
+        if not meta.get("ner"):
             return value, {}
         self.transform_entity_func = self.transform_entity
         # Sort NER entities according to the criterion.
