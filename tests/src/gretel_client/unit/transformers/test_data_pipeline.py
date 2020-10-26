@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from gretel_client.transformers.base import FieldRef
 from gretel_client.transformers.data_restore_pipeline import DataRestorePipeline
 from gretel_client.transformers import DataTransformPipeline, DataPath, BucketConfig
@@ -782,3 +784,19 @@ def test_date_shift_format():
         {"user_id": "michaelj@twinpinesmall.com", "birthday": "06/09/1961"},
         {"user_id": "michaelj@titostacos.com", "birthday": "08/29/1958"},
     ]
+
+
+def test_metadata_in_xf(record_meta_data_check):
+    path = DataPath(input="*", xforms=[RedactWithLabelConfig()])
+
+    with patch.object(
+        path.transformations[0],
+        "_transform_field",
+        wraps=path.transformations[0]._transform_field,
+    ) as xf_fn:
+        xf = DataTransformPipeline([path])
+        xf.transform_record(record_meta_data_check)
+        assert (
+            xf_fn.call_args_list[0][0][2]["gretel_id"]
+            == record_meta_data_check["metadata"]["gretel_id"]
+        )
