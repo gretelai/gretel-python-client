@@ -60,7 +60,7 @@ def test_get_sample_not_found(client: Client):
 
 
 def test_bulk_record_summary_count(client: Client):
-    samples = client.get_sample("safecast")
+    samples = client.get_sample("safecast", params={"limit": 150})
     with temporary_project(client) as project:
         summary = project.send_bulk(samples)
         assert summary.records_sent == len(samples)
