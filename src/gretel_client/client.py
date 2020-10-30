@@ -89,7 +89,7 @@ def _api_call(method):
     return dec
 
 
-class Counter:
+class _Counter:
     def __init__(self):
         self.count = 0
         self.lock = threading.Lock()
@@ -116,7 +116,7 @@ class WriteSummary:
     the upload operation was not successful """
 
     records_sent: int = 0
-    """Tracks the number of records written to API"""
+    """Tracks the number of records written to the API"""
 
     def __bool__(self):
         return self.success
@@ -250,7 +250,7 @@ class Client:
         self,
         project,
         write_queue,
-        record_count: Counter,
+        record_count: _Counter,
         error_list: list,
         thread_event: threading.Event,
         **kwargs,
@@ -316,7 +316,7 @@ class Client:
         sampler.set_source(iter(reader))
         write_queue = Queue(max_inflight_batches)  # backpressured worker queue
         error_list = []
-        record_count = Counter()
+        record_count = _Counter()
 
         threads = []
         thread_event = threading.Event()
