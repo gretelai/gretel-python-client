@@ -89,6 +89,16 @@ def _api_call(method):
     return dec
 
 
+class Counter:
+    def __init__(self):
+        self.count = 0
+        self.lock = threading.Lock()
+
+    def increment(self, incr: int):
+        with self.lock:
+            self.count += incr
+
+
 @dataclass
 class WriteSummary:
     """This object is returned from write operations that use
@@ -104,6 +114,9 @@ class WriteSummary:
     api_errors: List[dict] = field(default_factory=list)
     """A list of unique errors (as strings) returned from the API if
     the upload operation was not successful """
+
+    records_sent: int = 0
+    """Tracks the number of records written to API"""
 
     def __bool__(self):
         return self.success
@@ -237,6 +250,7 @@ class Client:
         self,
         project,
         write_queue,
+        record_count: Counter,
         error_list: list,
         thread_event: threading.Event,
         **kwargs,
@@ -247,6 +261,7 @@ class Client:
                 break
             try:
                 self._write_record_sync(project, record_batch, **kwargs)
+                record_count.increment(len(record_batch))
             except Unauthorized as err:
                 # logger.warning("Received Unauthorized response, halting...")
                 error_list.append(str(err))
@@ -301,13 +316,14 @@ class Client:
         sampler.set_source(iter(reader))
         write_queue = Queue(max_inflight_batches)  # backpressured worker queue
         error_list = []
+        record_count = Counter()
 
         threads = []
         thread_event = threading.Event()
         for _ in range(worker_threads):
             t = threading.Thread(
                 target=self._write_record_batch,
-                args=(project, write_queue, error_list, thread_event),
+                args=(project, write_queue, record_count, error_list, thread_event),
                 kwargs=kwargs,
             )
             t.start()
@@ -353,9 +369,13 @@ class Client:
         t.close()
 
         if error_list:
-            return WriteSummary(success=False, api_errors=list(set(error_list)))
+            return WriteSummary(
+                success=False,
+                api_errors=list(set(error_list)),
+                records_sent=record_count.count,
+            )
 
-        return WriteSummary()
+        return WriteSummary(records_sent=record_count.count)
 
     def _build_callback(self, post_process):  # pragma: no cover
         if callable(post_process):
@@ -405,10 +425,12 @@ class Client:
 
         # setup base params for streams request
         headers, params = self._headers_params_from_kwargs(**kwargs)
-        params.update({
-            "with_meta": params.get("with_meta", "yes"),
-            "flatten": params.get("flatten", "yes")
-        })
+        params.update(
+            {
+                "with_meta": params.get("with_meta", "yes"),
+                "flatten": params.get("flatten", "yes"),
+            }
+        )
         if entity_stream is not None:
             params["entity_stream"] = entity_stream
 
