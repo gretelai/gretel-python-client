@@ -348,10 +348,11 @@ def test_record_writer_csv(fake, client: Client):
 
 def test_json_writer(test_records, test_input_json_stream, client):
     client._post = Mock()
-    client._write_records(
+    summary = client._write_records(
         project="test-project", reader=JsonReader(test_input_json_stream)
     )
     client._post.assert_called_with("records/send/test-project", data=test_records)
+    assert summary.records_sent == len(test_records)
 
 
 def test_writer_params_headers(test_records, test_input_json_stream, client):
