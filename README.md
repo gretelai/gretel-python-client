@@ -21,9 +21,9 @@
 ## Try it out now!
 If you want to quickly discover the Gretel client and Transformer libraries, simply click the buttons below and follow the tutorials!
 
-* [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/gretelai/gretel-python-client/blob/master/notebooks/simple_pub_sub.ipynb) Blueprint example to demonstrate NLP labeling and publish/subscribe via the Gretel cloud.
+* [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/gretelai/gretel-python-client/blob/master/notebooks/simple_pub_sub.ipynb) Blueprint example to demonstrate NLP labeling and publish/subscribe via the Gretel cloud.
 
-* [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://github.com/gretelai/gretel-python-client/blob/master/notebooks/simple_constant_fakes.ipynb) Blueprint example to demonstrate deterministically replacing field values with fake entities.
+* [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/gretelai/gretel-python-client/blob/master/notebooks/simple_constant_fakes.ipynb) Blueprint example to demonstrate deterministically replacing field values with fake entities.
 
 # Overview
 
