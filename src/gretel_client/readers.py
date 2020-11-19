@@ -156,7 +156,7 @@ class CsvReader(Reader):
         super().__init__('csv')
 
     def try_infer_schema(self):
-        read_forward = self.data_source.read(1024)
+        read_forward = self.data_source.read(10000)
         if not read_forward:
             return
 
@@ -164,7 +164,7 @@ class CsvReader(Reader):
         self.data_source.seek(0)
 
         if self.sniff:
-            dialect = csv.Sniffer().sniff(self.data_source.read(1024))
+            dialect = csv.Sniffer().sniff(self.data_source.read(10000))
             self.data_source.seek(0)
             self.reader = csv.reader(self.data_source, dialect)
         else:
