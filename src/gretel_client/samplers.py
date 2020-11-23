@@ -77,14 +77,15 @@ class FixedSample(Sampler):
         self.record_it = iter(self.records)
         self.record_count = len(self.records)
 
-        if self.min_count_threshold and self.record_count < self.min_count_threshold:
-            return self
-
         if self.count:
             self.rate = int(self.record_count / self.count)
 
         if self.percent:
             self.rate = int(self.record_count / (self.record_count * self.percent))
+
+        theoretical_sample_count = self.record_count / self.rate
+        if self.min_count_threshold and theoretical_sample_count < self.min_count_threshold:
+            self.rate = 1
 
         return self
 
