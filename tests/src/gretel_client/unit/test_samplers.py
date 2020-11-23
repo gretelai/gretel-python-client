@@ -27,9 +27,16 @@ def test_fixed_percent():
 
 
 def test_fixed_min_threshold():
-    sampler = FixedSample(count=100, min_count_threshold=5000)
+    sampler = FixedSample(count=100, min_records=5000)
     sampler.set_source(data_source(1000))
     sampled = [r for r in sampler]
     assert sampler.rate == 1
     assert len(sampled) == 1000
 
+
+def test_fixed_max_threshold():
+    sampler = FixedSample(percent=.1, min_records=5000, max_records=7000)
+    sampler.set_source(data_source(100000))
+    sampled = [r for r in sampler]
+    assert sampler.rate == 14
+    assert len(sampled) == 7000

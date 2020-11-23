@@ -61,15 +61,22 @@ class FixedSample(Sampler):
         self,
         percent: float = None,
         count: int = None,
-        min_count_threshold: int = None
+        min_records: int = None,
+        max_records: int = None,
     ):
         if percent and count:
             raise AttributeError("Cannot specify percent and count args. Pick one.")
+
+        if percent and percent > 1:
+            raise ValueError("percent param must be <= 1")
+
         self.percent = percent
         self.count = count
-        self.min_count_threshold = min_count_threshold
+        self.min_records = min_records
+        self.max_records = max_records
         self.record_idx = 0
         self.rate = 1
+        self.sample_count = 0
         super().__init__("fixed_sample")
 
     def __iter__(self):
@@ -84,12 +91,21 @@ class FixedSample(Sampler):
             self.rate = int(self.record_count / (self.record_count * self.percent))
 
         theoretical_sample_count = self.record_count / self.rate
-        if self.min_count_threshold and theoretical_sample_count < self.min_count_threshold:
+        if self.min_records and theoretical_sample_count < self.min_records:
             self.rate = 1
+
+        # if we sample more than the configured max_records, then re-calculate
+        # the rate to sample up to the max set of records.
+        if self.max_records and theoretical_sample_count > self.max_records:
+            self.rate = int(self.record_count / self.max_records)
 
         return self
 
     def __next__(self):
+
+        self.sample_count += 1
+        if self.max_records and self.sample_count > self.max_records:
+            raise StopIteration(f"Reached max record count of {self.max_records}")
 
         while self.record_idx % self.rate != 0:
             self.record_idx += 1
