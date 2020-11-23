@@ -79,7 +79,13 @@ class FixedSample(Sampler):
         self.sample_count = 0
         super().__init__("fixed_sample")
 
+    def _reset(self):
+        self.record_idx = 0
+        self.rate = 1
+        self.sample_count = 0
+
     def __iter__(self):
+        self._reset()
         self.records = [r for r in self.data_source]
         self.record_it = iter(self.records)
         self.record_count = len(self.records)

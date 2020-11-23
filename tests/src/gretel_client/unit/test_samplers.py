@@ -1,5 +1,6 @@
 from typing import Iterator
 import pytest
+from gretel_client.readers import CsvReader
 
 from gretel_client.samplers import FixedSample
 
