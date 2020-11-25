@@ -57,6 +57,20 @@ class ConstantSampler(Sampler):
 
 
 class FixedSample(Sampler):
+    """Used to sample in memory datasets of a known length. Records can be
+    sampled as either a total number or percentage of the dataset.
+
+    Args:
+        percent: Determines the percentage of records to sample from the dataset.
+        count: The number of records to sample from the dataset.
+        min_records: The minimum number of records a dataset must contain before
+            it will be sampled. If the dataset has less than the minimum required
+            rows, the entire dataset will be iterated.
+        max_records: The max number of records that will be sampled. If a ``count``
+            or ``percent`` parameter is passed that is greater than the configured
+            ``max_records``, the sample rate will be reconfigured so that the total
+            number of sampled records is less than ``max_records``.
+    """
     def __init__(
         self,
         percent: float = None,
