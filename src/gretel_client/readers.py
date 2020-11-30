@@ -1,15 +1,14 @@
 """
 Misc data source readers
 """
-from collections.abc import Iterator
-from typing import List, Any, IO, Union, Callable, TYPE_CHECKING
 import csv
+import io
 import json
 import os
-import io
+from collections.abc import Iterator
+from typing import IO, TYPE_CHECKING, Any, Callable, List, Optional, Union
 
 import smart_open
-
 
 try:
     import pandas as pd
@@ -20,14 +19,16 @@ except ImportError:  # pragma: no cover
 if TYPE_CHECKING:  # pragma: no cover
     from pandas import DataFrame as _DataFrameT
 else:
-    class _DataFrameT: ... # noqa
+
+    class _DataFrameT:
+        ...  # noqa
 
 
 class ReaderError(Exception):
     pass
 
 
-def try_data_source(input_handle: Any):
+def try_data_source(input_handle: Any) -> Any:
     """Given an input object, try to return an open file handler.
 
     Args:
@@ -57,14 +58,14 @@ class Reader(Iterator):
         return self
 
     def __next__(self):  # pragma: no cover
-        raise NotImplementedError('__next__ not implemented.')
+        raise NotImplementedError("__next__ not implemented.")
 
 
 class JsonReader(Reader):
     def __init__(
         self,
         input_data: Union[IO[Any], str, list, dict, os.PathLike],
-        mapper: Callable = lambda x: x
+        mapper: Callable = lambda x: x,
     ):
         """Reads json streams or objects
 
@@ -78,7 +79,7 @@ class JsonReader(Reader):
         input_handle = try_data_source(input_data)
         self.data_source = self._get_input_start(input_handle)
         self.mapper = mapper
-        super().__init__('json')
+        super().__init__("json")
 
     def _get_input_start(self, input_data):
         """Figures out the start of the json input.
@@ -108,7 +109,7 @@ class JsonReader(Reader):
         try:
             record = next(self.data_source)
         except StopIteration:
-            if callable(getattr(self.data_source, 'close', None)):
+            if callable(getattr(self.data_source, "close", None)):
                 self.data_source.close()  # type: ignore
             raise StopIteration
 
@@ -123,12 +124,13 @@ class CsvReader(Reader):
     def __init__(
         self,
         input_source: Union[IO[Any], str, os.PathLike],
-        column_delimiter: str = ',',
+        column_delimiter: str = ",",
         quote_symbol: str = '"',
         column_headings: List[str] = None,
-        encoding: str = 'utf-8',
+        encoding: str = "utf-8",
         sniff: bool = True,
-        schema: List = None
+        schema: List = None,
+        has_header: Optional[bool] = None,
     ):
         """CSV reader for reading CSV formatted files into
         Gretel's record writer.
@@ -149,33 +151,49 @@ class CsvReader(Reader):
         self.column_headings = column_headings
         self.sniff = sniff
         self.schema = schema
+        self.has_header = has_header
         self.data_source = try_data_source(input_source)
 
         self.try_infer_schema()
 
-        super().__init__('csv')
+        super().__init__("csv")
+
+    def _default_reader(self):
+        return csv.reader(
+            self.data_source,
+            delimiter=self.column_delimiter,
+            quotechar=self.quote_symbol,
+        )
 
     def try_infer_schema(self):
         read_forward = self.data_source.read(10000)
         if not read_forward:
             return
 
-        has_header = csv.Sniffer().has_header(read_forward)
         self.data_source.seek(0)
 
+        if self.has_header is None:
+            self.has_header = True  # assume most datasets include a header in the csv
+            try:
+                self.has_header = csv.Sniffer().has_header(read_forward)
+            except csv.Error:
+                pass
+
         if self.sniff:
-            dialect = csv.Sniffer().sniff(self.data_source.read(10000))
-            self.data_source.seek(0)
-            self.reader = csv.reader(self.data_source, dialect)
+            try:
+                dialect = csv.Sniffer().sniff(read_forward)
+                self.reader = csv.reader(self.data_source, dialect)
+            except csv.Error:
+                self.reader = self._default_reader()
         else:
-            self.reader = csv.reader(self.data_source,
-                                     delimiter=self.column_delimiter,
-                                     quotechar=self.quote_symbol)
-        if not self.schema or has_header:
+            self.reader = self._default_reader()
+
+        if not self.schema or self.has_header:
             self.schema = next(self.reader)
+            self.schema = [str(h) for h in self.schema]
 
     def _close(self):
-        if callable(getattr(self.data_source, 'close', None)):
+        if callable(getattr(self.data_source, "close", None)):
             self.data_source.close()  # type: ignore
 
     def __next__(self):
@@ -191,13 +209,12 @@ class CsvReader(Reader):
 
 
 class DataFrameReader(Reader):
-
     def __init__(self, input_data: "_DataFrameT"):
         if not pd:  # pragma: no cover
-            raise RuntimeError('pandas must be installed for this reader')
+            raise RuntimeError("pandas must be installed for this reader")
 
         if not isinstance(input_data, pd.DataFrame):  # pragma: no cover
-            raise AttributeError('input_data must be a dataframe')
+            raise AttributeError("input_data must be a dataframe")
 
         self.df = input_data
         self.source_data = self._get_input_start()
