@@ -8,3 +8,4 @@ from .client import (
     Forbidden,
     project_from_uri
 )
+from .helpers import get_synthetics_config
