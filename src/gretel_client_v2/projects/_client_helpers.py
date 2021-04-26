@@ -2,7 +2,7 @@ import os
 
 from gretel_client_v2.rest.configuration import Configuration
 from gretel_client_v2.rest.api_client import ApiClient
-from gretel_client_v2.rest.api.model_api import ModelApi
+from gretel_client_v2.rest.api.projects_api import ProjectsApi
 
 
 _endpoint = os.getenv("GRETEL_API_ENDPOINT", "https://api-dev.gretel.cloud")
@@ -12,8 +12,8 @@ _api_key = os.getenv("GRETEL_API_KEY")
 """Gretel api key"""
 
 
-def get_model_api() -> ModelApi:
+def get_projects_api() -> ProjectsApi:
     configuration = Configuration(host=_endpoint)
     configuration.api_key['Authorization'] = _api_key
     api_client = ApiClient(configuration)
-    return ModelApi(api_client)
+    return ProjectsApi(api_client)

@@ -6,7 +6,7 @@
 # raise a `RecursionError`.
 # In order to avoid this, import only the API that you directly need like:
 #
-#   from .api.model_api import ModelApi
+#   from .api.projects_api import ProjectsApi
 #
 # or import this package, but before doing it, use:
 #
@@ -14,4 +14,4 @@
 #   sys.setrecursionlimit(n)
 
 # Import APIs into API package:
-from gretel_client_v2.rest.api.model_api import ModelApi
+from gretel_client_v2.rest.api.projects_api import ProjectsApi

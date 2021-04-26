@@ -1,7 +1,7 @@
-from gretel_client_v2.projects._client_helpers import get_model_api
+from gretel_client_v2.projects._client_helpers import get_projects_api
 
 
 class Project:
 
     def __init__(self):
-        self.model_api = get_model_api()
+        self.projects_api = get_projects_api()

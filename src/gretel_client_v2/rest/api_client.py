@@ -761,7 +761,7 @@ class Endpoint(object):
         """ This method is invoked when endpoints are called
         Example:
 
-        api_instance = ModelApi()
+        api_instance = ProjectsApi()
         api_instance.get_model  # this is an instance of the class Endpoint
         api_instance.get_model()  # this invokes api_instance.get_model.__call__()
         which then invokes the callable functions stored in that endpoint at

@@ -6,15 +6,11 @@ def projects():
     click.echo("projects subcommand")
 
 
-@click.command()
+@projects.command()
 def create():
     click.echo("creating a new project")
 
 
-@click.command()
+@projects.command()
 def set_default():
     click.echo("setting default project")
-
-
-projects.add_command(create)
-projects.add_command(set_default)
