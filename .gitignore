@@ -134,4 +134,3 @@ dmypy.json
 
 docs/_build
 
-tests/gretel_client/unit/helpers/training_data.csv

@@ -1,4 +1,0 @@
-m2r
-sphinx==3.0.3
-sphinx-rtd-theme
--r ../requirements.txt
