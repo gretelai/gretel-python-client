@@ -1,22 +1,9 @@
-import os
-
 import click
 
-from gretel_client_v2.configuration import Configuration
-from gretel_client_v2.api_client import ApiClient
-from gretel_client_v2.api.default_api import DefaultApi
-
-from gretel_cli.configure import configure
-from gretel_cli.models import models
-from gretel_cli.projects import projects
-from gretel_cli.records import records
-
-
-def api_client() -> DefaultApi:
-    configuration = Configuration(host="https://api-dev.gretel.cloud")
-    configuration.api_key['Authorization'] = os.getenv("GRETEL_API_KEY")
-    api_client = ApiClient(configuration)
-    return DefaultApi(api_client)
+from gretel_client_v2._cli.configure import configure
+from gretel_client_v2._cli.models import models
+from gretel_client_v2._cli.projects import projects
+from gretel_client_v2._cli.records import records
 
 
 @click.group()
