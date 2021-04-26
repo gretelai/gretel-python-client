@@ -17,7 +17,7 @@ from urllib.parse import urlencode
 
 import urllib3
 
-from gretel_client_v2.exceptions import ApiException, UnauthorizedException, ForbiddenException, NotFoundException, ServiceException, ApiValueError
+from gretel_client_v2.rest.exceptions import ApiException, UnauthorizedException, ForbiddenException, NotFoundException, ServiceException, ApiValueError
 
 
 logger = logging.getLogger(__name__)

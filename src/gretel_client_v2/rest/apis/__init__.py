@@ -14,4 +14,4 @@
 #   sys.setrecursionlimit(n)
 
 # Import APIs into API package:
-from gretel_client_v2.api.model_api import ModelApi
+from gretel_client_v2.rest.api.model_api import ModelApi

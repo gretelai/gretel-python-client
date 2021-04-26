@@ -11,8 +11,8 @@
 import re  # noqa: F401
 import sys  # noqa: F401
 
-from gretel_client_v2.api_client import ApiClient, Endpoint as _Endpoint
-from gretel_client_v2.model_utils import (  # noqa: F401
+from gretel_client_v2.rest.api_client import ApiClient, Endpoint as _Endpoint
+from gretel_client_v2.rest.model_utils import (  # noqa: F401
     check_allowed_values,
     check_validations,
     date,

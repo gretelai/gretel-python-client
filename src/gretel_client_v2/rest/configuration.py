@@ -15,7 +15,7 @@ import sys
 import urllib3
 
 from http import client as http_client
-from gretel_client_v2.exceptions import ApiValueError
+from gretel_client_v2.rest.exceptions import ApiValueError
 
 
 JSON_SCHEMA_VALIDATION_KEYWORDS = {
@@ -89,7 +89,7 @@ class Configuration(object):
 
     You can programmatically set the cookie:
 
-conf = gretel_client_v2.Configuration(
+conf = gretel_client_v2.rest.Configuration(
     api_key={'cookieAuth': 'abc123'}
     api_key_prefix={'cookieAuth': 'JSESSIONID'}
 )
@@ -152,7 +152,7 @@ conf = gretel_client_v2.Configuration(
         self.logger = {}
         """Logging Settings
         """
-        self.logger["package_logger"] = logging.getLogger("gretel_client_v2")
+        self.logger["package_logger"] = logging.getLogger("gretel_client_v2.rest")
         self.logger["urllib3_logger"] = logging.getLogger("urllib3")
         self.logger_format = '%(asctime)s %(levelname)s %(message)s'
         """Log format

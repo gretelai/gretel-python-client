@@ -18,7 +18,7 @@ import tempfile
 
 from dateutil.parser import parse
 
-from gretel_client_v2.exceptions import (
+from gretel_client_v2.rest.exceptions import (
     ApiKeyError,
     ApiAttributeError,
     ApiTypeError,

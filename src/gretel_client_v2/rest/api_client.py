@@ -20,10 +20,10 @@ from urllib.parse import quote
 from urllib3.fields import RequestField
 
 
-from gretel_client_v2 import rest
-from gretel_client_v2.configuration import Configuration
-from gretel_client_v2.exceptions import ApiTypeError, ApiValueError, ApiException
-from gretel_client_v2.model_utils import (
+from gretel_client_v2.rest import rest
+from gretel_client_v2.rest.configuration import Configuration
+from gretel_client_v2.rest.exceptions import ApiTypeError, ApiValueError, ApiException
+from gretel_client_v2.rest.model_utils import (
     ModelNormal,
     ModelSimple,
     ModelComposed,
