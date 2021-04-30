@@ -26,6 +26,7 @@ setup(
         "smart_open>=2.1.0,<3",
         "tqdm==4.45.0",
         "tenacity==6.2.0",
+        "pyyaml==5.4.1",
         'dataclasses;python_version<"3.7"'
     ],
     extras_require={
