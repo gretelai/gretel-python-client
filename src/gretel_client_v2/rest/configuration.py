@@ -386,13 +386,13 @@ conf = gretel_client_v2.rest.Configuration(
         :return: The Auth Settings information dict.
         """
         auth = {}
-        if 'GretelApiKey' in self.api_key:
-            auth['GretelApiKey'] = {
+        if 'ApiKey' in self.api_key:
+            auth['ApiKey'] = {
                 'type': 'api_key',
                 'in': 'header',
                 'key': 'Authorization',
                 'value': self.get_api_key_with_prefix(
-                    'GretelApiKey',
+                    'ApiKey',
                 ),
             }
         return auth

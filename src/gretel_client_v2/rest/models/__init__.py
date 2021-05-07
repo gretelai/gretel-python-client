@@ -9,3 +9,4 @@
 # import sys
 # sys.setrecursionlimit(n)
 
+from gretel_client_v2.rest.model.project import Project
