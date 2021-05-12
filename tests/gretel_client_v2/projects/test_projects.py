@@ -18,7 +18,7 @@ def api() -> ProjectsApi:
     return get_session_config().get_api(ProjectsApi)
 
 
-def test_doest_search_projects():
+def test_does_search_projects(project: Project):
     projects = search_projects()
     assert len(projects) > 0
 

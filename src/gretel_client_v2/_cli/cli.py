@@ -1,7 +1,7 @@
 import click
 
 from gretel_client_v2.config import (
-    get_session_config,
+    configure_session,
     GRETEL,
     DEFAULT_GRETEL_ENDPOINT,
     write_config,
@@ -47,12 +47,13 @@ def configure(sc: SessionContext, endpoint: str, api_key: str, project: str):
 
     try:
         config_path = write_config(config)
+        configure_session(config)
         sc.log.info(f"Configuration written to {config_path}. Done.")
     except Exception as ex:
         sc.log.debug(ex)
         sc.log.error("There was a problem configuring the Gretel CLI tool.")
 
-    sc.print(data=get_session_config().masked)
+    sc.print(data=config.masked)
 
 
 cli.add_command(models)

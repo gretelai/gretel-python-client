@@ -7,6 +7,7 @@ from gretel_client_v2.config import (
     get_session_config,
     configure_session,
 )
+from gretel_client_v2.rest.api.projects_api import ProjectsApi
 
 
 def test_does_read_and_write_config(tmpdir):
@@ -31,3 +32,8 @@ def test_does_set_session_factory():
     assert get_session_config() != config
     configure_session(config)
     assert get_session_config() == config
+
+
+def test_can_get_api_bindings():
+    client = get_session_config()
+    assert isinstance(client.get_api(ProjectsApi), ProjectsApi)

@@ -21,6 +21,7 @@ from gretel_client_v2.rest.model_utils import (  # noqa: F401
     none_type,
     validate_and_convert_types
 )
+from gretel_client_v2.rest.model.artifact import Artifact
 from gretel_client_v2.rest.model.project import Project
 
 
@@ -35,6 +36,276 @@ class ProjectsApi(object):
         if api_client is None:
             api_client = ApiClient()
         self.api_client = api_client
+
+        def __create_artifact(
+            self,
+            project_id,
+            artifact,
+            **kwargs
+        ):
+            """Create a new artifact  # noqa: E501
+
+            This method makes a synchronous HTTP request by default. To make an
+            asynchronous HTTP request, please pass async_req=True
+
+            >>> thread = api.create_artifact(project_id, artifact, async_req=True)
+            >>> result = thread.get()
+
+            Args:
+                project_id (str): Project id
+                artifact (Artifact):
+
+            Keyword Args:
+                _return_http_data_only (bool): response data without head status
+                    code and headers. Default is True.
+                _preload_content (bool): if False, the urllib3.HTTPResponse object
+                    will be returned without reading/decoding response data.
+                    Default is True.
+                _request_timeout (float/tuple): timeout setting for this request. If one
+                    number provided, it will be total request timeout. It can also
+                    be a pair (tuple) of (connection, read) timeouts.
+                    Default is None.
+                _check_input_type (bool): specifies if type checking
+                    should be done one the data sent to the server.
+                    Default is True.
+                _check_return_type (bool): specifies if type checking
+                    should be done one the data received from the server.
+                    Default is True.
+                _host_index (int/None): specifies the index of the server
+                    that we want to use.
+                    Default is read from the configuration.
+                async_req (bool): execute request asynchronously
+
+            Returns:
+                {str: (bool, date, datetime, dict, float, int, list, str, none_type)}
+                    If the method is called asynchronously, returns the request
+                    thread.
+            """
+            kwargs['async_req'] = kwargs.get(
+                'async_req', False
+            )
+            kwargs['_return_http_data_only'] = kwargs.get(
+                '_return_http_data_only', True
+            )
+            kwargs['_preload_content'] = kwargs.get(
+                '_preload_content', True
+            )
+            kwargs['_request_timeout'] = kwargs.get(
+                '_request_timeout', None
+            )
+            kwargs['_check_input_type'] = kwargs.get(
+                '_check_input_type', True
+            )
+            kwargs['_check_return_type'] = kwargs.get(
+                '_check_return_type', True
+            )
+            kwargs['_host_index'] = kwargs.get('_host_index')
+            kwargs['project_id'] = \
+                project_id
+            kwargs['artifact'] = \
+                artifact
+            return self.call_with_http_info(**kwargs)
+
+        self.create_artifact = _Endpoint(
+            settings={
+                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
+                'auth': [
+                    'ApiKey'
+                ],
+                'endpoint_path': '/projects/{project_id}/artifacts',
+                'operation_id': 'create_artifact',
+                'http_method': 'POST',
+                'servers': None,
+            },
+            params_map={
+                'all': [
+                    'project_id',
+                    'artifact',
+                ],
+                'required': [
+                    'project_id',
+                    'artifact',
+                ],
+                'nullable': [
+                ],
+                'enum': [
+                ],
+                'validation': [
+                ]
+            },
+            root_map={
+                'validations': {
+                },
+                'allowed_values': {
+                },
+                'openapi_types': {
+                    'project_id':
+                        (str,),
+                    'artifact':
+                        (Artifact,),
+                },
+                'attribute_map': {
+                    'project_id': 'project_id',
+                },
+                'location_map': {
+                    'project_id': 'path',
+                    'artifact': 'body',
+                },
+                'collection_format_map': {
+                }
+            },
+            headers_map={
+                'accept': [
+                    'application/json'
+                ],
+                'content_type': [
+                    'application/json'
+                ]
+            },
+            api_client=api_client,
+            callable=__create_artifact
+        )
+
+        def __create_model(
+            self,
+            project_id,
+            body,
+            **kwargs
+        ):
+            """Create and train a new model  # noqa: E501
+
+            This method makes a synchronous HTTP request by default. To make an
+            asynchronous HTTP request, please pass async_req=True
+
+            >>> thread = api.create_model(project_id, body, async_req=True)
+            >>> result = thread.get()
+
+            Args:
+                project_id (str): Project id
+                body ({str: (bool, date, datetime, dict, float, int, list, str, none_type)}):
+
+            Keyword Args:
+                dry_run (str): yes or no. [optional]
+                runner_mode (str): cloud or local. [optional]
+                _return_http_data_only (bool): response data without head status
+                    code and headers. Default is True.
+                _preload_content (bool): if False, the urllib3.HTTPResponse object
+                    will be returned without reading/decoding response data.
+                    Default is True.
+                _request_timeout (float/tuple): timeout setting for this request. If one
+                    number provided, it will be total request timeout. It can also
+                    be a pair (tuple) of (connection, read) timeouts.
+                    Default is None.
+                _check_input_type (bool): specifies if type checking
+                    should be done one the data sent to the server.
+                    Default is True.
+                _check_return_type (bool): specifies if type checking
+                    should be done one the data received from the server.
+                    Default is True.
+                _host_index (int/None): specifies the index of the server
+                    that we want to use.
+                    Default is read from the configuration.
+                async_req (bool): execute request asynchronously
+
+            Returns:
+                {str: (bool, date, datetime, dict, float, int, list, str, none_type)}
+                    If the method is called asynchronously, returns the request
+                    thread.
+            """
+            kwargs['async_req'] = kwargs.get(
+                'async_req', False
+            )
+            kwargs['_return_http_data_only'] = kwargs.get(
+                '_return_http_data_only', True
+            )
+            kwargs['_preload_content'] = kwargs.get(
+                '_preload_content', True
+            )
+            kwargs['_request_timeout'] = kwargs.get(
+                '_request_timeout', None
+            )
+            kwargs['_check_input_type'] = kwargs.get(
+                '_check_input_type', True
+            )
+            kwargs['_check_return_type'] = kwargs.get(
+                '_check_return_type', True
+            )
+            kwargs['_host_index'] = kwargs.get('_host_index')
+            kwargs['project_id'] = \
+                project_id
+            kwargs['body'] = \
+                body
+            return self.call_with_http_info(**kwargs)
+
+        self.create_model = _Endpoint(
+            settings={
+                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
+                'auth': [
+                    'ApiKey'
+                ],
+                'endpoint_path': '/projects/{project_id}/models',
+                'operation_id': 'create_model',
+                'http_method': 'POST',
+                'servers': None,
+            },
+            params_map={
+                'all': [
+                    'project_id',
+                    'body',
+                    'dry_run',
+                    'runner_mode',
+                ],
+                'required': [
+                    'project_id',
+                    'body',
+                ],
+                'nullable': [
+                ],
+                'enum': [
+                ],
+                'validation': [
+                ]
+            },
+            root_map={
+                'validations': {
+                },
+                'allowed_values': {
+                },
+                'openapi_types': {
+                    'project_id':
+                        (str,),
+                    'body':
+                        ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
+                    'dry_run':
+                        (str,),
+                    'runner_mode':
+                        (str,),
+                },
+                'attribute_map': {
+                    'project_id': 'project_id',
+                    'dry_run': 'dry_run',
+                    'runner_mode': 'runner_mode',
+                },
+                'location_map': {
+                    'project_id': 'path',
+                    'body': 'body',
+                    'dry_run': 'query',
+                    'runner_mode': 'query',
+                },
+                'collection_format_map': {
+                }
+            },
+            headers_map={
+                'accept': [
+                    'application/json'
+                ],
+                'content_type': [
+                    'application/json'
+                ]
+            },
+            api_client=api_client,
+            callable=__create_model
+        )
 
         def __create_project(
             self,
@@ -147,6 +418,134 @@ class ProjectsApi(object):
             },
             api_client=api_client,
             callable=__create_project
+        )
+
+        def __delete_model(
+            self,
+            project_id,
+            model_id,
+            **kwargs
+        ):
+            """Delete a model by it's ID  # noqa: E501
+
+            This method makes a synchronous HTTP request by default. To make an
+            asynchronous HTTP request, please pass async_req=True
+
+            >>> thread = api.delete_model(project_id, model_id, async_req=True)
+            >>> result = thread.get()
+
+            Args:
+                project_id (str): Project id
+                model_id (str): Model id
+
+            Keyword Args:
+                _return_http_data_only (bool): response data without head status
+                    code and headers. Default is True.
+                _preload_content (bool): if False, the urllib3.HTTPResponse object
+                    will be returned without reading/decoding response data.
+                    Default is True.
+                _request_timeout (float/tuple): timeout setting for this request. If one
+                    number provided, it will be total request timeout. It can also
+                    be a pair (tuple) of (connection, read) timeouts.
+                    Default is None.
+                _check_input_type (bool): specifies if type checking
+                    should be done one the data sent to the server.
+                    Default is True.
+                _check_return_type (bool): specifies if type checking
+                    should be done one the data received from the server.
+                    Default is True.
+                _host_index (int/None): specifies the index of the server
+                    that we want to use.
+                    Default is read from the configuration.
+                async_req (bool): execute request asynchronously
+
+            Returns:
+                {str: (bool, date, datetime, dict, float, int, list, str, none_type)}
+                    If the method is called asynchronously, returns the request
+                    thread.
+            """
+            kwargs['async_req'] = kwargs.get(
+                'async_req', False
+            )
+            kwargs['_return_http_data_only'] = kwargs.get(
+                '_return_http_data_only', True
+            )
+            kwargs['_preload_content'] = kwargs.get(
+                '_preload_content', True
+            )
+            kwargs['_request_timeout'] = kwargs.get(
+                '_request_timeout', None
+            )
+            kwargs['_check_input_type'] = kwargs.get(
+                '_check_input_type', True
+            )
+            kwargs['_check_return_type'] = kwargs.get(
+                '_check_return_type', True
+            )
+            kwargs['_host_index'] = kwargs.get('_host_index')
+            kwargs['project_id'] = \
+                project_id
+            kwargs['model_id'] = \
+                model_id
+            return self.call_with_http_info(**kwargs)
+
+        self.delete_model = _Endpoint(
+            settings={
+                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
+                'auth': [
+                    'ApiKey'
+                ],
+                'endpoint_path': '/projects/{project_id}/models/{model_id}',
+                'operation_id': 'delete_model',
+                'http_method': 'DELETE',
+                'servers': None,
+            },
+            params_map={
+                'all': [
+                    'project_id',
+                    'model_id',
+                ],
+                'required': [
+                    'project_id',
+                    'model_id',
+                ],
+                'nullable': [
+                ],
+                'enum': [
+                ],
+                'validation': [
+                ]
+            },
+            root_map={
+                'validations': {
+                },
+                'allowed_values': {
+                },
+                'openapi_types': {
+                    'project_id':
+                        (str,),
+                    'model_id':
+                        (str,),
+                },
+                'attribute_map': {
+                    'project_id': 'project_id',
+                    'model_id': 'model_id',
+                },
+                'location_map': {
+                    'project_id': 'path',
+                    'model_id': 'path',
+                },
+                'collection_format_map': {
+                }
+            },
+            headers_map={
+                'accept': [
+                    'application/json'
+                ],
+                'content_type': [],
+            },
+            api_client=api_client,
+            callable=__delete_model
         )
 
         def __delete_project(
@@ -267,6 +666,124 @@ class ProjectsApi(object):
             callable=__delete_project
         )
 
+        def __get_artifacts(
+            self,
+            project_id,
+            **kwargs
+        ):
+            """List all project artifacts  # noqa: E501
+
+            This method makes a synchronous HTTP request by default. To make an
+            asynchronous HTTP request, please pass async_req=True
+
+            >>> thread = api.get_artifacts(project_id, async_req=True)
+            >>> result = thread.get()
+
+            Args:
+                project_id (str): Project id
+
+            Keyword Args:
+                _return_http_data_only (bool): response data without head status
+                    code and headers. Default is True.
+                _preload_content (bool): if False, the urllib3.HTTPResponse object
+                    will be returned without reading/decoding response data.
+                    Default is True.
+                _request_timeout (float/tuple): timeout setting for this request. If one
+                    number provided, it will be total request timeout. It can also
+                    be a pair (tuple) of (connection, read) timeouts.
+                    Default is None.
+                _check_input_type (bool): specifies if type checking
+                    should be done one the data sent to the server.
+                    Default is True.
+                _check_return_type (bool): specifies if type checking
+                    should be done one the data received from the server.
+                    Default is True.
+                _host_index (int/None): specifies the index of the server
+                    that we want to use.
+                    Default is read from the configuration.
+                async_req (bool): execute request asynchronously
+
+            Returns:
+                {str: (bool, date, datetime, dict, float, int, list, str, none_type)}
+                    If the method is called asynchronously, returns the request
+                    thread.
+            """
+            kwargs['async_req'] = kwargs.get(
+                'async_req', False
+            )
+            kwargs['_return_http_data_only'] = kwargs.get(
+                '_return_http_data_only', True
+            )
+            kwargs['_preload_content'] = kwargs.get(
+                '_preload_content', True
+            )
+            kwargs['_request_timeout'] = kwargs.get(
+                '_request_timeout', None
+            )
+            kwargs['_check_input_type'] = kwargs.get(
+                '_check_input_type', True
+            )
+            kwargs['_check_return_type'] = kwargs.get(
+                '_check_return_type', True
+            )
+            kwargs['_host_index'] = kwargs.get('_host_index')
+            kwargs['project_id'] = \
+                project_id
+            return self.call_with_http_info(**kwargs)
+
+        self.get_artifacts = _Endpoint(
+            settings={
+                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
+                'auth': [
+                    'ApiKey'
+                ],
+                'endpoint_path': '/projects/{project_id}/artifacts',
+                'operation_id': 'get_artifacts',
+                'http_method': 'GET',
+                'servers': None,
+            },
+            params_map={
+                'all': [
+                    'project_id',
+                ],
+                'required': [
+                    'project_id',
+                ],
+                'nullable': [
+                ],
+                'enum': [
+                ],
+                'validation': [
+                ]
+            },
+            root_map={
+                'validations': {
+                },
+                'allowed_values': {
+                },
+                'openapi_types': {
+                    'project_id':
+                        (str,),
+                },
+                'attribute_map': {
+                    'project_id': 'project_id',
+                },
+                'location_map': {
+                    'project_id': 'path',
+                },
+                'collection_format_map': {
+                }
+            },
+            headers_map={
+                'accept': [
+                    'application/json'
+                ],
+                'content_type': [],
+            },
+            api_client=api_client,
+            callable=__get_artifacts
+        )
+
         def __get_model(
             self,
             project_id,
@@ -286,6 +803,7 @@ class ProjectsApi(object):
                 model_id (str): Model id
 
             Keyword Args:
+                logs (str): [optional]
                 _return_http_data_only (bool): response data without head status
                     code and headers. Default is True.
                 _preload_content (bool): if False, the urllib3.HTTPResponse object
@@ -351,6 +869,7 @@ class ProjectsApi(object):
                 'all': [
                     'project_id',
                     'model_id',
+                    'logs',
                 ],
                 'required': [
                     'project_id',
@@ -359,6 +878,7 @@ class ProjectsApi(object):
                 'nullable': [
                 ],
                 'enum': [
+                    'logs',
                 ],
                 'validation': [
                 ]
@@ -367,20 +887,29 @@ class ProjectsApi(object):
                 'validations': {
                 },
                 'allowed_values': {
+                    ('logs',): {
+
+                        "YES": "yes",
+                        "NO": "no"
+                    },
                 },
                 'openapi_types': {
                     'project_id':
                         (str,),
                     'model_id':
                         (str,),
+                    'logs':
+                        (str,),
                 },
                 'attribute_map': {
                     'project_id': 'project_id',
                     'model_id': 'model_id',
+                    'logs': 'logs',
                 },
                 'location_map': {
                     'project_id': 'path',
                     'model_id': 'path',
+                    'logs': 'query',
                 },
                 'collection_format_map': {
                 }
@@ -393,6 +922,153 @@ class ProjectsApi(object):
             },
             api_client=api_client,
             callable=__get_model
+        )
+
+        def __get_model_artifact(
+            self,
+            project_id,
+            model_id,
+            type,
+            **kwargs
+        ):
+            """Get model details  # noqa: E501
+
+            This method makes a synchronous HTTP request by default. To make an
+            asynchronous HTTP request, please pass async_req=True
+
+            >>> thread = api.get_model_artifact(project_id, model_id, type, async_req=True)
+            >>> result = thread.get()
+
+            Args:
+                project_id (str): Project id
+                model_id (str): Model id
+                type (str):
+
+            Keyword Args:
+                _return_http_data_only (bool): response data without head status
+                    code and headers. Default is True.
+                _preload_content (bool): if False, the urllib3.HTTPResponse object
+                    will be returned without reading/decoding response data.
+                    Default is True.
+                _request_timeout (float/tuple): timeout setting for this request. If one
+                    number provided, it will be total request timeout. It can also
+                    be a pair (tuple) of (connection, read) timeouts.
+                    Default is None.
+                _check_input_type (bool): specifies if type checking
+                    should be done one the data sent to the server.
+                    Default is True.
+                _check_return_type (bool): specifies if type checking
+                    should be done one the data received from the server.
+                    Default is True.
+                _host_index (int/None): specifies the index of the server
+                    that we want to use.
+                    Default is read from the configuration.
+                async_req (bool): execute request asynchronously
+
+            Returns:
+                {str: (bool, date, datetime, dict, float, int, list, str, none_type)}
+                    If the method is called asynchronously, returns the request
+                    thread.
+            """
+            kwargs['async_req'] = kwargs.get(
+                'async_req', False
+            )
+            kwargs['_return_http_data_only'] = kwargs.get(
+                '_return_http_data_only', True
+            )
+            kwargs['_preload_content'] = kwargs.get(
+                '_preload_content', True
+            )
+            kwargs['_request_timeout'] = kwargs.get(
+                '_request_timeout', None
+            )
+            kwargs['_check_input_type'] = kwargs.get(
+                '_check_input_type', True
+            )
+            kwargs['_check_return_type'] = kwargs.get(
+                '_check_return_type', True
+            )
+            kwargs['_host_index'] = kwargs.get('_host_index')
+            kwargs['project_id'] = \
+                project_id
+            kwargs['model_id'] = \
+                model_id
+            kwargs['type'] = \
+                type
+            return self.call_with_http_info(**kwargs)
+
+        self.get_model_artifact = _Endpoint(
+            settings={
+                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
+                'auth': [
+                    'ApiKey'
+                ],
+                'endpoint_path': '/projects/{project_id}/models/{model_id}/artifact',
+                'operation_id': 'get_model_artifact',
+                'http_method': 'GET',
+                'servers': None,
+            },
+            params_map={
+                'all': [
+                    'project_id',
+                    'model_id',
+                    'type',
+                ],
+                'required': [
+                    'project_id',
+                    'model_id',
+                    'type',
+                ],
+                'nullable': [
+                ],
+                'enum': [
+                    'type',
+                ],
+                'validation': [
+                ]
+            },
+            root_map={
+                'validations': {
+                },
+                'allowed_values': {
+                    ('type',): {
+
+                        "MODEL": "model",
+                        "REPORT": "report",
+                        "REPORT_JSON": "report_json",
+                        "DATA_PREVIEW": "data_preview",
+                        "MODEL_LOGS": "model_logs"
+                    },
+                },
+                'openapi_types': {
+                    'project_id':
+                        (str,),
+                    'model_id':
+                        (str,),
+                    'type':
+                        (str,),
+                },
+                'attribute_map': {
+                    'project_id': 'project_id',
+                    'model_id': 'model_id',
+                    'type': 'type',
+                },
+                'location_map': {
+                    'project_id': 'path',
+                    'model_id': 'path',
+                    'type': 'query',
+                },
+                'collection_format_map': {
+                }
+            },
+            headers_map={
+                'accept': [
+                    'application/json'
+                ],
+                'content_type': [],
+            },
+            api_client=api_client,
+            callable=__get_model_artifact
         )
 
         def __get_models(
