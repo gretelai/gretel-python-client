@@ -25,7 +25,7 @@ jobs:
     - name: Run Tests
       run: tox -e py
       env:
-        GRETEL_API_KEY: ${{ secrets.GRETEL_API_KEY }}
+        GRETEL_API_KEY: ${{ secrets.GRETEL_TEST_API_KEY }}
 
   style-checks:
     runs-on: ubuntu-20.04
@@ -38,6 +38,6 @@ jobs:
     - name: Test Setup
       run: |
         python -m pip install -r requirements.txt -r test-requirements.txt
-        python -m pip install tox
+        python -m pip install tox flake8
     - name: flake8
       run: tox -e flake8
