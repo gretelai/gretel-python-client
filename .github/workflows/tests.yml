@@ -26,7 +26,6 @@ jobs:
       run: tox -e py
       env:
         GRETEL_API_KEY: ${{ secrets.GRETEL_TEST_API_KEY }}
-        DOCKER_HOSTNAME: 172.17.0.1
 
   style-checks:
     runs-on: ubuntu-20.04
