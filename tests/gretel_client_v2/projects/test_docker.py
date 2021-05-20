@@ -3,7 +3,7 @@ from typing import Callable
 
 import pytest
 
-from gretel_client_v2.projects.docker import ContainerRun
+from gretel_client_v2.projects.docker import ContainerRun, _get_container_auth
 from gretel_client_v2.projects.models import Model
 from gretel_client_v2.projects.projects import get_project
 
@@ -42,3 +42,10 @@ def test_does_cleanup(model: Model):
     sleep(3)
     run._cleanup()
     assert run.container_status in {"removing", "unknown"}
+
+
+# mark: integration
+def test_does_auth_registry():
+    auth, reg = _get_container_auth()
+    assert auth
+    assert reg

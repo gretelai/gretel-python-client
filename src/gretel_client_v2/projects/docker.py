@@ -6,11 +6,14 @@ import signal
 import tempfile
 from pathlib import Path
 from time import sleep
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Tuple
 
 import docker
 import smart_open
 from docker.models.containers import Container
+
+from gretel_client_v2.config import get_session_config
+from gretel_client_v2.rest.api.opt_api import OptApi
 
 if TYPE_CHECKING:
     from gretel_client_v2.projects.models import Model
@@ -49,7 +52,9 @@ class ContainerRun:
     _container: Optional[Container] = None
     """Reference to a running or completed container run."""
 
-    def __init__(self, model: Model, output_dir: str = None, disable_uploads: bool = False):
+    def __init__(
+        self, model: Model, output_dir: str = None, disable_uploads: bool = False
+    ):
         self._docker_client = docker.from_env()
         self.image = f"gretelai/{model.model_type}:dev"  # todo(dn): consolidate image logic onto api.
         self.model = model
@@ -112,7 +117,17 @@ class ContainerRun:
 
         return volumes
 
+    def _pull(self):
+        auth, reg = _get_container_auth()
+        img = f"{reg}/{self.image}"
+        try:
+            self._docker_client.images.pull(img, auth_config=auth)
+        except Exception as ex:
+            raise ContainerRunError(f"Could not pull image {img}") from ex
+        return img
+
     def _run(self, remove: bool = True):
+        image = self._pull()
         volumes = self._setup_volumes()
         args = [
             "--worker-token",
@@ -125,7 +140,7 @@ class ContainerRun:
         if self.disable_uploads:
             args.append("--disable-cloud-upload")
         self._container = self._docker_client.containers.run(
-            self.image,
+            image,
             args,
             detach=True,
             remove=remove,
@@ -177,7 +192,7 @@ class ContainerRun:
 
 
 def _is_inside_container() -> bool:
-    """Return ``True`` if the function is being run inside a container."""
+    """Returns ``True`` if the function is being run inside a container."""
     try:
         with open("/proc/self/cgroup") as fin:
             for line in fin:
@@ -188,3 +203,16 @@ def _is_inside_container() -> bool:
     except FileNotFoundError:
         pass
     return False
+
+
+def _get_container_auth() -> Tuple[dict, str]:
+    """Exchanges a Gretel Api Key for container registry credentials.
+
+    Returns:
+        An authentication object that may be passed
+        into the docker api, and the registry endpoint.
+    """
+    config = get_session_config()
+    opt_api = config.get_api(OptApi)
+    cred_resp = opt_api.get_container_login()
+    return cred_resp.get("data").get("auth"), cred_resp.get("data").get("registry")

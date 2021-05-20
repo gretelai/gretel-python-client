@@ -761,11 +761,11 @@ class Endpoint(object):
         """ This method is invoked when endpoints are called
         Example:
 
-        api_instance = ProjectsApi()
-        api_instance.create_artifact  # this is an instance of the class Endpoint
-        api_instance.create_artifact()  # this invokes api_instance.create_artifact.__call__()
+        api_instance = OptApi()
+        api_instance.get_container_login  # this is an instance of the class Endpoint
+        api_instance.get_container_login()  # this invokes api_instance.get_container_login.__call__()
         which then invokes the callable functions stored in that endpoint at
-        api_instance.create_artifact.callable or self.callable in this class
+        api_instance.get_container_login.callable or self.callable in this class
 
         """
         return self.callable(self, *args, **kwargs)
