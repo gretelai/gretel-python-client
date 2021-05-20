@@ -313,7 +313,7 @@ class Model:
             ) from ex
 
     def _new_model_logs(self) -> List[dict]:
-        if self.status == "active" and len(self.logs) > self._logs_iter_index:
+        if self.logs and len(self.logs) > self._logs_iter_index:
             next_logs = self.logs[self._logs_iter_index :]
             self._logs_iter_index += len(next_logs)
             return next_logs
@@ -345,6 +345,10 @@ class Model:
                 current_status = self.status
                 yield Status(status=self.status, logs=logs, transitioned=transitioned)
             time.sleep(1)
+
+        flushed_logs = self._new_model_logs()
+        if len(flushed_logs) > 0 and current_status:
+            yield Status(status=current_status, logs=flushed_logs, transitioned=False)
 
         if self.status == "error":
             yield Status(status=self.status, error=self.errors)

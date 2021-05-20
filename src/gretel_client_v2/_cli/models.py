@@ -4,7 +4,6 @@ from urllib.parse import urlparse
 
 import click
 import requests
-import smart_open
 
 from gretel_client_v2._cli.common import SessionContext, pass_session, project_option
 from gretel_client_v2.projects.docker import ContainerRun
@@ -23,11 +22,12 @@ def _download_artifacts(sc: SessionContext, output: str, model: Model):
     sc.log.info(f"Downloading model artifacts to {output_path.resolve()}")
     for type, download_link in model.get_artifacts():
         try:
-            with smart_open.open(download_link, "r") as art:  # type:ignore
+            art = requests.get(download_link)
+            if art.status_code == 200:
                 art_output_path = output_path / Path(urlparse(download_link).path).name
-                with open(art_output_path, "w+") as out:  # type:ignore
+                with open(art_output_path, "wb+") as out:
                     sc.log.info(f"\tWriting {type} to {art_output_path}")
-                    out.write(art.read())
+                    out.write(art.content)
         except requests.exceptions.HTTPError:
             sc.log.info(f"\tSkipping {type}. Artifact not found.")
 
@@ -173,6 +173,7 @@ def create(
         _download_artifacts(sc, output, model)
 
     sc.print(data=model._data.get("model"))
+    sc.log.info("Done. Model created.")
 
 
 @models.command()
@@ -196,6 +197,7 @@ def get(sc: SessionContext, project: str, model_id: str, output: str):
             )
             sc.exit(1)
         _download_artifacts(sc, output, model)
+    sc.log.info("Done fetching model.")
 
 
 @models.command()
