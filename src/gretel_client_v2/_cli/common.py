@@ -10,14 +10,6 @@ from gretel_client_v2.projects import get_project
 from gretel_client_v2.rest.exceptions import NotFoundException, UnauthorizedException
 
 
-def validate_project(project_name: str) -> bool:
-    try:
-        get_project(name=project_name)
-    except (UnauthorizedException, NotFoundException):
-        return False
-    return True
-
-
 class Logger:
     """This classed is used to print CLI progress a debug messages
     to the console.

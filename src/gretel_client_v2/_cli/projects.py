@@ -2,13 +2,12 @@ import click
 
 from gretel_client_v2._cli.common import (
     SessionContext,
-    validate_project,
     pass_session
 )
 from gretel_client_v2.projects.projects import search_projects
 from gretel_client_v2.projects import get_project
 from gretel_client_v2.rest.exceptions import NotFoundException, UnauthorizedException
-from gretel_client_v2.config import write_config
+from gretel_client_v2.config import GretelClientConfigurationError, write_config
 
 
 @click.group()
@@ -72,11 +71,12 @@ def search(sc: SessionContext, limit: int, query: str):
 )
 @pass_session
 def set_default(sc: SessionContext, name: str):
-    if not validate_project(name):
-        sc.log.error(f"Project {name} does not exist.")
+    try:
+        sc.config.update_default_project(name)
+    except GretelClientConfigurationError as ex:
+        sc.log.error(f"Project {name} does not exist.", ex=ex)
         sc.exit(1)
 
-    sc.config.default_project_name = name
     write_config(sc.config)
 
     sc.log.info(f"Set {name} as the default project.")

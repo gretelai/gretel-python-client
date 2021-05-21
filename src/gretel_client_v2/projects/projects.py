@@ -4,6 +4,7 @@ High level API for interacting with a Gretel Project
 from functools import wraps
 from pathlib import Path
 from typing import Any, Dict, List, Union
+from contextlib import contextmanager
 
 from gretel_client_v2.config import get_session_config
 from gretel_client_v2.projects.models import Model
@@ -187,3 +188,20 @@ def get_project(
         desc=p.get("description"),
         display_name=p.get("display_name"),
     )
+
+
+@contextmanager
+def tmp_project():
+    """A temporary project context manager.  Create a new project
+    that can be used inside of a "with" statement for temporary purposes.
+    The project will be deleted from Gretel Cloud when the scope is exited.
+
+    Example::
+        with temporary_project() as proj:
+            model = proj.create_model()
+    """
+    project = get_project(create=True)
+    try:
+        yield project
+    finally:
+        project.delete()

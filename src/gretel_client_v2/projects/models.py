@@ -252,7 +252,7 @@ class Model:
     def data_source(self, data_source: str):
         self.model_config["models"][0][self.model_type]["data_source"] = data_source
 
-    def delete(self) -> dict:
+    def delete(self) -> Optional[dict]:
         """Deletes the remote model."""
         if self.model_id:
             return self._projects_api.delete_model(

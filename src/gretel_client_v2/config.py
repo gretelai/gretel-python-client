@@ -5,6 +5,8 @@ import json
 
 from gretel_client_v2.rest.configuration import Configuration
 from gretel_client_v2.rest.api_client import ApiClient
+from gretel_client_v2.rest.exceptions import NotFoundException, UnauthorizedException
+from gretel_client_v2.rest.api.projects_api import ProjectsApi
 
 
 GRETEL = "gretel"
@@ -56,9 +58,13 @@ class _ClientConfig:
         api_key: Optional[str] = None,
         default_project_name: Optional[str] = None,
     ):
-        self.endpoint = os.getenv(GRETEL_ENDPOINT) or endpoint or DEFAULT_GRETEL_ENDPOINT
+        self.endpoint = (
+            os.getenv(GRETEL_ENDPOINT) or endpoint or DEFAULT_GRETEL_ENDPOINT
+        )
         self.api_key = os.getenv(GRETEL_API_KEY) or api_key
-        self.default_project_name = os.getenv(GRETEL_PROJECT) or default_project_name
+        self.default_project_name = self._check_project(
+            os.getenv(GRETEL_PROJECT) or default_project_name
+        )
 
     @classmethod
     def from_file(cls, file_path: Path) -> "_ClientConfig":
@@ -75,14 +81,38 @@ class _ClientConfig:
             **{k: v for k, v in source.items() if k in cls.__annotations__.keys()}
         )
 
-    def get_api_client(self) -> ApiClient:
+    def _get_api_client(self) -> ApiClient:
         configuration = Configuration(
             host=self.endpoint, api_key={"ApiKey": self.api_key}
         )
         return ApiClient(configuration)
 
     def get_api(self, api_interface: Type[T]) -> T:
-        return api_interface(self.get_api_client())
+        return api_interface(self._get_api_client())
+
+    def _check_project(self, project_name: str = None) -> Optional[str]:
+        if not project_name:
+            return None
+        projects_api = self.get_api(ProjectsApi)
+        try:
+            projects_api.get_project(project_id=project_name)
+        except (UnauthorizedException, NotFoundException) as ex:
+            raise GretelClientConfigurationError(
+                f"Project {project_name} is invalid"
+            ) from ex
+        return project_name
+
+    def update_default_project(self, project_id):
+        """Updates the default project.
+
+        Args:
+            project_name: The name or id of the project to set.
+
+        Raises:
+            A ``GretelClientConfigurationError`` if the project
+            isn't valid.
+        """
+        self.default_project_name = self._check_project(project_id)
 
     @property
     def as_dict(self) -> dict:

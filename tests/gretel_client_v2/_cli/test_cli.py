@@ -1,23 +1,37 @@
+import os
 from pathlib import Path
 from typing import Callable
 from unittest.mock import MagicMock, patch
+from contextlib import contextmanager
 
 import pytest
 from click.testing import CliRunner
 
 from gretel_client_v2._cli.cli import cli as cli_entrypoint
-from gretel_client_v2.config import _ClientConfig, _load_config, configure_session
+from gretel_client_v2.config import (
+    DEFAULT_GRETEL_ENDPOINT,
+    _ClientConfig,
+    _load_config,
+    configure_session,
+    GRETEL_API_KEY,
+)
 from gretel_client_v2.projects.projects import Project, get_project
 from gretel_client_v2.projects.docker import _is_inside_container
 
 
 @pytest.fixture
 def runner() -> CliRunner:
+    """Returns a CliRuner that can be used to invoke the CLI from
+    unit tests.
+    """
     return CliRunner()
 
 
 @pytest.fixture
-def project():
+def project() -> Project:
+    """Returns a new project. This project will be cleaned up after
+    the test runs.
+    """
     p = get_project(create=True)
     yield p
     p.delete()
@@ -25,6 +39,18 @@ def project():
 
 @pytest.fixture
 def session_config():
+    """Ensures the the host client config is reset after each test."""
+    yield
+    configure_session(_load_config())
+
+
+@contextmanager
+def clear_session_config():
+    """Clears any session config so we can simulate a host without
+    any existing Gretel config.
+    """
+    with patch.dict(os.environ, {}, clear=True):
+        configure_session(_ClientConfig())
     yield
     configure_session(_load_config())
 
@@ -48,42 +74,40 @@ def test_cli_does_configure(write_config: MagicMock, runner: CliRunner, session_
     )
 
 
-@patch("gretel_client_v2._cli.projects.validate_project")
-@patch("gretel_client_v2._cli.projects.write_config")
-def test_project_set_default(
-    write_config: MagicMock,
-    validate_project: MagicMock,
-    runner: CliRunner,
-    session_config,
+@patch("gretel_client_v2._cli.cli.write_config")
+def test_cli_does_configure_with_project(
+    write_config: MagicMock, runner: CliRunner, project: Project
 ):
-    validate_project.return_value = True
-    call = runner.invoke(
-        cli_entrypoint, ["projects", "set-default", "--name", "test-project"]
-    )
+    with clear_session_config():
+        call = runner.invoke(
+            cli_entrypoint,
+            ["configure"],
+            input=f"{DEFAULT_GRETEL_ENDPOINT}\n{os.getenv(GRETEL_API_KEY)}\n{project.name}\n",
+            catch_exceptions=True
+        )
+    assert not call.exception
     assert call.exit_code == 0
-    validate_project.assert_called_once_with("test-project")
-    client_config: _ClientConfig = write_config.call_args[0][0]
-    assert client_config.default_project_name == "test-project"
-
-
-@patch("gretel_client_v2._cli.projects.validate_project")
-@patch("gretel_client_v2._cli.projects.write_config")
-@patch("gretel_client_v2._cli.common.get_project")
-def test_project_set_default_not_exist(
-    _: MagicMock,
-    write_config: MagicMock,
-    validate_project: MagicMock,
-    runner: CliRunner,
-):
-    validate_project.return_value = False
-    call = runner.invoke(
-        cli_entrypoint,
-        ["projects", "set-default", "--name", "test-project"],
-        catch_exceptions=False,
+    write_config.assert_called_once_with(
+        _ClientConfig(
+            endpoint=DEFAULT_GRETEL_ENDPOINT,
+            api_key=os.getenv(GRETEL_API_KEY),
+            default_project_name=project.name,
+        )
     )
-    assert call.exit_code == 1
-    write_config.assert_not_called()
-    validate_project.assert_called_once_with("test-project")
+
+
+@patch("gretel_client_v2._cli.cli.write_config")
+def test_cli_does_fail_configure_with_bad_project(
+    write_config: MagicMock, runner: CliRunner
+):
+    with clear_session_config():
+        call = runner.invoke(
+            cli_entrypoint,
+            ["configure"],
+            input=f"{DEFAULT_GRETEL_ENDPOINT}\n{os.getenv(GRETEL_API_KEY)}\nbad-project-key\n",
+            catch_exceptions=True
+        )
+        assert call.exit_code == 1
 
 
 # mark: integration

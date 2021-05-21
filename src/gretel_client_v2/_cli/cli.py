@@ -1,6 +1,7 @@
 import click
 
 from gretel_client_v2.config import (
+    GretelClientConfigurationError,
     configure_session,
     GRETEL,
     DEFAULT_GRETEL_ENDPOINT,
@@ -9,7 +10,6 @@ from gretel_client_v2.config import (
 )
 from gretel_client_v2._cli.common import (
     SessionContext,
-    validate_project,
     pass_session
 )
 from gretel_client_v2._cli.models import models
@@ -37,21 +37,23 @@ def cli(ctx: click.Context, debug: bool, output: str):
 def configure(sc: SessionContext, endpoint: str, api_key: str, project: str):
 
     project_name = None if project == "none" else project
-    if project_name and not validate_project(project_name):
-        sc.log.error(f"Project {project_name} not valid.")
-        sc.exit(1)
-
     config = _ClientConfig(
-        endpoint=endpoint, api_key=api_key, default_project_name=project_name
+        endpoint=endpoint, api_key=api_key
     )
 
     try:
+        config.update_default_project(project_id=project_name)
+    except GretelClientConfigurationError as ex:
+        sc.log.error(f"The project {project_name} is invalid", ex=ex)
+        sc.exit(1)
+
+    configure_session(config)
+
+    try:
         config_path = write_config(config)
-        configure_session(config)
         sc.log.info(f"Configuration written to {config_path}. Done.")
     except Exception as ex:
-        sc.log.debug(ex)
-        sc.log.error("There was a problem configuring the Gretel CLI tool.")
+        sc.log.error("Could not write configuration to.", ex=ex)
 
     sc.print(data=config.masked)
 
