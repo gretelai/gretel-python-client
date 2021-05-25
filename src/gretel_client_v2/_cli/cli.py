@@ -62,7 +62,6 @@ def cli(ctx: click.Context, debug: bool, output: str):
 def configure(
     sc: SessionContext, endpoint: str, api_key: str, project: str, default_runner: str
 ):
-
     project_name = None if project == "none" else project
     config = _ClientConfig(
         endpoint=endpoint, api_key=api_key, default_runner=default_runner

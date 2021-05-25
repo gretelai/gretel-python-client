@@ -14,7 +14,7 @@ from gretel_client_v2.projects.models import (
     ModelError,
 )
 from gretel_client_v2.rest.exceptions import ApiException, NotFoundException
-from gretel_client_v2.config import DEFAULT_RUNNER, get_session_config
+from gretel_client_v2.config import get_session_config
 
 
 def _download_artifacts(sc: SessionContext, output: str, model: Model):
@@ -69,9 +69,9 @@ def models():
 )
 @click.option(
     "--upload-model",
-    default=True,
+    default=False,
     is_flag=True,
-    help="If set to `false` no model data will be uploaded from the local training run. This may only be set to `false` if --runner is set to local",
+    help="If set, and --runner is set to local, model results will be uploaded to Gretel Cloud. When using the cloud runner, results will always be uploaded to Gretel Cloud.",
 )
 @click.option(
     "--dry-run",
@@ -98,9 +98,10 @@ def create(
             "An output dir is specified but --wait is > 0. Please re-run with --wait=0.",
         )
 
-    if not upload_model and runner == "cloud":
+    if runner == RunnerMode.LOCAL.value and not output:
         raise click.BadOptionUsage(
-            "--upload-model", "Cannot disable model uploads for cloud runs."
+            "--output",
+            "--runner is set to local, but --output is not set. Please specify an output directory for --output.",
         )
 
     model: Model = sc.project.create_model(config)

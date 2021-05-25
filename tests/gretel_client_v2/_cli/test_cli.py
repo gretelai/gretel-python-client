@@ -22,7 +22,7 @@ from gretel_client_v2.projects.docker import _is_inside_container
 
 @pytest.fixture
 def runner() -> CliRunner:
-    """Returns a CliRuner that can be used to invoke the CLI from
+    """Returns a CliRunner that can be used to invoke the CLI from
     unit tests.
     """
     return CliRunner()
@@ -57,21 +57,21 @@ def clear_session_config():
 
 
 def test_cli(runner):
-    call = runner.invoke(cli_entrypoint, ["--help"])
-    assert call.exit_code == 0
-    assert call.output.startswith("Usage")
+    cmd = runner.invoke(cli_entrypoint, ["--help"])
+    assert cmd.exit_code == 0
+    assert cmd.output.startswith("Usage")
 
 
 @patch("gretel_client_v2._cli.cli.write_config")
 def test_cli_does_configure(write_config: MagicMock, runner: CliRunner, session_config):
-    call = runner.invoke(cli_entrypoint, ["configure"], input="\n\ngrtu...\n\n")
-    assert not call.exception
+    cmd = runner.invoke(cli_entrypoint, ["configure"], input="\n\ngrtu...\n\n")
+    assert not cmd.exception
     write_config.assert_called_once_with(
         _ClientConfig(
             endpoint="https://api-dev.gretel.cloud",
             api_key="grtu...",
             default_project_name=None,
-            default_runner=DEFAULT_RUNNER.value
+            default_runner=DEFAULT_RUNNER.value,
         )
     )
 
@@ -81,14 +81,14 @@ def test_cli_does_configure_with_project(
     write_config: MagicMock, runner: CliRunner, project: Project
 ):
     with clear_session_config():
-        call = runner.invoke(
+        cmd = runner.invoke(
             cli_entrypoint,
             ["configure"],
             input=f"{DEFAULT_GRETEL_ENDPOINT}\n\n{os.getenv(GRETEL_API_KEY)}\n{project.name}\n",
-            catch_exceptions=True
+            catch_exceptions=True,
         )
-    assert not call.exception
-    assert call.exit_code == 0
+    assert not cmd.exception
+    assert cmd.exit_code == 0
     write_config.assert_called_once_with(
         _ClientConfig(
             endpoint=DEFAULT_GRETEL_ENDPOINT,
@@ -103,21 +103,21 @@ def test_cli_does_fail_configure_with_bad_project(
     write_config: MagicMock, runner: CliRunner
 ):
     with clear_session_config():
-        call = runner.invoke(
+        cmd = runner.invoke(
             cli_entrypoint,
             ["configure"],
             input=f"{DEFAULT_GRETEL_ENDPOINT}\n\n{os.getenv(GRETEL_API_KEY)}\nbad-project-key\n",
-            catch_exceptions=True
+            catch_exceptions=True,
         )
-        assert call.exit_code == 1
+        assert cmd.exit_code == 1
 
 
 # mark: integration
 def test_model_crud_from_cli(
-    runner: CliRunner, project: Project, get_fixture: Callable
+    runner: CliRunner, project: Project, get_fixture: Callable, tmpdir: Path
 ):
     # 1. create a new model and run it locally.
-    call = runner.invoke(
+    cmd = runner.invoke(
         cli_entrypoint,
         [
             "models",
@@ -126,16 +126,20 @@ def test_model_crud_from_cli(
             str(get_fixture("transforms_config.yml")),
             "--project",
             project.project_id,
+            "--runner",
+            "local",
+            "--output",
+            str(tmpdir),
         ],
     )
-    print(call.output)
-    assert call.exit_code == 0
+    print(cmd.output)
+    assert cmd.exit_code == 0
     # 2. check that the model can be found via a search
     model = project.search_models()[0]
     model_id = model["uid"]
     assert model["status"] == "completed"
     assert not model["error_msg"]
-    call = runner.invoke(
+    cmd = runner.invoke(
         cli_entrypoint,
         [
             "models",
@@ -144,11 +148,11 @@ def test_model_crud_from_cli(
             project.project_id,
         ],
     )
-    print(call.output)
-    assert model_id in call.output
-    assert call.exit_code == 0
+    print(cmd.output)
+    assert model_id in cmd.output
+    assert cmd.exit_code == 0
     # 3. check that an existing model can be downloaded back to disk
-    call = runner.invoke(
+    cmd = runner.invoke(
         cli_entrypoint,
         [
             "models",
@@ -159,10 +163,10 @@ def test_model_crud_from_cli(
             project.project_id,
         ],
     )
-    print(call.output)
-    assert call.exit_code == 0
+    print(cmd.output)
+    assert cmd.exit_code == 0
     # 4. check that the model can be deleted
-    call = runner.invoke(
+    cmd = runner.invoke(
         cli_entrypoint,
         [
             "models",
@@ -173,22 +177,22 @@ def test_model_crud_from_cli(
             project.project_id,
         ],
     )
-    print(call.output)
-    assert call.exit_code == 0
+    print(cmd.output)
+    assert cmd.exit_code == 0
 
 
 def test_model_crud_from_cli_local_inputs(
     runner: CliRunner, project: Project, get_fixture: Callable, tmpdir: Path
 ):
-    # this test looks similar to test_model_crud_from_cli but will  instead
+    # this test looks similar to test_model_crud_from_cli but will instead
     # test a training run using local inputs and outputs. currently, we don't
     # support mounting volumes when the cli is running inside a docker
     # container. the following check ensures that this test is only run
     # when the test harness is running on a non-docker host.
     if _is_inside_container():
-        return
+        pytest.skip("Test cannot be run from inside a container")
     # 1. create a new model and run it locally.
-    call = runner.invoke(
+    cmd = runner.invoke(
         cli_entrypoint,
         [
             "models",
@@ -201,12 +205,14 @@ def test_model_crud_from_cli_local_inputs(
             str(tmpdir),
             "--project",
             project.project_id,
+            "--runner",
+            "cloud",
         ],
     )
-    print(call.output)
-    assert call.exit_code == 0
+    print(cmd.output)
+    assert cmd.exit_code == 0
     assert (tmpdir / "model.tar.gz").exists()
-    assert (tmpdir / "model_logs.json.gz").exists()
+    assert (tmpdir / "logs.json.gz").exists()
     # 2. check that the model can be found via a search
     model = project.search_models()[0]
     model_id = model["uid"]
@@ -214,7 +220,7 @@ def test_model_crud_from_cli_local_inputs(
     assert model["status"] == "completed"
     assert not model["error_msg"]
 
-    call = runner.invoke(
+    cmd = runner.invoke(
         cli_entrypoint,
         [
             "models",
@@ -223,12 +229,12 @@ def test_model_crud_from_cli_local_inputs(
             project.project_id,
         ],
     )
-    print(call.output)
-    assert model_id in call.output
-    assert call.exit_code == 0
+    print(cmd.output)
+    assert model_id in cmd.output
+    assert cmd.exit_code == 0
     # 3. check that an existing model can be downloaded back to disk
     output_dir = tmpdir / "from_existing"
-    call = runner.invoke(
+    cmd = runner.invoke(
         cli_entrypoint,
         [
             "models",
@@ -241,11 +247,11 @@ def test_model_crud_from_cli_local_inputs(
             project.project_id,
         ],
     )
-    print(call.output)
+    print(cmd.output)
     assert (output_dir / "model.tar.gz").exists()
-    assert call.exit_code == 0
+    assert cmd.exit_code == 0
     # 4. check that the model can be deleted
-    call = runner.invoke(
+    cmd = runner.invoke(
         cli_entrypoint,
         [
             "models",
@@ -256,5 +262,81 @@ def test_model_crud_from_cli_local_inputs(
             project.project_id,
         ],
     )
-    print(call.output)
-    assert call.exit_code == 0
+    print(cmd.output)
+    assert cmd.exit_code == 0
+
+
+def test_local_model_params(runner: CliRunner, project: Project):
+    base_cmd = [
+        "models",
+        "create",
+        "--config",
+        "synthetics/default",
+        "--runner",
+        "local",
+        "--dry-run",
+        "--project",
+        project.project_id,
+    ]
+
+    # assert that --runner=local and no output param results in an error
+    cmd = runner.invoke(cli_entrypoint, base_cmd)
+    assert cmd.exit_code == 2
+    assert "Usage:" in cmd.output and "--output is not set" in cmd.output
+
+    # check that --runner=local and --output params are ok
+    cmd = runner.invoke(cli_entrypoint, base_cmd + ["--output", "tmp"])
+    assert cmd.exit_code == 0
+
+    # check that --wait cant be passed with an output dir
+    cmd = runner.invoke(cli_entrypoint, base_cmd + ["--output", "tmp", "--wait", "10"])
+    assert cmd.exit_code == 2 and "--wait is > 0" in cmd.output
+
+
+@patch("gretel_client_v2._cli.common.get_project")
+@patch("gretel_client_v2._cli.models.ContainerRun")
+def test_local_model_upload_flag(
+    container_run: MagicMock, get_project: MagicMock, runner: CliRunner
+):
+    if _is_inside_container():
+        pytest.skip("Test cannot be run from inside a container")
+    get_project.return_value.create_model.return_value.submit.return_value = {}
+    runner.invoke(
+        cli_entrypoint,
+        [
+            "models",
+            "create",
+            "--upload-model",
+            "--runner",
+            "local",
+            "--config",
+            "synthetics/default",
+            "--output",
+            "tmp",
+        ],
+    )
+    assert not container_run.call_args_list[0][1]["disable_uploads"]
+
+
+@patch("gretel_client_v2._cli.common.get_project")
+@patch("gretel_client_v2._cli.models.ContainerRun")
+def test_local_model_upload_disabled_by_default(
+    container_run: MagicMock, get_project: MagicMock, runner: CliRunner
+):
+    if _is_inside_container():
+        pytest.skip("Test cannot be run from inside a container")
+    get_project.return_value.create_model.return_value.submit.return_value = {}
+    runner.invoke(
+        cli_entrypoint,
+        [
+            "models",
+            "create",
+            "--runner",
+            "local",
+            "--config",
+            "synthetics/default",
+            "--output",
+            "tmp",
+        ],
+    )
+    assert container_run.call_args_list[0][1]["disable_uploads"]
