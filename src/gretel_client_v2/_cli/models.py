@@ -14,6 +14,7 @@ from gretel_client_v2.projects.models import (
     ModelError,
 )
 from gretel_client_v2.rest.exceptions import ApiException, NotFoundException
+from gretel_client_v2.config import DEFAULT_RUNNER, get_session_config
 
 
 def _download_artifacts(sc: SessionContext, output: str, model: Model):
@@ -61,15 +62,16 @@ def models():
 @click.option(
     "--runner",
     metavar="TYPE",
-    type=click.Choice(["cloud", "manual"], case_sensitive=False),
-    default="manual",
+    type=click.Choice([m.value for m in RunnerMode], case_sensitive=False),
+    default=lambda: get_session_config().default_runner,
+    show_default="from ~/.gretel/config.json",
     help="Determines where to schedule the model run.",
 )
 @click.option(
     "--upload-model",
     default=True,
     is_flag=True,
-    help="If set to `false` no model data will be uploaded from the local training run. This may only be set to `false` if --runner is set to manual",
+    help="If set to `false` no model data will be uploaded from the local training run. This may only be set to `false` if --runner is set to local",
 )
 @click.option(
     "--dry-run",
@@ -139,7 +141,7 @@ def create(
         sc.exit(0)
 
     # Start a local container when --runner is manual
-    if runner == RunnerMode.MANUAL.value:
+    if runner == RunnerMode.LOCAL.value:
         try:
             model.peek_data_source()
         except ArtifactError as ex:

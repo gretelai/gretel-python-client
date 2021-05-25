@@ -174,7 +174,7 @@ def test_model_submit(m: Model, create_model_resp: dict):
 
 
 def test_does_poll_status_and_logs(m: Model, model_logs: List[dict]):
-    m.submit(runner_mode=RunnerMode.MANUAL)
+    m.submit(runner_mode=RunnerMode.LOCAL)
     m._projects_api.get_model.side_effect = [  # type:ignore
         {"data": {"model": {"status": "created"}}},
         {"data": {"model": {"status": "pending"}}},

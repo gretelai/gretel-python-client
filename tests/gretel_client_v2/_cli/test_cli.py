@@ -10,6 +10,7 @@ from click.testing import CliRunner
 from gretel_client_v2._cli.cli import cli as cli_entrypoint
 from gretel_client_v2.config import (
     DEFAULT_GRETEL_ENDPOINT,
+    DEFAULT_RUNNER,
     _ClientConfig,
     _load_config,
     configure_session,
@@ -63,13 +64,14 @@ def test_cli(runner):
 
 @patch("gretel_client_v2._cli.cli.write_config")
 def test_cli_does_configure(write_config: MagicMock, runner: CliRunner, session_config):
-    call = runner.invoke(cli_entrypoint, ["configure"], input="\ngrtu...\n\n")
+    call = runner.invoke(cli_entrypoint, ["configure"], input="\n\ngrtu...\n\n")
     assert not call.exception
     write_config.assert_called_once_with(
         _ClientConfig(
             endpoint="https://api-dev.gretel.cloud",
             api_key="grtu...",
             default_project_name=None,
+            default_runner=DEFAULT_RUNNER.value
         )
     )
 
@@ -82,7 +84,7 @@ def test_cli_does_configure_with_project(
         call = runner.invoke(
             cli_entrypoint,
             ["configure"],
-            input=f"{DEFAULT_GRETEL_ENDPOINT}\n{os.getenv(GRETEL_API_KEY)}\n{project.name}\n",
+            input=f"{DEFAULT_GRETEL_ENDPOINT}\n\n{os.getenv(GRETEL_API_KEY)}\n{project.name}\n",
             catch_exceptions=True
         )
     assert not call.exception
@@ -104,7 +106,7 @@ def test_cli_does_fail_configure_with_bad_project(
         call = runner.invoke(
             cli_entrypoint,
             ["configure"],
-            input=f"{DEFAULT_GRETEL_ENDPOINT}\n{os.getenv(GRETEL_API_KEY)}\nbad-project-key\n",
+            input=f"{DEFAULT_GRETEL_ENDPOINT}\n\n{os.getenv(GRETEL_API_KEY)}\nbad-project-key\n",
             catch_exceptions=True
         )
         assert call.exit_code == 1

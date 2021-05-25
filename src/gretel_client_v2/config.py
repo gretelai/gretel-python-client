@@ -1,6 +1,7 @@
 import os
 from typing import Optional, Type, TypeVar, Union
 from pathlib import Path
+from enum import Enum
 import json
 
 from gretel_client_v2.rest.configuration import Configuration
@@ -38,6 +39,14 @@ class GretelClientConfigurationError(Exception):
 T = TypeVar("T")
 
 
+class RunnerMode(Enum):
+    LOCAL = "local"
+    CLOUD = "cloud"
+
+
+DEFAULT_RUNNER = RunnerMode.LOCAL
+
+
 class _ClientConfig:
     """Holds Gretel client configuration details. This can be instantiated from
     a file or environment.
@@ -52,16 +61,21 @@ class _ClientConfig:
     default_project_name: Optional[str] = None
     """Default Gretel project name."""
 
+    default_runner: str = DEFAULT_RUNNER.value
+    """Default runner"""
+
     def __init__(
         self,
         endpoint: Optional[str] = None,
         api_key: Optional[str] = None,
         default_project_name: Optional[str] = None,
+        default_runner: str = DEFAULT_RUNNER.value
     ):
         self.endpoint = (
             os.getenv(GRETEL_ENDPOINT) or endpoint or DEFAULT_GRETEL_ENDPOINT
         )
         self.api_key = os.getenv(GRETEL_API_KEY) or api_key
+        self.default_runner = default_runner
         self.default_project_name = self._check_project(
             os.getenv(GRETEL_PROJECT) or default_project_name
         )

@@ -4,7 +4,6 @@ Classes and methods for working with Gretel Models
 import json
 import time
 from dataclasses import dataclass, field
-from enum import Enum
 from functools import wraps
 from pathlib import Path
 from typing import Optional, Tuple, Union, List, Iterator
@@ -14,7 +13,7 @@ import requests
 import yaml
 from smart_open import open
 
-from gretel_client_v2.config import get_session_config
+from gretel_client_v2.config import DEFAULT_RUNNER, get_session_config, RunnerMode
 from gretel_client_v2.readers import CsvReader, JsonReader
 from gretel_client_v2.rest.api.projects_api import ProjectsApi
 from gretel_client_v2.rest.models import Artifact
@@ -34,11 +33,6 @@ class ModelError(Exception):
 
 class ArtifactError(Exception):
     ...
-
-
-class RunnerMode(Enum):
-    MANUAL = "manual"
-    CLOUD = "cloud"
 
 
 MODEL_ARTIFACT_TYPES = ["model", "report", "report_json", "data_preview", "model_logs"]
@@ -150,7 +144,7 @@ class Model:
 
     def submit(
         self,
-        runner_mode: RunnerMode = RunnerMode.MANUAL,
+        runner_mode: RunnerMode = DEFAULT_RUNNER,
         dry_run: bool = False,
         upload_data_source: bool = False,
     ) -> dict:
@@ -178,7 +172,9 @@ class Model:
             project_id=self.project_id,
             body=self.model_config,
             dry_run="yes" if dry_run else "no",
-            runner_mode=runner_mode.value,
+            runner_mode=runner_mode.value
+            if runner_mode == RunnerMode.CLOUD
+            else "manual",
         )
 
         self._data = resp.get("data").get("model")
