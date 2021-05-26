@@ -298,10 +298,9 @@ def test_local_model_params(runner: CliRunner, project: Project):
 def test_local_model_upload_flag(
     container_run: MagicMock, get_project: MagicMock, runner: CliRunner
 ):
-    if _is_inside_container():
-        pytest.skip("Test cannot be run from inside a container")
     get_project.return_value.create_model.return_value.submit.return_value = {}
-    runner.invoke(
+    get_project.return_value.create_model.return_value._data = {}
+    cmd = runner.invoke(
         cli_entrypoint,
         [
             "models",
@@ -313,8 +312,11 @@ def test_local_model_upload_flag(
             "synthetics/default",
             "--output",
             "tmp",
+            "--project",
+            "mocked"
         ],
     )
+    assert cmd.exit_code == 0
     assert not container_run.call_args_list[0][1]["disable_uploads"]
 
 
@@ -323,10 +325,9 @@ def test_local_model_upload_flag(
 def test_local_model_upload_disabled_by_default(
     container_run: MagicMock, get_project: MagicMock, runner: CliRunner
 ):
-    if _is_inside_container():
-        pytest.skip("Test cannot be run from inside a container")
     get_project.return_value.create_model.return_value.submit.return_value = {}
-    runner.invoke(
+    get_project.return_value.create_model.return_value._data = {}
+    cmd = runner.invoke(
         cli_entrypoint,
         [
             "models",
@@ -337,6 +338,9 @@ def test_local_model_upload_disabled_by_default(
             "synthetics/default",
             "--output",
             "tmp",
+            "--project",
+            "mocked"
         ],
     )
+    assert cmd.exit_code == 0
     assert container_run.call_args_list[0][1]["disable_uploads"]

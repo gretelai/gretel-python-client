@@ -211,5 +211,5 @@ def test_does_upload_local_artifact(
     m.data_source = ds
     assert m.data_source == ds
     assert m.model_config["models"][0][m.model_type]["data_source"] == ds
-    m._upload_data_source()
+    m.upload_data_source()
     assert m.data_source.startswith("gretel_")

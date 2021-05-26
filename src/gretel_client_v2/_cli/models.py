@@ -104,17 +104,25 @@ def create(
             "--runner is set to local, but --output is not set. Please specify an output directory for --output.",
         )
 
+    sc.log.info("Preparing model")
     model: Model = sc.project.create_model(config)
 
     # Figure out if we need to upload a data source as an artifact. By
     # default any cloud run will require an external data source to
     # be uploaded.
-    upload_data_source = False
     if in_data:
         model.data_source = in_data
         if runner == RunnerMode.CLOUD.value:
-            sc.log.info("Preparing to upload input data source")
-            upload_data_source = True
+            sc.log.info("Uploading input data source")
+            key = model.upload_data_source()
+            sc.log.info("Data source uploaded")
+            sc.log.info(
+                (
+                    "Gretel artifact key is"
+                    f"\n\n\t{key}\n\n"
+                    f"You can re-use this key for any model in the project {sc.project.name}"
+                )
+            )
 
     # Create the model and the data source
     try:
@@ -122,7 +130,6 @@ def create(
         run = model.submit(
             runner_mode=RunnerMode(runner),
             dry_run=dry_run,
-            upload_data_source=upload_data_source,
         )
         sc.log.info("Model created")
         sc.print(data=run)

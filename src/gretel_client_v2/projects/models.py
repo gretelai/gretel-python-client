@@ -166,7 +166,7 @@ class Model:
             raise RuntimeError("This model was already submitted.")
 
         if upload_data_source:
-            self._upload_data_source()
+            self.upload_data_source()
 
         resp = self._projects_api.create_model(
             project_id=self.project_id,
@@ -279,7 +279,13 @@ class Model:
             f"The provided data source {self.data_source} is not a valid source."
         )
 
-    def _upload_data_source(self):
+    def upload_data_source(self) -> str:
+        """Resolves and uploads the data source specified in the
+        model config.
+
+        Returns:
+            A Gretel artifact key
+        """
         with open(self.data_source, "rb") as src:  # type:ignore
             src_data = src.read()
             self.peek_data_source()
@@ -294,8 +300,8 @@ class Model:
             )
             if upload_resp.status_code != 200:
                 raise ModelError(f"Could not upload artifact {self.data_source}")
-
             self.data_source = artifact_key
+            return self.data_source
 
     def _poll_model(self):
         try:
