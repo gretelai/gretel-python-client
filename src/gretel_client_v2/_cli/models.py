@@ -183,7 +183,12 @@ def create(
         _download_artifacts(sc, output, model)
 
     sc.print(data=model._data.get("model"))
-    sc.log.info("Done. Model created.")
+    sc.log.info("Done")
+    sc.log.info((
+        "Billing estimate"
+        f"\n{json.dumps(model._data.get('billing_estimate'), indent=4)}"
+    ))
+    sc.log.info("Note: no charges will be incurred during the beta period")
 
 
 @models.command()
