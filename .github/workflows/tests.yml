@@ -47,9 +47,10 @@ jobs:
     if: always()
     runs-on: ubuntu-20.04
     steps:
+    - uses: technote-space/workflow-conclusion-action@v2
     - uses: 8398a7/action-slack@v2
       with:
-        status: ${{ success() }}
+        status: ${{ env.WORKFLOW_CONCLUSION }}
         author_name: Branch Checks
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
