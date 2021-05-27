@@ -41,3 +41,17 @@ jobs:
         python -m pip install tox flake8
     - name: flake8
       run: tox -e flake8
+
+  notify:
+    needs: [tests, style-checks]
+    if: always()
+    runs-on: ubuntu-20.04
+    steps:
+    - uses: 8398a7/action-slack@v2
+      with:
+        status: ${{ success() }}
+        author_name: Branch Checks
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    
