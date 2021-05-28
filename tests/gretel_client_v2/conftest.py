@@ -1,13 +1,14 @@
 import os
 from pathlib import Path
-from python.src.gretel_client_v2.config import (
+from unittest.mock import patch
+
+import pytest
+
+from gretel_client_v2.config import (
     _ClientConfig,
     _load_config,
     configure_session,
 )
-from unittest.mock import patch
-
-import pytest
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
