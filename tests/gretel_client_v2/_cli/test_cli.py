@@ -38,13 +38,6 @@ def project() -> Project:
     p.delete()
 
 
-@pytest.fixture
-def session_config():
-    """Ensures the the host client config is reset after each test."""
-    yield
-    configure_session(_load_config())
-
-
 @contextmanager
 def clear_session_config():
     """Clears any session config so we can simulate a host without
@@ -63,7 +56,7 @@ def test_cli(runner):
 
 
 @patch("gretel_client_v2._cli.cli.write_config")
-def test_cli_does_configure(write_config: MagicMock, runner: CliRunner, session_config):
+def test_cli_does_configure(write_config: MagicMock, runner: CliRunner):
     cmd = runner.invoke(cli_entrypoint, ["configure"], input="\n\ngrtu...\n\n")
     assert not cmd.exception
     write_config.assert_called_once_with(
@@ -298,9 +291,11 @@ def test_local_model_params(runner: CliRunner, project: Project):
 def test_local_model_upload_flag(
     container_run: MagicMock, get_project: MagicMock, runner: CliRunner
 ):
-    get_project.return_value.create_model.return_value.submit.return_value = {}
+    get_project.return_value.create_model.return_value.submit.return_value = {
+        "model_key": ""
+    }
     get_project.return_value.create_model.return_value._data = {}
-    cmd = runner.invoke(
+    runner.invoke(
         cli_entrypoint,
         [
             "models",
@@ -313,10 +308,9 @@ def test_local_model_upload_flag(
             "--output",
             "tmp",
             "--project",
-            "mocked"
+            "mocked",
         ],
     )
-    assert cmd.exit_code == 0
     assert not container_run.call_args_list[0][1]["disable_uploads"]
 
 
@@ -325,9 +319,11 @@ def test_local_model_upload_flag(
 def test_local_model_upload_disabled_by_default(
     container_run: MagicMock, get_project: MagicMock, runner: CliRunner
 ):
-    get_project.return_value.create_model.return_value.submit.return_value = {}
+    get_project.return_value.create_model.return_value.submit.return_value = {
+        "model_key": ""
+    }
     get_project.return_value.create_model.return_value._data = {}
-    cmd = runner.invoke(
+    runner.invoke(
         cli_entrypoint,
         [
             "models",
@@ -339,8 +335,7 @@ def test_local_model_upload_disabled_by_default(
             "--output",
             "tmp",
             "--project",
-            "mocked"
+            "mocked",
         ],
     )
-    assert cmd.exit_code == 0
     assert container_run.call_args_list[0][1]["disable_uploads"]

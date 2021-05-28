@@ -8,6 +8,7 @@ from functools import wraps
 from pathlib import Path
 from typing import Optional, Tuple, Union, List, Iterator
 from urllib.parse import urlparse
+import base64
 
 import requests
 import yaml
@@ -219,6 +220,11 @@ class Model:
     @_needs_remote_model
     def errors(self) -> str:
         return self._data.get("model").get("error_msg")
+
+    @property
+    @_needs_remote_model
+    def traceback(self) -> str:
+        return base64.b64decode(self._data.get("model").get("traceback")).decode("utf-8")
 
     @property
     def model_type(self) -> str:

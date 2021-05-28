@@ -5,7 +5,13 @@ from urllib.parse import urlparse
 import click
 import requests
 
-from gretel_client_v2._cli.common import SessionContext, pass_session, project_option
+from gretel_client_v2._cli.common import (
+    SessionContext,
+    pass_session,
+    project_option,
+    model_create_status_descriptions,
+    get_status_description
+)
 from gretel_client_v2.projects.docker import ContainerRun
 from gretel_client_v2.projects.models import (
     ArtifactError,
@@ -126,12 +132,13 @@ def create(
 
     # Create the model and the data source
     try:
-        sc.log.info("Creating model...")
+        sc.log.info("Creating model")
         run = model.submit(
             runner_mode=RunnerMode(runner),
             dry_run=dry_run,
         )
         sc.log.info("Model created")
+        del run["model_key"]
         sc.print(data=run)
     except ApiException as ex:
         sc.print(data=json.loads(ex.body))
@@ -156,13 +163,20 @@ def create(
             sc.log.error(f"The data source '{model.data_source}' is not valid", ex=ex)
             sc.exit(1)
         run = ContainerRun(model, output_dir=output, disable_uploads=not upload_model)
-        sc.log.info(f"Starting local container using {run.image}")
+        sc.log.info(
+            f"This model is configured to run locally using the container {run.image}"
+        )
         run.start()
 
     # Poll for the latest container status
     for update in model.poll_logs_status(wait):
         if update.transitioned:
-            sc.log.info(f"Status is {update.status}")
+            sc.log.info(
+                (
+                    f"Status is {update.status}. "
+                    f"{get_status_description(model_create_status_descriptions, update.status, runner)}"
+                )
+            )
         for log in update.logs:
             msg = f"{log['ts']}  {log['msg']}"
             if log["ctx"]:
@@ -176,19 +190,25 @@ def create(
     # local runs since there is already a volume mount.
     if (
         output
-        and model.status == "completed"
         and runner == RunnerMode.CLOUD.value
         and wait == 0
     ):
         _download_artifacts(sc, output, model)
 
     sc.print(data=model._data.get("model"))
-    sc.log.info("Done")
     sc.log.info((
         "Billing estimate"
         f"\n{json.dumps(model._data.get('billing_estimate'), indent=4)}"
     ))
     sc.log.info("Note: no charges will be incurred during the beta period")
+
+    if model.status == "completed":
+        sc.log.info("Done. Model created!")
+    else:
+        sc.log.error("The model failed with the following error")
+        sc.log.error(model.errors, ex=model.traceback)
+        sc.log.error(f"Status is {model.status}. Please scroll back through the logs for more details.")
+        sc.exit(1)
 
 
 @models.command()

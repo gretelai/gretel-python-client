@@ -1,13 +1,12 @@
 import sys
 import json
 import traceback
-from typing import Union
+from typing import Dict, Union
 
 import click
 
 from gretel_client_v2.config import get_session_config
 from gretel_client_v2.projects import get_project
-from gretel_client_v2.rest.exceptions import NotFoundException, UnauthorizedException
 
 
 class Logger:
@@ -45,7 +44,8 @@ class Logger:
         if msg:
             click.echo(click.style("ERROR: ", fg="red") + msg, err=True)
         if include_tb and self.debug_mode:
-            click.echo(ex, err=True)
+            if ex:
+                click.echo(ex, err=True)
             _, _, tb = sys.exc_info()
             traceback.print_tb(tb)
 
@@ -119,3 +119,27 @@ def project_option(fn):
         metavar="NAME",
         callback=callback,
     )(fn)
+
+
+StatusDescriptions = Dict[str, Dict[str, str]]
+
+model_create_status_descriptions: StatusDescriptions = {
+    "created": {
+        "default": "Model creation has been queued.",
+    },
+    "pending": {
+        "default": "A worker is being allocated to begin model creation.",
+        "cloud": "A Gretel Cloud worker is being allocated to begin model creation.",
+        "local": "A local container is being started to begin model creation.",
+    },
+    "active": {
+        "default": "A worker has started creating your model!",
+    },
+}
+
+
+def get_status_description(descriptions: StatusDescriptions, status: str, runner: str) -> str:
+    status_desc = descriptions.get(status)
+    if not status_desc:
+        return ""
+    return status_desc.get(runner, status_desc.get("default", ""))
