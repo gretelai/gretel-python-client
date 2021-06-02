@@ -129,7 +129,7 @@ def m(create_model_resp: dict, transform_model_path: Path) -> Model:
     projects_api.get_model.return_value = {"data": {"model": {}}}
     projects_api.create_model.return_value = create_model_resp
     projects_api.create_artifact.return_value = create_artifact_resp
-    m = Model(project_id="123", model_config=transform_model_path)
+    m = Model(project=MagicMock(), model_config=transform_model_path)
     m._projects_api = projects_api
     return m
 
@@ -198,7 +198,7 @@ def test_does_get_model_from_id(project: Project, transform_model_path: Path):
     model: Model = project.create_model(transform_model_path)
     model.submit()
     assert model.model_id
-    model_remote = Model(project_id=model.project_id, model_id=model.model_id)
+    model_remote = Model(project=project, model_id=model.model_id)
     assert model_remote.status
 
 
@@ -207,7 +207,7 @@ def test_does_upload_local_artifact(
     project: Project, transform_model_path: Path, transform_local_data_source: Path
 ):
     ds = str(transform_local_data_source)
-    m = Model(project_id=project.project_id, model_config=transform_model_path)
+    m = Model(project=project, model_config=transform_model_path)
     m.data_source = ds
     assert m.data_source == ds
     assert m.model_config["models"][0][m.model_type]["data_source"] == ds

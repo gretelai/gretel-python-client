@@ -27,6 +27,6 @@ def configure_session_client():
     with patch.dict(
         os.environ, {"GRETEL_API_KEY": os.getenv("GRETEL_API_KEY")}, clear=True
     ):
-        configure_session(_ClientConfig())
+        configure_session(_ClientConfig.from_env())
     yield
     configure_session(_load_config())

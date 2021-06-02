@@ -5,12 +5,17 @@ from functools import wraps
 from pathlib import Path
 from typing import Any, Dict, List, Union
 from contextlib import contextmanager
+from urllib.parse import urlparse
+
+import requests
 
 from gretel_client_v2.config import get_session_config
 from gretel_client_v2.projects.models import Model
 from gretel_client_v2.rest import models
 from gretel_client_v2.rest.api.projects_api import ProjectsApi
 from gretel_client_v2.rest.exceptions import NotFoundException, UnauthorizedException
+from gretel_client_v2.rest.model.artifact import Artifact
+from gretel_client_v2.projects.helpers import validate_data_source
 
 DATA = "data"
 PROJECTS = "projects"
@@ -96,11 +101,57 @@ class Project:
 
     @check_not_deleted
     def get_model(self, model_id: str) -> Model:
-        return Model(self.project_id, model_id=model_id)
+        return Model(project=self, model_id=model_id)
 
     @check_not_deleted
     def create_model(self, model_config: Union[str, Path, dict]) -> Model:
-        return Model(project_id=self.project_id, model_config=model_config)
+        return Model(model_config=model_config, project=self)
+
+    @property
+    @check_not_deleted
+    def artifacts(self) -> List[dict]:
+        """Returns a list of project artifacts"""
+        return (
+            self.projects_api.get_artifacts(project_id=self.name)
+            .get(DATA)
+            .get("artifacts")
+        )
+
+    def upload_artifact(
+        self, artifact_path: Union[Path, str], _validate: bool = True
+    ) -> str:
+        """Resolves and uploads the data source specified in the
+        model config.
+
+        Returns:
+            A Gretel artifact key
+        """
+        if _validate:
+            validate_data_source(artifact_path)
+        if isinstance(artifact_path, Path):
+            artifact_path = str(artifact_path)
+        with open(artifact_path, "rb") as src:  # type:ignore
+            src_data = src.read()
+            file_name = Path(urlparse(artifact_path).path).name
+            art_resp = self.projects_api.create_artifact(
+                project_id=self.name, artifact=Artifact(filename=file_name)
+            )
+            artifact_key = art_resp["data"]["key"]
+            upload_resp = requests.put(
+                art_resp["data"]["url"],
+                data=src_data,
+            )
+            if upload_resp.status_code != 200:
+                raise GretelProjectError(f"Could not upload artifact {artifact_path}")
+            return artifact_key
+
+    def delete_artifact(self, key: str):
+        """Deletes a project artifact
+
+        Args:
+            key: Artifact key to delete
+        """
+        return self.projects_api.delete_artifact(project_id=self.name, key=key)
 
 
 def search_projects(limit: int = 200, query: str = None) -> List[Project]:

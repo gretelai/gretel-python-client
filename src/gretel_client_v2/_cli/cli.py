@@ -14,6 +14,7 @@ from gretel_client_v2._cli.common import SessionContext, pass_session
 from gretel_client_v2._cli.models import models
 from gretel_client_v2._cli.projects import projects
 from gretel_client_v2._cli.records import records
+from gretel_client_v2._cli.artifacts import artifacts
 
 
 @click.group()
@@ -87,6 +88,7 @@ def configure(
 cli.add_command(models)
 cli.add_command(records)
 cli.add_command(projects)
+cli.add_command(artifacts)
 
 
 if __name__ == "__main__":

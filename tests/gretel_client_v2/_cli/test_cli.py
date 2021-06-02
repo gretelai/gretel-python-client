@@ -259,12 +259,14 @@ def test_model_crud_from_cli_local_inputs(
     assert cmd.exit_code == 0
 
 
-def test_local_model_params(runner: CliRunner, project: Project):
+def test_local_model_params(runner: CliRunner, project: Project, get_fixture: Callable):
     base_cmd = [
         "models",
         "create",
         "--config",
         "synthetics/default",
+        "--in-data",
+        str(get_fixture("account-balances.csv")),
         "--runner",
         "local",
         "--dry-run",
@@ -339,3 +341,59 @@ def test_local_model_upload_disabled_by_default(
         ],
     )
     assert container_run.call_args_list[0][1]["disable_uploads"]
+
+
+def test_artifacts_crud(runner: CliRunner, project: Project, get_fixture: Callable):
+    # upload an artifact
+    cmd = runner.invoke(
+        cli_entrypoint,
+        [
+            "artifacts",
+            "upload",
+            "--project",
+            project.name,
+            "--in-data",
+            get_fixture("account-balances.csv"),
+        ],
+    )
+    assert "gretel_" in cmd.output  # checks that a gretel key is returneds
+    assert cmd.exit_code == 0
+    assert len(project.artifacts) == 1
+    # check that we can list the artifact
+    cmd = runner.invoke(cli_entrypoint, ["artifacts", "list", "--project", project.name])
+    assert "account-balances" in cmd.output
+    assert cmd.exit_code == 0
+    assert len(project.artifacts) == 1
+    # check that we can delete the artifact
+    cmd = runner.invoke(
+        cli_entrypoint,
+        [
+            "artifacts",
+            "delete",
+            "--project",
+            project.name,
+            "--artifact-key",
+            project.artifacts[0]["key"],
+        ],
+    )
+    assert cmd.exit_code == 0
+    assert len(project.artifacts) == 0
+
+
+def test_artifact_invalid_data(
+    runner: CliRunner, project: Project, get_fixture: Callable
+):
+    cmd = runner.invoke(
+        cli_entrypoint,
+        [
+            "artifacts",
+            "upload",
+            "--project",
+            project.name,
+            "--in-data",
+            get_fixture("invalid_data.json"),
+        ],
+    )
+    assert (
+        cmd.exit_code == 0
+    )  # todo(dn): this should fail when we get better data validation checks

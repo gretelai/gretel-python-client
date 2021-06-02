@@ -1,3 +1,5 @@
+from typing import Callable
+
 import pytest
 
 from gretel_client_v2.config import get_session_config
@@ -39,3 +41,12 @@ def test_cannot_call_deleted_project():
         project.get_console_url()
     with pytest.raises(GretelProjectError):
         project.delete()
+
+
+def test_does_get_artifacts(project: Project, get_fixture: Callable):
+    art_to_upload = get_fixture("account-balances.csv")
+    art_key = project.upload_artifact(art_to_upload)
+    art_listing = project.artifacts
+    assert len(art_listing) == 1
+    project.delete_artifact(art_key)
+    assert len(project.artifacts) == 0

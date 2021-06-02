@@ -12,7 +12,7 @@ from gretel_client_v2.projects.projects import get_project
 def model(get_fixture: Callable):
     project = get_project(create=True)
     model = Model(
-        project_id=project.project_id, model_config=get_fixture("transforms_config.yml")
+        project=project, model_config=get_fixture("transforms_config.yml")
     )
     model.submit()
     yield model

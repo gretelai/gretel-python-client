@@ -1,23 +1,26 @@
 """
 Classes and methods for working with Gretel Models
 """
+import base64
 import json
 import time
 from dataclasses import dataclass, field
 from functools import wraps
 from pathlib import Path
-from typing import Optional, Tuple, Union, List, Iterator
-from urllib.parse import urlparse
-import base64
+from typing import TYPE_CHECKING, Iterator, List, Optional, Tuple, Union
 
-import requests
 import yaml
 from smart_open import open
 
-from gretel_client_v2.config import DEFAULT_RUNNER, get_session_config, RunnerMode
-from gretel_client_v2.readers import CsvReader, JsonReader
+from gretel_client_v2.config import DEFAULT_RUNNER, RunnerMode
+from gretel_client_v2.projects.helpers import validate_data_source
 from gretel_client_v2.rest.api.projects_api import ProjectsApi
-from gretel_client_v2.rest.models import Artifact
+
+if TYPE_CHECKING:
+    from gretel_client_v2.projects import Project
+else:
+    Project = None
+
 
 BASE_BLUEPRINT_REPO = "https://raw.githubusercontent.com/gretelai/gretel-blueprints/main/config_templates/gretel"
 
@@ -32,7 +35,7 @@ class ModelError(Exception):
     ...
 
 
-class ArtifactError(Exception):
+class ModelArtifactError(Exception):
     ...
 
 
@@ -114,8 +117,8 @@ class Model:
     models or run and lookup existing ones.
     """
 
-    project_id: str
-    """The project id associated with the model."""
+    project: Project
+    """The project associated with the model."""
 
     model_config: dict
     """Model config."""
@@ -130,15 +133,15 @@ class Model:
 
     def __init__(
         self,
-        project_id: str,
+        project: Project,
         model_config: _ModelConfigPathT = None,
         model_id: str = None,
     ):
-        self.project_id = project_id
+        self.project = project
         if model_config:
             self.model_config = read_model_config(model_config)
         self.model_id = model_id
-        self._projects_api = get_session_config().get_api(ProjectsApi)
+        self._projects_api = project.projects_api
         if self.model_id:
             self._poll_model()
         self._logs_iter_index = 0
@@ -148,6 +151,7 @@ class Model:
         runner_mode: RunnerMode = DEFAULT_RUNNER,
         dry_run: bool = False,
         upload_data_source: bool = False,
+        _validate_data_source: bool = True
     ) -> dict:
         """Submit a model to be run.
 
@@ -159,6 +163,12 @@ class Model:
             upload_data_source: If set to True the model's data source will
                 be resolved and download to the host machine and then uploaded
                 as a Gretel Cloud artifact.
+
+        Raises:
+            - ``ModelConfigError`` if the specified model config is invalid.
+            - ``RuntimeError`` if the model is submitted more than once.
+            - ``ApiException`` if there is a problem submitting the model to
+                Gretel's api.
         """
         if not self.model_config:
             raise ModelConfigError("No model config exists to submit.")
@@ -167,10 +177,10 @@ class Model:
             raise RuntimeError("This model was already submitted.")
 
         if upload_data_source:
-            self.upload_data_source()
+            self.upload_data_source(_validate=_validate_data_source)
 
         resp = self._projects_api.create_model(
-            project_id=self.project_id,
+            project_id=self.project.name,
             body=self.model_config,
             dry_run="yes" if dry_run else "no",
             runner_mode=runner_mode.value
@@ -197,11 +207,11 @@ class Model:
             artifact_type: Artifact type to download
         """
         if artifact_type not in MODEL_ARTIFACT_TYPES:
-            raise ArtifactError(
+            raise ModelArtifactError(
                 f"{artifact_type} is invalid. Must be in {','.join(MODEL_ARTIFACT_TYPES)}"
             )
         art_resp = self._projects_api.get_model_artifact(
-            project_id=self.project_id, model_id=self.model_id, type=artifact_type
+            project_id=self.project.name, model_id=self.model_id, type=artifact_type
         )
         return art_resp["data"]["url"]
 
@@ -224,7 +234,9 @@ class Model:
     @property
     @_needs_remote_model
     def traceback(self) -> str:
-        return base64.b64decode(self._data.get("model").get("traceback")).decode("utf-8")
+        return base64.b64decode(self._data.get("model").get("traceback")).decode(
+            "utf-8"
+        )
 
     @property
     def model_type(self) -> str:
@@ -258,66 +270,43 @@ class Model:
         """Deletes the remote model."""
         if self.model_id:
             return self._projects_api.delete_model(
-                project_id=self.project_id, model_id=self.model_id
+                project_id=self.project.name, model_id=self.model_id
             )
 
-    def peek_data_source(self) -> dict:
+    def validate_data_source(self):
         """Test that the attached data source is a valid
-        Csv or Json file.
+        Csv or Json file. If the data source is a Gretel
+        cloud artifact data validation will be skipped.
 
-        Returns:
-            A peek of the data source if it is valid. If the data source
-            cannot be read, an ``ArtifactError` will be thrown.
+        Raises:
+            - ``ModelArtifactError`` if the data source is not valid.
         """
         if not self.external_data_source:
             return
         try:
-            peek = JsonReader(self.data_source)
-            return next(peek)
-        except json.decoder.JSONDecodeError:
-            pass
-        try:
-            peek = CsvReader(self.data_source)
-            return next(peek)
-        except StopIteration:
-            pass
-        raise ArtifactError(
-            f"The provided data source {self.data_source} is not a valid source."
-        )
+            validate_data_source(self.data_source)
+        except Exception as ex:
+            raise ModelArtifactError("Could not validate data source") from ex
 
-    def upload_data_source(self) -> str:
+    def upload_data_source(self, _validate: bool = True) -> str:
         """Resolves and uploads the data source specified in the
         model config.
 
         Returns:
             A Gretel artifact key
         """
-        with open(self.data_source, "rb") as src:  # type:ignore
-            src_data = src.read()
-            self.peek_data_source()
-            file_name = Path(urlparse(self.data_source).path).name
-            art_resp = self._projects_api.create_artifact(
-                project_id=self.project_id, artifact=Artifact(filename=file_name)
-            )
-            artifact_key = art_resp["data"]["key"]
-            upload_resp = requests.put(
-                art_resp["data"]["url"],
-                data=src_data,
-            )
-            if upload_resp.status_code != 200:
-                raise ModelError(f"Could not upload artifact {self.data_source}")
-            self.data_source = artifact_key
-            return self.data_source
+        self.data_source = self.project.upload_artifact(self.data_source, _validate)
+        return self.data_source
 
     def _poll_model(self):
         try:
             resp = self._projects_api.get_model(
-                project_id=self.project_id, model_id=self.model_id, logs="yes"
+                project_id=self.project.name, model_id=self.model_id, logs="yes"
             )
             self._data = resp.get("data")
         except Exception as ex:
             raise ModelError(
-                f"Cannot fetch model details for project {self.project_id} model {self.model_id}"
+                f"Cannot fetch model details for project {self.project.name} model {self.model_id}"
             ) from ex
 
     def _new_model_logs(self) -> List[dict]:

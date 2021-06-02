@@ -10,17 +10,18 @@ from gretel_client_v2._cli.common import (
     pass_session,
     project_option,
     model_create_status_descriptions,
-    get_status_description
+    get_status_description,
 )
 from gretel_client_v2.projects.docker import ContainerRun
 from gretel_client_v2.projects.models import (
-    ArtifactError,
     Model,
+    ModelArtifactError,
     RunnerMode,
     ModelError,
 )
 from gretel_client_v2.rest.exceptions import ApiException, NotFoundException
 from gretel_client_v2.config import get_session_config
+from gretel_client_v2.projects.helpers import DataSourceError
 
 
 def _download_artifacts(sc: SessionContext, output: str, model: Model):
@@ -118,17 +119,26 @@ def create(
     # be uploaded.
     if in_data:
         model.data_source = in_data
-        if runner == RunnerMode.CLOUD.value:
-            sc.log.info("Uploading input data source")
-            key = model.upload_data_source()
-            sc.log.info("Data source uploaded")
-            sc.log.info(
-                (
-                    "Gretel artifact key is"
-                    f"\n\n\t{key}\n\n"
-                    f"You can re-use this key for any model in the project {sc.project.name}"
-                )
+
+    try:
+        model.validate_data_source()
+    except ModelArtifactError as ex:
+        sc.log.error(f"The data source '{model.data_source}' is not valid", ex=ex)
+        sc.exit(1)
+
+    if runner == RunnerMode.CLOUD.value:
+        sc.log.info("Uploading input data source")
+        key = model.upload_data_source(
+            _validate=False
+        )  # the data source was validated in a previous step
+        sc.log.info("Data source uploaded")
+        sc.log.info(
+            (
+                "Gretel artifact key is"
+                f"\n\n\t{key}\n\n"
+                f"You can re-use this key for any model in the project {sc.project.name}"
             )
+        )
 
     # Create the model and the data source
     try:
@@ -136,20 +146,16 @@ def create(
         run = model.submit(
             runner_mode=RunnerMode(runner),
             dry_run=dry_run,
+            _validate_data_source=False
         )
         sc.log.info("Model created")
         del run["model_key"]
         sc.print(data=run)
     except ApiException as ex:
-        sc.print(data=json.loads(ex.body))
-        sc.exit(1)
-    except ArtifactError as ex:
-        sc.log.error(
-            f"There was a problem with the input data source {model.data_source}", ex
-        )
+        sc.print(data=json.loads(ex.body))  # type:ignore
         sc.exit(1)
     except Exception as ex:
-        sc.log.error("Could not load model", ex)
+        sc.log.error("Could not load model", ex=ex)
         sc.exit(1)
 
     if dry_run:
@@ -157,11 +163,6 @@ def create(
 
     # Start a local container when --runner is manual
     if runner == RunnerMode.LOCAL.value:
-        try:
-            model.peek_data_source()
-        except ArtifactError as ex:
-            sc.log.error(f"The data source '{model.data_source}' is not valid", ex=ex)
-            sc.exit(1)
         run = ContainerRun(model, output_dir=output, disable_uploads=not upload_model)
         sc.log.info(
             f"This model is configured to run locally using the container {run.image}"
@@ -188,18 +189,16 @@ def create(
     # If the job is in the cloud, and --output is passed, we
     # want to download the artifacts. This isn't necessary for
     # local runs since there is already a volume mount.
-    if (
-        output
-        and runner == RunnerMode.CLOUD.value
-        and wait == 0
-    ):
+    if output and runner == RunnerMode.CLOUD.value and wait == 0:
         _download_artifacts(sc, output, model)
 
     sc.print(data=model._data.get("model"))
-    sc.log.info((
-        "Billing estimate"
-        f"\n{json.dumps(model._data.get('billing_estimate'), indent=4)}"
-    ))
+    sc.log.info(
+        (
+            "Billing estimate"
+            f"\n{json.dumps(model._data.get('billing_estimate'), indent=4)}"
+        )
+    )
     sc.log.info("Note: no charges will be incurred during the beta period")
 
     if model.status == "completed":
@@ -207,7 +206,9 @@ def create(
     else:
         sc.log.error("The model failed with the following error")
         sc.log.error(model.errors, ex=model.traceback)
-        sc.log.error(f"Status is {model.status}. Please scroll back through the logs for more details.")
+        sc.log.error(
+            f"Status is {model.status}. Please scroll back through the logs for more details."
+        )
         sc.exit(1)
 
 
