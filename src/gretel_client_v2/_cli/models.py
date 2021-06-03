@@ -7,21 +7,23 @@ import requests
 
 from gretel_client_v2._cli.common import (
     SessionContext,
+    get_status_description,
+    model_create_status_descriptions,
     pass_session,
     project_option,
-    model_create_status_descriptions,
-    get_status_description,
+    runner_option,
 )
-from gretel_client_v2.projects.docker import ContainerRun
+from gretel_client_v2.projects.docker import (
+    ContainerRun,
+    ContainerRunError
+)
 from gretel_client_v2.projects.models import (
     Model,
     ModelArtifactError,
-    RunnerMode,
     ModelError,
+    RunnerMode,
 )
 from gretel_client_v2.rest.exceptions import ApiException, NotFoundException
-from gretel_client_v2.config import get_session_config
-from gretel_client_v2.projects.helpers import DataSourceError
 
 
 def _download_artifacts(sc: SessionContext, output: str, model: Model):
@@ -40,7 +42,7 @@ def _download_artifacts(sc: SessionContext, output: str, model: Model):
             sc.log.info(f"\tSkipping {type}. Artifact not found.")
 
 
-@click.group()
+@click.group(help="Commands for training and working with models.]")
 def models():
     ...
 
@@ -67,14 +69,6 @@ def models():
     "--in-data", metavar="PATH", help="Specify an input file to train the model with."
 )
 @click.option(
-    "--runner",
-    metavar="TYPE",
-    type=click.Choice([m.value for m in RunnerMode], case_sensitive=False),
-    default=lambda: get_session_config().default_runner,
-    show_default="from ~/.gretel/config.json",
-    help="Determines where to schedule the model run.",
-)
-@click.option(
     "--upload-model",
     default=False,
     is_flag=True,
@@ -87,6 +81,7 @@ def models():
     help="If set, the model config will be validated against Gretel APIs, but no work will be scheduled to run.",
 )
 @project_option
+@runner_option
 @pass_session
 def create(
     sc: SessionContext,
@@ -144,9 +139,7 @@ def create(
     try:
         sc.log.info("Creating model")
         run = model.submit(
-            runner_mode=RunnerMode(runner),
-            dry_run=dry_run,
-            _validate_data_source=False
+            runner_mode=RunnerMode(runner), dry_run=dry_run, _validate_data_source=False
         )
         sc.log.info("Model created")
         del run["model_key"]
@@ -163,10 +156,24 @@ def create(
 
     # Start a local container when --runner is manual
     if runner == RunnerMode.LOCAL.value:
-        run = ContainerRun(model, output_dir=output, disable_uploads=not upload_model)
+        run = ContainerRun(model)
+        if output:
+            run.configure_output_dir(output)
+        if in_data:
+            run.configure_input_data(in_data)
+        if upload_model:
+            run.enable_cloud_uploads()
+        if model.model_type == "synthetics":
+            sc.log.info("Configuring GPU for model training")
+            try:
+                run.configure_gpu()
+                sc.log.info("GPU device found!")
+            except ContainerRunError:
+                sc.log.warn("Could not configure GPU. Continuing with CPU")
         sc.log.info(
             f"This model is configured to run locally using the container {run.image}"
         )
+        sc.log.info("Pulling the container and starting local model training.")
         run.start()
 
     # Poll for the latest container status

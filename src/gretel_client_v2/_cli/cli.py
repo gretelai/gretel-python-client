@@ -18,7 +18,7 @@ from gretel_client_v2._cli.artifacts import artifacts
 
 
 @click.group()
-@click.option("--debug/--no-debug", default=False)
+@click.option("--debug/--no-debug", default=False, help="Show extra debug messages.")
 @click.option(
     "--output",
     type=click.Choice(["json"], case_sensitive=False),
@@ -26,10 +26,12 @@ from gretel_client_v2._cli.artifacts import artifacts
 )
 @click.pass_context
 def cli(ctx: click.Context, debug: bool, output: str):
+    """The Gretel CLI.
+    """
     ctx.obj = SessionContext(ctx, output_fmt=output, debug=debug)
 
 
-@cli.command()
+@cli.command(help="Configures the Gretel CLI.")
 @click.option(
     "--endpoint",
     prompt="Endpoint",

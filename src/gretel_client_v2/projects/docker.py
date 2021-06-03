@@ -2,15 +2,18 @@
 Classes for running a Gretel Job as a local container
 """
 import atexit
+import shutil
 import signal
 import tempfile
 from pathlib import Path
 from time import sleep
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
+from urllib.parse import urlparse
 
 import docker
 import smart_open
 from docker.models.containers import Container
+from docker.types.containers import DeviceRequest
 
 from gretel_client_v2.config import get_session_config
 from gretel_client_v2.rest.api.opt_api import OptApi
@@ -23,6 +26,46 @@ else:
 
 class ContainerRunError(Exception):
     ...
+
+
+DEFAULT_ARTIFACT_DIR = "/workspace"
+
+
+DEFAULT_GPU_CONFIG = DeviceRequest(count=-1, capabilities=[['gpu']])
+
+
+class VolumeBuilder:
+
+    def __init__(self):
+        self.volumes = {}
+        self.input_mappings = {}
+        self.cleanup_paths = []
+        atexit.register(self.cleanup)
+
+    def add_output_volume(self, host_dir: Optional[str], container_dir: Optional[str]):
+        if host_dir:
+            host_dir_qualified = str(Path(host_dir).resolve())
+            self.volumes[host_dir_qualified] = {"bind": container_dir, "mode": "rw"}
+
+    def add_input_volume(
+        self, container_dir: str, files: List[Tuple[str, Optional[str]]] = []
+    ):
+        host_tmp_dir = tempfile.mkdtemp()
+        for file_key, host_file_path in files:
+            if not host_file_path:
+                continue
+            host_file_name = Path(urlparse(host_file_path).path).name
+            with smart_open.open(host_file_path, "rb", ignore_ext=True) as src:  # type: ignore
+                tmp_host_file = Path(host_tmp_dir) / host_file_name
+                with open(tmp_host_file, "wb") as out:
+                    out.write(src.read())  # type:ignore
+            self.input_mappings[file_key] = f"{container_dir}/{host_file_name}"
+        self.volumes[host_tmp_dir] = {"bind": container_dir, "mode": "rw"}
+        self.cleanup_paths.append(host_tmp_dir)
+
+    def cleanup(self):
+        for path in self.cleanup_paths:
+            shutil.rmtree(path, ignore_errors=True)
 
 
 class ContainerRun:
@@ -53,14 +96,16 @@ class ContainerRun:
     """Reference to a running or completed container run."""
 
     def __init__(
-        self, model: Model, output_dir: str = None, disable_uploads: bool = False
+        self,
+        model: Model,
     ):
         self._docker_client = docker.from_env()
         self.image = f"gretelai/{model.model_type}:dev"  # todo(dn): consolidate image logic onto api.
         self.model = model
-        self.output_dir = Path(output_dir).resolve() if output_dir else None
-        self.temp_data_source = None
-        self.disable_uploads = disable_uploads
+        self.volumes = VolumeBuilder()
+        self.device_requests = []
+        self.run_params = ["--disable-cloud-upload"]
+        self.configure_worker_token(self.model._worker_key)
         self._launched_from_docker = _is_inside_container()
 
     def start(self, _debug: bool = False):
@@ -77,6 +122,45 @@ class ContainerRun:
         """
         self._run(remove=not _debug)
 
+    def configure_worker_token(self, worker_token: str):
+        self.run_params.extend(["--worker-token", worker_token])
+
+    def configure_output_dir(
+        self, host_dir: str, container_dir: str = DEFAULT_ARTIFACT_DIR
+    ):
+        self.volumes.add_output_volume(host_dir, container_dir)
+        self.run_params.extend(["--artifact-dir", container_dir])
+
+    def configure_input_data(self, input_data: str):
+        if not isinstance(input_data, str):
+            input_data = str(input_data)
+        self.volumes.add_input_volume("/in", [("in_data", input_data)])
+        in_data_path = self.volumes.input_mappings["in_data"]
+        self.run_params.extend(["--data-source", in_data_path])
+
+    def enable_cloud_uploads(self):
+        self.run_params.remove("--disable-cloud-upload")
+
+    def configure_gpu(self):
+        try:
+            self._check_gpu()
+        except Exception as ex:
+            raise ContainerRunError("GPU could not be configured") from ex
+        self.device_requests.append(DEFAULT_GPU_CONFIG)
+
+    def _check_gpu(self):
+        if "synthetics" not in self.image:
+            raise ContainerRunError("This image does not require a GPU")
+        image = self._pull()
+        self._docker_client.containers.run(
+            image,
+            entrypoint="bash",
+            command=["-c", "nvidia-smi"],
+            detach=False,
+            remove=True,
+            device_requests=[DEFAULT_GPU_CONFIG]
+        )
+
     def stop(self, force: bool = False):
         """If there is a running container this command will stop that
         container.
@@ -91,32 +175,6 @@ class ContainerRun:
         except Exception:
             pass
 
-    def _setup_volumes(self) -> dict:
-        """Configures volumes to mount into the container.
-
-        Note: If the CLI is being run from inside a container this command
-        will return an empty volume configuration. Mounting volumes from
-        inside an already runningcontainer is problematic.
-        """
-        if self._launched_from_docker:
-            return {}
-        volumes = {}
-        if self.output_dir:
-            volumes[str(self.output_dir)] = {
-                "bind": self.container_artifact_dir,
-                "mode": "rw",
-            }
-        if self.model.external_data_source:
-            self.temp_data_source = tempfile.NamedTemporaryFile()
-            with smart_open.open(self.model.data_source, "rb") as src:
-                self.temp_data_source.write(src.read())
-            volumes[self.temp_data_source.name] = {
-                "bind": self.temp_data_source.name,
-                "mode": "rw",
-            }
-
-        return volumes
-
     def _pull(self):
         auth, reg = _get_container_auth()
         img = f"{reg}/{self.image}"
@@ -128,23 +186,13 @@ class ContainerRun:
 
     def _run(self, remove: bool = True):
         image = self._pull()
-        volumes = self._setup_volumes()
-        args = [
-            "--worker-token",
-            self.model._worker_key,
-            "--artifact-dir",
-            self.container_artifact_dir,
-        ]
-        if self.temp_data_source:
-            args.extend(["--data-source", self.temp_data_source.name])
-        if self.disable_uploads:
-            args.append("--disable-cloud-upload")
         self._container = self._docker_client.containers.run(
             image,
-            args,
+            self.run_params,
             detach=True,
             remove=remove,
-            volumes=volumes,
+            volumes=self.volumes.volumes,
+            device_requests=self.device_requests,
         )
         # ensure that the detached container stops when the process is closed
         atexit.register(self._cleanup)

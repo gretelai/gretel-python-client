@@ -10,7 +10,7 @@ from gretel_client_v2.rest.exceptions import NotFoundException, UnauthorizedExce
 from gretel_client_v2.config import GretelClientConfigurationError, write_config
 
 
-@click.group()
+@click.group(help="Commands for working with Gretel projects.")
 def projects():
     ...
 

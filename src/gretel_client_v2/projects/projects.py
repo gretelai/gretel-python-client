@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from urllib.parse import urlparse
 
 import requests
+import smart_open
 
 from gretel_client_v2.config import get_session_config
 from gretel_client_v2.projects.models import Model
@@ -130,7 +131,7 @@ class Project:
             validate_data_source(artifact_path)
         if isinstance(artifact_path, Path):
             artifact_path = str(artifact_path)
-        with open(artifact_path, "rb") as src:  # type:ignore
+        with smart_open.open(artifact_path, "rb", ignore_ext=True) as src:  # type:ignore
             src_data = src.read()
             file_name = Path(urlparse(artifact_path).path).name
             art_resp = self.projects_api.create_artifact(

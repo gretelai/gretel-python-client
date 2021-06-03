@@ -5,7 +5,7 @@ from typing import Dict, Union
 
 import click
 
-from gretel_client_v2.config import get_session_config
+from gretel_client_v2.config import RunnerMode, get_session_config
 from gretel_client_v2.projects import get_project
 
 
@@ -32,6 +32,10 @@ class Logger:
         """
         click.echo(click.style("INFO: ", fg="green") + msg, err=True)
 
+    def warn(self, msg):
+        """Print warn log messages"""
+        click.echo(click.style("WARN: ", fg="yellow") + msg, err=True)
+
     def error(self, msg: str = None, ex: Exception = None, include_tb: bool = True):
         """Logs an error to the terminal.
 
@@ -57,7 +61,7 @@ class Logger:
             msg: The message to print.
         """
         if self.debug_mode:
-            click.echo(click.style("DEBUG: ", fg="yellow") + msg, err=True)
+            click.echo(click.style("DEBUG: ", fg="blue") + msg, err=True)
 
 
 class SessionContext(object):
@@ -94,6 +98,15 @@ class SessionContext(object):
                 f'The specified project "{project_name}" is not valid'
             ) from ex
 
+    def set_model(self, model_id: str):
+        if not self.project:
+            raise click.BadArgumentUsage("Cannot set model. No project is set.")
+        try:
+            self.model = self.project.get_model(model_id)
+        except Exception as ex:
+            self.log.debug(f"Could not set model {model_id} {ex}")  # todo(dn): better traceback log
+            raise click.BadParameter("Invalid model.")
+
     def ensure_project(self):
         if not self.project:
             raise click.UsageError(
@@ -112,12 +125,36 @@ def project_option(fn):
         gc.ensure_project()
         return value
 
-    return click.option(
+    return click.option(  # type:ignore
         "--project",
         allow_from_autoenv=True,
         help="Gretel project to execute command from",
         metavar="NAME",
         callback=callback,
+    )(fn)
+
+
+def runner_option(fn):
+    return click.option(
+        "--runner",
+        metavar="TYPE",
+        type=click.Choice([m.value for m in RunnerMode], case_sensitive=False),
+        default=lambda: get_session_config().default_runner,
+        show_default="from ~/.gretel/config.json",
+        help="Determines where to schedule the model run.",
+    )(fn)
+
+
+def model_option(fn):
+    def callback(ctx, param: click.Option, value: str):
+        gc: SessionContext = ctx.ensure_object(SessionContext)
+        gc.set_model(value)
+
+    return click.option(  # type:ignore
+        "--model-id",
+        metavar="UID",
+        help="Specify the model.",
+        callback=callback
     )(fn)
 
 

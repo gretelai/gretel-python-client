@@ -1,7 +1,11 @@
 import json
-from typing import Any, Iterator
+from pathlib import Path
+from typing import Any, Iterator, Union
 
 from gretel_client_v2.readers import CsvReader, JsonReader
+
+
+Pathlike = Union[str, Path]
 
 
 class DataSourceError(Exception):

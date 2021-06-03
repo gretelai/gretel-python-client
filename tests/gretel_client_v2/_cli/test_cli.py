@@ -199,13 +199,13 @@ def test_model_crud_from_cli_local_inputs(
             "--project",
             project.project_id,
             "--runner",
-            "cloud",
+            "local",
         ],
     )
     print(cmd.output)
     assert cmd.exit_code == 0
     assert (tmpdir / "model.tar.gz").exists()
-    assert (tmpdir / "logs.json.gz").exists()
+    assert (tmpdir / "model_logs.json.gz").exists()
     # 2. check that the model can be found via a search
     model = project.search_models()[0]
     model_id = model["uid"]
@@ -241,7 +241,7 @@ def test_model_crud_from_cli_local_inputs(
         ],
     )
     print(cmd.output)
-    assert (output_dir / "model.tar.gz").exists()
+    assert (output_dir / "model_logs.json.gz").exists()
     assert cmd.exit_code == 0
     # 4. check that the model can be deleted
     cmd = runner.invoke(
@@ -313,7 +313,7 @@ def test_local_model_upload_flag(
             "mocked",
         ],
     )
-    assert not container_run.call_args_list[0][1]["disable_uploads"]
+    assert container_run.return_value.enable_cloud_uploads.call_count == 1
 
 
 @patch("gretel_client_v2._cli.common.get_project")
@@ -340,7 +340,7 @@ def test_local_model_upload_disabled_by_default(
             "mocked",
         ],
     )
-    assert container_run.call_args_list[0][1]["disable_uploads"]
+    assert container_run.return_value.enable_cloud_uploads.call_count == 0
 
 
 def test_artifacts_crud(runner: CliRunner, project: Project, get_fixture: Callable):

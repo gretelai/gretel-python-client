@@ -13,7 +13,7 @@ import yaml
 from smart_open import open
 
 from gretel_client_v2.config import DEFAULT_RUNNER, RunnerMode
-from gretel_client_v2.projects.helpers import validate_data_source
+from gretel_client_v2.projects.helpers import Pathlike, validate_data_source
 from gretel_client_v2.rest.api.projects_api import ProjectsApi
 
 if TYPE_CHECKING:
@@ -351,3 +351,14 @@ class Model:
             yield Status(status=self.status, error=self.errors)
         else:
             yield Status(status=self.status)
+
+    def generate(self, input_data: Pathlike):
+        if self.model_type != "synthetics":
+            raise ModelError(f"Can generate records using model type: {self.model_type}")
+
+    def transform(self, input_data: Pathlike):
+        if self.model_type != "transform":
+            raise ModelError(f"Can transforms records using model type: {self.model_type}")
+
+    def classify(self, input_data: Pathlike):
+        ...
