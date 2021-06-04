@@ -69,7 +69,7 @@ def create_and_run_record_handler(
         sc.log.info(f"Record handler created {record_handler.record_id}")
         sc.print(data=data.get("data").get("handler"))
     except Exception as ex:
-        sc.log.error("Could not create model", ex=ex)
+        sc.log.error("Could not create record handler", ex=ex)
         sc.exit(1)
 
     if runner == RunnerMode.LOCAL.value:
@@ -101,9 +101,9 @@ def create_and_run_record_handler(
             sc.log.error(f"\t{update.error}")
 
     if record_handler.status == "completed":
-        sc.log.info("Done. Model created!")
+        sc.log.info(f"Done. Record {action} command done!")
     else:
-        sc.log.error("The model failed with the following error")
+        sc.log.error("The record command failed with the following error")
         sc.log.error(record_handler.errors)
         sc.log.error(
             f"Status is {record_handler.status}. Please scroll back through the logs for more details."

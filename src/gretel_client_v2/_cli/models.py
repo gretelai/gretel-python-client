@@ -13,10 +13,7 @@ from gretel_client_v2._cli.common import (
     project_option,
     runner_option,
 )
-from gretel_client_v2.projects.docker import (
-    ContainerRun,
-    ContainerRunError
-)
+from gretel_client_v2.projects.docker import ContainerRun, ContainerRunError
 from gretel_client_v2.projects.models import (
     Model,
     ModelArtifactError,
@@ -211,7 +208,13 @@ def create(
     sc.log.info("Note: no charges will be incurred during the beta period")
 
     if model.status == "completed":
-        sc.log.info("Done. Model created!")
+        sc.log.info(
+            (
+                f"Model done training. The model id is\n\n\t{model.model_id}\n\n"
+                f"You can re-use this key for any gretel records [...] commands in the project {sc.project.name}"
+            )
+        )
+        sc.log.info("Done")
     else:
         sc.log.error("The model failed with the following error")
         sc.log.error(model.errors, ex=model.traceback)
