@@ -54,6 +54,7 @@ def create_and_run_record_handler(
     runner: str,
     output: str,
     in_data: str,
+    model_path: Optional[str],
     data_source: Optional[str],
     status_strings: StatusDescriptions
 ):
@@ -77,6 +78,8 @@ def create_and_run_record_handler(
             run.configure_output_dir(output)
         if in_data:
             run.configure_input_data(in_data)
+        if model_path:
+            run.configure_model(model_path)
         run.start()
         sc.register_cleanup(lambda: run.graceful_shutdown())
 
@@ -101,7 +104,7 @@ def create_and_run_record_handler(
         sc.log.info("Done. Model created!")
     else:
         sc.log.error("The model failed with the following error")
-        sc.log.error(record_handler.errors, ex=record_handler.traceback)
+        sc.log.error(record_handler.errors)
         sc.log.error(
             f"Status is {record_handler.status}. Please scroll back through the logs for more details."
         )
@@ -165,7 +168,8 @@ def generate(
         runner=runner,
         output=output,
         in_data=in_data,
-        status_strings=record_generation_status_descriptions
+        status_strings=record_generation_status_descriptions,
+        model_path=model_path
     )
 
 
@@ -214,5 +218,6 @@ def transform(
         runner=runner,
         output=output,
         in_data=in_data,
-        status_strings=record_transform_status_descriptions
+        status_strings=record_transform_status_descriptions,
+        model_path=model_path
     )

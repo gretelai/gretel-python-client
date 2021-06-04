@@ -33,7 +33,9 @@ class RecordHandler:
         self._projects_api = self.model._projects_api
         self.record_id = record_id
 
-    def create(self, params: Optional[dict], action: str, runner: str, data_source: Optional[str]):
+    def create(
+        self, params: Optional[dict], action: str, runner: str, data_source: Optional[str]
+    ):
         handler = self.model._projects_api.create_record_handler(
             project_id=self.model.project.project_id,
             model_id=self.model.model_id,
@@ -146,3 +148,10 @@ class RecordHandler:
                 model_id=self.model.model_id,
                 body={RestFields.STATUS.value: Status.CANCELLED.value},
             )
+
+    def delete(self):
+        self._projects_api.delete_record_handler(
+            project_id=self.project.project_id,
+            model_id=self.model.model_id,
+            record_handler_id=self.record_id,
+        )

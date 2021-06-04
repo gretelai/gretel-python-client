@@ -9,10 +9,10 @@ from gretel_client_v2.projects.projects import GretelProjectError
 
 
 @pytest.fixture
-def project():
+def project(request):
     p = get_project(create=True)
-    yield p
-    p.delete()
+    request.addfinalizer(p.delete)
+    return p
 
 
 @pytest.fixture

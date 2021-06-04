@@ -30,13 +30,13 @@ def runner() -> CliRunner:
 
 
 @pytest.fixture
-def project() -> Project:
+def project(request) -> Project:
     """Returns a new project. This project will be cleaned up after
     the test runs.
     """
     p = get_project(create=True)
-    yield p
-    p.delete()
+    request.addfinalizer(p.delete)
+    return p
 
 
 @pytest.fixture
@@ -241,6 +241,31 @@ def test_model_crud_from_cli_local_inputs(
     print(cmd.output)
     assert model_id in cmd.output
     assert cmd.exit_code == 0
+
+    # 4. get records
+    cmd = runner.invoke(
+        cli_entrypoint,
+        [
+            "records",
+            "transform",
+            "--project",
+            project.project_id,
+            "--model-id",
+            model_id,
+            "--in-data",
+            str(get_fixture("account-balances.csv")),
+            "--output",
+            str(tmpdir / "record_handler"),
+            "--model-path",
+            str(tmpdir / "model.tar.gz"),
+            "--runner",
+            "local"
+        ],
+    )
+    print(cmd.output)
+    assert cmd.exit_code == 0
+    assert (tmpdir / "record_handler/data.gz").exists()
+
     # 3. check that an existing model can be downloaded back to disk
     output_dir = tmpdir / "from_existing"
     cmd = runner.invoke(
@@ -259,6 +284,7 @@ def test_model_crud_from_cli_local_inputs(
     print(cmd.output)
     assert (output_dir / "logs.json.gz").exists()
     assert cmd.exit_code == 0
+
     # 4. check that the model can be deleted
     cmd = runner.invoke(
         cli_entrypoint,

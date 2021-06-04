@@ -14,13 +14,12 @@ from gretel_client_v2.projects.projects import get_project
 
 
 @pytest.fixture
-def model(get_fixture: Callable):
+def model(get_fixture: Callable, request):
     project = get_project(create=True)
+    request.addfinalizer(project.delete)
     model = Model(project=project, model_config=get_fixture("transforms_config.yml"))
     model.submit()
-    yield model
-    model.delete()
-    project.delete()
+    return model
 
 
 # mark: integration
@@ -47,7 +46,7 @@ def test_does_cleanup(model: Model, get_fixture: Callable):
     assert run.container_status in {"created", "running", "completed"}
     sleep(3)
     run._cleanup()
-    assert run.container_status in {"removing", "unknown"}
+    assert run.container_status in {"removing", "unknown", "exited"}
 
 
 # mark: integration

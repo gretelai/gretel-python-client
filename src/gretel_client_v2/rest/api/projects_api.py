@@ -1996,7 +1996,8 @@ class ProjectsApi(object):
                         "PENDING": "pending",
                         "ACTIVE": "active",
                         "LOST": "lost",
-                        "CREATED": "created"
+                        "CREATED": "created",
+                        "CANCELLED": "cancelled"
                     },
                 },
                 'openapi_types': {

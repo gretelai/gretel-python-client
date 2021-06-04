@@ -14,7 +14,6 @@ from smart_open import open
 from gretel_client_v2.config import DEFAULT_RUNNER, RunnerMode
 from gretel_client_v2.projects.common import (
     ACTIVE_STATES,
-    END_STATES,
     MANUAL,
     validate_data_source,
     Status,
@@ -183,9 +182,7 @@ class Model:
             project_id=self.project.name,
             body=self.model_config,
             dry_run="yes" if dry_run else "no",
-            runner_mode=runner_mode.value
-            if runner_mode == RunnerMode.CLOUD
-            else MANUAL,
+            runner_mode=runner_mode.value if runner_mode == RunnerMode.CLOUD else MANUAL,
         )
 
         self._data = resp.get("data").get("model")
@@ -270,6 +267,8 @@ class Model:
     def delete(self) -> Optional[dict]:
         """Deletes the remote model."""
         if self.model_id:
+            for handler in self.get_record_handlers():
+                handler.delete()
             return self._projects_api.delete_model(
                 project_id=self.project.name, model_id=self.model_id
             )
@@ -364,3 +363,16 @@ class Model:
                 model_id=self.model_id,
                 body={RestFields.STATUS.value: Status.CANCELLED.value},
             )
+
+    def get_record_handlers(self) -> Iterator[RecordHandler]:
+        for status in Status:
+            for handler in (
+                self._projects_api.query_record_handlers(
+                    project_id=self.project.project_id,
+                    model_id=self.model_id,
+                    status=status.value,
+                )
+                .get("data")
+                .get("handlers")
+            ):
+                yield RecordHandler(self, record_id=handler["uid"])

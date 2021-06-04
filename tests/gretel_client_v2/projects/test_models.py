@@ -135,10 +135,10 @@ def m(create_model_resp: dict, transform_model_path: Path) -> Model:
 
 
 @pytest.fixture
-def project():
+def project(request):
     p = get_project(create=True)
-    yield p
-    p.delete()
+    request.addfinalizer(p.delete)
+    return p
 
 
 def test_does_read_remote_model():
