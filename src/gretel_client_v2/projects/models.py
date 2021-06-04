@@ -311,7 +311,7 @@ class Model:
 
     def _new_model_logs(self) -> List[dict]:
         if self.logs and len(self.logs) > self._logs_iter_index:
-            next_logs = self.logs[self._logs_iter_index :]
+            next_logs = self.logs[self._logs_iter_index:]
             self._logs_iter_index += len(next_logs)
             return next_logs
         return []
