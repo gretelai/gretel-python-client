@@ -1,21 +1,25 @@
 """
 Classes for running a Gretel Job as a local container
 """
+from __future__ import annotations
+
 import atexit
 import shutil
 import signal
 import tempfile
 from pathlib import Path
 from time import sleep
-from typing import TYPE_CHECKING, List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple, Union
 from urllib.parse import urlparse
 
 import docker
+import docker.errors
 import smart_open
 from docker.models.containers import Container
 from docker.types.containers import DeviceRequest
 
 from gretel_client_v2.config import get_session_config
+from gretel_client_v2.projects.records import RecordHandler
 from gretel_client_v2.rest.api.opt_api import OptApi
 
 if TYPE_CHECKING:
@@ -97,16 +101,30 @@ class ContainerRun:
 
     def __init__(
         self,
-        model: Model,
+        image: str,
+        job: Union[Model, RecordHandler]  # todo(dn): consolidate into a single parent class
     ):
         self._docker_client = docker.from_env()
-        self.image = f"gretelai/{model.model_type}:dev"  # todo(dn): consolidate image logic onto api.
-        self.model = model
+        self.image = image
         self.volumes = VolumeBuilder()
         self.device_requests = []
         self.run_params = ["--disable-cloud-upload"]
-        self.configure_worker_token(self.model._worker_key)
+        self.job = job
         self._launched_from_docker = _is_inside_container()
+
+    @classmethod
+    def from_record_handler(cls, record_handler: RecordHandler) -> ContainerRun:
+        cr = cls(f"gretelai/{record_handler.type}:dev", record_handler)
+        if record_handler.worker_key:
+            cr.configure_worker_token(record_handler.worker_key)
+        return cr
+
+    @classmethod
+    def from_model(cls, model: Model) -> ContainerRun:
+        cr = cls(f"gretelai/{model.model_type}:dev", model)
+        if model._worker_key:
+            cr.configure_worker_token((model._worker_key))
+        return cr
 
     def start(self, _debug: bool = False):
         """Run job via a local container. This method
@@ -130,6 +148,13 @@ class ContainerRun:
     ):
         self.volumes.add_output_volume(host_dir, container_dir)
         self.run_params.extend(["--artifact-dir", container_dir])
+
+    def configure_model(self, model_path: str):
+        if not isinstance(model_path, str):
+            model_path = str(model_path)
+        self.volumes.add_input_volume("/model", [("model", model_path)])
+        in_model_path = self.volumes.input_mappings["model"]
+        self.run_params.extend(["--model-path", in_model_path])
 
     def configure_input_data(self, input_data: str):
         if not isinstance(input_data, str):
@@ -167,9 +192,9 @@ class ContainerRun:
 
         Args:
             force: If force is ``True``, ``SIGKILL`` will be sent to the
-                container, otherwise ``SIGINT``.
+                container, otherwise ``SIGTERM``.
         """
-        sig = signal.SIGKILL if force else signal.SIGINT
+        sig = signal.SIGKILL if force else signal.SIGTERM
         try:
             self._container.kill(int(sig))
         except Exception:
@@ -186,7 +211,7 @@ class ContainerRun:
 
     def _run(self, remove: bool = True):
         image = self._pull()
-        self._container = self._docker_client.containers.run(
+        self._container = self._docker_client.containers.run(  # type:ignore
             image,
             self.run_params,
             detach=True,
@@ -237,6 +262,13 @@ class ContainerRun:
 
     def _cleanup(self):
         self.stop(force=True)
+
+    def graceful_shutdown(self):
+        try:
+            self.job.cancel()
+        except Exception:
+            pass
+        self.wait(15)
 
 
 def _is_inside_container() -> bool:

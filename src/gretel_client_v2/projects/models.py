@@ -4,7 +4,6 @@ Classes and methods for working with Gretel Models
 import base64
 import json
 import time
-from dataclasses import dataclass, field
 from functools import wraps
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator, List, Optional, Tuple, Union
@@ -13,7 +12,16 @@ import yaml
 from smart_open import open
 
 from gretel_client_v2.config import DEFAULT_RUNNER, RunnerMode
-from gretel_client_v2.projects.helpers import Pathlike, validate_data_source
+from gretel_client_v2.projects.common import (
+    ACTIVE_STATES,
+    END_STATES,
+    MANUAL,
+    validate_data_source,
+    Status,
+    LogStatus,
+    RestFields,
+)
+from gretel_client_v2.projects.records import RecordHandler
 from gretel_client_v2.rest.api.projects_api import ProjectsApi
 
 if TYPE_CHECKING:
@@ -61,14 +69,6 @@ def _needs_remote_model(func):
         return func(self, *args, **kwargs)
 
     return wrap
-
-
-@dataclass
-class Status:
-    status: str
-    transitioned: bool = False
-    logs: List[dict] = field(default_factory=list)
-    error: Optional[str] = None
 
 
 def read_model_config(model_config: _ModelConfigPathT) -> dict:
@@ -151,7 +151,7 @@ class Model:
         runner_mode: RunnerMode = DEFAULT_RUNNER,
         dry_run: bool = False,
         upload_data_source: bool = False,
-        _validate_data_source: bool = True
+        _validate_data_source: bool = True,
     ) -> dict:
         """Submit a model to be run.
 
@@ -185,7 +185,7 @@ class Model:
             dry_run="yes" if dry_run else "no",
             runner_mode=runner_mode.value
             if runner_mode == RunnerMode.CLOUD
-            else "manual",
+            else MANUAL,
         )
 
         self._data = resp.get("data").get("model")
@@ -223,6 +223,11 @@ class Model:
 
     @property
     @_needs_remote_model
+    def is_cloud_model(self):
+        return self._data["model"]["runner_mode"] == "cloud"
+
+    @property
+    @_needs_remote_model
     def logs(self):
         return self._data.get("logs")
 
@@ -234,9 +239,7 @@ class Model:
     @property
     @_needs_remote_model
     def traceback(self) -> str:
-        return base64.b64decode(self._data.get("model").get("traceback")).decode(
-            "utf-8"
-        )
+        return base64.b64decode(self._data.get("model").get("traceback")).decode("utf-8")
 
     @property
     def model_type(self) -> str:
@@ -258,9 +261,7 @@ class Model:
         try:
             return self.model_config["models"][0][self.model_type]["data_source"]
         except (IndexError, KeyError) as ex:
-            raise ModelConfigError(
-                "Could not get data source from model config"
-            ) from ex
+            raise ModelConfigError("Could not get data source from model config") from ex
 
     @data_source.setter
     def data_source(self, data_source: str):
@@ -324,7 +325,7 @@ class Model:
             return False
         return True
 
-    def poll_logs_status(self, wait: int = 0) -> Iterator[Status]:
+    def poll_logs_status(self, wait: int = 0) -> Iterator[LogStatus]:
         """Returns an iterator that can be used to tail the logs
         of a running Model
 
@@ -340,25 +341,26 @@ class Model:
             if self.status != current_status or len(logs) > 0:
                 transitioned = self.status != current_status
                 current_status = self.status
-                yield Status(status=self.status, logs=logs, transitioned=transitioned)
+                yield LogStatus(status=self.status, logs=logs, transitioned=transitioned)
             time.sleep(1)
 
         flushed_logs = self._new_model_logs()
         if len(flushed_logs) > 0 and current_status:
-            yield Status(status=current_status, logs=flushed_logs, transitioned=False)
+            yield LogStatus(status=current_status, logs=flushed_logs, transitioned=False)
 
-        if self.status == "error":
-            yield Status(status=self.status, error=self.errors)
+        if self.status == Status.ERROR.value:
+            yield LogStatus(status=self.status, error=self.errors)
         else:
-            yield Status(status=self.status)
+            yield LogStatus(status=self.status)
 
-    def generate(self, input_data: Pathlike):
-        if self.model_type != "synthetics":
-            raise ModelError(f"Can generate records using model type: {self.model_type}")
+    def create_record_handler(self) -> RecordHandler:
+        return RecordHandler(self)
 
-    def transform(self, input_data: Pathlike):
-        if self.model_type != "transform":
-            raise ModelError(f"Can transforms records using model type: {self.model_type}")
-
-    def classify(self, input_data: Pathlike):
-        ...
+    def cancel(self):
+        self._poll_model()
+        if self.status in ACTIVE_STATES:
+            self._projects_api.update_model(
+                project_id=self.project.project_id,
+                model_id=self.model_id,
+                body={RestFields.STATUS.value: Status.CANCELLED.value},
+            )

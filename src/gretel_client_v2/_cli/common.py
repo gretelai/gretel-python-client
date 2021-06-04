@@ -1,12 +1,14 @@
-import sys
 import json
+import signal
+import sys
 import traceback
-from typing import Dict, Union
+from typing import Callable, Dict, Optional, Union
 
 import click
 
 from gretel_client_v2.config import RunnerMode, get_session_config
 from gretel_client_v2.projects import get_project
+from gretel_client_v2.projects.models import Model
 
 
 class Logger:
@@ -65,6 +67,9 @@ class Logger:
 
 
 class SessionContext(object):
+
+    model: Optional[Model]
+
     def __init__(self, ctx: click.Context, output_fmt: str, debug: bool = False):
         self.debug = debug
         self.verbosity = 0
@@ -77,6 +82,10 @@ class SessionContext(object):
             self.set_project(self.config.default_project_name)
         else:
             self.project = None
+
+        self.cleanup_methods = []
+        self._shutting_down = False
+        signal.signal(signal.SIGINT, self._cleanup)
 
     def exit(self, exit_code: int = 0):
         self.ctx.exit(exit_code)
@@ -112,6 +121,27 @@ class SessionContext(object):
             raise click.UsageError(
                 "A project must be specified since no default was found.", ctx=self.ctx
             )
+
+    def _cleanup(self, sig, frame):
+        if self._shutting_down:
+            self.log.warn("Got a second interrupt. Shutting down")
+            self.exit(1)
+        else:
+            self._shutting_down = True
+        self.log.warn("Got interupt signal.")
+
+        if self.cleanup_methods:
+            self.log.warn("Attemping Graceful shutdown")
+            for method in self.cleanup_methods:
+                try:
+                    method()
+                except Exception as ex:
+                    self.log.error("Cleanup hook failed to run", ex=ex)
+        self.log.info("Quitting")
+        self.exit(0)
+
+    def register_cleanup(self, method: Callable):
+        self.cleanup_methods.append(method)
 
 
 pass_session = click.make_pass_decorator(SessionContext, ensure=True)
@@ -171,6 +201,34 @@ model_create_status_descriptions: StatusDescriptions = {
     },
     "active": {
         "default": "A worker has started creating your model!",
+    },
+}
+
+record_generation_status_descriptions: StatusDescriptions = {
+    "created": {
+        "default": "A Record generation job has been queued.",
+    },
+    "pending": {
+        "default": "A worker is being allocated to begin generating synthetic records.",
+        "cloud": "A Gretel Cloud worker is being allocated to begin generating synthetic records.",
+        "local": "A local container is being started to begin record generation.",
+    },
+    "active": {
+        "default": "A worker has started!",
+    },
+}
+
+record_transform_status_descriptions: StatusDescriptions = {
+    "created": {
+        "default": "A Record transform job has been queued.",
+    },
+    "pending": {
+        "default": "A worker is being allocated to begin running a transform pipeline.",
+        "cloud": "A Gretel Cloud worker is being allocated to begin transforming records.",
+        "local": "A local container is being started to and will begin transforming records.",
+    },
+    "active": {
+        "default": "A worker has started!",
     },
 }
 

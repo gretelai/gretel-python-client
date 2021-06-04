@@ -43,7 +43,7 @@ def cli(ctx: click.Context, debug: bool, output: str):
     "--default-runner",
     prompt="Default Runner",
     default=DEFAULT_RUNNER.value,
-    type=click.Choice([m.value for m in RunnerMode], case_sensitive=False),
+    type=click.Choice(["local"], case_sensitive=False),
     metavar="RUNNER",
     help="Specify the default runner.",
 )

@@ -1,8 +1,8 @@
 import os
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable
 from unittest.mock import MagicMock, patch
-from contextlib import contextmanager
 
 import pytest
 from click.testing import CliRunner
@@ -11,13 +11,14 @@ from gretel_client_v2._cli.cli import cli as cli_entrypoint
 from gretel_client_v2.config import (
     DEFAULT_GRETEL_ENDPOINT,
     DEFAULT_RUNNER,
+    GRETEL_API_KEY,
     _ClientConfig,
     _load_config,
     configure_session,
-    GRETEL_API_KEY,
 )
-from gretel_client_v2.projects.projects import Project, get_project
 from gretel_client_v2.projects.docker import _is_inside_container
+from gretel_client_v2.projects.models import Model
+from gretel_client_v2.projects.projects import Project, get_project
 
 
 @pytest.fixture
@@ -36,6 +37,21 @@ def project() -> Project:
     p = get_project(create=True)
     yield p
     p.delete()
+
+
+@pytest.fixture
+def pre_trained_project() -> Project:
+    yield get_project(name="gretel-client-project-pretrained")
+
+
+@pytest.fixture
+def trained_synth_model(pre_trained_project: Project) -> Model:
+    return pre_trained_project.get_model(model_id="60b8f345e00f682f45819019")
+
+
+@pytest.fixture
+def trained_xf_model(pre_trained_project: Project) -> Model:
+    return pre_trained_project.get_model(model_id="60b8f50ae00f682f4581901d")
 
 
 @contextmanager
@@ -61,7 +77,7 @@ def test_cli_does_configure(write_config: MagicMock, runner: CliRunner):
     assert not cmd.exception
     write_config.assert_called_once_with(
         _ClientConfig(
-            endpoint="https://api-dev.gretel.cloud",
+            endpoint="https://api.gretel.cloud",
             api_key="grtu...",
             default_project_name=None,
             default_runner=DEFAULT_RUNNER.value,
@@ -77,14 +93,14 @@ def test_cli_does_configure_with_project(
         cmd = runner.invoke(
             cli_entrypoint,
             ["configure"],
-            input=f"{DEFAULT_GRETEL_ENDPOINT}\n\n{os.getenv(GRETEL_API_KEY)}\n{project.name}\n",
+            input=f"https://api-dev.gretel.cloud\n\n{os.getenv(GRETEL_API_KEY)}\n{project.name}\n",
             catch_exceptions=True,
         )
     assert not cmd.exception
     assert cmd.exit_code == 0
     write_config.assert_called_once_with(
         _ClientConfig(
-            endpoint=DEFAULT_GRETEL_ENDPOINT,
+            endpoint="https://api-dev.gretel.cloud",
             api_key=os.getenv(GRETEL_API_KEY),
             default_project_name=project.name,
         )
@@ -174,6 +190,7 @@ def test_model_crud_from_cli(
     assert cmd.exit_code == 0
 
 
+@pytest.mark.skipif(_is_inside_container(), reason="running test from docker")
 def test_model_crud_from_cli_local_inputs(
     runner: CliRunner, project: Project, get_fixture: Callable, tmpdir: Path
 ):
@@ -182,8 +199,7 @@ def test_model_crud_from_cli_local_inputs(
     # support mounting volumes when the cli is running inside a docker
     # container. the following check ensures that this test is only run
     # when the test harness is running on a non-docker host.
-    if _is_inside_container():
-        pytest.skip("Test cannot be run from inside a container")
+
     # 1. create a new model and run it locally.
     cmd = runner.invoke(
         cli_entrypoint,
@@ -241,7 +257,7 @@ def test_model_crud_from_cli_local_inputs(
         ],
     )
     print(cmd.output)
-    assert (output_dir / "model_logs.json.gz").exists()
+    assert (output_dir / "logs.json.gz").exists()
     assert cmd.exit_code == 0
     # 4. check that the model can be deleted
     cmd = runner.invoke(
@@ -293,11 +309,12 @@ def test_local_model_params(runner: CliRunner, project: Project, get_fixture: Ca
 def test_local_model_upload_flag(
     container_run: MagicMock, get_project: MagicMock, runner: CliRunner
 ):
+    """Checks to see artifacts are uploaded when --upload model is passed."""
     get_project.return_value.create_model.return_value.submit.return_value = {
         "model_key": ""
     }
     get_project.return_value.create_model.return_value._data = {}
-    runner.invoke(
+    cmd = runner.invoke(
         cli_entrypoint,
         [
             "models",
@@ -313,7 +330,7 @@ def test_local_model_upload_flag(
             "mocked",
         ],
     )
-    assert container_run.return_value.enable_cloud_uploads.call_count == 1
+    assert container_run.from_model.return_value.enable_cloud_uploads.call_count == 1
 
 
 @patch("gretel_client_v2._cli.common.get_project")
@@ -397,3 +414,51 @@ def test_artifact_invalid_data(
     assert (
         cmd.exit_code == 0
     )  # todo(dn): this should fail when we get better data validation checks
+
+
+@pytest.mark.skipif(_is_inside_container(), reason="running test from docker")
+def test_records_generate(
+    runner: CliRunner, get_fixture: Callable, tmpdir: Path, trained_synth_model: Model
+):
+    cmd = runner.invoke(
+        cli_entrypoint,
+        [  # type:ignore
+            "records",
+            "generate",
+            "--project",
+            trained_synth_model.project.project_id,
+            "--model-id",
+            trained_synth_model.model_id,
+            "--output",
+            str(tmpdir),
+            "--runner",
+            "local",
+        ],
+    )
+    assert cmd.exit_code == 0
+    assert (tmpdir / "data.gz").exists()
+
+
+@pytest.mark.skipif(_is_inside_container(), reason="running test from docker")
+def test_records_transform(
+    runner: CliRunner, get_fixture: Callable, tmpdir: Path, trained_xf_model: Model
+):
+    cmd = runner.invoke(
+        cli_entrypoint,
+        [  # type:ignore
+            "records",
+            "transform",
+            "--project",
+            trained_xf_model.project.project_id,
+            "--model-id",
+            trained_xf_model.model_id,
+            "--in-data",
+            str(get_fixture("account-balances.csv")),
+            "--output",
+            str(tmpdir),
+            "--runner",
+            "local",
+        ],
+    )
+    assert cmd.exit_code == 0
+    assert (tmpdir / "data.gz").exists()

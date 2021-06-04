@@ -28,8 +28,8 @@ GRETEL_PROJECT = "GRETEL_PROJECT"
 """Env variable name to select default project"""
 
 
-DEFAULT_GRETEL_ENDPOINT = "https://api-dev.gretel.cloud"
-"""Default gretel endpoint. TODO: changeme to prod"""
+DEFAULT_GRETEL_ENDPOINT = "https://api.gretel.cloud"
+"""Default gretel endpoint"""
 
 
 class GretelClientConfigurationError(Exception):

@@ -16,7 +16,7 @@ from gretel_client_v2.rest import models
 from gretel_client_v2.rest.api.projects_api import ProjectsApi
 from gretel_client_v2.rest.exceptions import NotFoundException, UnauthorizedException
 from gretel_client_v2.rest.model.artifact import Artifact
-from gretel_client_v2.projects.helpers import validate_data_source
+from gretel_client_v2.projects.common import validate_data_source
 
 DATA = "data"
 PROJECTS = "projects"
@@ -249,7 +249,7 @@ def tmp_project():
     The project will be deleted from Gretel Cloud when the scope is exited.
 
     Example::
-        with temporary_project() as proj:
+        with tmp_project() as proj:
             model = proj.create_model()
     """
     project = get_project(create=True)

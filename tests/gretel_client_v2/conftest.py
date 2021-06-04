@@ -25,7 +25,12 @@ def get_fixture():
 def configure_session_client():
     """Ensures the the host client config is reset after each test."""
     with patch.dict(
-        os.environ, {"GRETEL_API_KEY": os.getenv("GRETEL_API_KEY")}, clear=True
+        os.environ,
+        {
+            "GRETEL_API_KEY": os.getenv("GRETEL_API_KEY"),
+            "GRETEL_ENDPOINT": "https://api-dev.gretel.cloud",
+        },
+        clear=True,
     ):
         configure_session(_ClientConfig.from_env())
     yield

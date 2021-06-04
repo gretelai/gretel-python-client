@@ -141,6 +141,7 @@ def create(
         run = model.submit(
             runner_mode=RunnerMode(runner), dry_run=dry_run, _validate_data_source=False
         )
+        sc.register_cleanup(lambda: model.cancel())
         sc.log.info("Model created")
         del run["model_key"]
         sc.print(data=run)
@@ -156,7 +157,7 @@ def create(
 
     # Start a local container when --runner is manual
     if runner == RunnerMode.LOCAL.value:
-        run = ContainerRun(model)
+        run = ContainerRun.from_model(model)
         if output:
             run.configure_output_dir(output)
         if in_data:
@@ -175,6 +176,7 @@ def create(
         )
         sc.log.info("Pulling the container and starting local model training.")
         run.start()
+        sc.register_cleanup(lambda: run.graceful_shutdown())
 
     # Poll for the latest container status
     for update in model.poll_logs_status(wait):

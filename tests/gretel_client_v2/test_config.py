@@ -17,10 +17,12 @@ from gretel_client_v2.config import (
 from gretel_client_v2.rest.api.projects_api import ProjectsApi
 from gretel_client_v2.projects import tmp_project
 
+DEV_EP = "https://api-dev.gretel.cloud"
+
 
 def test_does_read_and_write_config(tmpdir):
     config = _ClientConfig(
-        endpoint=DEFAULT_GRETEL_ENDPOINT,
+        endpoint=DEV_EP,
         api_key="grtu...",
         default_project_name=None,
     )
@@ -34,7 +36,7 @@ def test_does_read_and_write_config(tmpdir):
 def test_does_set_session_factory():
     with patch.dict(os.environ, {}, clear=True):
         config = _ClientConfig(
-            endpoint=DEFAULT_GRETEL_ENDPOINT,
+            endpoint=DEV_EP,
             api_key="grtu...",
             default_project_name=None,
         )
@@ -53,7 +55,7 @@ def test_can_get_api_bindings():
 
 def test_does_check_project():
     config = _ClientConfig(
-        endpoint=DEFAULT_GRETEL_ENDPOINT,
+        endpoint=DEV_EP,
         api_key=os.getenv(GRETEL_API_KEY),
     )
 
@@ -63,7 +65,7 @@ def test_does_check_project():
     with tmp_project() as p:
         config.update_default_project(p.project_id)
         config = _ClientConfig(
-            endpoint=DEFAULT_GRETEL_ENDPOINT,
+            endpoint=DEV_EP,
             api_key=os.getenv(GRETEL_API_KEY),
             default_project_name=p.project_id
         )

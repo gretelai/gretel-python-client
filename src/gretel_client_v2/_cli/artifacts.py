@@ -67,7 +67,7 @@ def delete(sc: SessionContext, artifact_key: str, project: str, all: bool):
     sc.log.info("Artifact deleted")
 
 
-@artifacts.command(help="Upload the artifact")
+@artifacts.command(help="Uploads a project artifact.")
 @click.option("--in-data", metavar="PATH", help="Path to the dataset to upload.")
 @project_option
 @pass_session

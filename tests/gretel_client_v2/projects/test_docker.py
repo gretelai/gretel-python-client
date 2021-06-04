@@ -25,7 +25,7 @@ def model(get_fixture: Callable):
 
 # mark: integration
 def test_does_start_local_container(model: Model, get_fixture: Callable):
-    run = ContainerRun(model)
+    run = ContainerRun.from_model(model)
     run.enable_cloud_uploads()
     run.start()
     assert run.container_status in {"created", "running"}
@@ -36,7 +36,7 @@ def test_does_start_local_container(model: Model, get_fixture: Callable):
 
 # mark: integration
 def test_does_cleanup(model: Model, get_fixture: Callable):
-    run = ContainerRun(model)
+    run = ContainerRun.from_model(model)
     run.enable_cloud_uploads()
     run.configure_input_data(get_fixture("account-balances.csv"))
     run.start()
@@ -44,7 +44,7 @@ def test_does_cleanup(model: Model, get_fixture: Callable):
     # be created or running. if we're in either one of
     # these statuses, it's a good indication things are
     # working as expected.
-    assert run.container_status in {"created", "running"}
+    assert run.container_status in {"created", "running", "completed"}
     sleep(3)
     run._cleanup()
     assert run.container_status in {"removing", "unknown"}

@@ -186,7 +186,7 @@ class ProjectsApi(object):
 
             Keyword Args:
                 dry_run (str): yes or no. [optional]
-                runner_mode (str): cloud or local. [optional]
+                runner_mode (str): cloud or manual. [optional]
                 _return_http_data_only (bool): response data without head status
                     code and headers. Default is True.
                 _preload_content (bool): if False, the urllib3.HTTPResponse object
@@ -418,6 +418,169 @@ class ProjectsApi(object):
             },
             api_client=api_client,
             callable=__create_project
+        )
+
+        def __create_record_handler(
+            self,
+            project_id,
+            model_id,
+            action,
+            **kwargs
+        ):
+            """Create a record handler for a model  # noqa: E501
+
+            This method makes a synchronous HTTP request by default. To make an
+            asynchronous HTTP request, please pass async_req=True
+
+            >>> thread = api.create_record_handler(project_id, model_id, action, async_req=True)
+            >>> result = thread.get()
+
+            Args:
+                project_id (str): Project id
+                model_id (str): Model id
+                action (str):
+
+            Keyword Args:
+                runner_mode (str): [optional]
+                body ({str: (bool, date, datetime, dict, float, int, list, str, none_type)}): [optional]
+                _return_http_data_only (bool): response data without head status
+                    code and headers. Default is True.
+                _preload_content (bool): if False, the urllib3.HTTPResponse object
+                    will be returned without reading/decoding response data.
+                    Default is True.
+                _request_timeout (float/tuple): timeout setting for this request. If one
+                    number provided, it will be total request timeout. It can also
+                    be a pair (tuple) of (connection, read) timeouts.
+                    Default is None.
+                _check_input_type (bool): specifies if type checking
+                    should be done one the data sent to the server.
+                    Default is True.
+                _check_return_type (bool): specifies if type checking
+                    should be done one the data received from the server.
+                    Default is True.
+                _host_index (int/None): specifies the index of the server
+                    that we want to use.
+                    Default is read from the configuration.
+                async_req (bool): execute request asynchronously
+
+            Returns:
+                {str: (bool, date, datetime, dict, float, int, list, str, none_type)}
+                    If the method is called asynchronously, returns the request
+                    thread.
+            """
+            kwargs['async_req'] = kwargs.get(
+                'async_req', False
+            )
+            kwargs['_return_http_data_only'] = kwargs.get(
+                '_return_http_data_only', True
+            )
+            kwargs['_preload_content'] = kwargs.get(
+                '_preload_content', True
+            )
+            kwargs['_request_timeout'] = kwargs.get(
+                '_request_timeout', None
+            )
+            kwargs['_check_input_type'] = kwargs.get(
+                '_check_input_type', True
+            )
+            kwargs['_check_return_type'] = kwargs.get(
+                '_check_return_type', True
+            )
+            kwargs['_host_index'] = kwargs.get('_host_index')
+            kwargs['project_id'] = \
+                project_id
+            kwargs['model_id'] = \
+                model_id
+            kwargs['action'] = \
+                action
+            return self.call_with_http_info(**kwargs)
+
+        self.create_record_handler = _Endpoint(
+            settings={
+                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
+                'auth': [
+                    'ApiKey'
+                ],
+                'endpoint_path': '/projects/{project_id}/models/{model_id}/record_handlers',
+                'operation_id': 'create_record_handler',
+                'http_method': 'POST',
+                'servers': None,
+            },
+            params_map={
+                'all': [
+                    'project_id',
+                    'model_id',
+                    'action',
+                    'runner_mode',
+                    'body',
+                ],
+                'required': [
+                    'project_id',
+                    'model_id',
+                    'action',
+                ],
+                'nullable': [
+                ],
+                'enum': [
+                    'action',
+                    'runner_mode',
+                ],
+                'validation': [
+                ]
+            },
+            root_map={
+                'validations': {
+                },
+                'allowed_values': {
+                    ('action',): {
+
+                        "GENERATE": "generate",
+                        "TRANSFORM": "transform"
+                    },
+                    ('runner_mode',): {
+
+                        "CLOUD": "cloud",
+                        "MANUAL": "manual"
+                    },
+                },
+                'openapi_types': {
+                    'project_id':
+                        (str,),
+                    'model_id':
+                        (str,),
+                    'action':
+                        (str,),
+                    'runner_mode':
+                        (str,),
+                    'body':
+                        ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
+                },
+                'attribute_map': {
+                    'project_id': 'project_id',
+                    'model_id': 'model_id',
+                    'action': 'action',
+                    'runner_mode': 'runner_mode',
+                },
+                'location_map': {
+                    'project_id': 'path',
+                    'model_id': 'path',
+                    'action': 'query',
+                    'runner_mode': 'query',
+                    'body': 'body',
+                },
+                'collection_format_map': {
+                }
+            },
+            headers_map={
+                'accept': [
+                    'application/json'
+                ],
+                'content_type': [
+                    'application/json'
+                ]
+            },
+            api_client=api_client,
+            callable=__create_record_handler
         )
 
         def __delete_artifact(
@@ -788,6 +951,144 @@ class ProjectsApi(object):
             },
             api_client=api_client,
             callable=__delete_project
+        )
+
+        def __delete_record_handler(
+            self,
+            project_id,
+            model_id,
+            record_handler_id,
+            **kwargs
+        ):
+            """delete_record_handler  # noqa: E501
+
+            This method makes a synchronous HTTP request by default. To make an
+            asynchronous HTTP request, please pass async_req=True
+
+            >>> thread = api.delete_record_handler(project_id, model_id, record_handler_id, async_req=True)
+            >>> result = thread.get()
+
+            Args:
+                project_id (str): Project id
+                model_id (str): Model id
+                record_handler_id (str): Record handler id
+
+            Keyword Args:
+                _return_http_data_only (bool): response data without head status
+                    code and headers. Default is True.
+                _preload_content (bool): if False, the urllib3.HTTPResponse object
+                    will be returned without reading/decoding response data.
+                    Default is True.
+                _request_timeout (float/tuple): timeout setting for this request. If one
+                    number provided, it will be total request timeout. It can also
+                    be a pair (tuple) of (connection, read) timeouts.
+                    Default is None.
+                _check_input_type (bool): specifies if type checking
+                    should be done one the data sent to the server.
+                    Default is True.
+                _check_return_type (bool): specifies if type checking
+                    should be done one the data received from the server.
+                    Default is True.
+                _host_index (int/None): specifies the index of the server
+                    that we want to use.
+                    Default is read from the configuration.
+                async_req (bool): execute request asynchronously
+
+            Returns:
+                {str: (bool, date, datetime, dict, float, int, list, str, none_type)}
+                    If the method is called asynchronously, returns the request
+                    thread.
+            """
+            kwargs['async_req'] = kwargs.get(
+                'async_req', False
+            )
+            kwargs['_return_http_data_only'] = kwargs.get(
+                '_return_http_data_only', True
+            )
+            kwargs['_preload_content'] = kwargs.get(
+                '_preload_content', True
+            )
+            kwargs['_request_timeout'] = kwargs.get(
+                '_request_timeout', None
+            )
+            kwargs['_check_input_type'] = kwargs.get(
+                '_check_input_type', True
+            )
+            kwargs['_check_return_type'] = kwargs.get(
+                '_check_return_type', True
+            )
+            kwargs['_host_index'] = kwargs.get('_host_index')
+            kwargs['project_id'] = \
+                project_id
+            kwargs['model_id'] = \
+                model_id
+            kwargs['record_handler_id'] = \
+                record_handler_id
+            return self.call_with_http_info(**kwargs)
+
+        self.delete_record_handler = _Endpoint(
+            settings={
+                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
+                'auth': [
+                    'ApiKey'
+                ],
+                'endpoint_path': '/projects/{project_id}/models/{model_id}/record_handlers/{record_handler_id}',
+                'operation_id': 'delete_record_handler',
+                'http_method': 'DELETE',
+                'servers': None,
+            },
+            params_map={
+                'all': [
+                    'project_id',
+                    'model_id',
+                    'record_handler_id',
+                ],
+                'required': [
+                    'project_id',
+                    'model_id',
+                    'record_handler_id',
+                ],
+                'nullable': [
+                ],
+                'enum': [
+                ],
+                'validation': [
+                ]
+            },
+            root_map={
+                'validations': {
+                },
+                'allowed_values': {
+                },
+                'openapi_types': {
+                    'project_id':
+                        (str,),
+                    'model_id':
+                        (str,),
+                    'record_handler_id':
+                        (str,),
+                },
+                'attribute_map': {
+                    'project_id': 'project_id',
+                    'model_id': 'model_id',
+                    'record_handler_id': 'record_handler_id',
+                },
+                'location_map': {
+                    'project_id': 'path',
+                    'model_id': 'path',
+                    'record_handler_id': 'path',
+                },
+                'collection_format_map': {
+                }
+            },
+            headers_map={
+                'accept': [
+                    'application/json'
+                ],
+                'content_type': [],
+            },
+            api_client=api_client,
+            callable=__delete_record_handler
         )
 
         def __get_artifacts(
@@ -1431,6 +1732,304 @@ class ProjectsApi(object):
             callable=__get_project
         )
 
+        def __get_record_handler(
+            self,
+            project_id,
+            model_id,
+            record_handler_id,
+            **kwargs
+        ):
+            """Get record handler  # noqa: E501
+
+            This method makes a synchronous HTTP request by default. To make an
+            asynchronous HTTP request, please pass async_req=True
+
+            >>> thread = api.get_record_handler(project_id, model_id, record_handler_id, async_req=True)
+            >>> result = thread.get()
+
+            Args:
+                project_id (str): Project id
+                model_id (str): Model id
+                record_handler_id (str): Record handler id
+
+            Keyword Args:
+                logs (str): [optional]
+                _return_http_data_only (bool): response data without head status
+                    code and headers. Default is True.
+                _preload_content (bool): if False, the urllib3.HTTPResponse object
+                    will be returned without reading/decoding response data.
+                    Default is True.
+                _request_timeout (float/tuple): timeout setting for this request. If one
+                    number provided, it will be total request timeout. It can also
+                    be a pair (tuple) of (connection, read) timeouts.
+                    Default is None.
+                _check_input_type (bool): specifies if type checking
+                    should be done one the data sent to the server.
+                    Default is True.
+                _check_return_type (bool): specifies if type checking
+                    should be done one the data received from the server.
+                    Default is True.
+                _host_index (int/None): specifies the index of the server
+                    that we want to use.
+                    Default is read from the configuration.
+                async_req (bool): execute request asynchronously
+
+            Returns:
+                {str: (bool, date, datetime, dict, float, int, list, str, none_type)}
+                    If the method is called asynchronously, returns the request
+                    thread.
+            """
+            kwargs['async_req'] = kwargs.get(
+                'async_req', False
+            )
+            kwargs['_return_http_data_only'] = kwargs.get(
+                '_return_http_data_only', True
+            )
+            kwargs['_preload_content'] = kwargs.get(
+                '_preload_content', True
+            )
+            kwargs['_request_timeout'] = kwargs.get(
+                '_request_timeout', None
+            )
+            kwargs['_check_input_type'] = kwargs.get(
+                '_check_input_type', True
+            )
+            kwargs['_check_return_type'] = kwargs.get(
+                '_check_return_type', True
+            )
+            kwargs['_host_index'] = kwargs.get('_host_index')
+            kwargs['project_id'] = \
+                project_id
+            kwargs['model_id'] = \
+                model_id
+            kwargs['record_handler_id'] = \
+                record_handler_id
+            return self.call_with_http_info(**kwargs)
+
+        self.get_record_handler = _Endpoint(
+            settings={
+                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
+                'auth': [
+                    'ApiKey'
+                ],
+                'endpoint_path': '/projects/{project_id}/models/{model_id}/record_handlers/{record_handler_id}',
+                'operation_id': 'get_record_handler',
+                'http_method': 'GET',
+                'servers': None,
+            },
+            params_map={
+                'all': [
+                    'project_id',
+                    'model_id',
+                    'record_handler_id',
+                    'logs',
+                ],
+                'required': [
+                    'project_id',
+                    'model_id',
+                    'record_handler_id',
+                ],
+                'nullable': [
+                ],
+                'enum': [
+                    'logs',
+                ],
+                'validation': [
+                ]
+            },
+            root_map={
+                'validations': {
+                },
+                'allowed_values': {
+                    ('logs',): {
+
+                        "YES": "yes",
+                        "NO": "no"
+                    },
+                },
+                'openapi_types': {
+                    'project_id':
+                        (str,),
+                    'model_id':
+                        (str,),
+                    'record_handler_id':
+                        (str,),
+                    'logs':
+                        (str,),
+                },
+                'attribute_map': {
+                    'project_id': 'project_id',
+                    'model_id': 'model_id',
+                    'record_handler_id': 'record_handler_id',
+                    'logs': 'logs',
+                },
+                'location_map': {
+                    'project_id': 'path',
+                    'model_id': 'path',
+                    'record_handler_id': 'path',
+                    'logs': 'query',
+                },
+                'collection_format_map': {
+                }
+            },
+            headers_map={
+                'accept': [
+                    'application/json'
+                ],
+                'content_type': [],
+            },
+            api_client=api_client,
+            callable=__get_record_handler
+        )
+
+        def __query_record_handlers(
+            self,
+            project_id,
+            model_id,
+            status,
+            **kwargs
+        ):
+            """Queries record handlers  # noqa: E501
+
+            This method makes a synchronous HTTP request by default. To make an
+            asynchronous HTTP request, please pass async_req=True
+
+            >>> thread = api.query_record_handlers(project_id, model_id, status, async_req=True)
+            >>> result = thread.get()
+
+            Args:
+                project_id (str): Project id
+                model_id (str): Model id
+                status (str):
+
+            Keyword Args:
+                _return_http_data_only (bool): response data without head status
+                    code and headers. Default is True.
+                _preload_content (bool): if False, the urllib3.HTTPResponse object
+                    will be returned without reading/decoding response data.
+                    Default is True.
+                _request_timeout (float/tuple): timeout setting for this request. If one
+                    number provided, it will be total request timeout. It can also
+                    be a pair (tuple) of (connection, read) timeouts.
+                    Default is None.
+                _check_input_type (bool): specifies if type checking
+                    should be done one the data sent to the server.
+                    Default is True.
+                _check_return_type (bool): specifies if type checking
+                    should be done one the data received from the server.
+                    Default is True.
+                _host_index (int/None): specifies the index of the server
+                    that we want to use.
+                    Default is read from the configuration.
+                async_req (bool): execute request asynchronously
+
+            Returns:
+                {str: (bool, date, datetime, dict, float, int, list, str, none_type)}
+                    If the method is called asynchronously, returns the request
+                    thread.
+            """
+            kwargs['async_req'] = kwargs.get(
+                'async_req', False
+            )
+            kwargs['_return_http_data_only'] = kwargs.get(
+                '_return_http_data_only', True
+            )
+            kwargs['_preload_content'] = kwargs.get(
+                '_preload_content', True
+            )
+            kwargs['_request_timeout'] = kwargs.get(
+                '_request_timeout', None
+            )
+            kwargs['_check_input_type'] = kwargs.get(
+                '_check_input_type', True
+            )
+            kwargs['_check_return_type'] = kwargs.get(
+                '_check_return_type', True
+            )
+            kwargs['_host_index'] = kwargs.get('_host_index')
+            kwargs['project_id'] = \
+                project_id
+            kwargs['model_id'] = \
+                model_id
+            kwargs['status'] = \
+                status
+            return self.call_with_http_info(**kwargs)
+
+        self.query_record_handlers = _Endpoint(
+            settings={
+                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
+                'auth': [
+                    'ApiKey'
+                ],
+                'endpoint_path': '/projects/{project_id}/models/{model_id}/record_handlers',
+                'operation_id': 'query_record_handlers',
+                'http_method': 'GET',
+                'servers': None,
+            },
+            params_map={
+                'all': [
+                    'project_id',
+                    'model_id',
+                    'status',
+                ],
+                'required': [
+                    'project_id',
+                    'model_id',
+                    'status',
+                ],
+                'nullable': [
+                ],
+                'enum': [
+                    'status',
+                ],
+                'validation': [
+                ]
+            },
+            root_map={
+                'validations': {
+                },
+                'allowed_values': {
+                    ('status',): {
+
+                        "COMPLETED": "completed",
+                        "ERROR": "error",
+                        "PENDING": "pending",
+                        "ACTIVE": "active",
+                        "LOST": "lost",
+                        "CREATED": "created"
+                    },
+                },
+                'openapi_types': {
+                    'project_id':
+                        (str,),
+                    'model_id':
+                        (str,),
+                    'status':
+                        (str,),
+                },
+                'attribute_map': {
+                    'project_id': 'project_id',
+                    'model_id': 'model_id',
+                    'status': 'status',
+                },
+                'location_map': {
+                    'project_id': 'path',
+                    'model_id': 'path',
+                    'status': 'query',
+                },
+                'collection_format_map': {
+                }
+            },
+            headers_map={
+                'accept': [
+                    'application/json'
+                ],
+                'content_type': [],
+            },
+            api_client=api_client,
+            callable=__query_record_handlers
+        )
+
         def __search_projects(
             self,
             **kwargs
@@ -1547,4 +2146,292 @@ class ProjectsApi(object):
             },
             api_client=api_client,
             callable=__search_projects
+        )
+
+        def __update_model(
+            self,
+            project_id,
+            model_id,
+            body,
+            **kwargs
+        ):
+            """update_model  # noqa: E501
+
+            This method makes a synchronous HTTP request by default. To make an
+            asynchronous HTTP request, please pass async_req=True
+
+            >>> thread = api.update_model(project_id, model_id, body, async_req=True)
+            >>> result = thread.get()
+
+            Args:
+                project_id (str): Project id
+                model_id (str): Model id
+                body ({str: (bool, date, datetime, dict, float, int, list, str, none_type)}):
+
+            Keyword Args:
+                _return_http_data_only (bool): response data without head status
+                    code and headers. Default is True.
+                _preload_content (bool): if False, the urllib3.HTTPResponse object
+                    will be returned without reading/decoding response data.
+                    Default is True.
+                _request_timeout (float/tuple): timeout setting for this request. If one
+                    number provided, it will be total request timeout. It can also
+                    be a pair (tuple) of (connection, read) timeouts.
+                    Default is None.
+                _check_input_type (bool): specifies if type checking
+                    should be done one the data sent to the server.
+                    Default is True.
+                _check_return_type (bool): specifies if type checking
+                    should be done one the data received from the server.
+                    Default is True.
+                _host_index (int/None): specifies the index of the server
+                    that we want to use.
+                    Default is read from the configuration.
+                async_req (bool): execute request asynchronously
+
+            Returns:
+                {str: (bool, date, datetime, dict, float, int, list, str, none_type)}
+                    If the method is called asynchronously, returns the request
+                    thread.
+            """
+            kwargs['async_req'] = kwargs.get(
+                'async_req', False
+            )
+            kwargs['_return_http_data_only'] = kwargs.get(
+                '_return_http_data_only', True
+            )
+            kwargs['_preload_content'] = kwargs.get(
+                '_preload_content', True
+            )
+            kwargs['_request_timeout'] = kwargs.get(
+                '_request_timeout', None
+            )
+            kwargs['_check_input_type'] = kwargs.get(
+                '_check_input_type', True
+            )
+            kwargs['_check_return_type'] = kwargs.get(
+                '_check_return_type', True
+            )
+            kwargs['_host_index'] = kwargs.get('_host_index')
+            kwargs['project_id'] = \
+                project_id
+            kwargs['model_id'] = \
+                model_id
+            kwargs['body'] = \
+                body
+            return self.call_with_http_info(**kwargs)
+
+        self.update_model = _Endpoint(
+            settings={
+                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
+                'auth': [
+                    'ApiKey'
+                ],
+                'endpoint_path': '/projects/{project_id}/models/{model_id}',
+                'operation_id': 'update_model',
+                'http_method': 'PATCH',
+                'servers': None,
+            },
+            params_map={
+                'all': [
+                    'project_id',
+                    'model_id',
+                    'body',
+                ],
+                'required': [
+                    'project_id',
+                    'model_id',
+                    'body',
+                ],
+                'nullable': [
+                ],
+                'enum': [
+                ],
+                'validation': [
+                ]
+            },
+            root_map={
+                'validations': {
+                },
+                'allowed_values': {
+                },
+                'openapi_types': {
+                    'project_id':
+                        (str,),
+                    'model_id':
+                        (str,),
+                    'body':
+                        ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
+                },
+                'attribute_map': {
+                    'project_id': 'project_id',
+                    'model_id': 'model_id',
+                },
+                'location_map': {
+                    'project_id': 'path',
+                    'model_id': 'path',
+                    'body': 'body',
+                },
+                'collection_format_map': {
+                }
+            },
+            headers_map={
+                'accept': [
+                    'application/json'
+                ],
+                'content_type': [
+                    'application/json'
+                ]
+            },
+            api_client=api_client,
+            callable=__update_model
+        )
+
+        def __update_record_handler(
+            self,
+            project_id,
+            model_id,
+            record_handler_id,
+            body,
+            **kwargs
+        ):
+            """update_record_handler  # noqa: E501
+
+            This method makes a synchronous HTTP request by default. To make an
+            asynchronous HTTP request, please pass async_req=True
+
+            >>> thread = api.update_record_handler(project_id, model_id, record_handler_id, body, async_req=True)
+            >>> result = thread.get()
+
+            Args:
+                project_id (str): Project id
+                model_id (str): Model id
+                record_handler_id (str): Record handler id
+                body ({str: (bool, date, datetime, dict, float, int, list, str, none_type)}):
+
+            Keyword Args:
+                _return_http_data_only (bool): response data without head status
+                    code and headers. Default is True.
+                _preload_content (bool): if False, the urllib3.HTTPResponse object
+                    will be returned without reading/decoding response data.
+                    Default is True.
+                _request_timeout (float/tuple): timeout setting for this request. If one
+                    number provided, it will be total request timeout. It can also
+                    be a pair (tuple) of (connection, read) timeouts.
+                    Default is None.
+                _check_input_type (bool): specifies if type checking
+                    should be done one the data sent to the server.
+                    Default is True.
+                _check_return_type (bool): specifies if type checking
+                    should be done one the data received from the server.
+                    Default is True.
+                _host_index (int/None): specifies the index of the server
+                    that we want to use.
+                    Default is read from the configuration.
+                async_req (bool): execute request asynchronously
+
+            Returns:
+                {str: (bool, date, datetime, dict, float, int, list, str, none_type)}
+                    If the method is called asynchronously, returns the request
+                    thread.
+            """
+            kwargs['async_req'] = kwargs.get(
+                'async_req', False
+            )
+            kwargs['_return_http_data_only'] = kwargs.get(
+                '_return_http_data_only', True
+            )
+            kwargs['_preload_content'] = kwargs.get(
+                '_preload_content', True
+            )
+            kwargs['_request_timeout'] = kwargs.get(
+                '_request_timeout', None
+            )
+            kwargs['_check_input_type'] = kwargs.get(
+                '_check_input_type', True
+            )
+            kwargs['_check_return_type'] = kwargs.get(
+                '_check_return_type', True
+            )
+            kwargs['_host_index'] = kwargs.get('_host_index')
+            kwargs['project_id'] = \
+                project_id
+            kwargs['model_id'] = \
+                model_id
+            kwargs['record_handler_id'] = \
+                record_handler_id
+            kwargs['body'] = \
+                body
+            return self.call_with_http_info(**kwargs)
+
+        self.update_record_handler = _Endpoint(
+            settings={
+                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
+                'auth': [
+                    'ApiKey'
+                ],
+                'endpoint_path': '/projects/{project_id}/models/{model_id}/record_handlers/{record_handler_id}',
+                'operation_id': 'update_record_handler',
+                'http_method': 'PATCH',
+                'servers': None,
+            },
+            params_map={
+                'all': [
+                    'project_id',
+                    'model_id',
+                    'record_handler_id',
+                    'body',
+                ],
+                'required': [
+                    'project_id',
+                    'model_id',
+                    'record_handler_id',
+                    'body',
+                ],
+                'nullable': [
+                ],
+                'enum': [
+                ],
+                'validation': [
+                ]
+            },
+            root_map={
+                'validations': {
+                },
+                'allowed_values': {
+                },
+                'openapi_types': {
+                    'project_id':
+                        (str,),
+                    'model_id':
+                        (str,),
+                    'record_handler_id':
+                        (str,),
+                    'body':
+                        ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
+                },
+                'attribute_map': {
+                    'project_id': 'project_id',
+                    'model_id': 'model_id',
+                    'record_handler_id': 'record_handler_id',
+                },
+                'location_map': {
+                    'project_id': 'path',
+                    'model_id': 'path',
+                    'record_handler_id': 'path',
+                    'body': 'body',
+                },
+                'collection_format_map': {
+                }
+            },
+            headers_map={
+                'accept': [
+                    'application/json'
+                ],
+                'content_type': [
+                    'application/json'
+                ]
+            },
+            api_client=api_client,
+            callable=__update_record_handler
         )
