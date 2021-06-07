@@ -13,18 +13,18 @@
 [![Downloads](https://pepy.tech/badge/gretel-client)](https://pepy.tech/project/gretel-client)
 [![GitHub stars](https://img.shields.io/github/stars/gretelai/gretel-python-client?style=social)](https://github.com/gretelai/gretel-python-client)
 
-**`Documentation`** |
-------------------- |
-[![Documentation](https://img.shields.io/badge/api-reference-blue.svg)](https://gretel-client.readthedocs.io/en/stable/api_bindings/api_ref.html) Cloud API 
-[![Documentation](https://img.shields.io/badge/api-reference-blue.svg)](https://gretel-client.readthedocs.io/en/stable/transformers/api_ref.html) Transformers SDK
+## Documentation
+|Component|Links|
+|-----|----|
+|Cloud API|[API Reference](https://gretel-client.readthedocs.io/en/stable/api_bindings/api_ref.html)|
+|Transformers SDK|[API Reference](https://gretel-client.readthedocs.io/en/stable/transformers/api_ref.html)|
 
 ## Try it out now!
 If you want to quickly discover the Gretel client and Transformer libraries, simply click the buttons below and follow the tutorials!
 
-* [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/gretelai/gretel-python-client/blob/master/notebooks/simple_pub_sub.ipynb) Blueprint example to demonstrate NLP labeling and publish/subscribe via the Gretel cloud.
+<a href="https://colab.research.google.com/github/gretelai/gretel-python-client/blob/master/notebooks/simple_pub_sub.ipynb"><img alt="Open in Colab" src="https://colab.research.google.com/assets/colab-badge.svg"></a> Blueprint example to demonstrate NLP labeling and publish/subscribe via the Gretel cloud.
 
-* [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/gretelai/gretel-python-client/blob/master/notebooks/simple_constant_fakes.ipynb) Blueprint example to demonstrate deterministically replacing field values with fake entities.
-
+<a href="https://colab.research.google.com/github/gretelai/gretel-python-client/blob/master/notebooks/simple_constant_fakes.ipynb"><img alt="Open in Colab" src="https://colab.research.google.com/assets/colab-badge.svg"></a> Blueprint example to demonstrate deterministically replacing field values with fake entities.
 # Overview
 
 The Gretel Python Client provides bindings to the Gretel REST API and a transformation sub-package that provides interfaces to manipulate data based on a variety of use cases.
