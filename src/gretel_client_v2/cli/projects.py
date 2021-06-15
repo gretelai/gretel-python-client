@@ -1,6 +1,6 @@
 import click
 
-from gretel_client_v2._cli.common import (
+from gretel_client_v2.cli.common import (
     SessionContext,
     pass_session
 )

@@ -2,12 +2,16 @@ import json
 import signal
 import sys
 import traceback
+from pathlib import Path
 from typing import Callable, Dict, Optional, Union
+from urllib.parse import urlparse
 
 import click
+import requests
 
 from gretel_client_v2.config import RunnerMode, get_session_config
 from gretel_client_v2.projects import get_project
+from gretel_client_v2.projects.jobs import Job
 from gretel_client_v2.projects.models import Model
 
 
@@ -38,7 +42,9 @@ class Logger:
         """Print warn log messages"""
         click.echo(click.style("WARN: ", fg="yellow") + msg, err=True)
 
-    def error(self, msg: str = None, ex: Exception = None, include_tb: bool = True):
+    def error(
+        self, msg: str = None, ex: Union[str, Exception] = None, include_tb: bool = True
+    ):
         """Logs an error to the terminal.
 
         Args:
@@ -52,10 +58,11 @@ class Logger:
         if include_tb and self.debug_mode:
             if ex:
                 click.echo(ex, err=True)
-            _, _, tb = sys.exc_info()
-            traceback.print_tb(tb)
+            if include_tb:
+                _, _, tb = sys.exc_info()
+                traceback.print_tb(tb)
 
-    def debug(self, msg: str):
+    def debug(self, msg: str, ex: Exception = None):
         """Prints a debug message to the console if ``debug_mode`` is
         enabled.
 
@@ -64,6 +71,9 @@ class Logger:
         """
         if self.debug_mode:
             click.echo(click.style("DEBUG: ", fg="blue") + msg, err=True)
+            if ex:
+                _, _, tb = sys.exc_info()
+                traceback.print_tb(tb)
 
 
 class SessionContext(object):
@@ -113,7 +123,9 @@ class SessionContext(object):
         try:
             self.model = self.project.get_model(model_id)
         except Exception as ex:
-            self.log.debug(f"Could not set model {model_id} {ex}")  # todo(dn): better traceback log
+            self.log.debug(
+                f"Could not set model {model_id} {ex}"
+            )  # todo(dn): better traceback log
             raise click.BadParameter("Invalid model.")
 
     def ensure_project(self):
@@ -131,12 +143,12 @@ class SessionContext(object):
         self.log.warn("Got interupt signal.")
 
         if self.cleanup_methods:
-            self.log.warn("Attemping Graceful shutdown")
+            self.log.warn("Attemping graceful shutdown")
             for method in self.cleanup_methods:
                 try:
                     method()
                 except Exception as ex:
-                    self.log.error("Cleanup hook failed to run", ex=ex)
+                    self.log.debug("Cleanup hook failed to run", ex=ex)
         self.log.info("Quitting")
         self.exit(0)
 
@@ -181,10 +193,7 @@ def model_option(fn):
         gc.set_model(value)
 
     return click.option(  # type:ignore
-        "--model-id",
-        metavar="UID",
-        help="Specify the model.",
-        callback=callback
+        "--model-id", metavar="UID", help="Specify the model.", callback=callback
     )(fn)
 
 
@@ -233,8 +242,54 @@ record_transform_status_descriptions: StatusDescriptions = {
 }
 
 
-def get_status_description(descriptions: StatusDescriptions, status: str, runner: str) -> str:
+def get_status_description(
+    descriptions: StatusDescriptions, status: str, runner: str
+) -> str:
     status_desc = descriptions.get(status)
     if not status_desc:
         return ""
     return status_desc.get(runner, status_desc.get("default", ""))
+
+
+def poll_and_print(
+    job: Job,
+    sc: SessionContext,
+    runner: str,
+    status_strings: StatusDescriptions,
+    wait: int = 0,
+    callback: Callable = None,
+):
+    for update in job.poll_logs_status(wait=wait, callback=callback):
+        if update.transitioned:
+            sc.log.info(
+                (
+                    f"Status is {update.status}. "
+                    f"{get_status_description(status_strings, update.status, runner)}"
+                )
+            )
+        for log in update.logs:
+            msg = f"{log['ts']}  {log['msg']}"
+            if log["ctx"]:
+                msg += f"\n{json.dumps(log['ctx'], indent=4)}"
+            click.echo(msg, err=True)
+        if update.error:
+            sc.log.error(f"\t{update.error}")
+
+
+def download_artifacts(sc: SessionContext, output: str, job: Job):
+    output_path = Path(output)
+    output_path.mkdir(exist_ok=True, parents=True)
+    sc.log.info(f"Downloading model artifacts to {output_path.resolve()}")
+    for artifact_type, download_link in job.get_artifacts():
+        try:
+            art = requests.get(download_link)
+            if art.status_code == 200:
+                art_output_path = output_path / Path(urlparse(download_link).path).name
+                with open(art_output_path, "wb+") as out:
+                    sc.log.info(f"\tWriting {artifact_type} to {art_output_path}")
+                    out.write(art.content)
+        except requests.exceptions.HTTPError as ex:
+            sc.log.error(
+                f"\tCould not download {artifact_type}. You might retry this request.",
+                ex=ex,
+            )

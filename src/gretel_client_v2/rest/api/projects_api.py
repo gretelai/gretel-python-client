@@ -1462,7 +1462,9 @@ class ProjectsApi(object):
                         "REPORT": "report",
                         "REPORT_JSON": "report_json",
                         "DATA_PREVIEW": "data_preview",
-                        "MODEL_LOGS": "model_logs"
+                        "DATA": "data",
+                        "MODEL_LOGS": "model_logs",
+                        "RUN_LOGS": "run_logs"
                     },
                 },
                 'openapi_types': {
@@ -1880,6 +1882,162 @@ class ProjectsApi(object):
             },
             api_client=api_client,
             callable=__get_record_handler
+        )
+
+        def __get_record_handler_artifact(
+            self,
+            project_id,
+            model_id,
+            record_handler_id,
+            type,
+            **kwargs
+        ):
+            """Get record handler artifact  # noqa: E501
+
+            This method makes a synchronous HTTP request by default. To make an
+            asynchronous HTTP request, please pass async_req=True
+
+            >>> thread = api.get_record_handler_artifact(project_id, model_id, record_handler_id, type, async_req=True)
+            >>> result = thread.get()
+
+            Args:
+                project_id (str): Project id
+                model_id (str): Model id
+                record_handler_id (str): Record handler id
+                type (str):
+
+            Keyword Args:
+                _return_http_data_only (bool): response data without head status
+                    code and headers. Default is True.
+                _preload_content (bool): if False, the urllib3.HTTPResponse object
+                    will be returned without reading/decoding response data.
+                    Default is True.
+                _request_timeout (float/tuple): timeout setting for this request. If one
+                    number provided, it will be total request timeout. It can also
+                    be a pair (tuple) of (connection, read) timeouts.
+                    Default is None.
+                _check_input_type (bool): specifies if type checking
+                    should be done one the data sent to the server.
+                    Default is True.
+                _check_return_type (bool): specifies if type checking
+                    should be done one the data received from the server.
+                    Default is True.
+                _host_index (int/None): specifies the index of the server
+                    that we want to use.
+                    Default is read from the configuration.
+                async_req (bool): execute request asynchronously
+
+            Returns:
+                {str: (bool, date, datetime, dict, float, int, list, str, none_type)}
+                    If the method is called asynchronously, returns the request
+                    thread.
+            """
+            kwargs['async_req'] = kwargs.get(
+                'async_req', False
+            )
+            kwargs['_return_http_data_only'] = kwargs.get(
+                '_return_http_data_only', True
+            )
+            kwargs['_preload_content'] = kwargs.get(
+                '_preload_content', True
+            )
+            kwargs['_request_timeout'] = kwargs.get(
+                '_request_timeout', None
+            )
+            kwargs['_check_input_type'] = kwargs.get(
+                '_check_input_type', True
+            )
+            kwargs['_check_return_type'] = kwargs.get(
+                '_check_return_type', True
+            )
+            kwargs['_host_index'] = kwargs.get('_host_index')
+            kwargs['project_id'] = \
+                project_id
+            kwargs['model_id'] = \
+                model_id
+            kwargs['record_handler_id'] = \
+                record_handler_id
+            kwargs['type'] = \
+                type
+            return self.call_with_http_info(**kwargs)
+
+        self.get_record_handler_artifact = _Endpoint(
+            settings={
+                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
+                'auth': [
+                    'ApiKey'
+                ],
+                'endpoint_path': '/projects/{project_id}/models/{model_id}/record_handlers/{record_handler_id}/artifact',
+                'operation_id': 'get_record_handler_artifact',
+                'http_method': 'GET',
+                'servers': None,
+            },
+            params_map={
+                'all': [
+                    'project_id',
+                    'model_id',
+                    'record_handler_id',
+                    'type',
+                ],
+                'required': [
+                    'project_id',
+                    'model_id',
+                    'record_handler_id',
+                    'type',
+                ],
+                'nullable': [
+                ],
+                'enum': [
+                    'type',
+                ],
+                'validation': [
+                ]
+            },
+            root_map={
+                'validations': {
+                },
+                'allowed_values': {
+                    ('type',): {
+
+                        "REPORT": "report",
+                        "REPORT_JSON": "report_json",
+                        "DATA": "data",
+                        "RUN_LOGS": "run_logs"
+                    },
+                },
+                'openapi_types': {
+                    'project_id':
+                        (str,),
+                    'model_id':
+                        (str,),
+                    'record_handler_id':
+                        (str,),
+                    'type':
+                        (str,),
+                },
+                'attribute_map': {
+                    'project_id': 'project_id',
+                    'model_id': 'model_id',
+                    'record_handler_id': 'record_handler_id',
+                    'type': 'type',
+                },
+                'location_map': {
+                    'project_id': 'path',
+                    'model_id': 'path',
+                    'record_handler_id': 'path',
+                    'type': 'query',
+                },
+                'collection_format_map': {
+                }
+            },
+            headers_map={
+                'accept': [
+                    'application/json'
+                ],
+                'content_type': [],
+            },
+            api_client=api_client,
+            callable=__get_record_handler_artifact
         )
 
         def __query_record_handlers(

@@ -21,6 +21,7 @@ from docker.types.containers import DeviceRequest
 from gretel_client_v2.config import get_session_config
 from gretel_client_v2.projects.records import RecordHandler
 from gretel_client_v2.rest.api.opt_api import OptApi
+from gretel_client_v2.projects.jobs import ACTIVE_STATES, Job
 
 if TYPE_CHECKING:
     from gretel_client_v2.projects.models import Model
@@ -35,11 +36,10 @@ class ContainerRunError(Exception):
 DEFAULT_ARTIFACT_DIR = "/workspace"
 
 
-DEFAULT_GPU_CONFIG = DeviceRequest(count=-1, capabilities=[['gpu']])
+DEFAULT_GPU_CONFIG = DeviceRequest(count=-1, capabilities=[["gpu"]])
 
 
 class VolumeBuilder:
-
     def __init__(self):
         self.volumes = {}
         self.input_mappings = {}
@@ -99,46 +99,32 @@ class ContainerRun:
     _container: Optional[Container] = None
     """Reference to a running or completed container run."""
 
-    def __init__(
-        self,
-        image: str,
-        job: Union[Model, RecordHandler]  # todo(dn): consolidate into a single parent class
-    ):
+    def __init__(self, job: Job):
         self._docker_client = docker.from_env()
-        self.image = image
+        self.image = job.container_image
         self.volumes = VolumeBuilder()
         self.device_requests = []
         self.run_params = ["--disable-cloud-upload"]
         self.job = job
         self._launched_from_docker = _is_inside_container()
+        self.configure_worker_token(job.worker_key)
+        self.debug = False
 
     @classmethod
-    def from_record_handler(cls, record_handler: RecordHandler) -> ContainerRun:
-        cr = cls(f"gretelai/{record_handler.type}:dev", record_handler)
-        if record_handler.worker_key:
-            cr.configure_worker_token(record_handler.worker_key)
-        return cr
+    def from_job(cls, job: Job) -> ContainerRun:
+        return cls(job)
 
-    @classmethod
-    def from_model(cls, model: Model) -> ContainerRun:
-        cr = cls(f"gretelai/{model.model_type}:dev", model)
-        if model._worker_key:
-            cr.configure_worker_token((model._worker_key))
-        return cr
-
-    def start(self, _debug: bool = False):
+    def start(self):
         """Run job via a local container. This method
         is async and will return after the job has started.
 
         If you wish to block until the container has finished, the
         ``wait`` method may be used.
-
-        Args:
-            _debug: If ``_debug`` is set to ``True`` the container won't be
-                removed after the job has finished running. This is useful
-                if you need to inspect container logs.
         """
-        self._run(remove=not _debug)
+        self._run(remove=self.debug)
+
+    def enable_debug(self):
+        self.debug = True
 
     def configure_worker_token(self, worker_token: str):
         self.run_params.extend(["--worker-token", worker_token])
@@ -183,7 +169,7 @@ class ContainerRun:
             command=["-c", "nvidia-smi"],
             detach=False,
             remove=True,
-            device_requests=[DEFAULT_GPU_CONFIG]
+            device_requests=[DEFAULT_GPU_CONFIG],
         )
 
     def stop(self, force: bool = False):
@@ -197,6 +183,12 @@ class ContainerRun:
         sig = signal.SIGKILL if force else signal.SIGTERM
         try:
             self._container.kill(int(sig))
+        except Exception:
+            pass
+
+    def delete(self):
+        try:
+            self._container.remove()
         except Exception:
             pass
 
@@ -222,6 +214,14 @@ class ContainerRun:
         # ensure that the detached container stops when the process is closed
         atexit.register(self._cleanup)
 
+    def get_logs(self) -> str:
+        try:
+            return self._container.logs().decode("utf-8")
+        except Exception as ex:
+            raise ContainerRunError(
+                "Cannot get logs. Please re-run the job with debugging enabled."
+            ) from ex
+
     @property
     def active(self) -> bool:
         """Returns ``True`` if the container is running. ``False`` otherwise."""
@@ -245,6 +245,25 @@ class ContainerRun:
                 pass
         return "unknown"
 
+    def is_ok(self):
+        """Checks to see if the container is ok.
+
+        Raises:
+            ``ContainerRunError`` if there is a problem with the container.
+        """
+        if self.job.status in ACTIVE_STATES and not self.active:
+            try:
+                print(self.get_logs())  # todo use logger
+            except Exception:
+                pass
+            if not self.debug:
+                print(
+                    "Re-run with debugging enabled for more details."
+                )  # todo use logger
+            raise ContainerRunError(
+                ("Could not launch container. Please check the logs for more details.")
+            )
+
     def wait(self, timeout: int = 30):
         """Blocks until a running container has completed. If the
         container hasn't started yet, we wait until a ``timeout``
@@ -262,8 +281,10 @@ class ContainerRun:
 
     def _cleanup(self):
         self.stop(force=True)
+        self.delete()
 
     def graceful_shutdown(self):
+        """Attempts to gracefully shutdown the container run."""
         try:
             self.job.cancel()
         except Exception:
@@ -289,8 +310,8 @@ def _get_container_auth() -> Tuple[dict, str]:
     """Exchanges a Gretel Api Key for container registry credentials.
 
     Returns:
-        An authentication object that may be passed
-        into the docker api, and the registry endpoint.
+        An authentication object and registry endpoint. The authentication
+        object may be passed into the docker sdk.
     """
     config = get_session_config()
     opt_api = config.get_api(OptApi)

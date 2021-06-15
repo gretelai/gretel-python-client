@@ -1,19 +1,19 @@
 import json
-from pathlib import Path
-from urllib.parse import urlparse
 
 import click
-import requests
 
-from gretel_client_v2._cli.common import (
+from gretel_client_v2.cli.common import (
     SessionContext,
-    get_status_description,
     model_create_status_descriptions,
     pass_session,
+    poll_and_print,
     project_option,
     runner_option,
+    download_artifacts,
 )
+from gretel_client_v2.projects.common import ModelArtifact
 from gretel_client_v2.projects.docker import ContainerRun, ContainerRunError
+from gretel_client_v2.projects.jobs import Status
 from gretel_client_v2.projects.models import (
     Model,
     ModelArtifactError,
@@ -23,23 +23,7 @@ from gretel_client_v2.projects.models import (
 from gretel_client_v2.rest.exceptions import ApiException, NotFoundException
 
 
-def _download_artifacts(sc: SessionContext, output: str, model: Model):
-    output_path = Path(output)
-    output_path.mkdir(exist_ok=True, parents=True)
-    sc.log.info(f"Downloading model artifacts to {output_path.resolve()}")
-    for type, download_link in model.get_artifacts():
-        try:
-            art = requests.get(download_link)
-            if art.status_code == 200:
-                art_output_path = output_path / Path(urlparse(download_link).path).name
-                with open(art_output_path, "wb+") as out:
-                    sc.log.info(f"\tWriting {type} to {art_output_path}")
-                    out.write(art.content)
-        except requests.exceptions.HTTPError:
-            sc.log.info(f"\tSkipping {type}. Artifact not found.")
-
-
-@click.group(help="Commands for training and working with models.]")
+@click.group(help="Commands for training and working with models.")
 def models():
     ...
 
@@ -135,12 +119,11 @@ def create(
     # Create the model and the data source
     try:
         sc.log.info("Creating model")
-        run = model.submit(
+        run = model.create(
             runner_mode=RunnerMode(runner), dry_run=dry_run, _validate_data_source=False
         )
         sc.register_cleanup(lambda: model.cancel())
         sc.log.info("Model created")
-        del run["model_key"]
         sc.print(data=run)
     except ApiException as ex:
         sc.print(data=json.loads(ex.body))  # type:ignore
@@ -153,13 +136,18 @@ def create(
         sc.exit(0)
 
     # Start a local container when --runner is manual
+    run = None
     if runner == RunnerMode.LOCAL.value:
-        run = ContainerRun.from_model(model)
+        run = ContainerRun.from_job(model)
+        if sc.debug:
+            sc.log.debug("Enabling debug logs for the local container")
+            run.enable_debug()
         if output:
             run.configure_output_dir(output)
         if in_data:
             run.configure_input_data(in_data)
         if upload_model:
+            sc.log.info("Uploads to Gretel Cloud are enabled")
             run.enable_cloud_uploads()
         if model.model_type == "synthetics":
             sc.log.info("Configuring GPU for model training")
@@ -176,38 +164,44 @@ def create(
         sc.register_cleanup(lambda: run.graceful_shutdown())
 
     # Poll for the latest container status
-    for update in model.poll_logs_status(wait):
-        if update.transitioned:
-            sc.log.info(
-                (
-                    f"Status is {update.status}. "
-                    f"{get_status_description(model_create_status_descriptions, update.status, runner)}"
-                )
-            )
-        for log in update.logs:
-            msg = f"{log['ts']}  {log['msg']}"
-            if log["ctx"]:
-                msg += f"\n{json.dumps(log['ctx'], indent=4)}"
-            click.echo(msg, err=True)
-        if update.error:
-            sc.log.error(f"\t{update.error}")
+    poll_and_print(
+        model,
+        sc,
+        runner,
+        model_create_status_descriptions,
+        callback=run.is_ok if run else None,
+        wait=wait,
+    )
 
     # If the job is in the cloud, and --output is passed, we
     # want to download the artifacts. This isn't necessary for
     # local runs since there is already a volume mount.
     if output and runner == RunnerMode.CLOUD.value and wait == 0:
-        _download_artifacts(sc, output, model)
+        download_artifacts(sc, output, model)
 
-    sc.print(data=model._data.get("model"))
+    report_path = None
+    if output:
+        report_path = f"{output}/{ModelArtifact.REPORT_JSON}.json.gz"
+
+    sc.print(data=model.print_obj)
     sc.log.info(
-        (
-            "Billing estimate"
-            f"\n{json.dumps(model._data.get('billing_estimate'), indent=4)}"
-        )
+        "Fetching model report...\n"
+        f"{json.dumps(model.peek_report(report_path), indent=4) or 'Could not parse or open report'}"
     )
+
+    if output:
+        sc.log.info(f"For a more detailed view of the report see\n\n\t{report_path}\n")
+    else:
+        sc.log.info(
+            (
+                "For a more detailed view, you can download the HTML report using the CLI command \n\n"
+                f"\tgretel models get --project {sc.project.name} --model-id {model.model_id} --output .\n"
+            )
+        )
+    sc.log.info(("Billing estimate" f"\n{json.dumps(model.billing_details, indent=4)}"))
     sc.log.info("Note: no charges will be incurred during the beta period")
 
-    if model.status == "completed":
+    if model.status == Status.COMPLETED:
         sc.log.info(
             (
                 f"Model done training. The model id is\n\n\t{model.model_id}\n\n"
@@ -217,7 +211,7 @@ def create(
         sc.log.info("Done")
     else:
         sc.log.error("The model failed with the following error")
-        sc.log.error(model.errors, ex=model.traceback)
+        sc.log.error(model.errors, ex=model.traceback, include_tb=False)
         sc.log.error(
             f"Status is {model.status}. Please scroll back through the logs for more details."
         )
@@ -235,7 +229,7 @@ def create(
 @pass_session
 def get(sc: SessionContext, project: str, model_id: str, output: str):
     model: Model = sc.project.get_model(model_id)
-    sc.print(data=model._data)
+    sc.print(data=model.print_obj)
     if output:
         if model.status != "completed":
             sc.log.error(
@@ -244,7 +238,7 @@ def get(sc: SessionContext, project: str, model_id: str, output: str):
                 state, but is instead {model.status}"""
             )
             sc.exit(1)
-        _download_artifacts(sc, output, model)
+        download_artifacts(sc, output, model)
     sc.log.info("Done fetching model.")
 
 

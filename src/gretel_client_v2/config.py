@@ -1,14 +1,15 @@
-import os
-from typing import Optional, Type, TypeVar, Union
-from pathlib import Path
-from enum import Enum
+from __future__ import annotations
+
 import json
+import os
+from enum import Enum
+from pathlib import Path
+from typing import Optional, Type, TypeVar, Union
 
-from gretel_client_v2.rest.configuration import Configuration
-from gretel_client_v2.rest.api_client import ApiClient
-from gretel_client_v2.rest.exceptions import NotFoundException, UnauthorizedException
 from gretel_client_v2.rest.api.projects_api import ProjectsApi
-
+from gretel_client_v2.rest.api_client import ApiClient
+from gretel_client_v2.rest.configuration import Configuration
+from gretel_client_v2.rest.exceptions import NotFoundException, UnauthorizedException
 
 GRETEL = "gretel"
 """Gretel application name"""
@@ -47,7 +48,7 @@ class RunnerMode(Enum):
 DEFAULT_RUNNER = RunnerMode.LOCAL
 
 
-class _ClientConfig:
+class ClientConfig:
     """Holds Gretel client configuration details. This can be instantiated from
     a file or environment.
     """
@@ -69,11 +70,9 @@ class _ClientConfig:
         endpoint: Optional[str] = None,
         api_key: Optional[str] = None,
         default_project_name: Optional[str] = None,
-        default_runner: str = DEFAULT_RUNNER.value
+        default_runner: str = DEFAULT_RUNNER.value,
     ):
-        self.endpoint = (
-            os.getenv(GRETEL_ENDPOINT) or endpoint or DEFAULT_GRETEL_ENDPOINT
-        )
+        self.endpoint = os.getenv(GRETEL_ENDPOINT) or endpoint or DEFAULT_GRETEL_ENDPOINT
         self.api_key = os.getenv(GRETEL_API_KEY) or api_key
         self.default_runner = default_runner
         self.default_project_name = self._check_project(
@@ -81,19 +80,17 @@ class _ClientConfig:
         )
 
     @classmethod
-    def from_file(cls, file_path: Path) -> "_ClientConfig":
+    def from_file(cls, file_path: Path) -> ClientConfig:
         config = json.loads(file_path.read_bytes())
         return cls.from_dict(config)
 
     @classmethod
-    def from_env(cls) -> "_ClientConfig":
+    def from_env(cls) -> ClientConfig:
         return cls()
 
     @classmethod
-    def from_dict(cls, source: dict) -> "_ClientConfig":
-        return cls(
-            **{k: v for k, v in source.items() if k in cls.__annotations__.keys()}
-        )
+    def from_dict(cls, source: dict) -> ClientConfig:
+        return cls(**{k: v for k, v in source.items() if k in cls.__annotations__.keys()})
 
     def _get_api_client(self) -> ApiClient:
         configuration = Configuration(
@@ -136,7 +133,7 @@ class _ClientConfig:
             if not prop.startswith("_")
         }
 
-    def __eq__(self, other: "_ClientConfig") -> bool:
+    def __eq__(self, other: ClientConfig) -> bool:
         return self.as_dict == other.as_dict
 
     @property
@@ -155,7 +152,7 @@ def _get_config_path() -> Path:
     return Path().home() / f".{GRETEL}" / "config.json"
 
 
-def _load_config(config_path: Path = None) -> _ClientConfig:
+def _load_config(config_path: Path = None) -> ClientConfig:
     """This will load in a Gretel config that can be used for making
     requests to Gretel's API.
 
@@ -170,16 +167,16 @@ def _load_config(config_path: Path = None) -> _ClientConfig:
     if not config_path:
         config_path = _get_config_path()
     if not config_path.exists():
-        return _ClientConfig.from_env()
+        return ClientConfig.from_env()
     try:
-        return _ClientConfig.from_file(config_path)
+        return ClientConfig.from_file(config_path)
     except Exception as ex:
         raise GretelClientConfigurationError(
             f"Could not load config from {config_path}"
         ) from ex
 
 
-def write_config(config: _ClientConfig, config_path: Union[str, Path] = None) -> Path:
+def write_config(config: ClientConfig, config_path: Union[str, Path] = None) -> Path:
     """Writes a Gretel client config to disk.
 
     Args:
@@ -206,12 +203,12 @@ def write_config(config: _ClientConfig, config_path: Union[str, Path] = None) ->
 _session_client_config = _load_config()  # noqa
 
 
-def get_session_config() -> _ClientConfig:
+def get_session_config() -> ClientConfig:
     """Return the session's client config"""
     return _session_client_config
 
 
-def configure_session(config: Union[str, _ClientConfig]):
+def configure_session(config: Union[str, ClientConfig]):
     """Updates client config for the session
 
     Args:
@@ -219,7 +216,7 @@ def configure_session(config: Union[str, _ClientConfig]):
             will attempt to parse it as a Gretel URI.
     """
     global _session_client_config
-    if isinstance(config, _ClientConfig):
+    if isinstance(config, ClientConfig):
         _session_client_config = config
     if isinstance(config, str):
         raise NotImplementedError("Gretel URIs are not supported yet.")

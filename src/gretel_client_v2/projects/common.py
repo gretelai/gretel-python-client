@@ -1,8 +1,7 @@
 import json
-from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Iterator, List, Optional, Union
+from typing import Any, Iterator, Union
 
 from gretel_client_v2.readers import CsvReader, JsonReader
 
@@ -11,11 +10,13 @@ Pathlike = Union[str, Path]
 
 class DataSourceError(Exception):
     """Indicates there is a problem reading the data source"""
+
     ...
 
 
 class DataValidationError(Exception):
     """Indicates there is a problem validating the structure of the data source."""
+
     ...
 
 
@@ -59,35 +60,34 @@ def _validate_from_reader(peek: Iterator, sample_size: int = 1):
     # todo(dn): add additional checks to ensure the data is valid
 
 
-@dataclass
-class LogStatus:
-    status: str
-    transitioned: bool = False
-    logs: List[dict] = field(default_factory=list)
-    error: Optional[str] = None
+def peek_transforms_report(report_contents: dict) -> dict:
+    fields = ["training_time_seconds", "record_count", "field_count", "field_transforms"]
+    return {f: report_contents[f] for f in fields}
 
 
-class Status(str, Enum):
-    CREATED = "created"
-    PENDING = "pending"
-    ACTIVE = "active"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
-    ERROR = "error"
-    LOST = "lost"
+def peek_synthetics_report(report_contents: dict) -> dict:
+    fields = [
+        "synthetic_data_quality_score",
+        "field_correlation_stability",
+        "principal_component_stability",
+        "field_distribution_stability",
+    ]
+    return {f: report_contents[f] for f in fields}
+
+
+def peek_classification_report(report_contents: dict) -> dict:
+    ...
 
 
 class ModelType(str, Enum):
     SYNTHETICS = "synthetics"
-    TRANSFORM = "transform"
+    TRANSFORMS = "transforms"
     MIXED = "mixed"
     CLASSIFY = "classify"
     TMP = "__tmp__"
 
 
-class RunnerMode(str, Enum):
-    CLOUD = "cloud"
-    LOCAL = "local"
+MANUAL = "manual"
 
 
 class ModelArtifact(str, Enum):
@@ -107,19 +107,21 @@ class ModelRunArtifact(str, Enum):
     RUN_LOGS = "run_logs"
 
 
-class ModelTableType(str, Enum):
-    TRAIN = "train"
-    RUN = "run"
+class f:
+    """Rest api field constants."""
 
-
-class RestFields(str, Enum):
     DATA = "data"
-    MODEL = "model"
+    URL = "url"
     STATUS = "status"
+    ERROR_MSG = "error_msg"
+    TRACEBACK = "traceback"
+    UID = "uid"
+    MODEL_KEY = "model_key"
+    WORKER_KEY = "worker_key"
+    LOGS = "logs"
+    MODEL = "model"
+    RUNNER_MODE = "runner_mode"
 
 
-ACTIVE_STATES = [Status.CREATED, Status.ACTIVE]
-END_STATES = [Status.COMPLETED, Status.CANCELLED, Status.ERROR, Status.LOST]
-
-
-MANUAL = "manual"
+YES = "yes"
+NO = "no"

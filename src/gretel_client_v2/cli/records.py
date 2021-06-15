@@ -3,10 +3,11 @@ from typing import Dict, Optional, Union
 
 import click
 
-from gretel_client_v2._cli.common import (
+from gretel_client_v2.cli.common import (
     SessionContext,
     StatusDescriptions,
-    get_status_description,
+    download_artifacts,
+    poll_and_print,
     record_transform_status_descriptions,
     record_generation_status_descriptions,
     model_option,
@@ -16,6 +17,7 @@ from gretel_client_v2._cli.common import (
 )
 from gretel_client_v2.config import RunnerMode
 from gretel_client_v2.projects.docker import ContainerRun
+from gretel_client_v2.projects.jobs import Status
 
 
 @click.group(help="Commands for working with records and running models.")
@@ -56,7 +58,7 @@ def create_and_run_record_handler(
     in_data: str,
     model_path: Optional[str],
     data_source: Optional[str],
-    status_strings: StatusDescriptions
+    status_strings: StatusDescriptions,
 ):
     sc.log.info(f"Creating record handler for model {sc.model.model_id}")
     record_handler = sc.model.create_record_handler()
@@ -67,13 +69,17 @@ def create_and_run_record_handler(
         )
         sc.register_cleanup(lambda: record_handler.cancel())
         sc.log.info(f"Record handler created {record_handler.record_id}")
-        sc.print(data=data.get("data").get("handler"))
+        sc.print(data=data)
     except Exception as ex:
         sc.log.error("Could not create record handler", ex=ex)
         sc.exit(1)
 
+    run = None
     if runner == RunnerMode.LOCAL.value:
-        run = ContainerRun.from_record_handler(record_handler)
+        run = ContainerRun.from_job(record_handler)
+        if sc.debug:
+            sc.log.debug("Enabling debug for the container run")
+            run.enable_debug()
         if output:
             run.configure_output_dir(output)
         if in_data:
@@ -84,23 +90,20 @@ def create_and_run_record_handler(
         sc.register_cleanup(lambda: run.graceful_shutdown())
 
     # Poll for the latest container status
-    for update in record_handler.poll_logs_status():
-        if update.transitioned:
-            sc.log.info(
-                (
-                    f"Status is {update.status}. "
-                    f"{get_status_description(status_strings, update.status, runner)}"
-                )
-            )
-        for log in update.logs:
-            msg = f"{log['ts']}  {log['msg']}"
-            if log["ctx"]:
-                msg += f"\n{json.dumps(log['ctx'], indent=4)}"
-            click.echo(msg, err=True)
-        if update.error:
-            sc.log.error(f"\t{update.error}")
+    poll_and_print(
+        record_handler, sc, runner, status_strings, callback=run.is_ok if run else None
+    )
 
-    if record_handler.status == "completed":
+    if output:
+        download_artifacts(sc, output, record_handler)
+
+    if record_handler.status == Status.COMPLETED:
+        sc.log.info(
+            (
+                "Billing estimate"
+                f"\n{json.dumps(record_handler.billing_details, indent=4)}"
+            )
+        )
         sc.log.info(f"Done. Record {action} command done!")
     else:
         sc.log.error("The record command failed with the following error")
@@ -154,7 +157,7 @@ def generate(
     data_source = None
     if in_data and runner == RunnerMode.CLOUD.value:
         try:
-            sc.log.info(f"Upload input artifact {in_data}")
+            sc.log.info(f"Uploading input artifact {in_data}")
             data_source = sc.project.upload_artifact(in_data)
         except Exception as ex:
             sc.log.error(f"Could not upload artifact {in_data}", ex=ex)
@@ -169,7 +172,7 @@ def generate(
         output=output,
         in_data=in_data,
         status_strings=record_generation_status_descriptions,
-        model_path=model_path
+        model_path=model_path,
     )
 
 
@@ -219,5 +222,5 @@ def transform(
         output=output,
         in_data=in_data,
         status_strings=record_transform_status_descriptions,
-        model_path=model_path
+        model_path=model_path,
     )

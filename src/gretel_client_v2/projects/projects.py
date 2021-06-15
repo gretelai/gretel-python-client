@@ -205,7 +205,7 @@ def get_project(
             gretel and never changes.
         desc: A short description of the project
         display_name: The main display name used in the Gretel Console for your project
-        client_config: An instance of a _ClientConfig. This can be used to override any
+        client_config: An instance of a ClientConfig. This can be used to override any
             default connection configuration.
     Returns:
         A project instance.

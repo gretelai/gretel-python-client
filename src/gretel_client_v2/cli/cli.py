@@ -8,13 +8,13 @@ from gretel_client_v2.config import (
     GRETEL,
     DEFAULT_GRETEL_ENDPOINT,
     write_config,
-    _ClientConfig,
+    ClientConfig,
 )
-from gretel_client_v2._cli.common import SessionContext, pass_session
-from gretel_client_v2._cli.models import models
-from gretel_client_v2._cli.projects import projects
-from gretel_client_v2._cli.records import records
-from gretel_client_v2._cli.artifacts import artifacts
+from gretel_client_v2.cli.common import SessionContext, pass_session
+from gretel_client_v2.cli.models import models
+from gretel_client_v2.cli.projects import projects
+from gretel_client_v2.cli.records import records
+from gretel_client_v2.cli.artifacts import artifacts
 
 
 @click.group()
@@ -66,7 +66,7 @@ def configure(
     sc: SessionContext, endpoint: str, api_key: str, project: str, default_runner: str
 ):
     project_name = None if project == "none" else project
-    config = _ClientConfig(
+    config = ClientConfig(
         endpoint=endpoint, api_key=api_key, default_runner=default_runner
     )
 

@@ -1,6 +1,6 @@
 import click
 
-from gretel_client_v2._cli.common import SessionContext, pass_session, project_option
+from gretel_client_v2.cli.common import SessionContext, pass_session, project_option
 
 
 @click.group(help="Commands for interacting with Gretel Cloud artifacts.")
