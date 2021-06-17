@@ -18,7 +18,6 @@ def runner() -> CliRunner:
     return CliRunner()
 
 
-
 @pytest.fixture
 def get_project() -> MagicMock:
     with patch("gretel_client_v2.cli.common.get_project") as get_project:
@@ -61,6 +60,7 @@ def test_local_model_upload_flag(
     assert cmd.exit_code == 0
     assert container_run.from_job.return_value.start.call_count == 1
     assert container_run.from_job.return_value.enable_cloud_uploads.call_count == 1
+
 
 def test_local_model_upload_disabled_by_default(
     container_run: MagicMock, get_project: MagicMock, runner: CliRunner

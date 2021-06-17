@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import click
 
@@ -194,18 +195,25 @@ def create(
     if output and runner == RunnerMode.CLOUD.value and wait == WAIT_UNTIL_DONE:
         download_artifacts(sc, output, model)
 
+    if output and runner == RunnerMode.LOCAL.value:
+        sc.log.info(f"Extracting run output into {output}")
+        run.extract_output_dir(output)
+
     report_path = None
     if output:
-        report_path = f"{output}/{ModelArtifact.REPORT_JSON}.json.gz"
+        report_path = Path(output) / f"{ModelArtifact.REPORT_JSON}.json.gz"
 
     sc.print(data=model.print_obj)
     sc.log.info(
         "Fetching model report...\n"
-        f"{json.dumps(model.peek_report(report_path), indent=4) or 'Could not parse or open report'}"
+        f"{json.dumps(model.peek_report(str(report_path)), indent=4) or 'Could not parse or open report'}"
     )
 
     if output:
-        sc.log.info(f"For a more detailed view of the report see\n\n\t{report_path}\n")
+        sc.log.info(
+            "For a more detailed view of the report, please refer to the "
+            f"full report artifact found under the output directory: `{output}`"
+        )
     else:
         sc.log.info(
             (

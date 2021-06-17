@@ -94,8 +94,12 @@ def create_and_run_record_handler(
         record_handler, sc, runner, status_strings, callback=run.is_ok if run else None
     )
 
-    if output:
+    if output and runner == RunnerMode.CLOUD.value:
         download_artifacts(sc, output, record_handler)
+
+    if output and run:
+        sc.log.info("Extracting record artifacts from container")
+        run.extract_output_dir(output)
 
     if record_handler.status == Status.COMPLETED:
         sc.log.info(

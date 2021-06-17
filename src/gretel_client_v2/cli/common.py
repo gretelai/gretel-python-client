@@ -9,7 +9,11 @@ from urllib.parse import urlparse
 import click
 import requests
 
-from gretel_client_v2.config import RunnerMode, get_session_config
+from gretel_client_v2.config import (
+    RunnerMode,
+    configure_custom_logger,
+    get_session_config,
+)
 from gretel_client_v2.projects import get_project
 from gretel_client_v2.projects.common import WAIT_UNTIL_DONE
 from gretel_client_v2.projects.jobs import Job, WaitTimeExceeded
@@ -87,6 +91,7 @@ class SessionContext(object):
         self.output_fmt = output_fmt
         self.config = get_session_config()
         self.log = Logger(self.debug)
+        configure_custom_logger(self.log)
         self.ctx = ctx
 
         if self.config.default_project_name:

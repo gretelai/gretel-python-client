@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from enum import Enum
 from pathlib import Path
@@ -221,3 +222,15 @@ def configure_session(config: Union[str, ClientConfig]):
         _session_client_config = config
     if isinstance(config, str):
         raise NotImplementedError("Gretel URIs are not supported yet.")
+
+
+_custom_logger = None
+
+
+def get_logger(name: str = None) -> logging.Logger:
+    return _custom_logger or logging.getLogger(name)
+
+
+def configure_custom_logger(logger):
+    global _custom_logger
+    _custom_logger = logger

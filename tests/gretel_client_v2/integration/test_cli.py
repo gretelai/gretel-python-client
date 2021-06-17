@@ -17,9 +17,8 @@ from gretel_client_v2.config import (
     _load_config,
     configure_session,
 )
-from gretel_client_v2.projects.docker import _is_inside_container
 from gretel_client_v2.projects.models import Model
-from gretel_client_v2.projects.projects import Project, get_project
+from gretel_client_v2.projects.projects import Project
 
 
 @pytest.fixture
@@ -219,7 +218,6 @@ def test_model_crud_manual_mode(project: Project, get_fixture: Callable, tmpdir:
     assert cmd.exit_code == 0
 
 
-@pytest.mark.skipif(_is_inside_container(), reason="running test from docker")
 def test_model_crud_from_cli_local_inputs(
     runner: CliRunner, project: Project, get_fixture: Callable, tmpdir: Path
 ):
@@ -458,7 +456,6 @@ def test_artifact_invalid_data(
     )  # todo(dn): this should fail when we get better data validation checks
 
 
-@pytest.mark.skipif(_is_inside_container(), reason="running test from docker")
 def test_records_generate(
     runner: CliRunner, get_fixture: Callable, tmpdir: Path, trained_synth_model: Model
 ):
@@ -481,7 +478,6 @@ def test_records_generate(
     assert (tmpdir / "data.gz").exists()
 
 
-@pytest.mark.skipif(_is_inside_container(), reason="running test from docker")
 def test_records_transform(
     runner: CliRunner, get_fixture: Callable, tmpdir: Path, trained_xf_model: Model
 ):

@@ -4,24 +4,25 @@ Classes for running a Gretel Job as a local container
 from __future__ import annotations
 
 import atexit
-import shutil
+import io
 import signal
-import tempfile
+import tarfile
+from urllib.parse import urlparse
+import uuid
 from pathlib import Path
 from time import sleep
 from typing import TYPE_CHECKING, List, Optional, Tuple, Union
-from urllib.parse import urlparse
 
 import docker
 import docker.errors
 import smart_open
 from docker.models.containers import Container
+from docker.models.volumes import Volume
 from docker.types.containers import DeviceRequest
 
-from gretel_client_v2.config import get_session_config
-from gretel_client_v2.projects.records import RecordHandler
-from gretel_client_v2.rest.api.opt_api import OptApi
+from gretel_client_v2.config import get_logger, get_session_config
 from gretel_client_v2.projects.jobs import ACTIVE_STATES, Job
+from gretel_client_v2.rest.api.opt_api import OptApi
 
 if TYPE_CHECKING:
     from gretel_client_v2.projects.models import Model
@@ -39,46 +40,70 @@ DEFAULT_ARTIFACT_DIR = "/workspace"
 DEFAULT_GPU_CONFIG = DeviceRequest(count=-1, capabilities=[["gpu"]])
 
 
-class VolumeBuilder:
-    def __init__(self):
-        self.volumes = {}
-        self.input_mappings = {}
-        self.cleanup_paths = []
+class DataVolume:
+
+    volume: Optional[Volume]
+    volume_container: Optional[Container]
+
+    def __init__(self, host_dir: str, docker_client: docker.DockerClient):
+        self.name = f"gretel-{uuid.uuid4().hex[:5]}"
+        self.host_dir = host_dir
+        self.docker_client = docker_client
+        self.local_files = []
+        self.volume_image = "busybox:latest"
         atexit.register(self.cleanup)
 
-    def add_output_volume(self, host_dir: Optional[str], container_dir: Optional[str]):
-        if host_dir:
-            host_dir_qualified = str(Path(host_dir).resolve())
-            self.volumes[host_dir_qualified] = {"bind": container_dir, "mode": "rw"}
+    def add_file(self, local_file: Union[Path, str]) -> str:
+        if not isinstance(local_file, str):
+            local_file = str(local_file)
+        self.local_files.append(local_file)
+        return f"{self.host_dir}/{self._extract_file_name(local_file)}"
 
-    def add_input_volume(
-        self, container_dir: str, files: List[Tuple[str, Optional[str]]] = []
-    ):
-        host_tmp_dir = tempfile.mkdtemp()
-        for file_key, host_file_path in files:
-            if not host_file_path:
-                continue
-            host_file_name = Path(urlparse(host_file_path).path).name
-            with smart_open.open(host_file_path, "rb", ignore_ext=True) as src:  # type: ignore
-                tmp_host_file = Path(host_tmp_dir) / host_file_name
-                with open(tmp_host_file, "wb") as out:
-                    out.write(src.read())  # type:ignore
-            self.input_mappings[file_key] = f"{container_dir}/{host_file_name}"
-        self.volumes[host_tmp_dir] = {"bind": container_dir, "mode": "rw"}
-        self.cleanup_paths.append(host_tmp_dir)
+    def _extract_file_name(self, path: str) -> str:
+        return Path(urlparse(path).path).name
+
+    def copy_files(self, files: List[str], volume_container: Container):
+        copy_stream = io.BytesIO()
+        with tarfile.open(fileobj=copy_stream, mode="w") as tar_archive:
+            for file in files:
+                with smart_open.open(file, "rb", ignore_ext=True) as src:  # type: ignore
+                    src.seek(0, 2)
+                    info = tarfile.TarInfo(name=self._extract_file_name(file))
+                    info.size = src.tell()
+                    src.seek(0)
+                    tar_archive.addfile(fileobj=src, tarinfo=info)
+            copy_stream.seek(0)
+            volume_container.put_archive(data=copy_stream, path=self.host_dir)
+
+    def prepare_volume(self) -> dict:
+        self.volume = self.docker_client.volumes.create(name=self.name)  # type:ignore
+        self.docker_client.images.pull(self.volume_image)
+        self.volume_container = self.docker_client.containers.create(  # type:ignore
+            image=self.volume_image,
+            volumes=[f"{self.volume.name}:{self.host_dir}"],  # type: ignore
+        )
+
+        self.copy_files(self.local_files, self.volume_container)  # type:ignore
+        return {self.name: {"bind": self.host_dir, "mode": "rw"}}
 
     def cleanup(self):
-        for path in self.cleanup_paths:
-            shutil.rmtree(path, ignore_errors=True)
+        if self.volume_container:
+            try:
+                self.volume_container.remove(force=True)
+            except Exception:
+                pass
+        if self.volume:
+            try:
+                self.volume.remove(force=True)
+            except Exception:
+                pass
 
 
 class ContainerRun:
     """Runs a Gretel Job from a local container.
 
     Args:
-        model: Model to run.
-        output_dir: Local file path to save run artifacts to. If no path
-            is specified the artifacts will remain on the container.
+        job: Job to run as docker container.
     """
 
     image: str
@@ -90,7 +115,7 @@ class ContainerRun:
     output_dir: Optional[Path]
     """Local file path to save artifacts to."""
 
-    container_artifact_dir: str = "/workspace"
+    container_output_dir: Optional[str]
     """Output directory on the container where artifacts placed."""
 
     _docker_client: docker.DockerClient
@@ -102,12 +127,13 @@ class ContainerRun:
     def __init__(self, job: Job):
         self._docker_client = docker.from_env()
         self.image = job.container_image
-        self.volumes = VolumeBuilder()
+        self.input_volume = DataVolume("/in", self._docker_client)
         self.device_requests = []
         self.run_params = ["--disable-cloud-upload"]
         self.job = job
         self._launched_from_docker = _is_inside_container()
         self.configure_worker_token(job.worker_key)
+        self.logger = get_logger(__name__)
         self.debug = False
 
     @classmethod
@@ -123,6 +149,13 @@ class ContainerRun:
         """
         self._run(remove=self.debug)
 
+    def extract_output_dir(self, dest: str):
+        if not self.container_output_dir:
+            return
+        extract_container_path(
+            self._container, self.container_output_dir, dest  #
+        )
+
     def enable_debug(self):
         self.debug = True
 
@@ -132,21 +165,19 @@ class ContainerRun:
     def configure_output_dir(
         self, host_dir: str, container_dir: str = DEFAULT_ARTIFACT_DIR
     ):
-        self.volumes.add_output_volume(host_dir, container_dir)
+        self.container_output_dir = container_dir
         self.run_params.extend(["--artifact-dir", container_dir])
 
-    def configure_model(self, model_path: str):
+    def configure_model(self, model_path: Union[str, Path]):
         if not isinstance(model_path, str):
             model_path = str(model_path)
-        self.volumes.add_input_volume("/model", [("model", model_path)])
-        in_model_path = self.volumes.input_mappings["model"]
+        in_model_path = self.input_volume.add_file(model_path)
         self.run_params.extend(["--model-path", in_model_path])
 
-    def configure_input_data(self, input_data: str):
+    def configure_input_data(self, input_data: Union[str, Path]):
         if not isinstance(input_data, str):
             input_data = str(input_data)
-        self.volumes.add_input_volume("/in", [("in_data", input_data)])
-        in_data_path = self.volumes.input_mappings["in_data"]
+        in_data_path = self.input_volume.add_file(input_data)
         self.run_params.extend(["--data-source", in_data_path])
 
     def enable_cloud_uploads(self):
@@ -187,6 +218,9 @@ class ContainerRun:
             pass
 
     def delete(self):
+        """Remove the docker container"""
+        if self.debug:
+            return
         try:
             self._container.remove()
         except Exception:
@@ -202,13 +236,15 @@ class ContainerRun:
         return img
 
     def _run(self, remove: bool = True):
+        self.logger.debug("Pulling container image")
         image = self._pull()
+        self.logger.debug("Preparing input data volume")
+        volume_config = self.input_volume.prepare_volume()
         self._container = self._docker_client.containers.run(  # type:ignore
             image,
             self.run_params,
             detach=True,
-            remove=remove,
-            volumes=self.volumes.volumes,
+            volumes=volume_config,
             device_requests=self.device_requests,
         )
         # ensure that the detached container stops when the process is closed
@@ -253,13 +289,13 @@ class ContainerRun:
         """
         if self.job.status in ACTIVE_STATES and not self.active:
             try:
-                print(self.get_logs())  # todo use logger
+                self.logger.debug(self.get_logs())
             except Exception:
                 pass
             if not self.debug:
-                print(
+                self.logger.warn(
                     "Re-run with debugging enabled for more details."
-                )  # todo use logger
+                )
             raise ContainerRunError(
                 ("Could not launch container. Please check the logs for more details.")
             )
@@ -317,3 +353,21 @@ def _get_container_auth() -> Tuple[dict, str]:
     opt_api = config.get_api(OptApi)
     cred_resp = opt_api.get_container_login()
     return cred_resp.get("data").get("auth"), cred_resp.get("data").get("registry")
+
+
+def extract_container_path(container: Container, container_path: str, host_path: str):
+    """Writes all files from a container path to a host path"""
+    stream = io.BytesIO()
+    archive, _ = container.get_archive(container_path)
+    for b in archive:
+        stream.write(b)
+    stream.seek(0)
+    with tarfile.open(fileobj=stream, mode="r") as tar:
+        dest_path = Path(host_path)
+        dest_path.mkdir(exist_ok=True, parents=True)
+        members_to_extact = []
+        for member in tar.getmembers():
+            if member.isfile():
+                member.name = Path(member.name).name
+                members_to_extact.append(member)
+        tar.extractall(path=dest_path, members=members_to_extact)
