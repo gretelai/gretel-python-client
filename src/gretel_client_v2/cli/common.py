@@ -11,7 +11,8 @@ import requests
 
 from gretel_client_v2.config import RunnerMode, get_session_config
 from gretel_client_v2.projects import get_project
-from gretel_client_v2.projects.jobs import Job
+from gretel_client_v2.projects.common import WAIT_UNTIL_DONE
+from gretel_client_v2.projects.jobs import Job, WaitTimeExceeded
 from gretel_client_v2.projects.models import Model
 
 
@@ -256,24 +257,36 @@ def poll_and_print(
     sc: SessionContext,
     runner: str,
     status_strings: StatusDescriptions,
-    wait: int = 0,
+    wait: int = WAIT_UNTIL_DONE,
     callback: Callable = None,
 ):
-    for update in job.poll_logs_status(wait=wait, callback=callback):
-        if update.transitioned:
-            sc.log.info(
-                (
-                    f"Status is {update.status}. "
-                    f"{get_status_description(status_strings, update.status, runner)}"
+    try:
+
+        for update in job.poll_logs_status(wait=wait, callback=callback):
+            if update.transitioned:
+                sc.log.info(
+                    (
+                        f"Status is {update.status}. "
+                        f"{get_status_description(status_strings, update.status, runner)}"
+                    )
                 )
+            for log in update.logs:
+                msg = f"{log['ts']}  {log['msg']}"
+                if log["ctx"]:
+                    msg += f"\n{json.dumps(log['ctx'], indent=4)}"
+                click.echo(msg, err=True)
+            if update.error:
+                sc.log.error(f"\t{update.error}")
+
+    except WaitTimeExceeded:
+        if wait == 0:
+            sc.log.info("Option --wait=0 was specified, not waiting for the job completion.")
+        else:
+            sc.log.warn(
+                f"Job hasn't completed after waiting for {wait} seconds. "
+                f"Exiting the script, but the job will remain running until it reaches the end state."
             )
-        for log in update.logs:
-            msg = f"{log['ts']}  {log['msg']}"
-            if log["ctx"]:
-                msg += f"\n{json.dumps(log['ctx'], indent=4)}"
-            click.echo(msg, err=True)
-        if update.error:
-            sc.log.error(f"\t{update.error}")
+        sc.exit(0)
 
 
 def download_artifacts(sc: SessionContext, output: str, job: Job):

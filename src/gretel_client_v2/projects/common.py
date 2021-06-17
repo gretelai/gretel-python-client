@@ -125,3 +125,5 @@ class f:
 
 YES = "yes"
 NO = "no"
+
+WAIT_UNTIL_DONE = -1

@@ -11,7 +11,7 @@ from gretel_client_v2.cli.common import (
     runner_option,
     download_artifacts,
 )
-from gretel_client_v2.projects.common import ModelArtifact
+from gretel_client_v2.projects.common import ModelArtifact, WAIT_UNTIL_DONE
 from gretel_client_v2.projects.docker import ContainerRun, ContainerRunError
 from gretel_client_v2.projects.jobs import Status
 from gretel_client_v2.projects.models import (
@@ -37,9 +37,9 @@ def models():
 )
 @click.option(
     "--wait",
-    metavar="MINUTES",
-    help="Configures the time in minutes to wait for a model to finish running.",
-    default=0,
+    metavar="SECONDS",
+    help="Configures the time in seconds to wait for a model to finish running.",
+    default=WAIT_UNTIL_DONE,
 )
 @click.option(
     "--output",
@@ -75,16 +75,23 @@ def create(
     project: str,
     dry_run: bool,
 ):
-    if wait > 0 and output:
+    if wait >= 0 and output:
         raise click.BadOptionUsage(
             "--output",
-            "An output dir is specified but --wait is > 0. Please re-run with --wait=0.",
+            "An output dir is specified but --wait is >= 0. "
+            "Please re-run without --wait argument (will wait until the job is done).",
         )
 
     if runner == RunnerMode.LOCAL.value and not output:
         raise click.BadOptionUsage(
             "--output",
             "--runner is set to local, but --output is not set. Please specify an output directory for --output.",
+        )
+
+    if runner == RunnerMode.MANUAL.value and (output or in_data or upload_model):
+        raise click.BadOptionUsage(
+            "--runner",
+            "--runner manual cannot be used together with any of --output, --in-data, --upload-model."
         )
 
     sc.log.info("Preparing model")
@@ -123,8 +130,16 @@ def create(
             runner_mode=RunnerMode(runner), dry_run=dry_run, _validate_data_source=False
         )
         sc.register_cleanup(lambda: model.cancel())
-        sc.log.info("Model created")
-        sc.print(data=run)
+        sc.log.info(f"Model created with ID {model.model_id}")
+
+        if runner == RunnerMode.MANUAL.value:
+            # With --runner MANUAL, we only print the worker_key and it's up to the user to run the worker
+            sc.print(data={
+                "model": run,
+                "worker_key": model.worker_key
+            })
+        else:
+            sc.print(data=run)
     except ApiException as ex:
         sc.print(data=json.loads(ex.body))  # type:ignore
         sc.exit(1)
@@ -135,7 +150,7 @@ def create(
     if dry_run:
         sc.exit(0)
 
-    # Start a local container when --runner is manual
+    # Start a local container when --runner is LOCAL
     run = None
     if runner == RunnerMode.LOCAL.value:
         run = ContainerRun.from_job(model)
@@ -176,7 +191,7 @@ def create(
     # If the job is in the cloud, and --output is passed, we
     # want to download the artifacts. This isn't necessary for
     # local runs since there is already a volume mount.
-    if output and runner == RunnerMode.CLOUD.value and wait == 0:
+    if output and runner == RunnerMode.CLOUD.value and wait == WAIT_UNTIL_DONE:
         download_artifacts(sc, output, model)
 
     report_path = None

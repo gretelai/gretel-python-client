@@ -1,3 +1,4 @@
+import json
 import os
 from contextlib import contextmanager
 from pathlib import Path
@@ -164,6 +165,60 @@ def test_model_crud_from_cli(
     assert cmd.exit_code == 0
 
 
+def test_model_crud_manual_mode(project: Project, get_fixture: Callable, tmpdir: Path):
+    # This test is using it's own runner and uses separate capture for STDOUT and STDERR.
+    # This is to verify that only JSON object is outputted on STDOUT, so the CLI can be
+    # piped with other commands.
+    runner = CliRunner(mix_stderr=False)
+
+    # 1. create a new model with manual runner_mode and --wait=0
+    cmd = runner.invoke(
+        cli,
+        [
+            "models",
+            "create",
+            "--config",
+            str(get_fixture("transforms_config.yml")),
+            "--project",
+            project.project_id,
+            "--runner",
+            "manual",
+            "--wait",
+            "0",
+        ],
+    )
+    print(cmd.stdout)
+    print(cmd.stderr)
+    assert cmd.exit_code == 0
+    assert "not waiting for the job completion" in cmd.stderr
+
+    output_json = json.loads(cmd.stdout)
+    model_id = output_json["model"]["uid"]
+    assert output_json.get("worker_key") is not None
+
+    # 2. check that the model can be found via a get
+    model = project.get_model(model_id=model_id)
+    assert model is not None
+    assert model.status == "created"
+    assert model.runner_mode == "manual"
+
+    # 3. delete the model
+    cmd = runner.invoke(
+        cli,
+        [
+            "models",
+            "delete",
+            "--model-id",
+            model_id,
+            "--project",
+            project.project_id,
+        ],
+    )
+    print(cmd.stdout)
+    print(cmd.stderr)
+    assert cmd.exit_code == 0
+
+
 @pytest.mark.skipif(_is_inside_container(), reason="running test from docker")
 def test_model_crud_from_cli_local_inputs(
     runner: CliRunner, project: Project, get_fixture: Callable, tmpdir: Path
@@ -301,7 +356,50 @@ def test_local_model_params(runner: CliRunner, project: Project, get_fixture: Ca
 
     # check that --wait cant be passed with an output dir
     cmd = runner.invoke(cli, base_cmd + ["--output", "tmp", "--wait", "10"])
-    assert cmd.exit_code == 2 and "--wait is > 0" in cmd.output
+    assert cmd.exit_code == 2 and "--wait is >= 0" in cmd.output
+
+
+def test_manual_model_params(runner: CliRunner, project: Project, get_fixture: Callable):
+    base_cmd = [
+        "models",
+        "create",
+        "--config",
+        "synthetics/default",
+        "--runner",
+        "manual",
+        "--dry-run",
+        "--project",
+        project.project_id,
+    ]
+
+    # assert that --runner=manual and in-data param results in an error
+    cmd = runner.invoke(
+        cli, base_cmd + ["--in-data", str(get_fixture("account-balances.csv"))]
+    )
+    assert cmd.exit_code == 2
+    assert (
+        "Usage:" in cmd.output
+        and "--runner manual cannot be used together with" in cmd.output
+        and "--in-data" in cmd.output
+    )
+
+    # check that --runner=local and --output params are ok
+    cmd = runner.invoke(cli, base_cmd + ["--output", "tmp"])
+    assert (
+        "Usage:" in cmd.output
+        and "--runner manual cannot be used together with" in cmd.output
+        and "--output" in cmd.output
+    )
+    assert cmd.exit_code == 2
+
+    # check that --wait cant be passed with an output dir
+    cmd = runner.invoke(cli, base_cmd + ["--upload-model"])
+    assert (
+        "Usage:" in cmd.output
+        and "--runner manual cannot be used together with" in cmd.output
+        and "--upload-model" in cmd.output
+    )
+    assert cmd.exit_code == 2
 
 
 def test_artifacts_crud(runner: CliRunner, project: Project, get_fixture: Callable):

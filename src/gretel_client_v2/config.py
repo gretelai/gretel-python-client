@@ -43,6 +43,7 @@ T = TypeVar("T")
 class RunnerMode(Enum):
     LOCAL = "local"
     CLOUD = "cloud"
+    MANUAL = "manual"
 
 
 DEFAULT_RUNNER = RunnerMode.LOCAL

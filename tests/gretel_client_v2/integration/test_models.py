@@ -5,10 +5,9 @@ import pytest
 import smart_open
 from gretel_client_v2.config import RunnerMode
 
-from gretel_client_v2.projects import get_project
 from gretel_client_v2.projects.common import ModelRunArtifact
 from gretel_client_v2.projects.docker import ContainerRun
-from gretel_client_v2.projects.jobs import Job, Status
+from gretel_client_v2.projects.jobs import Job, Status, WaitTimeExceeded
 from gretel_client_v2.projects.models import Model
 from gretel_client_v2.projects.projects import Project
 
@@ -72,6 +71,26 @@ def test_does_train_model_and_transform_records(
     logs = list(record_handler.poll_logs_status())
     assert len(logs) > 1
     assert record_handler.status == Status.COMPLETED
+
+
+def test_raises_wait_time_exceeded(
+    project: Project,
+    transform_model_path: Path,
+    transform_local_data_source: Path,
+):
+    ...
+    m = Model(project=project, model_config=transform_model_path)
+    m.create(runner_mode=RunnerMode.CLOUD)
+
+    with pytest.raises(WaitTimeExceeded):
+        # note: list is required here, because poll_logs_status() returns an iterator
+        # and it may yield an item before throwing an exception
+        list(m.poll_logs_status(wait=0))
+
+    # poll logs until job is done
+    logs = list(m.poll_logs_status())
+    assert len(logs) > 1
+    assert m.status == Status.COMPLETED
 
 
 def test_does_get_synthetic_records(trained_synth_model: Model, request):

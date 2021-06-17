@@ -16,6 +16,7 @@ from gretel_client_v2.projects.common import (
     peek_classification_report,
     peek_synthetics_report,
     peek_transforms_report,
+    WAIT_UNTIL_DONE,
 )
 
 if TYPE_CHECKING:
@@ -47,6 +48,14 @@ END_STATES = [Status.COMPLETED, Status.CANCELLED, Status.ERROR, Status.LOST]
 
 CPU = "cpu"
 GPU = "gpu"
+
+
+class WaitTimeExceeded(Exception):
+    """
+    Thrown when the wait time specified by the user has expired.
+    """
+
+    ...
 
 
 class Job(ABC):
@@ -127,14 +136,17 @@ class Job(ABC):
     def errors(self):
         return self._data[self.job_type][f.ERROR_MSG]
 
+    @property
     def runner_mode(self) -> RunnerMode:
         return self._data[self.job_type][f.RUNNER_MODE]
 
     @property
     def traceback(self) -> Optional[str]:
-        return base64.b64decode(self._data.get(self.job_type).get(f.TRACEBACK)).decode(
-            "utf-8"
-        )
+        traceback = self._data.get(self.job_type).get(f.TRACEBACK)
+        if not traceback:
+            return None
+
+        return base64.b64decode(traceback).decode("utf-8")
 
     @property
     def print_obj(self) -> dict:
@@ -173,7 +185,7 @@ class Job(ABC):
 
     def peek_report(self, report_path: str = None) -> Optional[dict]:
         """Return a summary of the job results
-        
+
         Args:
             report_path: If a report_path is passed, that report
                 will be used for the summary. If no report path
@@ -214,12 +226,12 @@ class Job(ABC):
                 f"Cannot fetch {self.job_type} details for {repr(self)}"
             ) from ex
 
-    def _check_predicate(self, start: float, wait: int = 0) -> bool:
+    def _check_predicate(self, start: float, wait: int = WAIT_UNTIL_DONE) -> bool:
         self._poll_job_endpoint()
         if self.status in END_STATES:
             return False
-        if wait > 0 and time.time() - start > wait:
-            return False
+        if wait >= 0 and time.time() - start > wait:
+            raise WaitTimeExceeded()
         return True
 
     def _new_job_logs(self) -> List[dict]:
@@ -230,14 +242,14 @@ class Job(ABC):
         return []
 
     def poll_logs_status(
-        self, wait: int = 0, callback: Callable = None
+        self, wait: int = WAIT_UNTIL_DONE, callback: Callable = None
     ) -> Iterator[LogStatus]:
         """Returns an iterator that may be used to tail the logs
         of a running Model
 
         Args:
             wait: The time in seconds to wait before closing the
-                iterator. If wait is 0, the iterator will run until
+                iterator. If wait is -1 (WAIT_UNTIL_DONE), the iterator will run until
                 the model has reached a "completed"  or "error" state.
             callback: This function will be executed on every polling loop.
                 A callback is useful for checking some external state that

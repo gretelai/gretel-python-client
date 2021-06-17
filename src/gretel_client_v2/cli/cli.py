@@ -94,4 +94,4 @@ cli.add_command(artifacts)
 
 
 if __name__ == "__main__":
-    cli(auto_env_prefix=GRETEL)
+    cli()
