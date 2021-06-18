@@ -1,0 +1,15 @@
+schema_version: 1.0
+name: "my-awesome-model"
+
+models:
+  - transforms:
+      data_source: account-balances.csv
+      policies:
+        - name: pii
+          rules:
+            - name: second_rule
+              conditions:
+                field_name:
+                  - account_id
+              transforms:
+                - type: passthrough

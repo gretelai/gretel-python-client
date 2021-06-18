@@ -222,10 +222,7 @@ def test_model_crud_from_cli_local_inputs(
     runner: CliRunner, project: Project, get_fixture: Callable, tmpdir: Path
 ):
     # this test looks similar to test_model_crud_from_cli but will instead
-    # test a training run using local inputs and outputs. currently, we don't
-    # support mounting volumes when the cli is running inside a docker
-    # container. the following check ensures that this test is only run
-    # when the test harness is running on a non-docker host.
+    # test a training run using local inputs and outputs.
 
     # 1. create a new model and run it locally.
     cmd = runner.invoke(
@@ -234,9 +231,7 @@ def test_model_crud_from_cli_local_inputs(
             "models",
             "create",
             "--config",
-            str(get_fixture("transforms_config.yml")),
-            "--in-data",
-            str(get_fixture("account-balances.csv")),
+            str(get_fixture("transforms_config_local_datasource.yml")),
             "--output",
             str(tmpdir),
             "--project",

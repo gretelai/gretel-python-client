@@ -160,8 +160,8 @@ def create(
             run.enable_debug()
         if output:
             run.configure_output_dir(output)
-        if in_data:
-            run.configure_input_data(in_data)
+        if model.external_data_source:
+            run.configure_input_data(model.data_source)
         if upload_model:
             sc.log.info("Uploads to Gretel Cloud are enabled")
             run.enable_cloud_uploads()

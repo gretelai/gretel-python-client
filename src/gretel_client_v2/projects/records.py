@@ -1,6 +1,3 @@
-import base64
-import time
-from functools import wraps
 from typing import TYPE_CHECKING, Optional, List
 
 from gretel_client_v2.projects.jobs import CPU, Status, Job
@@ -58,7 +55,7 @@ class RecordHandler(Job):
     @property
     def instance_type(self) -> str:
         return CPU
-    
+
     @property
     def artifact_types(self) -> List[str]:
         return [a.value for a in ModelRunArtifact]

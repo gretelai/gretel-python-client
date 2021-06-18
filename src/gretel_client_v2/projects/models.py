@@ -1,12 +1,10 @@
 """
 Classes and methods for working with Gretel Models
 """
-import base64
 import json
-import time
-from functools import wraps
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterator, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Iterator, List, Optional, Union
+from pathlib import Path
 
 import yaml
 from smart_open import open
@@ -18,15 +16,11 @@ from gretel_client_v2.projects.common import (
     ModelType,
     YES,
     NO,
-    peek_classification_report,
-    peek_synthetics_report,
-    peek_transforms_report,
     validate_data_source,
 )
 from gretel_client_v2.projects.jobs import CPU, GPU, Job, Status
 from gretel_client_v2.projects.common import f
 from gretel_client_v2.projects.records import RecordHandler
-from gretel_client_v2.rest.api.projects_api import ProjectsApi
 
 if TYPE_CHECKING:
     from gretel_client_v2.projects import Project
@@ -106,6 +100,9 @@ def read_model_config(model_config: _ModelConfigPathT) -> dict:
     return config
 
 
+JOB_TYPE = "model"
+
+
 class Model(Job):
     """Represents a Gretel Model. This class can be used to train new
     models or run and lookup existing ones.
@@ -117,11 +114,13 @@ class Model(Job):
         model_config: _ModelConfigPathT = None,
         model_id: str = None,
     ):
+        self._local_model_config_path = None
         if model_config:
             self._local_model_config = read_model_config(model_config)
+            if isinstance(model_config, (str, Path)):
+                self._local_model_config_path = Path(model_config)
         self.model_id = model_id
-        super().__init__(project, "model", model_id)
-        
+        super().__init__(project, JOB_TYPE, model_id)
 
     def create(
         self,
@@ -206,9 +205,20 @@ class Model(Job):
 
     @property
     def data_source(self) -> str:
-        """Retrieves the configured data source from the model config"""
+        """Retrieves the configured data source from the model config.
+
+        If the model config has a local data_source we'll try and resolve
+        that path relative to the location of the model config.
+        """
         try:
-            return self.model_config["models"][0][self.model_type]["data_source"]
+            data_source = self.model_config["models"][0][self.model_type]["data_source"]
+            if isinstance(data_source, list):
+                data_source = data_source[0]
+            if self._local_model_config_path and not data_source.startswith("gretel_"):
+                data_source_path = self._local_model_config_path.parent / data_source
+                if data_source_path.is_file():
+                    return str(data_source_path)
+            return data_source
         except (IndexError, KeyError) as ex:
             raise ModelConfigError("Could not get data source from model config") from ex
 
@@ -247,10 +257,14 @@ class Model(Job):
         """Resolves and uploads the data source specified in the
         model config.
 
+        If the data source is already a Gretel artifact, the artifact
+        will not be uploaded.
+
         Returns:
             A Gretel artifact key
         """
-        self.data_source = self.project.upload_artifact(self.data_source, _validate)
+        if self.external_data_source:
+            self.data_source = self.project.upload_artifact(self.data_source, _validate)
         return self.data_source
 
     def _do_get_job_details(self):
