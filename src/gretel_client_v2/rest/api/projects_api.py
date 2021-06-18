@@ -535,7 +535,8 @@ class ProjectsApi(object):
                     ('action',): {
 
                         "GENERATE": "generate",
-                        "TRANSFORM": "transform"
+                        "TRANSFORM": "transform",
+                        "CLASSIFY": "classify"
                     },
                     ('runner_mode',): {
 

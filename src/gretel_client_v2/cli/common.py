@@ -247,6 +247,20 @@ record_transform_status_descriptions: StatusDescriptions = {
     },
 }
 
+record_classify_status_descriptions: StatusDescriptions = {
+    "created": {
+        "default": "A Record classify job has been queued.",
+    },
+    "pending": {
+        "default": "A worker is being allocated to begin running a classification pipeline.",
+        "cloud": "A Gretel Cloud worker is being allocated to begin classifying records.",
+        "local": "A local container is being started and will begin classifying records.",
+    },
+    "active": {
+        "default": "A worker has started!",
+    },
+}
+
 
 def get_status_description(
     descriptions: StatusDescriptions, status: str, runner: str

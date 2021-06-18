@@ -61,7 +61,13 @@ def _validate_from_reader(peek: Iterator, sample_size: int = 1):
 
 
 def peek_transforms_report(report_contents: dict) -> dict:
-    fields = ["training_time_seconds", "record_count", "field_count", "field_transforms"]
+    fields = [
+        "training_time_seconds",
+        "record_count",
+        "field_count",
+        "field_transforms",
+        "value_transforms",
+    ]
     return {f: report_contents[f] for f in fields}
 
 
@@ -76,7 +82,8 @@ def peek_synthetics_report(report_contents: dict) -> dict:
 
 
 def peek_classification_report(report_contents: dict) -> dict:
-    ...
+    fields = ["elapsed_time_seconds", "record_count", "field_count", "warnings"]
+    return {f: report_contents[f] for f in fields}
 
 
 class ModelType(str, Enum):

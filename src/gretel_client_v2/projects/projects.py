@@ -225,11 +225,13 @@ def get_project(
             project = api.get_project(project_id=name)
         except (UnauthorizedException, NotFoundException):
             if create:
-                resp = api.create_project(
-                    models.Project(
-                        name=name, display_name=display_name, description=desc
-                    )
-                )
+                project_args = {"name": name}
+                if desc:
+                    project_args["description"] = desc
+                if display_name:
+                    project_args["display_name"] = display_name
+
+                resp = api.create_project(project=models.Project(**project_args))
                 project = api.get_project(project_id=resp.get(DATA).get("id"))
             else:
                 raise

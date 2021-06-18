@@ -7,12 +7,13 @@ from gretel_client_v2.cli.common import (
     SessionContext,
     StatusDescriptions,
     download_artifacts,
-    poll_and_print,
-    record_transform_status_descriptions,
-    record_generation_status_descriptions,
     model_option,
-    project_option,
     pass_session,
+    poll_and_print,
+    project_option,
+    record_classify_status_descriptions,
+    record_generation_status_descriptions,
+    record_transform_status_descriptions,
     runner_option,
 )
 from gretel_client_v2.config import RunnerMode
@@ -69,7 +70,15 @@ def create_and_run_record_handler(
         )
         sc.register_cleanup(lambda: record_handler.cancel())
         sc.log.info(f"Record handler created {record_handler.record_id}")
-        sc.print(data=data)
+
+        if runner == RunnerMode.MANUAL.value:
+            # With --runner MANUAL, we only print the worker_key and it's up to the user to run the worker
+            sc.print(data={
+                "record_handler": data,
+                "worker_key": record_handler.worker_key
+            })
+        else:
+            sc.print(data=data)
     except Exception as ex:
         sc.log.error("Could not create record handler", ex=ex)
         sc.exit(1)
@@ -154,6 +163,12 @@ def generate(
             "--model-path", "Cannot specify a local model path for cloud models"
         )
 
+    if runner == RunnerMode.MANUAL.value and (output or in_data or model_path):
+        raise click.BadOptionUsage(
+            "--runner",
+            "--runner manual cannot be used together with any of --output, --in-data, --model-path."
+        )
+
     params: Dict[str, Union[int, float, str]] = {
         "num_records": num_records,
         "max_invalid": max_invalid,
@@ -208,6 +223,12 @@ def transform(
             "--model-path", "Cannot specify a local model path for cloud models"
         )
 
+    if runner == RunnerMode.MANUAL.value and (output or in_data or model_path):
+        raise click.BadOptionUsage(
+            "--runner",
+            "--runner manual cannot be used together with any of --output, --in-data, --model-path."
+        )
+
     data_source = "__local__"
     if in_data and runner == RunnerMode.CLOUD.value:
         try:
@@ -228,3 +249,53 @@ def transform(
         status_strings=record_transform_status_descriptions,
         model_path=model_path,
     )
+
+
+@records.command(help="Classify records.")
+@project_option
+@runner_option
+@model_option
+@input_data_option
+@output_data_option
+@pass_session
+def classify(
+    sc: SessionContext,
+    project: str,
+    in_data: str,
+    output: str,
+    runner: str,
+    model_id: str,
+):
+    if runner == RunnerMode.LOCAL.value and not output:
+        raise click.BadOptionUsage(
+            "--output",
+            "--runner is set to local, but no --output flag is set. Please set an output path",
+        )
+
+    if runner == RunnerMode.MANUAL.value and (output or in_data):
+        raise click.BadOptionUsage(
+            "--runner",
+            "--runner manual cannot be used together with any of --output, --in-data."
+        )
+
+    data_source = "__local__"
+    if in_data and runner == RunnerMode.CLOUD.value:
+        try:
+            sc.log.info(f"Uploading input artifact {in_data}")
+            data_source = sc.project.upload_artifact(in_data)
+        except Exception as ex:
+            sc.log.error(f"Could not upload artifact {in_data}", ex=ex)
+            sc.exit(1)
+
+    create_and_run_record_handler(
+        sc,
+        params=None,
+        data_source=data_source,
+        action="classify",
+        runner=runner,
+        output=output,
+        in_data=in_data,
+        status_strings=record_classify_status_descriptions,
+        model_path=None,
+    )
+

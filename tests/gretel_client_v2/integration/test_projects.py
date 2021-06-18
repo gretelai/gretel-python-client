@@ -24,6 +24,19 @@ def test_does_create_project(project: Project, projects_api: ProjectsApi):
     assert projects_api.get_project(project_id=project.project_id)
 
 
+def test_create_project_with_specific_name(request):
+    name = "integ-test-project-1234"
+    description = "Integration test project."
+
+    project = get_project(create=True, name=name, desc=description)
+    request.addfinalizer(project.delete)
+
+    assert project.project_id is not None
+    assert project.name == name
+    assert project.description == description
+    assert project.display_name == ""
+
+
 def test_does_get_project(project: Project):
     p = get_project(name=project.project_id)
     assert p.project_id == project.project_id

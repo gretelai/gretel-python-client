@@ -495,3 +495,28 @@ def test_records_transform(
     )
     assert cmd.exit_code == 0
     assert (tmpdir / "data.gz").exists()
+
+
+def test_records_classify(
+    runner: CliRunner, get_fixture: Callable, tmpdir: Path, trained_classify_model: Model
+):
+    cmd = runner.invoke(
+        cli,
+        [  # type:ignore
+            "records",
+            "classify",
+            "--project",
+            trained_classify_model.project.project_id,
+            "--model-id",
+            trained_classify_model.model_id,
+            "--in-data",
+            str(get_fixture("account-balances.csv")),
+            "--output",
+            str(tmpdir),
+            "--runner",
+            "local",
+        ],
+    )
+    assert cmd.exit_code == 0
+    # TODO(pm): I will fix name of this file in next change in classify container
+    assert (tmpdir / "data.jsonl.gz").exists()

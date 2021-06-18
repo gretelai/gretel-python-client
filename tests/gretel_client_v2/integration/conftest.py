@@ -55,3 +55,8 @@ def trained_synth_model(pre_trained_project: Project) -> Model:
 @pytest.fixture
 def trained_xf_model(pre_trained_project: Project) -> Model:
     return pre_trained_project.get_model(model_id="60b8f50ae00f682f4581901d")
+
+
+@pytest.fixture
+def trained_classify_model(pre_trained_project: Project) -> Model:
+    return pre_trained_project.get_model(model_id="60cd03dec34d2b6362538133")
