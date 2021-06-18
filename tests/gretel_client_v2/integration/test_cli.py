@@ -518,5 +518,4 @@ def test_records_classify(
         ],
     )
     assert cmd.exit_code == 0
-    # TODO(pm): I will fix name of this file in next change in classify container
-    assert (tmpdir / "data.jsonl.gz").exists()
+    assert (tmpdir / "data.gz").exists()
