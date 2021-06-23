@@ -1,0 +1,63 @@
+{
+    "worker_key": "eyJwcm9qZWN0X2lkIjogIjYwYzJlN2E1ZWY0N2E3YmIzNmQwNjU4YiIsICJtb2RlbF9pZCI6ICI2MGMyZTdhODA0MzgyZWQ2MWEzMDFmNWQiLCAiZW5kcG9pbnQiOiAiYXBpLWRldi5ncmV0ZWwuY2xvdWQiLCAicnVuX2lkIjogbnVsbCwgIm1vZGVsX2tleSI6ICJncnRtODZmNDc4YmY3MTVkZWE0N2FkNDJjYjk3YjE5ZDI2YmI0M2IxYTE4OWQ5NDMyNWE3N2M1ZTA4MmFkYWNhMGVjYSIsICJ0eXBlIjogInRyYWluIn0=",
+    "data": {
+        "model": {
+            "uid": "60c2e7a804382ed61a301f5d",
+            "model_key": "grtm86f478bf715dea47ad42cb97b19d26bb43b1a189d94325a77c5e082adaca0eca",
+            "runner_mode": "manual",
+            "user_id": "5ece8962492fbf5bd66089f1",
+            "project_id": "60c2e7a5ef47a7bb36d0658b",
+            "logs": null,
+            "status_history": {
+                "created": "2021-06-11T04:33:44.754541"
+            },
+            "last_modified": "2021-06-11T04:33:44.933260",
+            "status": "created",
+            "last_active_hb": null,
+            "duration_minutes": null,
+            "error_msg": null,
+            "traceback": null,
+            "model_type": "transform",
+            "config": {
+                "schema_version": "1.0",
+                "name": "my-awesome-model",
+                "models": [
+                    {
+                        "transforms": {
+                            "data_source": [
+                                "https://gretel-public-website.s3.us-west-2.amazonaws.com/tests/client/account-balances.csv"
+                            ],
+                            "policies": [
+                                {
+                                    "name": "pii",
+                                    "rules": [
+                                        {
+                                            "name": "second_rule",
+                                            "conditions": {
+                                                "field_name": [
+                                                    "account_id"
+                                                ],
+                                                "field_name_regex": null,
+                                                "field_name_similarity": null,
+                                                "field_label": null,
+                                                "field_attributes": null,
+                                                "value_label": null
+                                            },
+                                            "transforms": [
+                                                {
+                                                    "type": "passthrough"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "notifications": null,
+                "label_predictors": null
+            }
+        }
+    }
+}

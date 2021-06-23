@@ -1,0 +1,141 @@
+{
+    "data": {
+        "model": {
+            "uid": "60c2f0b8b7bc91d932d2e75a",
+            "model_key": "grtmd0a4bd65e11083d1046767d032d04d38c02f7acd1f0180d7935b5edd714d6c10",
+            "runner_mode": "manual",
+            "user_id": "5ece8962492fbf5bd66089f1",
+            "project_id": "60c2f0b82b54ef56a87b23e8",
+            "logs": null,
+            "status_history": {
+                "created": "2021-06-11T05:12:24.953000",
+                "pending": "2021-06-11T05:12:30.526000",
+                "active": "2021-06-11T05:12:30.770000",
+                "completed": "2021-06-11T05:12:45.468000"
+            },
+            "last_modified": "2021-06-11T05:12:45.464000",
+            "status": "completed",
+            "last_active_hb": "2021-06-11T05:12:43.938000",
+            "duration_minutes": null,
+            "error_msg": null,
+            "traceback": null,
+            "model_type": "transform",
+            "config": {
+                "schema_version": "1.0",
+                "name": "my-awesome-model",
+                "models": [
+                    {
+                        "transforms": {
+                            "data_source": [
+                                "https://gretel-public-website.s3.us-west-2.amazonaws.com/tests/client/account-balances.csv"
+                            ],
+                            "policies": [
+                                {
+                                    "name": "pii",
+                                    "rules": [
+                                        {
+                                            "name": "second_rule",
+                                            "conditions": {
+                                                "field_name": [
+                                                    "account_id"
+                                                ],
+                                                "field_name_regex": null,
+                                                "field_name_similarity": null,
+                                                "field_label": null,
+                                                "field_attributes": null,
+                                                "value_label": null
+                                            },
+                                            "transforms": [
+                                                {
+                                                    "type": "passthrough"
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "notifications": null,
+                "label_predictors": null
+            }
+        },
+        "billing_estimate": {
+            "total_time_seconds": 14,
+            "total_billed_seconds": 60,
+            "total_billed_usd": 0.03,
+            "job_status": "completed"
+        },
+        "logs": [
+            {
+                "ts": "2021-06-11T05:12:32.333130Z",
+                "msg": "Starting transforms model training",
+                "ctx": {},
+                "seq": 1,
+                "stage": "pre"
+            },
+            {
+                "ts": "2021-06-11T05:12:32.334726Z",
+                "msg": "Loading training data",
+                "ctx": {},
+                "seq": 2,
+                "stage": "pre"
+            },
+            {
+                "ts": "2021-06-11T05:12:32.620843Z",
+                "msg": "Training data loaded",
+                "ctx": {
+                    "record_count": 302,
+                    "field_count": 9
+                },
+                "seq": 3,
+                "stage": "pre"
+            },
+            {
+                "ts": "2021-06-11T05:12:32.621591Z",
+                "msg": "Beginning transforms model training",
+                "ctx": {},
+                "seq": 4,
+                "stage": "train"
+            },
+            {
+                "ts": "2021-06-11T05:12:42.846683Z",
+                "msg": "Saving model archive",
+                "ctx": {},
+                "seq": 5,
+                "stage": "train"
+            },
+            {
+                "ts": "2021-06-11T05:12:42.853049Z",
+                "msg": "Saving training report",
+                "ctx": {},
+                "seq": 6,
+                "stage": "train"
+            },
+            {
+                "ts": "2021-06-11T05:12:42.857218Z",
+                "msg": "Generating data preview",
+                "ctx": {
+                    "num_records": 100
+                },
+                "seq": 7,
+                "stage": "run"
+            },
+            {
+                "ts": "2021-06-11T05:12:42.902072Z",
+                "msg": "Done generating data preview",
+                "ctx": {},
+                "seq": 8,
+                "stage": "run"
+            },
+            {
+                "ts": "2021-06-11T05:12:42.902979Z",
+                "msg": "Model creation complete!",
+                "ctx": {},
+                "seq": 9,
+                "stage": "post"
+            }
+        ]
+    }
+}

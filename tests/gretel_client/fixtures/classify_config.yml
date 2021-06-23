@@ -1,0 +1,14 @@
+schema_version: 1.0
+name: "my-awesome-model"
+
+models:
+  - classify:
+      data_source: https://gretel-public-website.s3.us-west-2.amazonaws.com/tests/client/account-balances.csv
+
+label_predictors:
+  namespace: acme
+  regex:
+    float_number:
+      patterns:
+        - score: high
+          regex: "\\d+\\.\\d+"

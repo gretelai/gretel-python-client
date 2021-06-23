@@ -1,0 +1,28 @@
+{
+    "worker_key": "eyJwcm9qZWN0X2lkIjogIjYwYzJmMGI4MmI1NGVmNTZhODdiMjNlOCIsICJtb2RlbF9pZCI6ICI2MGMyZjBiOGI3YmM5MWQ5MzJkMmU3NWEiLCAiZW5kcG9pbnQiOiAiYXBpLWRldi5ncmV0ZWwuY2xvdWQiLCAicnVuX2lkIjogIjYwYzJmMTEyOGNjMmNiODIxNDliODNmMCIsICJtb2RlbF9rZXkiOiAiZ3J0bTgyYzc3MzM4NTNkMDVkOTE0NTY2Njc0MGE1ZTU4OGViZTIxN2JjNGFiMWQwZDkxNGY2MGI4MjhkZmZjODA3YzkiLCAidHlwZSI6ICJydW4ifQ==",
+    "data": {
+        "handler": {
+            "uid": "60c2f1128cc2cb82149b83f0",
+            "model_key": "grtm82c7733853d05d9145666740a5e588ebe217bc4ab1d0d914f60b828dffc807c9",
+            "runner_mode": "manual",
+            "user_id": "5ece8962492fbf5bd66089f1",
+            "project_id": "60c2f0b82b54ef56a87b23e8",
+            "logs": null,
+            "status_history": {
+                "created": "2021-06-11T05:13:54.329000"
+            },
+            "last_modified": "2021-06-11T05:13:54.401000",
+            "status": "created",
+            "last_active_hb": null,
+            "duration_minutes": null,
+            "error_msg": null,
+            "traceback": null,
+            "model_id": "60c2f0b8b7bc91d932d2e75a",
+            "action": "transform",
+            "config": {
+                "data_source": "path/to/account-balances.csv",
+                "params": null
+            }
+        }
+    }
+}
