@@ -30,7 +30,7 @@ setup(
     package_dir={"": "src"},
     packages=find_packages("src"),
     python_requires=">=3.7",
-    entry_points={"console_scripts": ["gretel=gretel_client_v2.cli.cli:cli"]},
+    entry_points={"console_scripts": ["gretel=gretel_client.cli.cli:cli"]},
     install_requires=reqs("requirements.txt"),
     tests_require=reqs("test-requirements.txt"),
     classifiers=[
