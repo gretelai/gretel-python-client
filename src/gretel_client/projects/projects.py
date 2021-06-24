@@ -102,8 +102,12 @@ class Project:
         return self.projects_api.get_project(project_id=self.name).get(DATA)
 
     @check_not_deleted
-    def search_models(self) -> List[dict]:
-        return self.projects_api.get_models(project_id=self.name).get(DATA).get(MODELS)
+    def search_models(self, limit: int = 100) -> List[dict]:
+        return (
+            self.projects_api.get_models(project_id=self.name, limit=limit)
+            .get(DATA)
+            .get(MODELS)
+        )
 
     @check_not_deleted
     def get_model(self, model_id: str) -> Model:

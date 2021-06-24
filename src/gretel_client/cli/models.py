@@ -142,6 +142,7 @@ def create(
         else:
             sc.print(data=run)
     except ApiException as ex:
+        sc.log.error("Could not create model", ex=ex)
         sc.print(data=json.loads(ex.body))  # type:ignore
         sc.exit(1)
     except Exception as ex:
@@ -267,9 +268,10 @@ def get(sc: SessionContext, project: str, model_id: str, output: str):
 
 @models.command()
 @project_option
+@click.option("--limit", help="Limit the number of projects.", default=100)
 @pass_session
-def search(sc: SessionContext, project: str):
-    sc.print(data=sc.project.search_models())
+def search(sc: SessionContext, project: str, limit: int):
+    sc.print(data=sc.project.search_models(limit=limit))
 
 
 @models.command()

@@ -218,13 +218,8 @@ class Job(ABC):
             self._do_cancel_job()
 
     def _poll_job_endpoint(self):
-        try:
-            resp = self._do_get_job_details()
-            self._data = resp.get(f.DATA)
-        except Exception as ex:
-            raise Exception(
-                f"Cannot fetch {self.job_type} details for {repr(self)}"
-            ) from ex
+        resp = self._do_get_job_details()
+        self._data = resp.get(f.DATA)
 
     def _check_predicate(self, start: float, wait: int = WAIT_UNTIL_DONE) -> bool:
         self._poll_job_endpoint()

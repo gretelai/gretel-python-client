@@ -73,9 +73,10 @@ class RecordHandler(Job):
         )
 
     def _do_cancel_job(self):
-        self._projects_api.update_model(
+        self._projects_api.update_record_handler(
             project_id=self.project.project_id,
             model_id=self.model.model_id,
+            record_handler_id=self.record_id,
             body={f.STATUS: Status.CANCELLED.value},
         )
 

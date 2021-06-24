@@ -1,18 +1,10 @@
-import os
 from typing import Callable
 
 import pytest
 
-from gretel_client.config import (
-    GRETEL_API_KEY,
-    GretelClientConfigurationError,
-    ClientConfig,
-)
-
-
+from gretel_client.projects import Project, get_project, search_projects
+from gretel_client.projects.projects import GretelProjectError
 from gretel_client.rest.api.projects_api import ProjectsApi
-from gretel_client.projects import Project, search_projects, get_project
-from gretel_client.projects.projects import GretelProjectError, tmp_project
 
 
 def test_does_search_projects(project: Project):
@@ -58,21 +50,3 @@ def test_does_get_artifacts(project: Project, get_fixture: Callable):
     assert len(art_listing) == 1
     project.delete_artifact(art_key)
     assert len(project.artifacts) == 0
-
-
-def test_does_check_project(dev_ep):
-    config = ClientConfig(
-        endpoint=dev_ep,
-        api_key=os.getenv(GRETEL_API_KEY),
-    )
-
-    with pytest.raises(GretelClientConfigurationError):
-        config.update_default_project("not_found")
-
-    with tmp_project() as p:
-        config.update_default_project(p.project_id)
-        config = ClientConfig(
-            endpoint=dev_ep,
-            api_key=os.getenv(GRETEL_API_KEY),
-            default_project_name=p.project_id,
-        )

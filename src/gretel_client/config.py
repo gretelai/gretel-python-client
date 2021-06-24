@@ -77,9 +77,7 @@ class ClientConfig:
         self.endpoint = os.getenv(GRETEL_ENDPOINT) or endpoint or DEFAULT_GRETEL_ENDPOINT
         self.api_key = os.getenv(GRETEL_API_KEY) or api_key
         self.default_runner = default_runner
-        self.default_project_name = self._check_project(
-            os.getenv(GRETEL_PROJECT) or default_project_name
-        )
+        self.default_project_name = os.getenv(GRETEL_PROJECT) or default_project_name
 
     @classmethod
     def from_file(cls, file_path: Path) -> ClientConfig:
@@ -115,17 +113,13 @@ class ClientConfig:
             ) from ex
         return project_name
 
-    def update_default_project(self, project_id):
+    def update_default_project(self, project_id: str):
         """Updates the default project.
 
         Args:
             project_name: The name or id of the project to set.
-
-        Raises:
-            A ``GretelClientConfigurationError`` if the project
-            isn't valid.
         """
-        self.default_project_name = self._check_project(project_id)
+        self.default_project_name = project_id
 
     @property
     def as_dict(self) -> dict:

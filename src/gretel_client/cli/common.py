@@ -18,6 +18,11 @@ from gretel_client.projects import get_project
 from gretel_client.projects.common import WAIT_UNTIL_DONE
 from gretel_client.projects.jobs import Job, WaitTimeExceeded
 from gretel_client.projects.models import Model
+from gretel_client.projects.projects import Project
+from gretel_client.rest.exceptions import ApiException, NotFoundException
+
+
+ExT = Union[str, Exception]
 
 
 class Logger:
@@ -47,9 +52,7 @@ class Logger:
         """Print warn log messages"""
         click.echo(click.style("WARN: ", fg="yellow") + msg, err=True)
 
-    def error(
-        self, msg: str = None, ex: Union[str, Exception] = None, include_tb: bool = True
-    ):
+    def error(self, msg: str = None, ex: ExT = None, include_tb: bool = True):
         """Logs an error to the terminal.
 
         Args:
@@ -60,14 +63,26 @@ class Logger:
         """
         if msg:
             click.echo(click.style("ERROR: ", fg="red") + msg, err=True)
+
         if include_tb and self.debug_mode:
             if ex:
                 click.echo(ex, err=True)
             if include_tb:
                 _, _, tb = sys.exc_info()
                 traceback.print_tb(tb)
+        if ex:
+            self.hint(ex)
 
-    def debug(self, msg: str, ex: Exception = None):
+    def hint(self, ex: ExT):
+        hint = None
+        try:
+            hint = get_hint_for_error(ex)
+        except Exception as ex:
+            self.debug("Could not get hint", ex=ex)
+        if hint:
+            click.echo(click.style("HINT: ", fg="blue") + hint, err=True)
+
+    def debug(self, msg: str, ex: ExT = None):
         """Prints a debug message to the console if ``debug_mode`` is
         enabled.
 
@@ -81,10 +96,44 @@ class Logger:
                 traceback.print_tb(tb)
 
 
+def _naming_hint(ex: ExT) -> Optional[str]:
+    if isinstance(ex, ApiException):
+        resp = json.loads(ex.body)
+        ctx = resp.get("context")
+        matched = False
+        obj = ""
+        if ctx:
+            if isinstance(ctx, dict):
+                matched = "name" in ctx
+                obj = "Project"
+            if isinstance(ctx, list):
+                for err in ctx:
+                    if "name" in err.get("loc", []):
+                        matched = True
+                        obj = "Model"
+
+        if matched:
+            return (
+                f"{obj} names must be DNS compliant. "
+                "No upper-case letters, underscores or periods. "
+                "Names may not end in a dash and must be between 3 and 63 characters."
+            )
+
+
+hints = [_naming_hint]
+
+
+def get_hint_for_error(ex: ExT) -> Optional[str]:
+    for hint in hints:
+        try:
+            hint_msg = hint(ex)
+            if hint_msg:
+                return hint_msg
+        except Exception:
+            pass
+
+
 class SessionContext(object):
-
-    model: Optional[Model]
-
     def __init__(self, ctx: click.Context, output_fmt: str, debug: bool = False):
         self.debug = debug
         self.verbosity = 0
@@ -93,11 +142,12 @@ class SessionContext(object):
         self.log = Logger(self.debug)
         configure_custom_logger(self.log)
         self.ctx = ctx
+        self._model = None
 
+        self._project = None
+        self._project_id = None
         if self.config.default_project_name:
-            self.set_project(self.config.default_project_name)
-        else:
-            self.project = None
+            self._project_id = self.config.default_project_name
 
         self.cleanup_methods = []
         self._shutting_down = False
@@ -115,24 +165,45 @@ class SessionContext(object):
             self.exit(1)
 
     def set_project(self, project_name: str):
-        try:
-            self.project = get_project(name=project_name)
-        except Exception as ex:
-            self.log.error(ex=ex, include_tb=True)
-            raise click.BadArgumentUsage(
-                f'The specified project "{project_name}" is not valid'
-            ) from ex
+        self._project_id = project_name
 
     def set_model(self, model_id: str):
         if not self.project:
             raise click.BadArgumentUsage("Cannot set model. No project is set.")
-        try:
-            self.model = self.project.get_model(model_id)
-        except Exception as ex:
-            self.log.debug(
-                f"Could not set model {model_id} {ex}"
-            )  # todo(dn): better traceback log
-            raise click.BadParameter("Invalid model.")
+        self.model_id = model_id
+
+    @property
+    def model(self) -> Model:
+        if self._model:
+            return self._model
+        else:
+            try:
+                self._model = self.project.get_model(self.model_id)
+                return self._model
+            except NotFoundException as ex:
+                self.log.debug(f"Could not get model {self.model_id}", ex=ex)
+                raise click.BadParameter(
+                    (
+                        f"The model `{self.model_id}` was not found in the "
+                        f"project `{self.project.name}`. "
+                    )
+                )
+
+    @property
+    def project(self) -> Project:
+        if self._project:
+            return self._project
+        if not self._project_id:
+            raise click.BadArgumentUsage("A project must be specified.")
+        else:
+            try:
+                self._project = get_project(name=self._project_id)
+                return self._project
+            except Exception as ex:
+                self.log.error(ex=ex, include_tb=True)
+                raise click.BadArgumentUsage(
+                    f"Could not load the specified project `{self._project_id}`"
+                ) from ex
 
     def ensure_project(self):
         if not self.project:
@@ -299,7 +370,9 @@ def poll_and_print(
 
     except WaitTimeExceeded:
         if wait == 0:
-            sc.log.info("Option --wait=0 was specified, not waiting for the job completion.")
+            sc.log.info(
+                "Option --wait=0 was specified, not waiting for the job completion."
+            )
         else:
             sc.log.warn(
                 f"Job hasn't completed after waiting for {wait} seconds. "

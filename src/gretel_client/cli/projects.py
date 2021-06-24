@@ -1,12 +1,13 @@
 import click
 
-from gretel_client.cli.common import (
-    SessionContext,
-    pass_session
-)
+from gretel_client.cli.common import SessionContext, pass_session
 from gretel_client.projects.projects import search_projects
 from gretel_client.projects import get_project
-from gretel_client.rest.exceptions import NotFoundException, UnauthorizedException
+from gretel_client.rest.exceptions import (
+    ApiException,
+    NotFoundException,
+    UnauthorizedException,
+)
 from gretel_client.config import GretelClientConfigurationError, write_config
 
 
@@ -28,15 +29,24 @@ def projects():
     help="Use this project as the default.",
 )
 @pass_session
-def create(sc: SessionContext, name: str, desc: str, display_name: str, set_default: bool):
+def create(
+    sc: SessionContext, name: str, desc: str, display_name: str, set_default: bool
+):
     project = None
     try:
         project = get_project(
             name=name, desc=desc, display_name=display_name, create=True
         )
     except (UnauthorizedException, NotFoundException) as ex:
-        sc.log.debug(ex)
-        sc.log.error(f"Project name {name} unavailable.")
+        sc.log.error(f"Project name {name} unavailable.", ex=ex)
+    except ApiException as ex:
+        sc.log.error(
+            (
+                "There was a problem creating the project using the supplied inputs. "
+                "Please check your inputs and retry."
+            ),
+            ex=ex,
+        )
 
     if not project:
         sc.exit(1)

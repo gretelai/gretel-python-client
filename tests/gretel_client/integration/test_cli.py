@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Callable
 from unittest.mock import MagicMock, patch
+import uuid
 
 import pytest
 from click.testing import CliRunner
@@ -18,7 +19,7 @@ from gretel_client.config import (
     configure_session,
 )
 from gretel_client.projects.models import Model
-from gretel_client.projects.projects import Project
+from gretel_client.projects.projects import Project, get_project
 
 
 @pytest.fixture
@@ -83,7 +84,7 @@ def test_cli_does_configure_with_project(
 
 
 @patch("gretel_client.cli.cli.write_config")
-def test_cli_does_fail_configure_with_bad_project(
+def test_cli_does_pass_configure_with_bad_project(
     write_config: MagicMock, runner: CliRunner
 ):
     with clear_session_config():
@@ -93,7 +94,7 @@ def test_cli_does_fail_configure_with_bad_project(
             input=f"{DEFAULT_GRETEL_ENDPOINT}\n\n{os.getenv(GRETEL_API_KEY)}\nbad-project-key\n",
             catch_exceptions=True,
         )
-        assert cmd.exit_code == 1
+        assert cmd.exit_code == 0
 
 
 def test_model_crud_from_cli(
@@ -519,3 +520,29 @@ def test_records_classify(
     )
     assert cmd.exit_code == 0
     assert (tmpdir / "data.gz").exists()
+
+
+def test_invalid_project_create(runner: CliRunner):
+    project_name = f"{uuid.uuid4().hex[:5]}_not_dns_compliant"
+    cmd = runner.invoke(cli, ["--debug", "projects", "create", "--name", project_name])
+    assert cmd.exit_code == 1
+
+
+def test_can_create_project(runner: CliRunner, request):
+    project_name = f"{uuid.uuid4().hex[:5]}"
+    request.addfinalizer(lambda: get_project(name=project_name).delete())
+    cmd = runner.invoke(
+        cli,
+        [
+            "--debug",
+            "projects",
+            "create",
+            "--name",
+            project_name,
+            "--display-name",
+            "test-project",
+            "--desc",
+            "test description",
+        ],
+    )
+    assert cmd.exit_code == 0
