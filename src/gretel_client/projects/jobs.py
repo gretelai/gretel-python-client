@@ -195,7 +195,7 @@ class Job(ABC):
         if not report_path:
             try:
                 report_path = self.get_artifact_link("report_json")
-            except Exception as ex:
+            except Exception:
                 pass
         report_contents = None
         if report_path:
@@ -208,7 +208,7 @@ class Job(ABC):
             try:
                 report_contents = json.loads(report_contents)
                 return self._peek_report(report_contents)
-            except Exception as ex:
+            except Exception:
                 pass
 
     def cancel(self):
@@ -236,7 +236,7 @@ class Job(ABC):
 
     def _new_job_logs(self) -> List[dict]:
         if self.logs and len(self.logs) > self._logs_iter_index:
-            next_logs = self.logs[self._logs_iter_index :]
+            next_logs = self.logs[self._logs_iter_index:]
             self._logs_iter_index += len(next_logs)
             return next_logs
         return []
@@ -279,12 +279,7 @@ class Job(ABC):
     @property
     def billing_details(self) -> dict:
         """Get billing details for the current Job"""
-        return {
-            "total_billed_seconds": self._data["billing_estimate"].get(
-                "total_billed_seconds"
-            ),
-            "task_type": self.instance_type,
-        }
+        return self._data.get("billing_data", {})
 
     @property
     def container_image(self) -> str:
