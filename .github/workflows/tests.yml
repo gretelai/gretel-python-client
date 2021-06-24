@@ -7,11 +7,11 @@ on:
 
 
 jobs:
-  tests:
+  unit-tests:
     runs-on: ubuntu-20.04
     strategy:
       matrix:
-        python: [3.8]
+        python: [3.7,3.8,3.9]
     steps:
     - uses: actions/checkout@v2
     - name: Setup Python
@@ -19,11 +19,25 @@ jobs:
       with:
         python-version: ${{ matrix.python }}
     - name: Test Setup
-      run: |
-        python -m pip install -r requirements.txt -r test-requirements.txt
-        python -m pip install tox
+      run: python -m pip install tox
     - name: Run Tests
       run: tox -e py
+
+  integration-tests:
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        python: [3.8]  # the default gh runner will crash if multiple sets of int tests are run
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python }}
+    - name: Test Setup
+      run: python -m pip install tox
+    - name: Run Tests
+      run: tox -e integration
       env:
         GRETEL_API_KEY: ${{ secrets.GRETEL_TEST_API_KEY }}
 
@@ -43,7 +57,7 @@ jobs:
       run: tox -e flake8
 
   notify:
-    needs: [tests, style-checks]
+    needs: [unit-tests, integration-tests, style-checks]
     if: always()
     runs-on: ubuntu-20.04
     steps:
@@ -55,4 +69,4 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-    
+
