@@ -43,7 +43,7 @@ class Status(str, Enum):
     LOST = "lost"
 
 
-ACTIVE_STATES = [Status.CREATED, Status.ACTIVE]
+ACTIVE_STATES = [Status.CREATED, Status.ACTIVE, Status.PENDING]
 END_STATES = [Status.COMPLETED, Status.CANCELLED, Status.ERROR, Status.LOST]
 
 CPU = "cpu"
