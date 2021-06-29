@@ -482,10 +482,10 @@ def test_records_transform(
         [  # type:ignore
             "records",
             "transform",
-            "--project",
-            trained_xf_model.project.project_id,
             "--model-id",
             trained_xf_model.model_id,
+            "--project",
+            trained_xf_model.project.project_id,
             "--in-data",
             str(get_fixture("account-balances.csv")),
             "--output",

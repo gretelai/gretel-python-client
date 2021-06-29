@@ -168,8 +168,6 @@ class SessionContext(object):
         self._project_id = project_name
 
     def set_model(self, model_id: str):
-        if not self.project:
-            raise click.BadArgumentUsage("Cannot set model. No project is set.")
         self.model_id = model_id
 
     @property
