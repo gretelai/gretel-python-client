@@ -6,7 +6,7 @@ import pytest
 from click.testing import CliRunner
 
 from gretel_client.cli.cli import cli
-from gretel_client.cli.common import download_artifacts
+from gretel_client.cli.common import ModelObjectReader, download_artifacts
 from gretel_client.projects.jobs import Status
 
 
@@ -105,3 +105,30 @@ def test_does_write_artifacts_to_disk(tmpdir: Path, get_fixture: Callable):
     download_artifacts(sc, str(tmpdir), job)
     for file in files:
         assert (tmpdir / file).exists()
+
+
+def test_does_read_model_json(runner: CliRunner, get_fixture: Callable):
+    output = get_fixture("xf_model_create_output.json")
+    sc = MagicMock()
+    sc.model.data_source = "test.csv"
+    model_obj = ModelObjectReader(output)
+    model_obj.apply(sc)
+    sc.in_data == "test.csv"
+    sc.runner == "local"
+    sc.set_project.assert_called_once_with("60b9a37000f67523d00b944c")
+    sc.set_model.assert_called_once_with("60dca3d09c03f7c6edadee91")
+
+
+def test_does_read_model_object_id():
+    sc = MagicMock()
+    model_obj = ModelObjectReader("test_id")
+    model_obj.apply(sc)
+    sc.set_model.assert_called_once_with("test_id")
+    sc.data_source = None
+    sc.runner = None
+
+
+def test_does_read_model_object_str(get_fixture: Callable):
+    output = get_fixture("xf_model_create_output.json")
+    model_obj = ModelObjectReader(output.read_text())
+    assert model_obj.model.get("uid") == "60dca3d09c03f7c6edadee91"

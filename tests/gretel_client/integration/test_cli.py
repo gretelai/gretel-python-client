@@ -27,7 +27,7 @@ def runner() -> CliRunner:
     """Returns a CliRunner that can be used to invoke the CLI from
     unit tests.
     """
-    return CliRunner()
+    return CliRunner(mix_stderr=False)
 
 
 @contextmanager
@@ -342,7 +342,7 @@ def test_local_model_params(runner: CliRunner, project: Project, get_fixture: Ca
     # assert that --runner=local and no output param results in an error
     cmd = runner.invoke(cli, base_cmd)
     assert cmd.exit_code == 2
-    assert "Usage:" in cmd.output and "--output is not set" in cmd.output
+    assert "Usage:" in cmd.stderr and "--output is not set" in cmd.stderr
 
     # check that --runner=local and --output params are ok
     cmd = runner.invoke(cli, base_cmd + ["--output", "tmp"])
@@ -350,7 +350,7 @@ def test_local_model_params(runner: CliRunner, project: Project, get_fixture: Ca
 
     # check that --wait cant be passed with an output dir
     cmd = runner.invoke(cli, base_cmd + ["--output", "tmp", "--wait", "10"])
-    assert cmd.exit_code == 2 and "--wait is >= 0" in cmd.output
+    assert cmd.exit_code == 2 and "--wait is >= 0" in cmd.stderr
 
 
 def test_manual_model_params(runner: CliRunner, project: Project, get_fixture: Callable):
@@ -372,26 +372,26 @@ def test_manual_model_params(runner: CliRunner, project: Project, get_fixture: C
     )
     assert cmd.exit_code == 2
     assert (
-        "Usage:" in cmd.output
-        and "--runner manual cannot be used together with" in cmd.output
-        and "--in-data" in cmd.output
+        "Usage:" in cmd.stderr
+        and "--runner manual cannot be used together with" in cmd.stderr
+        and "--in-data" in cmd.stderr
     )
 
     # check that --runner=local and --output params are ok
     cmd = runner.invoke(cli, base_cmd + ["--output", "tmp"])
     assert (
-        "Usage:" in cmd.output
-        and "--runner manual cannot be used together with" in cmd.output
-        and "--output" in cmd.output
+        "Usage:" in cmd.stderr
+        and "--runner manual cannot be used together with" in cmd.stderr
+        and "--output" in cmd.stderr
     )
     assert cmd.exit_code == 2
 
     # check that --wait cant be passed with an output dir
     cmd = runner.invoke(cli, base_cmd + ["--upload-model"])
     assert (
-        "Usage:" in cmd.output
-        and "--runner manual cannot be used together with" in cmd.output
-        and "--upload-model" in cmd.output
+        "Usage:" in cmd.stderr
+        and "--runner manual cannot be used together with" in cmd.stderr
+        and "--upload-model" in cmd.stderr
     )
     assert cmd.exit_code == 2
 
@@ -409,7 +409,7 @@ def test_artifacts_crud(runner: CliRunner, project: Project, get_fixture: Callab
             get_fixture("account-balances.csv"),
         ],
     )
-    assert "gretel_" in cmd.output  # checks that a gretel key is returneds
+    assert "gretel_" in cmd.stderr  # checks that a gretel key is returneds
     assert cmd.exit_code == 0
     assert len(project.artifacts) == 1
     # check that we can list the artifact
@@ -545,4 +545,46 @@ def test_can_create_project(runner: CliRunner, request):
             "test description",
         ],
     )
+    assert cmd.exit_code == 0
+
+
+def test_create_records_from_model_obj(
+    runner: CliRunner, project: Project, get_fixture: Callable, tmpdir: Path
+):
+    cmd = runner.invoke(
+        cli,
+        [
+            "models",
+            "create",
+            "--config",
+            str(get_fixture("classify_config.yml")),
+            "--output",
+            str(tmpdir),
+            "--project",
+            project.project_id,
+            "--runner",
+            "local",
+            "--in-data",
+            str(get_fixture("account-balances.csv"))
+        ],
+    )
+    print(cmd.output)
+    assert cmd.exit_code == 0
+    assert (tmpdir / "model.tar.gz").exists()
+    model_obj = Path(tmpdir / "model_obj.json")
+    model_obj.write_text(cmd.stdout)
+    cmd = runner.invoke(
+        cli,
+        [
+            "records",
+            "classify",
+            "--output",
+            str(tmpdir),
+            "--model-id",
+            str(model_obj),
+            "--model-path",
+            str(tmpdir / "model.tar.gz")
+        ],
+    )
+
     assert cmd.exit_code == 0

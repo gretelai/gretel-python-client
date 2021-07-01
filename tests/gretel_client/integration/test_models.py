@@ -4,6 +4,7 @@ from typing import Callable
 import pytest
 import smart_open
 from gretel_client.config import RunnerMode
+from gretel_client.helpers import poll
 
 from gretel_client.projects.common import ModelRunArtifact
 from gretel_client.projects.docker import ContainerRun
@@ -53,7 +54,6 @@ def test_does_train_model_and_transform_records(
     project: Project,
     transform_model_path: Path,
     transform_local_data_source: Path,
-    tmpdir: Path,
 ):
     m = Model(project=project, model_config=transform_model_path)
     m.create(runner_mode=RunnerMode.CLOUD)
@@ -64,7 +64,7 @@ def test_does_train_model_and_transform_records(
     record_handler.create(
         params=None,
         action="transform",
-        runner="cloud",
+        runner_mode=RunnerMode.CLOUD,
         data_source=str(transform_local_data_source),
         upload_data_source=True,
     )
@@ -76,7 +76,6 @@ def test_does_train_model_and_transform_records(
 def test_raises_wait_time_exceeded(
     project: Project,
     transform_model_path: Path,
-    transform_local_data_source: Path,
 ):
     ...
     m = Model(project=project, model_config=transform_model_path)
@@ -96,7 +95,7 @@ def test_raises_wait_time_exceeded(
 def test_does_get_synthetic_records(trained_synth_model: Model, request):
     handler = trained_synth_model.create_record_handler()
     handler.create(
-        action="generate", runner=RunnerMode.CLOUD.value, params={"num_records": 100}
+        action="generate", runner_mode=RunnerMode.CLOUD, params={"num_records": 100}
     )
     request.addfinalizer(handler.delete)
     logs = list(handler.poll_logs_status())
@@ -109,3 +108,16 @@ def test_does_get_synthetic_records(trained_synth_model: Model, request):
     ) as syn_data:
         contents = syn_data.read()
         assert len(contents) > 0
+
+
+def test_polls_with_helper(
+    project: Project,
+    transform_model_path: Path,
+    capsys,
+):
+    m = Model(project=project, model_config=transform_model_path)
+    m.create(runner_mode=RunnerMode.CLOUD)
+    poll(m)
+    captured = capsys.readouterr()
+    assert "Model creation complete" in captured.err
+    assert m.status == Status.COMPLETED

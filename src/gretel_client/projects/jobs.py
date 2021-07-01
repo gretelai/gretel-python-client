@@ -8,7 +8,6 @@ from typing import Callable, Iterator, Optional, List, TYPE_CHECKING, Tuple
 
 import smart_open
 
-from gretel_client.config import RunnerMode
 from gretel_client.rest.api.projects_api import ProjectsApi
 from gretel_client.projects.common import (
     ModelType,
@@ -137,7 +136,7 @@ class Job(ABC):
         return self._data[self.job_type][f.ERROR_MSG]
 
     @property
-    def runner_mode(self) -> RunnerMode:
+    def runner_mode(self) -> str:
         return self._data[self.job_type][f.RUNNER_MODE]
 
     @property
@@ -152,7 +151,8 @@ class Job(ABC):
     def print_obj(self) -> dict:
         """Returns an object representation of the job"""
         out = self._data[self.job_type]
-        del out[f.MODEL_KEY]
+        if out.get(f.MODEL_KEY):
+            del out[f.MODEL_KEY]
         return out
 
     # Base Job Methods

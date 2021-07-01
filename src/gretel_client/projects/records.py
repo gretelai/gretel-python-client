@@ -1,4 +1,5 @@
 from typing import TYPE_CHECKING, Optional, List
+from gretel_client.config import RunnerMode
 
 from gretel_client.projects.jobs import CPU, Status, Job
 from gretel_client.projects.common import ModelRunArtifact, ModelType, YES, f
@@ -25,7 +26,7 @@ class RecordHandler(Job):
     def create(
         self,
         action: str,
-        runner: str,
+        runner_mode: RunnerMode,
         data_source: Optional[str] = None,
         params: Optional[dict] = None,
         upload_data_source: bool = False,
@@ -37,7 +38,9 @@ class RecordHandler(Job):
             model_id=self.model.model_id,
             body={"params": params, "data_source": data_source},
             action=action,
-            runner_mode="cloud" if runner == "cloud" else "manual",
+            runner_mode=RunnerMode.CLOUD.value
+            if runner_mode == RunnerMode.CLOUD
+            else RunnerMode.MANUAL.value,
         )
         self.action = action
         self._data: dict = handler[f.DATA]

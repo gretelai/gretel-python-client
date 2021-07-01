@@ -3,7 +3,7 @@ import signal
 import sys
 import traceback
 from pathlib import Path
-from typing import Callable, Dict, Optional, Union
+from typing import Any, Callable, Dict, Optional, Union
 from urllib.parse import urlparse
 
 import click
@@ -15,10 +15,11 @@ from gretel_client.config import (
     get_session_config,
 )
 from gretel_client.projects import get_project
-from gretel_client.projects.common import WAIT_UNTIL_DONE
+from gretel_client.projects.common import ModelType, WAIT_UNTIL_DONE
 from gretel_client.projects.jobs import Job, WaitTimeExceeded
 from gretel_client.projects.models import Model
 from gretel_client.projects.projects import Project
+from gretel_client.projects.records import RecordHandler
 from gretel_client.rest.exceptions import ApiException, NotFoundException
 
 
@@ -38,7 +39,11 @@ class Logger:
     def __init__(self, debug: bool = False):
         self.debug_mode = debug
 
-    def info(self, msg):
+    def _format_object(self, obj: Any) -> Optional[str]:
+        if obj:
+            return json.dumps(obj, indent=4)
+
+    def info(self, msg: str = "", data: Optional[Any] = None):
         """Prints general info statements to the console. Use this log
         level if you want to print messages that indicate progress or
         state change.
@@ -46,6 +51,8 @@ class Logger:
         Args:
             msg: The message to print.
         """
+        if data:
+            msg = f"{msg}\n{self._format_object(data)}"
         click.echo(click.style("INFO: ", fg="green") + msg, err=True)
 
     def warn(self, msg):
@@ -134,6 +141,11 @@ def get_hint_for_error(ex: ExT) -> Optional[str]:
 
 
 class SessionContext(object):
+
+    runner: Optional[str] = None
+
+    data_source: Optional[str] = None
+
     def __init__(self, ctx: click.Context, output_fmt: str, debug: bool = False):
         self.debug = debug
         self.verbosity = 0
@@ -236,11 +248,11 @@ pass_session = click.make_pass_decorator(SessionContext, ensure=True)
 
 def project_option(fn):
     def callback(ctx, param: click.Option, value: str):
-        gc: SessionContext = ctx.ensure_object(SessionContext)
+        sc: SessionContext = ctx.ensure_object(SessionContext)
         if value is not None:
-            gc.set_project(value)
-        gc.ensure_project()
-        return value
+            sc.set_project(value)
+        sc.ensure_project()
+        return sc._project_id or value
 
     return click.option(  # type:ignore
         "--project",
@@ -252,11 +264,16 @@ def project_option(fn):
 
 
 def runner_option(fn):
-    return click.option(
+    def callback(ctx, param: click.Option, value: str):
+        sc: SessionContext = ctx.ensure_object(SessionContext)
+        return value or sc.runner
+
+    return click.option(  # type: ignore
         "--runner",
         metavar="TYPE",
         type=click.Choice([m.value for m in RunnerMode], case_sensitive=False),
         default=lambda: get_session_config().default_runner,
+        callback=callback,
         show_default="from ~/.gretel/config.json",
         help="Determines where to schedule the model run.",
     )(fn)
@@ -264,12 +281,56 @@ def runner_option(fn):
 
 def model_option(fn):
     def callback(ctx, param: click.Option, value: str):
-        gc: SessionContext = ctx.ensure_object(SessionContext)
-        gc.set_model(value)
+        model_obj = ModelObjectReader(value)
+        sc: SessionContext = ctx.ensure_object(SessionContext)
+        model_obj.apply(sc)
+        return sc.model_id or value
 
     return click.option(  # type:ignore
         "--model-id", metavar="UID", help="Specify the model.", callback=callback
     )(fn)
+
+
+class ModelObjectReader:
+    """Reads a model config and configures the ``SessionContext`` based
+    on the contents of the model.
+    """
+    def __init__(self, input: str):
+        self.input = input
+        self.model = self._maybe_parse_model(input)
+
+    def _maybe_parse_model(self, val: str) -> dict:
+        contents = val
+        model_obj = {}
+        try:
+            if Path(val).is_file():
+                contents = Path(val).read_text()
+        except OSError:
+            pass
+        try:
+            model_obj = json.loads(contents)
+        except Exception:
+            pass
+        return model_obj
+
+    def apply(self, sc: SessionContext):
+        model_id = self.model.get("uid")
+        project_id = self.model.get("project_id")
+        runner = self.model.get("runner_mode")
+        if project_id:
+            sc.set_project(project_id)
+        if model_id:
+            sc.set_model(model_id)
+            sc.data_source = sc.model.data_source
+        if not model_id:
+            # if there isn't a model id, then we implicitly assume
+            # the original input was a model id rather than a model
+            # object.
+            sc.set_model(self.input)
+        if runner:
+            sc.runner = (
+                RunnerMode.CLOUD.value if runner == "cloud" else RunnerMode.LOCAL.value
+            )
 
 
 StatusDescriptions = Dict[str, Dict[str, str]]
@@ -329,6 +390,18 @@ record_classify_status_descriptions: StatusDescriptions = {
         "default": "A worker has started!",
     },
 }
+
+
+def get_description_set(job: Job) -> Optional[dict]:
+    if isinstance(job, Model):
+        return model_create_status_descriptions
+    if isinstance(job, RecordHandler):
+        if job.model_type == ModelType.SYNTHETICS:
+            return record_generation_status_descriptions
+        if job.model_type == ModelType.TRANSFORMS:
+            return record_transform_status_descriptions
+        if job.model_type == ModelType.CLASSIFY:
+            return record_classify_status_descriptions
 
 
 def get_status_description(

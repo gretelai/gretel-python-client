@@ -1,0 +1,61 @@
+{
+    "uid": "60dca3d09c03f7c6edadee91",
+    "runner_mode": "manual",
+    "user_id": "5ece8962492fbf5bd66089f1",
+    "project_id": "60b9a37000f67523d00b944c",
+    "logs": null,
+    "status_history": {
+        "created": "2021-06-30T17:03:12.239000Z",
+        "pending": "2021-06-30T17:03:26.940000Z",
+        "active": "2021-06-30T17:03:27.197000Z",
+        "completed": "2021-06-30T17:03:45.796000Z"
+    },
+    "last_modified": "2021-06-30T17:03:45.794000Z",
+    "status": "completed",
+    "last_active_hb": "2021-06-30T17:03:40.293000Z",
+    "duration_minutes": null,
+    "error_msg": null,
+    "traceback": null,
+    "container_image": "074762682575.dkr.ecr.us-east-2.amazonaws.com/gretelai/transforms@sha256:8b6f364e6667f011e8c728274275fc705fe84046510a28b2cadacf1d7837b5dd",
+    "model_type": "transform",
+    "config": {
+        "schema_version": "1.0",
+        "name": "my-awesome-model",
+        "models": [
+            {
+                "transforms": {
+                    "data_source": [
+                        "account-balances.csv"
+                    ],
+                    "policies": [
+                        {
+                            "name": "pii",
+                            "rules": [
+                                {
+                                    "name": "second_rule",
+                                    "conditions": {
+                                        "field_name": [
+                                            "account_id"
+                                        ],
+                                        "field_name_regex": null,
+                                        "field_name_similarity": null,
+                                        "field_label": null,
+                                        "field_attributes": null,
+                                        "value_label": null
+                                    },
+                                    "transforms": [
+                                        {
+                                            "type": "passthrough"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        ],
+        "notifications": null,
+        "label_predictors": null
+    }
+}

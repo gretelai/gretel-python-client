@@ -35,9 +35,14 @@ def model_path_option(fn):
 
 
 def input_data_option(fn):
-    return click.option(
+    def callback(ctx, param: click.Option, value: str):
+        gc: SessionContext = ctx.ensure_object(SessionContext)
+        return value or gc.data_source
+
+    return click.option(  # type: ignore
         "--in-data",
         metavar="PATH",
+        callback=callback,
         help="Specify model input data.",
     )(fn)
 
@@ -66,7 +71,7 @@ def create_and_run_record_handler(
 
     try:
         data = record_handler.create(
-            params=params, action=action, runner=runner, data_source=data_source
+            params=params, action=action, runner_mode=RunnerMode(runner), data_source=data_source
         )
         sc.register_cleanup(lambda: record_handler.cancel())
         sc.log.info(f"Record handler created {record_handler.record_id}")
@@ -254,9 +259,10 @@ def transform(
 @records.command(help="Classify records.")
 @project_option
 @runner_option
-@model_option
+@model_path_option
 @input_data_option
 @output_data_option
+@model_option
 @pass_session
 def classify(
     sc: SessionContext,
@@ -265,6 +271,7 @@ def classify(
     output: str,
     runner: str,
     model_id: str,
+    model_path: str
 ):
     if runner == RunnerMode.LOCAL.value and not output:
         raise click.BadOptionUsage(
@@ -296,6 +303,5 @@ def classify(
         output=output,
         in_data=in_data,
         status_strings=record_classify_status_descriptions,
-        model_path=None,
+        model_path=model_path,
     )
-

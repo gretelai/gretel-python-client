@@ -105,7 +105,8 @@ def create(
         model.data_source = in_data
 
     try:
-        model.validate_data_source()
+        if runner != RunnerMode.MANUAL.value:
+            model.validate_data_source()
     except ModelArtifactError as ex:
         sc.log.error(f"The data source '{model.data_source}' is not valid", ex=ex)
         sc.exit(1)
@@ -140,7 +141,7 @@ def create(
                 "worker_key": model.worker_key
             })
         else:
-            sc.print(data=run)
+            sc.log.info(data=run)
     except ApiException as ex:
         sc.log.error("Could not create model", ex=ex)
         sc.print(data=json.loads(ex.body))  # type:ignore
@@ -178,7 +179,7 @@ def create(
         )
         sc.log.info("Pulling the container and starting local model training.")
         run.start()
-        sc.register_cleanup(lambda: run.graceful_shutdown())
+        sc.register_cleanup(lambda: run.graceful_shutdown())  # type:ignore
 
     # Poll for the latest container status
     poll_and_print(
@@ -196,7 +197,7 @@ def create(
     if output and runner == RunnerMode.CLOUD.value and wait == WAIT_UNTIL_DONE:
         download_artifacts(sc, output, model)
 
-    if output and runner == RunnerMode.LOCAL.value:
+    if output and runner == RunnerMode.LOCAL.value and run:
         sc.log.info(f"Extracting run output into {output}")
         run.extract_output_dir(output)
 

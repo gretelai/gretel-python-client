@@ -181,7 +181,7 @@ def test_does_populate_record_details(m: Model, create_record_handler_resp: dict
     m._poll_job_endpoint()
     record_handler = m.create_record_handler()
     record_handler.create(
-        action="transform", runner="local", data_source="path/to/datasource.csv"
+        action="transform", runner_mode=RunnerMode.LOCAL, data_source="path/to/datasource.csv"
     )
     assert (
         record_handler.status.value
