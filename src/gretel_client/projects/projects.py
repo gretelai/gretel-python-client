@@ -136,6 +136,8 @@ class Project:
         Returns:
             A Gretel artifact key
         """
+        if isinstance(artifact_path, str) and artifact_path.startswith("gretel_"):
+            return artifact_path
         if _validate:
             validate_data_source(artifact_path)
         if isinstance(artifact_path, Path):

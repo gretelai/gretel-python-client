@@ -266,7 +266,7 @@ def project_option(fn):
 def runner_option(fn):
     def callback(ctx, param: click.Option, value: str):
         sc: SessionContext = ctx.ensure_object(SessionContext)
-        return value or sc.runner
+        return sc.runner or value
 
     return click.option(  # type: ignore
         "--runner",
