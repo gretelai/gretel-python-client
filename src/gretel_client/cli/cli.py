@@ -1,12 +1,9 @@
 import click
 
 from gretel_client.config import (
-    DEFAULT_RUNNER,
     GretelClientConfigurationError,
-    RunnerMode,
     configure_session,
-    GRETEL,
-    DEFAULT_GRETEL_ENDPOINT,
+    get_session_config,
     write_config,
     ClientConfig,
 )
@@ -31,18 +28,52 @@ def cli(ctx: click.Context, debug: bool, output: str):
     ctx.obj = SessionContext(ctx, output_fmt=output, debug=debug)
 
 
+_copyright_data = """
+The Gretel CLI and Python SDK, installed through the "gretel-client" 
+package or other mechanism is free and open source software under
+the Apache 2.0 License.
+
+When using the CLI or SDK, you may launch "Gretel Worker(s)"
+that are hosted in your local environment as containers. These
+workers are launched automatically when running commands that create
+models or process data records.
+
+The "Gretel Worker" and all code within it is copyrighted and an
+extension of the Gretel Service and licensed under the Gretel.ai
+Terms of Service.  These terms can be found at https://gretel.ai/terms
+section G paragraph 2.
+"""
+
+
+def copyright(fn):
+    click.echo(click.style("\nGretel.ai COPYRIGHT Notice\n", fg="yellow"))
+    click.echo(_copyright_data + "\n\n")
+    return fn
+
+
+_current_config = get_session_config()
+
+
+def _set_api_key() -> str:
+    if not _current_config.api_key:
+        return "None"
+
+    return _current_config.api_key[:8] + "****"
+
+
 @cli.command(help="Configures the Gretel CLI.")
+@copyright
 @click.option(
     "--endpoint",
     prompt="Endpoint",
-    default=DEFAULT_GRETEL_ENDPOINT,
+    default=_current_config.endpoint,
     metavar="URL",
     help="Gretel API endpoint.",
 )
 @click.option(
     "--default-runner",
     prompt="Default Runner",
-    default=DEFAULT_RUNNER.value,
+    default=_current_config.default_runner,
     type=click.Choice(["local"], case_sensitive=False),
     metavar="RUNNER",
     help="Specify the default runner.",
@@ -51,13 +82,14 @@ def cli(ctx: click.Context, debug: bool, output: str):
     "--api-key",
     prompt="Gretel API Key",
     hide_input=True,
+    default=_set_api_key(),
     metavar="API",
     help="Gretel API key.",
 )
 @click.option(
     "--project",
     prompt="Default Project",
-    default="none",
+    default=_current_config.default_project_name or "None",
     metavar="PROJECT",
     help="Default Gretel project.",
 )
