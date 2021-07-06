@@ -29,7 +29,7 @@ def cli(ctx: click.Context, debug: bool, output: str):
 
 
 _copyright_data = """
-The Gretel CLI and Python SDK, installed through the "gretel-client" 
+The Gretel CLI and Python SDK, installed through the "gretel-client"
 package or other mechanism is free and open source software under
 the Apache 2.0 License.
 
@@ -51,14 +51,11 @@ def copyright(fn):
     return fn
 
 
-_current_config = get_session_config()
-
-
 def _set_api_key() -> str:
-    if not _current_config.api_key:
+    if not get_session_config().api_key:
         return "None"
 
-    return _current_config.api_key[:8] + "****"
+    return get_session_config().api_key[:8] + "****"
 
 
 @cli.command(help="Configures the Gretel CLI.")
@@ -66,14 +63,14 @@ def _set_api_key() -> str:
 @click.option(
     "--endpoint",
     prompt="Endpoint",
-    default=_current_config.endpoint,
+    default=lambda: get_session_config().endpoint,
     metavar="URL",
     help="Gretel API endpoint.",
 )
 @click.option(
     "--default-runner",
     prompt="Default Runner",
-    default=_current_config.default_runner,
+    default=lambda: get_session_config().default_runner,
     type=click.Choice(["local"], case_sensitive=False),
     metavar="RUNNER",
     help="Specify the default runner.",
@@ -82,14 +79,14 @@ def _set_api_key() -> str:
     "--api-key",
     prompt="Gretel API Key",
     hide_input=True,
-    default=_set_api_key(),
+    default=lambda: _set_api_key(),
     metavar="API",
     help="Gretel API key.",
 )
 @click.option(
     "--project",
     prompt="Default Project",
-    default=_current_config.default_project_name or "None",
+    default=lambda: get_session_config().default_project_name or "none",
     metavar="PROJECT",
     help="Default Gretel project.",
 )

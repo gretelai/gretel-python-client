@@ -53,7 +53,7 @@ def test_cli_does_configure(write_config: MagicMock, runner: CliRunner):
     assert not cmd.exception
     write_config.assert_called_once_with(
         ClientConfig(
-            endpoint="https://api.gretel.cloud",
+            endpoint="https://api-dev.gretel.cloud",
             api_key="grtu...",
             default_project_name=None,
             default_runner=DEFAULT_RUNNER.value,
