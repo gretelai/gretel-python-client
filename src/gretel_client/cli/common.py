@@ -26,6 +26,23 @@ from gretel_client.rest.exceptions import ApiException, NotFoundException
 ExT = Union[str, Exception]
 
 
+_copyright_data = """
+The Gretel CLI and Python SDK, installed through the "gretel-client"
+package or other mechanism is free and open source software under
+the Apache 2.0 License.
+
+When using the CLI or SDK, you may launch "Gretel Worker(s)"
+that are hosted in your local environment as containers. These
+workers are launched automatically when running commands that create
+models or process data records.
+
+The "Gretel Worker" and all code within it is copyrighted and an
+extension of the Gretel Service and licensed under the Gretel.ai
+Terms of Service.  These terms can be found at https://gretel.ai/terms
+section G paragraph 2.
+"""
+
+
 class Logger:
     """This classed is used to print CLI progress a debug messages
     to the console.
@@ -165,8 +182,15 @@ class SessionContext(object):
         self._shutting_down = False
         signal.signal(signal.SIGINT, self._cleanup)
 
+        self._print_copyright()
+
     def exit(self, exit_code: int = 0):
         self.ctx.exit(exit_code)
+
+    def _print_copyright(self):
+        if self.ctx.invoked_subcommand == "configure":
+            click.echo(click.style("\nGretel.ai COPYRIGHT Notice\n", fg="yellow"), err=True)
+            click.echo(_copyright_data + "\n\n", err=True)
 
     def print(self, *, ok: bool = True, message: str = None, data: Union[list, dict]):
         if self.output_fmt == "json":

@@ -139,6 +139,13 @@ class ClientConfig:
         c["api_key"] = "[redacted from output]"
         return c
 
+    @property
+    def masked_api_key(self) -> str:
+        if not self.api_key:
+            return "None"
+
+        return self.api_key[:8] + "****"
+
 
 def _get_config_path() -> Path:
     """Returns the path to the system's Gretel config"""

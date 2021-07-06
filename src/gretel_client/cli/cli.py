@@ -28,38 +28,7 @@ def cli(ctx: click.Context, debug: bool, output: str):
     ctx.obj = SessionContext(ctx, output_fmt=output, debug=debug)
 
 
-_copyright_data = """
-The Gretel CLI and Python SDK, installed through the "gretel-client"
-package or other mechanism is free and open source software under
-the Apache 2.0 License.
-
-When using the CLI or SDK, you may launch "Gretel Worker(s)"
-that are hosted in your local environment as containers. These
-workers are launched automatically when running commands that create
-models or process data records.
-
-The "Gretel Worker" and all code within it is copyrighted and an
-extension of the Gretel Service and licensed under the Gretel.ai
-Terms of Service.  These terms can be found at https://gretel.ai/terms
-section G paragraph 2.
-"""
-
-
-def copyright(fn):
-    click.echo(click.style("\nGretel.ai COPYRIGHT Notice\n", fg="yellow"))
-    click.echo(_copyright_data + "\n\n")
-    return fn
-
-
-def _set_api_key() -> str:
-    if not get_session_config().api_key:
-        return "None"
-
-    return get_session_config().api_key[:8] + "****"
-
-
 @cli.command(help="Configures the Gretel CLI.")
-@copyright
 @click.option(
     "--endpoint",
     prompt="Endpoint",
@@ -79,7 +48,7 @@ def _set_api_key() -> str:
     "--api-key",
     prompt="Gretel API Key",
     hide_input=True,
-    default=lambda: _set_api_key(),
+    default=lambda: get_session_config().masked_api_key,
     metavar="API",
     help="Gretel API key.",
 )
@@ -95,6 +64,11 @@ def configure(
     sc: SessionContext, endpoint: str, api_key: str, project: str, default_runner: str
 ):
     project_name = None if project == "none" else project
+
+    # swap the api key back to the original if one was
+    # already read in from the config and not updated
+    if api_key.endswith("****"):
+        api_key = get_session_config().api_key
     config = ClientConfig(
         endpoint=endpoint, api_key=api_key, default_runner=default_runner
     )

@@ -15,6 +15,10 @@ class _PythonSessionContext(click.Context):
     def exit(self, code):
         sys.exit(code)
 
+    @property
+    def invoked_subcommand(self):
+        return None
+
 
 def poll(job: Job, wait: int = WAIT_UNTIL_DONE):
     """Polls a ``Model`` or ``RecordHandler``.
