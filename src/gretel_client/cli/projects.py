@@ -1,13 +1,10 @@
 import click
+import json
 
 from gretel_client.cli.common import SessionContext, pass_session
 from gretel_client.projects.projects import search_projects
-from gretel_client.projects import get_project
-from gretel_client.rest.exceptions import (
-    ApiException,
-    NotFoundException,
-    UnauthorizedException,
-)
+from gretel_client.projects import create_project
+from gretel_client.rest.exceptions import ApiException
 from gretel_client.config import GretelClientConfigurationError, write_config
 
 
@@ -32,24 +29,27 @@ def projects():
 def create(
     sc: SessionContext, name: str, desc: str, display_name: str, set_default: bool
 ):
-    project = None
     try:
-        project = get_project(
-            name=name, desc=desc, display_name=display_name, create=True
+        project = create_project(
+            name=name, desc=desc, display_name=display_name
         )
-    except (UnauthorizedException, NotFoundException) as ex:
-        sc.log.error(f"Project name {name} unavailable.", ex=ex)
     except ApiException as ex:
-        sc.log.error(
-            (
-                "There was a problem creating the project using the supplied inputs. "
-                "Please check your inputs and retry."
-            ),
-            ex=ex,
-        )
-
-    if not project:
-        sc.exit(1)
+        if ex.status == 400:
+            error_dict = json.loads(ex.body)
+            error_msg = error_dict.get("message")
+            sc.log.error(
+                (
+                    f"Error creating project: {error_msg}"
+                ),
+                ex=ex,
+            )
+            sc.exit(1)
+        elif ex.status == 401:
+            sc.log.error("Unauthorized. Please check your credentials.")
+            sc.exit(1)
+        else:
+            sc.log.error(f"HTTP Error: {ex.body}")
+            sc.exit(1)
 
     sc.log.info(f"Created project {project.name}.")
     sc.log.info(f"Console link: {project.get_console_url()}")

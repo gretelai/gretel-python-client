@@ -3,7 +3,7 @@ High level API for interacting with a Gretel Project
 """
 from functools import wraps
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List, Union, Optional
 from contextlib import contextmanager
 from urllib.parse import urlparse
 
@@ -14,7 +14,7 @@ from gretel_client.config import get_session_config
 from gretel_client.projects.models import Model
 from gretel_client.rest import models
 from gretel_client.rest.api.projects_api import ProjectsApi
-from gretel_client.rest.exceptions import NotFoundException, UnauthorizedException
+from gretel_client.rest.exceptions import UnauthorizedException
 from gretel_client.rest.model.artifact import Artifact
 from gretel_client.projects.common import validate_data_source
 
@@ -142,7 +142,9 @@ class Project:
             validate_data_source(artifact_path)
         if isinstance(artifact_path, Path):
             artifact_path = str(artifact_path)
-        with smart_open.open(artifact_path, "rb", ignore_ext=True) as src:  # type:ignore
+        with smart_open.open(
+            artifact_path, "rb", ignore_ext=True
+        ) as src:  # type:ignore
             src_data = src.read()
             file_name = Path(urlparse(artifact_path).path).name
             art_resp = self.projects_api.create_artifact(
@@ -193,6 +195,39 @@ def search_projects(limit: int = 200, query: str = None) -> List[Project]:
     ]
 
 
+def create_project(
+    *,
+    name: Optional[str] = None,
+    desc: Optional[str] = None,
+    display_name: Optional[str] = None,
+) -> Project:
+    """
+    Excplit project creation. This function will simply call
+    the API endpoint and will raise any HTTP exceptions upstream.
+    """
+    api = get_session_config().get_api(ProjectsApi)
+
+    payload = {}
+    if name:
+        payload["name"] = name
+    if desc:
+        payload["description"] = desc
+    if display_name:
+        payload["display_name"] = display_name
+
+    resp = api.create_project(project=models.Project(**payload))
+    project = api.get_project(project_id=resp.get(DATA).get("id"))
+
+    p = project.get(DATA).get(PROJECT)
+
+    return Project(
+        name=p.get("name"),
+        project_id=p.get("_id"),
+        desc=p.get("description"),
+        display_name=p.get("display_name"),
+    )
+
+
 def get_project(
     *,
     name: str = None,
@@ -222,21 +257,23 @@ def get_project(
     api = get_session_config().get_api(ProjectsApi)
     project = None
 
+    project_args = {}
+    if create:
+        if desc:
+            project_args["description"] = desc
+        if display_name:
+            project_args["display_name"] = display_name
+
     if not name and create:
-        resp = api.create_project()
+        resp = api.create_project(project=models.Project(**project_args))
         project = api.get_project(project_id=resp.get(DATA).get("id"))
 
     if name:
         try:
             project = api.get_project(project_id=name)
-        except (UnauthorizedException, NotFoundException):
+        except UnauthorizedException:
             if create:
-                project_args = {"name": name}
-                if desc:
-                    project_args["description"] = desc
-                if display_name:
-                    project_args["display_name"] = display_name
-
+                project_args["name"] = name
                 resp = api.create_project(project=models.Project(**project_args))
                 project = api.get_project(project_id=resp.get(DATA).get("id"))
             else:
