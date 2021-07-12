@@ -52,6 +52,10 @@ class RecordHandler(Job):
         return self.project.upload_artifact(data_source)
 
     @property
+    def container_image(self) -> str:
+        return self._data.get(f.HANDLER).get(f.CONTAINER_IMAGE)
+
+    @property
     def model_type(self) -> ModelType:
         return self.model.model_type
 

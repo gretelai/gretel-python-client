@@ -2,6 +2,7 @@ import click
 
 from gretel_client.config import (
     GretelClientConfigurationError,
+    RunnerMode,
     configure_session,
     get_session_config,
     write_config,
@@ -40,7 +41,7 @@ def cli(ctx: click.Context, debug: bool, output: str):
     "--default-runner",
     prompt="Default Runner",
     default=lambda: get_session_config().default_runner,
-    type=click.Choice(["local"], case_sensitive=False),
+    type=click.Choice([RunnerMode.CLOUD.value, RunnerMode.LOCAL.value], case_sensitive=False),
     metavar="RUNNER",
     help="Specify the default runner.",
 )

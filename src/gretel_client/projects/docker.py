@@ -131,13 +131,13 @@ class ContainerRun:
         self.device_requests = []
         self.run_params = ["--disable-cloud-upload"]
         self.job = job
-        self._launched_from_docker = _is_inside_container()
         self.configure_worker_token(job.worker_key)
         self.logger = get_logger(__name__)
         self.debug = False
 
     @classmethod
     def from_job(cls, job: Job) -> ContainerRun:
+        job._poll_job_endpoint()
         return cls(job)
 
     def start(self):
@@ -227,13 +227,12 @@ class ContainerRun:
             pass
 
     def _pull(self):
-        auth, reg = _get_container_auth()
-        img = f"{reg}/{self.image}"
+        auth, _ = _get_container_auth()
         try:
-            self._docker_client.images.pull(img, auth_config=auth)
+            self._docker_client.images.pull(self.image, auth_config=auth)
         except Exception as ex:
-            raise ContainerRunError(f"Could not pull image {img}") from ex
-        return img
+            raise ContainerRunError(f"Could not pull image {self.image}") from ex
+        return self.image
 
     def _run(self, remove: bool = True):
         self.logger.debug("Pulling container image")
@@ -326,20 +325,6 @@ class ContainerRun:
         except Exception:
             pass
         self.wait(15)
-
-
-def _is_inside_container() -> bool:
-    """Returns ``True`` if the function is being run inside a container."""
-    try:
-        with open("/proc/self/cgroup") as fin:
-            for line in fin:
-                parts = line.split("/")
-                sha = parts[-1].rstrip()
-                if len(sha) == 64:
-                    return True
-    except FileNotFoundError:
-        pass
-    return False
 
 
 def _get_container_auth() -> Tuple[dict, str]:

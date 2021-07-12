@@ -1,22 +1,23 @@
-from abc import ABC, abstractmethod, abstractproperty
 import base64
-from dataclasses import dataclass, field
-from enum import Enum
 import json
 import time
-from typing import Callable, Iterator, Optional, List, TYPE_CHECKING, Tuple
+from abc import ABC, abstractmethod, abstractproperty
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import TYPE_CHECKING, Callable, Iterator, List, Optional, Tuple
+from urllib.parse import urlparse
 
 import smart_open
 
-from gretel_client.rest.api.projects_api import ProjectsApi
 from gretel_client.projects.common import (
+    WAIT_UNTIL_DONE,
     ModelType,
     f,
     peek_classification_report,
     peek_synthetics_report,
     peek_transforms_report,
-    WAIT_UNTIL_DONE,
 )
+from gretel_client.rest.api.projects_api import ProjectsApi
 
 if TYPE_CHECKING:
     from gretel_client.projects import Project
@@ -276,7 +277,7 @@ class Job(ABC):
         """Get billing details for the current Job"""
         return self._data.get("billing_data", {})
 
-    @property
+    @abstractproperty
     def container_image(self) -> str:
         """Return the container image for the job"""
-        return f"gretelai/{self.model_type.value}:dev"
+        ...

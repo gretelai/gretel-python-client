@@ -128,6 +128,8 @@ class f:
     LOGS = "logs"
     MODEL = "model"
     RUNNER_MODE = "runner_mode"
+    CONTAINER_IMAGE = "container_image"
+    HANDLER = "handler"
 
 
 YES = "yes"

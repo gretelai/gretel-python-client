@@ -45,9 +45,6 @@ class ModelArtifactError(Exception):
     ...
 
 
-MODEL_ARTIFACT_TYPES = ["model", "report", "report_json", "data_preview", "model_logs"]
-
-
 def _resolve_config_short_path(config_path: str) -> dict:
     path = f"{BASE_BLUEPRINT_REPO}/{config_path}.yml"
     try:
@@ -172,6 +169,10 @@ class Model(Job):
             project_id=self.project.name, model_id=self.model_id, type=artifact_type
         )
         return art_resp["data"]["url"]
+
+    @property
+    def container_image(self) -> str:
+        return self._data.get(f.MODEL).get(f.CONTAINER_IMAGE)
 
     @property
     def artifact_types(self) -> List[str]:

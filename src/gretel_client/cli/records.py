@@ -55,6 +55,64 @@ def output_data_option(fn):
     )(fn)
 
 
+def _validate_params(
+    sc: SessionContext, runner: str, output: str, model_path: str, in_data: str
+):
+    if runner == RunnerMode.CLOUD.value and model_path:
+        raise click.BadOptionUsage(
+            "--model-path", "A model path may not be specified for cloud models."
+        )
+    if (
+        not sc.model.is_cloud_model
+        and runner == RunnerMode.LOCAL.value
+        and not model_path
+    ):
+        raise click.BadOptionUsage(
+            "--model-path", "--model-path is required when running a local model"
+        )
+    if runner == RunnerMode.LOCAL.value and not output:
+        raise click.BadOptionUsage(
+            "--output",
+            "--runner is set to local, but no --output flag is set. Please set an output path",
+        )
+
+    if runner == RunnerMode.LOCAL.value and sc.model.is_cloud_model and model_path:
+        raise click.BadOptionUsage(
+            "--model-path", "Cannot specify a local model path for cloud models"
+        )
+
+    if runner == RunnerMode.MANUAL.value and (output or in_data or model_path):
+        raise click.BadOptionUsage(
+            "--runner",
+            "--runner manual cannot be used together with any of --output, --in-data, --model-path.",
+        )
+
+
+def _check_model_and_runner(sc: SessionContext, runner) -> str:
+    if not sc.model.is_cloud_model and runner is RunnerMode.CLOUD.value:
+        sc.log.info(
+            (
+                f"The model {sc.model.model_id} is configured for local runs, "
+                f"but runner_mode is {runner}. "
+            )
+        )
+        sc.log.info("Setting runner_mode to local and running the model")
+        return RunnerMode.LOCAL.value
+    return runner
+
+
+def _configure_data_source(sc: SessionContext, in_data: str, runner: str):
+    data_source = "__local__"
+    if in_data and runner == RunnerMode.CLOUD.value:
+        try:
+            sc.log.info(f"Uploading input artifact {in_data}")
+            data_source = sc.project.upload_artifact(in_data)
+        except Exception as ex:
+            sc.log.error(f"Could not upload artifact {in_data}", ex=ex)
+            sc.exit(1)
+    return data_source
+
+
 def create_and_run_record_handler(
     sc: SessionContext,
     params: Optional[dict],
@@ -71,17 +129,19 @@ def create_and_run_record_handler(
 
     try:
         data = record_handler.create(
-            params=params, action=action, runner_mode=RunnerMode(runner), data_source=data_source
+            params=params,
+            action=action,
+            runner_mode=RunnerMode(runner),
+            data_source=data_source,
         )
         sc.register_cleanup(lambda: record_handler.cancel())
         sc.log.info(f"Record handler created {record_handler.record_id}")
 
         if runner == RunnerMode.MANUAL.value:
             # With --runner MANUAL, we only print the worker_key and it's up to the user to run the worker
-            sc.print(data={
-                "record_handler": data,
-                "worker_key": record_handler.worker_key
-            })
+            sc.print(
+                data={"record_handler": data, "worker_key": record_handler.worker_key}
+            )
         else:
             sc.print(data=data)
     except Exception as ex:
@@ -157,35 +217,15 @@ def generate(
     num_records: int,
     max_invalid: int,
 ):
-    if runner == RunnerMode.LOCAL.value and not output:
-        raise click.BadOptionUsage(
-            "--output",
-            "--runner is set to local, but no --output flag is set. Please set an output path",
-        )
+    runner = _check_model_and_runner(sc, runner)
+    _validate_params(sc, runner, output, model_path, in_data)
 
-    if runner == RunnerMode.LOCAL.value and sc.model.is_cloud_model and model_path:
-        raise click.BadOptionUsage(
-            "--model-path", "Cannot specify a local model path for cloud models"
-        )
-
-    if runner == RunnerMode.MANUAL.value and (output or in_data or model_path):
-        raise click.BadOptionUsage(
-            "--runner",
-            "--runner manual cannot be used together with any of --output, --in-data, --model-path."
-        )
+    data_source = _configure_data_source(sc, in_data, runner)
 
     params: Dict[str, Union[int, float, str]] = {
         "num_records": num_records,
         "max_invalid": max_invalid,
     }
-    data_source = None
-    if in_data and runner == RunnerMode.CLOUD.value:
-        try:
-            sc.log.info(f"Uploading input artifact {in_data}")
-            data_source = sc.project.upload_artifact(in_data)
-        except Exception as ex:
-            sc.log.error(f"Could not upload artifact {in_data}", ex=ex)
-            sc.exit(1)
 
     create_and_run_record_handler(
         sc,
@@ -217,31 +257,10 @@ def transform(
     runner: str,
     model_id: str,
 ):
-    if runner == RunnerMode.LOCAL.value and not output:
-        raise click.BadOptionUsage(
-            "--output",
-            "--runner is set to local, but no --output flag is set. Please set an output path",
-        )
+    runner = _check_model_and_runner(sc, runner)
+    _validate_params(sc, runner, output, model_path, in_data)
 
-    if runner == RunnerMode.LOCAL.value and sc.model.is_cloud_model and model_path:
-        raise click.BadOptionUsage(
-            "--model-path", "Cannot specify a local model path for cloud models"
-        )
-
-    if runner == RunnerMode.MANUAL.value and (output or in_data or model_path):
-        raise click.BadOptionUsage(
-            "--runner",
-            "--runner manual cannot be used together with any of --output, --in-data, --model-path."
-        )
-
-    data_source = "__local__"
-    if in_data and runner == RunnerMode.CLOUD.value:
-        try:
-            sc.log.info(f"Uploading input artifact {in_data}")
-            data_source = sc.project.upload_artifact(in_data)
-        except Exception as ex:
-            sc.log.error(f"Could not upload artifact {in_data}", ex=ex)
-            sc.exit(1)
+    data_source = _configure_data_source(sc, in_data, runner)
 
     create_and_run_record_handler(
         sc,
@@ -271,28 +290,12 @@ def classify(
     output: str,
     runner: str,
     model_id: str,
-    model_path: str
+    model_path: str,
 ):
-    if runner == RunnerMode.LOCAL.value and not output:
-        raise click.BadOptionUsage(
-            "--output",
-            "--runner is set to local, but no --output flag is set. Please set an output path",
-        )
+    runner = _check_model_and_runner(sc, runner)
+    _validate_params(sc, runner, output, model_path, in_data)
 
-    if runner == RunnerMode.MANUAL.value and (output or in_data):
-        raise click.BadOptionUsage(
-            "--runner",
-            "--runner manual cannot be used together with any of --output, --in-data."
-        )
-
-    data_source = "__local__"
-    if in_data and runner == RunnerMode.CLOUD.value:
-        try:
-            sc.log.info(f"Uploading input artifact {in_data}")
-            data_source = sc.project.upload_artifact(in_data)
-        except Exception as ex:
-            sc.log.error(f"Could not upload artifact {in_data}", ex=ex)
-            sc.exit(1)
+    data_source = _configure_data_source(sc, in_data, runner)
 
     create_and_run_record_handler(
         sc,

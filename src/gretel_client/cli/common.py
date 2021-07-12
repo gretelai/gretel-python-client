@@ -189,7 +189,9 @@ class SessionContext(object):
 
     def _print_copyright(self):
         if self.ctx.invoked_subcommand == "configure":
-            click.echo(click.style("\nGretel.ai COPYRIGHT Notice\n", fg="yellow"), err=True)
+            click.echo(
+                click.style("\nGretel.ai COPYRIGHT Notice\n", fg="yellow"), err=True
+            )
             click.echo(_copyright_data + "\n\n", err=True)
 
     def print(self, *, ok: bool = True, message: str = None, data: Union[list, dict]):
@@ -311,7 +313,11 @@ def model_option(fn):
         return sc.model_id or value
 
     return click.option(  # type:ignore
-        "--model-id", metavar="UID", help="Specify the model.", callback=callback
+        "--model-id",
+        metavar="UID",
+        help="Specify the model.",
+        callback=callback,
+        required=True,
     )(fn)
 
 
@@ -319,6 +325,7 @@ class ModelObjectReader:
     """Reads a model config and configures the ``SessionContext`` based
     on the contents of the model.
     """
+
     def __init__(self, input: str):
         self.input = input
         self.model = self._maybe_parse_model(input)

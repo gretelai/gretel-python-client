@@ -47,7 +47,7 @@ class RunnerMode(Enum):
     MANUAL = "manual"
 
 
-DEFAULT_RUNNER = RunnerMode.LOCAL
+DEFAULT_RUNNER = RunnerMode.CLOUD
 
 
 class ClientConfig:
