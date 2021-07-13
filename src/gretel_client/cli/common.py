@@ -14,11 +14,10 @@ from gretel_client.config import (
     configure_custom_logger,
     get_session_config,
 )
-from gretel_client.projects import get_project
 from gretel_client.projects.common import ModelType, WAIT_UNTIL_DONE
 from gretel_client.projects.jobs import Job, WaitTimeExceeded
 from gretel_client.projects.models import Model
-from gretel_client.projects.projects import Project
+from gretel_client.projects.projects import Project, get_project
 from gretel_client.projects.records import RecordHandler
 from gretel_client.rest.exceptions import ApiException, NotFoundException
 

@@ -91,7 +91,7 @@ class Job(ABC):
     # Abstract methods to implement
 
     @abstractmethod
-    def create(self) -> dict:
+    def submit(self) -> dict:
         ...
 
     @abstractproperty
@@ -126,22 +126,27 @@ class Job(ABC):
 
     @property
     def logs(self):
+        """Returns run logs for the job."""
         return self._data.get(f.LOGS)
 
     @property
     def status(self) -> Status:
+        """The status of the job. Is one of ``gretel_client.projects.jobs.Status``"""
         return Status(self._data[self.job_type][f.STATUS])
 
     @property
     def errors(self):
+        """Return any errors associated with the model."""
         return self._data[self.job_type][f.ERROR_MSG]
 
     @property
     def runner_mode(self) -> str:
+        """Returns the runner_mode of the job. May be one of ``manual`` or ``cloud``."""
         return self._data[self.job_type][f.RUNNER_MODE]
 
     @property
     def traceback(self) -> Optional[str]:
+        """Returns the traceback associated with any errors on the job."""
         traceback = self._data.get(self.job_type).get(f.TRACEBACK)
         if not traceback:
             return None

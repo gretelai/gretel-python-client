@@ -14,7 +14,7 @@ def model(get_fixture: Callable, request):
     project = get_project(create=True)
     request.addfinalizer(project.delete)
     model = Model(project=project, model_config=get_fixture("transforms_config.yml"))
-    model.create()
+    model.submit()
     return model
 
 

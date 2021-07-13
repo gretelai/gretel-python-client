@@ -1,5 +1,5 @@
 from typing import TYPE_CHECKING, Optional, List
-from gretel_client.config import RunnerMode
+from gretel_client.config import DEFAULT_RUNNER, RunnerMode
 
 from gretel_client.projects.jobs import CPU, Status, Job
 from gretel_client.projects.common import ModelRunArtifact, ModelType, YES, f
@@ -18,19 +18,27 @@ JOB_TYPE = "handler"
 
 
 class RecordHandler(Job):
+    """Manages a model's record handler. After a model has been created
+    and trained, a record handler may be used to \"run\" the model.
+
+    Args:
+        model: The model to generate a record handler for
+        record_id: The id of an existing record handler.
+    """
     def __init__(self, model: Model, record_id: str = None):
         self.model = model
         self.record_id = record_id
         super().__init__(model.project, JOB_TYPE, self.record_id)
 
-    def create(
+    def submit(
         self,
         action: str,
-        runner_mode: RunnerMode,
+        runner_mode: RunnerMode = DEFAULT_RUNNER,
         data_source: Optional[str] = None,
         params: Optional[dict] = None,
         upload_data_source: bool = False,
     ) -> dict:
+        """Submits the record handler to be run."""
         if upload_data_source and data_source:
             data_source = self._upload_data_source(data_source)
         handler = self.model._projects_api.create_record_handler(
@@ -57,14 +65,17 @@ class RecordHandler(Job):
 
     @property
     def model_type(self) -> ModelType:
+        """Returns the parent model type of the record handler."""
         return self.model.model_type
 
     @property
     def instance_type(self) -> str:
+        """Return CPU or GPU based on the record handler's run requirements."""
         return CPU
 
     @property
     def artifact_types(self) -> List[str]:
+        """Returns a list of valid artifacts for the record handler."""
         return [a.value for a in ModelRunArtifact]
 
     def _do_get_job_details(self):
@@ -97,6 +108,7 @@ class RecordHandler(Job):
         return resp[f.DATA][f.URL]
 
     def delete(self):
+        """Deletes the record handler."""
         self._projects_api.delete_record_handler(
             project_id=self.project.project_id,
             model_id=self.model.model_id,

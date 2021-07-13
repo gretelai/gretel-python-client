@@ -96,7 +96,7 @@ def create(
         )
 
     sc.log.info("Preparing model")
-    model: Model = sc.project.create_model(config)
+    model: Model = sc.project.create_model_obj(config)
 
     # Figure out if we need to upload a data source as an artifact. By
     # default any cloud run will require an external data source to
@@ -128,7 +128,7 @@ def create(
     # Create the model and the data source
     try:
         sc.log.info("Creating model")
-        run = model.create(
+        run = model.submit(
             runner_mode=RunnerMode(runner), dry_run=dry_run, _validate_data_source=False
         )
         sc.register_cleanup(lambda: model.cancel())

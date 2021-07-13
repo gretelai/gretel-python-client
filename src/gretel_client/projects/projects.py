@@ -68,7 +68,7 @@ class Project:
     @check_not_deleted
     def delete(self, include_models: bool = True):
         """Deletes a project. After the project has been deleted, functions
-        relying on a project will fail with a ``GretelProjectError` exception.
+        relying on a project will fail with a ``GretelProjectError`` exception.
 
         Note: Deleting projects is asynchronous. It may take a few seconds
         for the project to be deleted by Gretel services.
@@ -114,7 +114,7 @@ class Project:
         return Model(project=self, model_id=model_id)
 
     @check_not_deleted
-    def create_model(self, model_config: Union[str, Path, dict]) -> Model:
+    def create_model_obj(self, model_config: Union[str, Path, dict]) -> Model:
         return Model(model_config=model_config, project=self)
 
     @property
@@ -300,7 +300,7 @@ def tmp_project():
 
     Example::
         with tmp_project() as proj:
-            model = proj.create_model()
+            model = proj.create_model_obj()
     """
     project = get_project(create=True)
     try:

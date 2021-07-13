@@ -21,14 +21,16 @@ def runner() -> CliRunner:
 @pytest.fixture
 def get_project() -> MagicMock:
     with patch("gretel_client.cli.common.get_project") as get_project:
-        get_project.return_value.create_model.return_value.create.return_value = {
+        get_project.return_value.create_model_obj.return_value.submit.return_value = {
             "model_key": ""
         }
-        get_project.return_value.create_model.return_value.print_obj = {}
-        get_project.return_value.create_model.return_value.billing_details = {}
-        get_project.return_value.create_model.return_value.peek_report.return_value = {}
-        get_project.return_value.create_model.return_value.status = Status.COMPLETED
-        get_project.return_value.create_model.return_value._data = {}
+        get_project.return_value.create_model_obj.return_value.print_obj = {}
+        get_project.return_value.create_model_obj.return_value.billing_details = {}
+        get_project.return_value.create_model_obj.return_value.peek_report.return_value = (
+            {}
+        )
+        get_project.return_value.create_model_obj.return_value.status = Status.COMPLETED
+        get_project.return_value.create_model_obj.return_value._data = {}
         yield get_project
 
 
@@ -65,14 +67,14 @@ def test_local_model_upload_flag(
 def test_local_model_upload_disabled_by_default(
     container_run: MagicMock, get_project: MagicMock, runner: CliRunner
 ):
-    get_project.return_value.create_model.return_value.create.return_value = {
+    get_project.return_value.create_model_obj.return_value.submit.return_value = {
         "model_key": ""
     }
-    get_project.return_value.create_model.return_value.print_obj = {}
-    get_project.return_value.create_model.return_value.billing_details = {}
-    get_project.return_value.create_model.return_value.peek_report.return_value = {}
-    get_project.return_value.create_model.return_value.status = Status.COMPLETED
-    get_project.return_value.create_model.return_value._data = {}
+    get_project.return_value.create_model_obj.return_value.print_obj = {}
+    get_project.return_value.create_model_obj.return_value.billing_details = {}
+    get_project.return_value.create_model_obj.return_value.peek_report.return_value = {}
+    get_project.return_value.create_model_obj.return_value.status = Status.COMPLETED
+    get_project.return_value.create_model_obj.return_value._data = {}
     cmd = runner.invoke(
         cli,
         [

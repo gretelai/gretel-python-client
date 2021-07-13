@@ -119,7 +119,7 @@ class Model(Job):
         self.model_id = model_id
         super().__init__(project, JOB_TYPE, model_id)
 
-    def create(
+    def submit(
         self,
         runner_mode: RunnerMode = DEFAULT_RUNNER,
         dry_run: bool = False,
@@ -176,22 +176,28 @@ class Model(Job):
 
     @property
     def artifact_types(self) -> List[str]:
+        """Returns a list of artifact types associated with the model."""
         return [a.value for a in ModelArtifact]
 
     @property
     def is_cloud_model(self):
+        """Returns ``True`` if the model was created to run in Gretel's
+        Cloud. ``False`` otherwise."""
         return self._data["model"]["runner_mode"] == "cloud"
 
     @property
     def instance_type(self) -> str:
+        """Returns CPU or GPU based on the model being trained."""
         return GPU if self.model_type == ModelType.SYNTHETICS else CPU
 
     @property
     def model_config(self) -> dict:
+        """Returns the model config used to create the model."""
         return self._data[f.MODEL]["config"] if self._data else self._local_model_config
 
     @property
     def model_type(self) -> ModelType:
+        """Returns the type of model. Eg synthetics, transforms or classify."""
         try:
             return ModelType(list(self.model_config["models"][0].keys())[0])
         except (IndexError, KeyError) as ex:
@@ -225,6 +231,7 @@ class Model(Job):
 
     @data_source.setter
     def data_source(self, data_source: str):
+        """Configure a new data source for the model."""
         self.model_config["models"][0][self.model_type]["data_source"] = data_source
 
     def delete(self) -> Optional[dict]:
@@ -273,7 +280,8 @@ class Model(Job):
             project_id=self.project.name, model_id=self.model_id, logs="yes"
         )
 
-    def create_record_handler(self) -> RecordHandler:
+    def create_record_handler_obj(self) -> RecordHandler:
+        """Creates a new record handler for the model."""
         return RecordHandler(self)
 
     def _do_cancel_job(self):
@@ -284,6 +292,7 @@ class Model(Job):
         )
 
     def get_record_handlers(self) -> Iterator[RecordHandler]:
+        """Returns a list of record handlers associated with the model."""
         for status in Status:
             for handler in (
                 self._projects_api.query_record_handlers(

@@ -125,10 +125,10 @@ def create_and_run_record_handler(
     status_strings: StatusDescriptions,
 ):
     sc.log.info(f"Creating record handler for model {sc.model.model_id}")
-    record_handler = sc.model.create_record_handler()
+    record_handler = sc.model.create_record_handler_obj()
 
     try:
-        data = record_handler.create(
+        data = record_handler.submit(
             params=params,
             action=action,
             runner_mode=RunnerMode(runner),

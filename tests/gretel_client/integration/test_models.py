@@ -31,8 +31,8 @@ def run_job(job: Job, tmpdir: Path):
 
 
 def test_does_get_model_from_id(project: Project, transform_model_path: Path):
-    model: Model = project.create_model(transform_model_path)
-    model.create()
+    model: Model = project.create_model_obj(transform_model_path)
+    model.submit()
     assert model.model_id
     model_remote = Model(project=project, model_id=model.model_id)
     assert model_remote.status
@@ -56,12 +56,12 @@ def test_does_train_model_and_transform_records(
     transform_local_data_source: Path,
 ):
     m = Model(project=project, model_config=transform_model_path)
-    m.create(runner_mode=RunnerMode.CLOUD)
+    m.submit(runner_mode=RunnerMode.CLOUD)
     logs = list(m.poll_logs_status())
     assert len(logs) > 1
     assert m.status == Status.COMPLETED
-    record_handler = m.create_record_handler()
-    record_handler.create(
+    record_handler = m.create_record_handler_obj()
+    record_handler.submit(
         params=None,
         action="transform",
         runner_mode=RunnerMode.CLOUD,
@@ -79,7 +79,7 @@ def test_raises_wait_time_exceeded(
 ):
     ...
     m = Model(project=project, model_config=transform_model_path)
-    m.create(runner_mode=RunnerMode.CLOUD)
+    m.submit(runner_mode=RunnerMode.CLOUD)
 
     with pytest.raises(WaitTimeExceeded):
         # note: list is required here, because poll_logs_status() returns an iterator
@@ -93,8 +93,8 @@ def test_raises_wait_time_exceeded(
 
 
 def test_does_get_synthetic_records(trained_synth_model: Model, request):
-    handler = trained_synth_model.create_record_handler()
-    handler.create(
+    handler = trained_synth_model.create_record_handler_obj()
+    handler.submit(
         action="generate", runner_mode=RunnerMode.CLOUD, params={"num_records": 100}
     )
     request.addfinalizer(handler.delete)
@@ -116,7 +116,7 @@ def test_polls_with_helper(
     capsys,
 ):
     m = Model(project=project, model_config=transform_model_path)
-    m.create(runner_mode=RunnerMode.CLOUD)
+    m.submit(runner_mode=RunnerMode.CLOUD)
     poll(m)
     captured = capsys.readouterr()
     assert "Model creation complete" in captured.err

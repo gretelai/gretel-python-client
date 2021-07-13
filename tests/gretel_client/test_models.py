@@ -129,7 +129,7 @@ def m(
 
 def test_model_create(m: Model, create_model_resp: dict):
     assert m.model_id is None
-    m.create(runner_mode=RunnerMode.CLOUD)
+    m.submit(runner_mode=RunnerMode.CLOUD)
     m._projects_api.create_model.assert_called_once()  # type:ignore
     assert isinstance(m._data, dict)
     assert m.model_id == create_model_resp["data"]["model"]["uid"]
@@ -138,7 +138,7 @@ def test_model_create(m: Model, create_model_resp: dict):
 
 
 def test_does_poll_status_and_logs(m: Model, model_logs: List[dict]):
-    m.create(runner_mode=RunnerMode.LOCAL)
+    m.submit(runner_mode=RunnerMode.LOCAL)
     m._projects_api.get_model.side_effect = [  # type:ignore
         {"data": {"model": {"status": "created"}}},
         {"data": {"model": {"status": "pending"}}},
@@ -179,8 +179,8 @@ def test_does_read_local_model(transform_model_path: Path):
 
 def test_does_populate_record_details(m: Model, create_record_handler_resp: dict):
     m._poll_job_endpoint()
-    record_handler = m.create_record_handler()
-    record_handler.create(
+    record_handler = m.create_record_handler_obj()
+    record_handler.submit(
         action="transform", runner_mode=RunnerMode.LOCAL, data_source="path/to/datasource.csv"
     )
     assert (
