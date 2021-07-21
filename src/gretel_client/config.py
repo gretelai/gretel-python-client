@@ -74,10 +74,10 @@ class ClientConfig:
         default_project_name: Optional[str] = None,
         default_runner: str = DEFAULT_RUNNER.value,
     ):
-        self.endpoint = os.getenv(GRETEL_ENDPOINT) or endpoint or DEFAULT_GRETEL_ENDPOINT
-        self.api_key = os.getenv(GRETEL_API_KEY) or api_key
+        self.endpoint = endpoint or os.getenv(GRETEL_ENDPOINT) or DEFAULT_GRETEL_ENDPOINT
+        self.api_key = api_key or os.getenv(GRETEL_API_KEY)
         self.default_runner = default_runner
-        self.default_project_name = os.getenv(GRETEL_PROJECT) or default_project_name
+        self.default_project_name = default_project_name or os.getenv(GRETEL_PROJECT) or default_project_name
 
     @classmethod
     def from_file(cls, file_path: Path) -> ClientConfig:

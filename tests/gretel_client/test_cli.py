@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 from typing import Callable
@@ -7,6 +8,16 @@ from click.testing import CliRunner
 
 from gretel_client.cli.cli import cli
 from gretel_client.cli.common import ModelObjectReader, download_artifacts
+from gretel_client.config import (
+    ClientConfig,
+    GRETEL_API_KEY,
+    GRETEL_CONFIG_FILE,
+    GRETEL_ENDPOINT,
+    GRETEL_PROJECT,
+    configure_session,
+    get_session_config,
+    _load_config,
+)
 from gretel_client.projects.jobs import Status
 
 
@@ -16,6 +27,43 @@ def runner() -> CliRunner:
     unit tests.
     """
     return CliRunner()
+
+
+@patch("gretel_client.cli.cli.write_config")
+def test_configure_env(write_config: MagicMock, runner: CliRunner):
+    orig_api, orig_proj, orig_endpoint = "orig_api", "orig_proj", "orig_endpoint"
+    new_api, new_proj, new_endpoint = "new_api", "new_proj", "new_endpoint"
+
+    with patch.dict(
+        os.environ,
+        {
+            GRETEL_API_KEY: orig_api,
+            GRETEL_ENDPOINT: orig_endpoint,
+            GRETEL_PROJECT: orig_proj,
+            GRETEL_CONFIG_FILE: "none"
+        },
+    ):
+        configure_session(ClientConfig())
+        assert get_session_config().api_key == orig_api
+        assert get_session_config().endpoint == orig_endpoint
+        assert get_session_config().default_project_name == orig_proj
+        cmd = runner.invoke(
+            cli,
+            [
+                "configure",
+                "--api-key",
+                new_api,
+                "--endpoint",
+                new_endpoint,
+                "--project",
+                new_proj,
+            ],
+        )
+
+    assert get_session_config().api_key == new_api
+    assert get_session_config().endpoint == new_endpoint
+    assert get_session_config().default_project_name == new_proj
+    assert cmd.exit_code == 0
 
 
 @pytest.fixture
