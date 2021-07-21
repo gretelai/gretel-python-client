@@ -588,3 +588,23 @@ def test_create_records_from_model_obj(
     )
 
     assert cmd.exit_code == 0
+
+
+def test_does_not_download_cloud_model_data(
+    runner: CliRunner, get_fixture: Callable, tmpdir: Path, trained_synth_model: Model
+):
+    cmd = runner.invoke(
+        cli,
+        [
+            "models",
+            "get",
+            "--model-id",
+            trained_synth_model.model_id,
+            "--project",
+            trained_synth_model.project.project_id,
+            "--output",
+            str(tmpdir / "downloaded")
+        ],
+    )
+    assert cmd.exit_code == 0
+    assert not (tmpdir / "downloaded" / "model.tar.gz").exists()

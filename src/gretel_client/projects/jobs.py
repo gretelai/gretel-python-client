@@ -146,7 +146,7 @@ class Job(ABC):
 
     @property
     def traceback(self) -> Optional[str]:
-        """Returns the traceback associated with any errors on the job."""
+        """Returns the traceback associated with any job errors."""
         traceback = self._data.get(self.job_type).get(f.TRACEBACK)
         if not traceback:
             return None
@@ -155,7 +155,7 @@ class Job(ABC):
 
     @property
     def print_obj(self) -> dict:
-        """Returns an object representation of the job"""
+        """Returns a printable object representation of the job"""
         out = self._data[self.job_type]
         if out.get(f.MODEL_KEY):
             del out[f.MODEL_KEY]

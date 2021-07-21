@@ -14,7 +14,7 @@ from gretel_client.config import (
     configure_custom_logger,
     get_session_config,
 )
-from gretel_client.projects.common import ModelType, WAIT_UNTIL_DONE
+from gretel_client.projects.common import ModelArtifact, ModelType, WAIT_UNTIL_DONE
 from gretel_client.projects.jobs import Job, WaitTimeExceeded
 from gretel_client.projects.models import Model
 from gretel_client.projects.projects import Project, get_project
@@ -487,6 +487,13 @@ def download_artifacts(sc: SessionContext, output: str, job: Job):
     output_path.mkdir(exist_ok=True, parents=True)
     sc.log.info(f"Downloading model artifacts to {output_path.resolve()}")
     for artifact_type, download_link in job.get_artifacts():
+        # we don't need to download cloud model artifacts
+        if (
+            isinstance(job, Model)
+            and job.is_cloud_model
+            and artifact_type == ModelArtifact.MODEL.value
+        ):
+            continue
         try:
             art = requests.get(download_link)
             if art.status_code == 200:
