@@ -73,19 +73,24 @@ def read_model_config(model_config: _ModelConfigPathT) -> dict:
         except Exception as ex:
             raise ModelConfigError(f"Could not read {model_config}") from ex
 
-        # todo(dn): if there is a yaml or json parse error, we want to bubble
-        # that error up to the user. first, we need to decide if the file is
-        # supposed to be a yaml or json file.
         if config_contents:
+            valid_config_contents = False
             try:
                 config = yaml.safe_load(config_contents)
+                valid_config_contents = True
             except Exception:
                 pass
 
             try:
                 config = json.loads(config_contents)
+                valid_config_contents = True
             except Exception:
                 pass
+
+            if not valid_config_contents:
+                # The provided config was a valid path on the local
+                # fs, but we could not load the config as YAML or JSON
+                raise ModelConfigError("The provided config file is not valid YAML or JSON!")
 
     # try and read a model config from a blueprint short path
     if not config and isinstance(model_config, str):
