@@ -127,9 +127,12 @@ def m(
     return m
 
 
-def test_model_create(m: Model, create_model_resp: dict):
+@pytest.mark.parametrize(
+    "runner_mode", [RunnerMode.CLOUD, "cloud"]
+)
+def test_model_create(m: Model, create_model_resp: dict, runner_mode):
     assert m.model_id is None
-    m.submit(runner_mode=RunnerMode.CLOUD)
+    m._submit(runner_mode=runner_mode)
     m._projects_api.create_model.assert_called_once()  # type:ignore
     assert isinstance(m._data, dict)
     assert m.model_id == create_model_resp["data"]["model"]["uid"]
@@ -137,8 +140,24 @@ def test_model_create(m: Model, create_model_resp: dict):
     assert m.worker_key == create_model_resp["worker_key"]
 
 
+def test_model_submit_bad_runner_modes(m: Model):
+    with pytest.raises(ValueError) as err:
+        m._submit(runner_mode="foo")
+    assert "Invalid runner_mode: foo" in str(err)
+
+    with pytest.raises(ValueError) as err:
+        m._submit(runner_mode=123)
+    assert "Invalid runner_mode type" in str(err)
+
+
+def test_model_submit_no_local_mode(m: Model):
+    with pytest.raises(ValueError) as err:
+        m._submit(runner_mode="local")
+    assert "local" in str(err)
+
+
 def test_does_poll_status_and_logs(m: Model, model_logs: List[dict]):
-    m.submit(runner_mode=RunnerMode.LOCAL)
+    m._submit(runner_mode=RunnerMode.LOCAL, _default_manual=True)
     m._projects_api.get_model.side_effect = [  # type:ignore
         {"data": {"model": {"status": "created"}}},
         {"data": {"model": {"status": "pending"}}},

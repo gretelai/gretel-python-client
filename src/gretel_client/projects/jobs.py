@@ -5,7 +5,6 @@ from abc import ABC, abstractmethod, abstractproperty
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Callable, Iterator, List, Optional, Tuple
-from urllib.parse import urlparse
 
 import smart_open
 

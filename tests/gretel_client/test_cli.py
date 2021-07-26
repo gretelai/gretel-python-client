@@ -15,8 +15,7 @@ from gretel_client.config import (
     GRETEL_ENDPOINT,
     GRETEL_PROJECT,
     configure_session,
-    get_session_config,
-    _load_config,
+    get_session_config
 )
 from gretel_client.projects.jobs import Status
 
@@ -69,7 +68,7 @@ def test_configure_env(write_config: MagicMock, runner: CliRunner):
 @pytest.fixture
 def get_project() -> MagicMock:
     with patch("gretel_client.cli.common.get_project") as get_project:
-        get_project.return_value.create_model_obj.return_value.submit.return_value = {
+        get_project.return_value.create_model_obj.return_value._submit.return_value = {
             "model_key": ""
         }
         get_project.return_value.create_model_obj.return_value.print_obj = {}
@@ -115,7 +114,7 @@ def test_local_model_upload_flag(
 def test_local_model_upload_disabled_by_default(
     container_run: MagicMock, get_project: MagicMock, runner: CliRunner
 ):
-    get_project.return_value.create_model_obj.return_value.submit.return_value = {
+    get_project.return_value.create_model_obj.return_value._submit.return_value = {
         "model_key": ""
     }
     get_project.return_value.create_model_obj.return_value.print_obj = {}

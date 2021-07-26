@@ -54,7 +54,7 @@ def models():
     "--upload-model",
     default=False,
     is_flag=True,
-    help="If set, and --runner is set to local, model results will be uploaded to Gretel Cloud. When using the cloud runner, results will always be uploaded to Gretel Cloud.",
+    help="If set, and --runner is set to local, model results will be uploaded to Gretel Cloud. When using the cloud runner, results will always be uploaded to Gretel Cloud.",  # noqa
 )
 @click.option(
     "--dry-run",
@@ -128,8 +128,11 @@ def create(
     # Create the model and the data source
     try:
         sc.log.info("Creating model")
-        run = model.submit(
-            runner_mode=RunnerMode(runner), dry_run=dry_run, _validate_data_source=False
+        run = model._submit(
+            runner_mode=RunnerMode(runner),
+            dry_run=dry_run,
+            _validate_data_source=False,
+            _default_manual=True
         )
         sc.register_cleanup(lambda: model.cancel())
         sc.log.info(f"Model created with ID {model.model_id}")
@@ -154,6 +157,10 @@ def create(
         sc.exit(0)
 
     # Start a local container when --runner is LOCAL
+    #
+    # The `_default_manual` flag in the call to `Model._submit()` above will
+    # trigger the model to have been created in manual mode so at this point
+    # the model instance is hydrated with the data from the Cloud API
     run = None
     if runner == RunnerMode.LOCAL.value:
         run = ContainerRun.from_job(model)

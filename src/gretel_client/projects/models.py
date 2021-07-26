@@ -4,14 +4,13 @@ Classes and methods for working with Gretel Models
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator, List, Optional, Union
-from pathlib import Path
+import logging
 
 import yaml
 from smart_open import open
 
 from gretel_client.config import DEFAULT_RUNNER, RunnerMode
 from gretel_client.projects.common import (
-    MANUAL,
     ModelArtifact,
     ModelType,
     YES,
@@ -26,6 +25,11 @@ if TYPE_CHECKING:
     from gretel_client.projects import Project
 else:
     Project = None
+
+
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 BASE_BLUEPRINT_REPO = "https://raw.githubusercontent.com/gretelai/gretel-blueprints/main/config_templates/gretel"
@@ -124,23 +128,60 @@ class Model(Job):
         self.model_id = model_id
         super().__init__(project, JOB_TYPE, model_id)
 
-    def submit(
+    def submit(self, **kwargs) -> "Model":
+        """Alias for ``submit_cloud``, support for params is there for backwards
+        compatibility.
+        """
+        # logging.warning("Deprecation Warning: This method will be deprecated in the future for ``submit_cloud()`` and ``submit_manual()`` instead.")  # noqa
+        runner_mode = kwargs.get("runner_mode")
+        if runner_mode and (runner_mode != "cloud" and runner_mode != RunnerMode.CLOUD):
+            raise ValueError("submit() only supports Cloud Runners and this method will be deprecated in the future. To use your own worker, use `submit_manual()` then submit the `Model` instance to an appropiate handler.")  # noqa
+        return self.submit_cloud()
+
+    def submit_cloud(self) -> dict:
+        """Submit this model to be scheduled for runing in Gretel Cloud.
+
+        Returns:
+            The response from the Gretel API.
+        """
+        self.upload_data_source()
+        return self._submit(
+            runner_mode=RunnerMode.CLOUD
+        )
+
+    def submit_manual(self) -> dict:
+        """Submit this model to the Gretel Cloud API, which will create
+        the job metadata but no runner will be started. The ``Model`` instance
+        can now be passed into a dedicated runner to start the work within
+        a container
+
+        Returns:
+            The response from the Gretel API.
+        """
+        return self._submit(
+            runner_mode=RunnerMode.MANUAL
+        )
+
+    def _submit(
         self,
-        runner_mode: RunnerMode = DEFAULT_RUNNER,
+        runner_mode: Union[RunnerMode, str] = DEFAULT_RUNNER,
         dry_run: bool = False,
         upload_data_source: bool = False,
         _validate_data_source: bool = True,
+        _default_manual: bool = False
     ) -> dict:
         """Submit a model to be run.
 
         Args:
             runner_mode: Determines where to run the model. See ``RunnerMode``
-                for a list of valid modes. Defaults to manual mode.
+                for a list of valid modes. Local mode is not explicitly supported.
             dry_run: If set to True the model config will be sumbitted for
                 validation, but won't be run.
             upload_data_source: If set to True the model's data source will
                 be resolved and download to the host machine and then uploaded
-                as a Gretel Cloud artifact.
+                as a Gretel Cloud artifact. This is enabled by default to
+                ease UX for SDK users. This flag will be ignored if the
+                runner mode is not "cloud."
 
         Raises:
             - ``ModelConfigError`` if the specified model config is invalid.
@@ -154,14 +195,34 @@ class Model(Job):
         if self.model_id:
             raise RuntimeError("This model was already submitted.")
 
-        if upload_data_source:
+        # Support `runner_mode` input as a str to provide
+        # parity with the CLI semantics
+        if isinstance(runner_mode, str):
+            try:
+                runner_mode = RunnerMode(runner_mode)
+            except ValueError:
+                raise ValueError(f"Invalid runner_mode: {runner_mode}")
+
+        if not isinstance(runner_mode, RunnerMode):
+            raise ValueError("Invalid runner_mode type, must be str or RunnerMode enum")
+
+        if runner_mode == RunnerMode.LOCAL and not _default_manual:
+            raise ValueError("Cannot use local mode")
+
+        if upload_data_source and runner_mode == RunnerMode.CLOUD:
             self.upload_data_source(_validate=_validate_data_source)
+
+        # If the runner mode is NOT set to cloud mode, check if we should
+        # fall back to manual mode, this is useful for when running local
+        # mode from the CLI.
+        if runner_mode != RunnerMode.CLOUD and _default_manual:
+            runner_mode = RunnerMode.MANUAL
 
         resp = self._projects_api.create_model(
             project_id=self.project.name,
             body=self._local_model_config,
             dry_run=YES if dry_run else NO,
-            runner_mode=runner_mode.value if runner_mode == RunnerMode.CLOUD else MANUAL,
+            runner_mode=runner_mode.value,
         )
 
         self._data: dict = resp[f.DATA]
@@ -237,6 +298,8 @@ class Model(Job):
     @data_source.setter
     def data_source(self, data_source: str):
         """Configure a new data source for the model."""
+        if self.model_id:
+            raise RuntimeError("Cannot update data source after the model has been submitted")
         self.model_config["models"][0][self.model_type]["data_source"] = data_source
 
     def delete(self) -> Optional[dict]:

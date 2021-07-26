@@ -114,8 +114,13 @@ class Project:
         return Model(project=self, model_id=model_id)
 
     @check_not_deleted
-    def create_model_obj(self, model_config: Union[str, Path, dict]) -> Model:
-        return Model(model_config=model_config, project=self)
+    def create_model_obj(self, model_config: Union[str, Path, dict], data_source: Optional[str] = None) -> Model:
+        _model = Model(model_config=model_config, project=self)
+        if data_source and not isinstance(data_source, str):
+            raise ValueError("data_source must be a str")
+        if data_source is not None:
+            _model.data_source = data_source
+        return _model
 
     @property
     @check_not_deleted
