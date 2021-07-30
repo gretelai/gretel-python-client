@@ -1,3 +1,4 @@
+from pathlib import Path
 from time import sleep
 from typing import Callable
 
@@ -7,6 +8,7 @@ from gretel_client.projects.docker import ContainerRun, _get_container_auth
 from gretel_client.projects.jobs import Status
 from gretel_client.projects.models import Model
 from gretel_client.projects.projects import get_project
+from gretel_client.helpers import submit_docker_local
 
 
 @pytest.fixture
@@ -14,11 +16,11 @@ def model(get_fixture: Callable, request):
     project = get_project(create=True)
     request.addfinalizer(project.delete)
     model = Model(project=project, model_config=get_fixture("transforms_config.yml"))
-    model.submit()
     return model
 
 
 def test_does_start_local_container(model: Model):
+    model.submit()
     run = ContainerRun.from_job(model)
     run.enable_cloud_uploads()
     run.start()
@@ -29,6 +31,7 @@ def test_does_start_local_container(model: Model):
 
 
 def test_does_cleanup(model: Model, get_fixture: Callable):
+    model.submit()
     run = ContainerRun.from_job(model)
     run.enable_cloud_uploads()
     run.configure_input_data(get_fixture("account-balances.csv"))
@@ -47,3 +50,22 @@ def test_does_auth_registry():
     auth, reg = _get_container_auth()
     assert auth
     assert reg
+
+
+def test_does_run_record_handler(model: Model, get_fixture: Callable, tmpdir: Path):
+    submit_docker_local(
+        model, output_dir=tmpdir, in_data=get_fixture("account-balances.csv")
+    )
+    model._poll_job_endpoint()
+    assert model.status == Status.COMPLETED
+    record_handler = model.create_record_handler_obj(
+        data_source=str(get_fixture("account-balances.csv"))
+    )
+    submit_docker_local(
+        record_handler,
+        output_dir=tmpdir,
+        model_path=(tmpdir / "model.tar.gz"),
+    )
+    record_handler._poll_job_endpoint()
+    assert record_handler.status == Status.COMPLETED
+    assert (tmpdir / "data.gz").exists()

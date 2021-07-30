@@ -1,6 +1,7 @@
 """
 Classes and methods for working with Gretel Models
 """
+from __future__ import annotations
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Iterator, List, Optional, Union
@@ -9,7 +10,7 @@ import logging
 import yaml
 from smart_open import open
 
-from gretel_client.config import DEFAULT_RUNNER, RunnerMode
+from gretel_client.config import RunnerMode
 from gretel_client.projects.common import (
     ModelArtifact,
     ModelType,
@@ -94,7 +95,9 @@ def read_model_config(model_config: _ModelConfigPathT) -> dict:
             if not valid_config_contents:
                 # The provided config was a valid path on the local
                 # fs, but we could not load the config as YAML or JSON
-                raise ModelConfigError("The provided config file is not valid YAML or JSON!")
+                raise ModelConfigError(
+                    "The provided config file is not valid YAML or JSON!"
+                )
 
     # try and read a model config from a blueprint short path
     if not config and isinstance(model_config, str):
@@ -128,48 +131,14 @@ class Model(Job):
         self.model_id = model_id
         super().__init__(project, JOB_TYPE, model_id)
 
-    def submit(self, **kwargs) -> "Model":
-        """Alias for ``submit_cloud``, support for params is there for backwards
-        compatibility.
-        """
-        # logging.warning("Deprecation Warning: This method will be deprecated in the future for ``submit_cloud()`` and ``submit_manual()`` instead.")  # noqa
-        runner_mode = kwargs.get("runner_mode")
-        if runner_mode and (runner_mode != "cloud" and runner_mode != RunnerMode.CLOUD):
-            raise ValueError("submit() only supports Cloud Runners and this method will be deprecated in the future. To use your own worker, use `submit_manual()` then submit the `Model` instance to an appropiate handler.")  # noqa
-        return self.submit_cloud()
-
-    def submit_cloud(self) -> dict:
-        """Submit this model to be scheduled for runing in Gretel Cloud.
-
-        Returns:
-            The response from the Gretel API.
-        """
-        self.upload_data_source()
-        return self._submit(
-            runner_mode=RunnerMode.CLOUD
-        )
-
-    def submit_manual(self) -> dict:
-        """Submit this model to the Gretel Cloud API, which will create
-        the job metadata but no runner will be started. The ``Model`` instance
-        can now be passed into a dedicated runner to start the work within
-        a container
-
-        Returns:
-            The response from the Gretel API.
-        """
-        return self._submit(
-            runner_mode=RunnerMode.MANUAL
-        )
-
     def _submit(
         self,
-        runner_mode: Union[RunnerMode, str] = DEFAULT_RUNNER,
+        runner_mode: RunnerMode,
         dry_run: bool = False,
         upload_data_source: bool = False,
         _validate_data_source: bool = True,
-        _default_manual: bool = False
-    ) -> dict:
+        _default_manual: bool = False,
+    ) -> Model:
         """Submit a model to be run.
 
         Args:
@@ -194,14 +163,6 @@ class Model(Job):
 
         if self.model_id:
             raise RuntimeError("This model was already submitted.")
-
-        # Support `runner_mode` input as a str to provide
-        # parity with the CLI semantics
-        if isinstance(runner_mode, str):
-            try:
-                runner_mode = RunnerMode(runner_mode)
-            except ValueError:
-                raise ValueError(f"Invalid runner_mode: {runner_mode}")
 
         if not isinstance(runner_mode, RunnerMode):
             raise ValueError("Invalid runner_mode type, must be str or RunnerMode enum")
@@ -228,7 +189,7 @@ class Model(Job):
         self._data: dict = resp[f.DATA]
         self.worker_key = resp[f.WORKER_KEY]
         self.model_id = self._data[f.MODEL][f.UID]
-        return self.print_obj
+        return self
 
     def _do_get_artifact(self, artifact_type: str) -> str:
         art_resp = self._projects_api.get_model_artifact(
@@ -270,13 +231,6 @@ class Model(Job):
             raise ModelConfigError("Could not determine model type from config") from ex
 
     @property
-    def external_data_source(self) -> bool:
-        """Returns ``True`` if the data source is external to Gretel Cloud.
-        If the data source is a Gretel Artifact, returns ``False``.
-        """
-        return not self.data_source.startswith("gretel_")
-
-    @property
     def data_source(self) -> str:
         """Retrieves the configured data source from the model config.
 
@@ -299,7 +253,9 @@ class Model(Job):
     def data_source(self, data_source: str):
         """Configure a new data source for the model."""
         if self.model_id:
-            raise RuntimeError("Cannot update data source after the model has been submitted")
+            raise RuntimeError(
+                "Cannot update data source after the model has been submitted"
+            )
         self.model_config["models"][0][self.model_type]["data_source"] = data_source
 
     def delete(self) -> Optional[dict]:
@@ -329,28 +285,22 @@ class Model(Job):
     def __repr__(self) -> str:
         return f"Model(id={self.model_id}, project={self.project.name})"
 
-    def upload_data_source(self, _validate: bool = True) -> str:
-        """Resolves and uploads the data source specified in the
-        model config.
-
-        If the data source is already a Gretel artifact, the artifact
-        will not be uploaded.
-
-        Returns:
-            A Gretel artifact key
-        """
-        if self.external_data_source:
-            self.data_source = self.project.upload_artifact(self.data_source, _validate)
-        return self.data_source
-
     def _do_get_job_details(self):
         return self._projects_api.get_model(
             project_id=self.project.name, model_id=self.model_id, logs="yes"
         )
 
-    def create_record_handler_obj(self) -> RecordHandler:
-        """Creates a new record handler for the model."""
-        return RecordHandler(self)
+    def create_record_handler_obj(
+        self, data_source: Optional[str] = None, params: Optional[dict] = None
+    ) -> RecordHandler:
+        """Creates a new record handler for the model.
+
+        Args:
+            data_source: A data source to upload to the record handler.
+             params: Any custom params for the record handler. These params
+                are specific to the upstream model.
+        """
+        return RecordHandler(self, data_source=data_source, params=params)
 
     def _do_cancel_job(self):
         return self._projects_api.update_model(

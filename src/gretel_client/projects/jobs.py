@@ -1,12 +1,14 @@
+from __future__ import annotations
 import base64
 import json
 import time
 from abc import ABC, abstractmethod, abstractproperty
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Iterator, List, Optional, Tuple
+from typing import TYPE_CHECKING, Callable, Iterator, List, Optional, Tuple, Union
 
 import smart_open
+from gretel_client.config import DEFAULT_RUNNER, RunnerMode
 
 from gretel_client.projects.common import (
     WAIT_UNTIL_DONE,
@@ -87,10 +89,42 @@ class Job(ABC):
             self._poll_job_endpoint()
         self._logs_iter_index = 0
 
-    # Abstract methods to implement
+    def submit(
+        self, runner_mode: Union[str, RunnerMode] = DEFAULT_RUNNER, **kwargs
+    ) -> dict:
+        # todo: deprecate in favor of submit_manual and submit_cloud
+        # Support `runner_mode` input as a str to provide
+        # parity with the CLI semantics
+        if isinstance(runner_mode, str):
+            try:
+                runner_mode = RunnerMode(runner_mode)
+            except ValueError:
+                raise ValueError(f"Invalid runner_mode: {runner_mode}")
+
+        return self._submit(runner_mode, **kwargs).print_obj
+
+    def submit_manual(self) -> Job:
+        """Submit this Job to the Gretel Cloud API, which will create
+        the job metadata but no runner will be started. The ``Model`` instance
+        can now be passed into a dedicated runner.
+
+        Returns:
+            The response from the Gretel API.
+        """
+        return self._submit(runner_mode=RunnerMode.MANUAL)
+
+    def submit_cloud(self) -> Job:
+        """Submit this model to be scheduled for runing in Gretel Cloud.
+
+        Returns:
+            The response from the Gretel API.
+        """
+        if self.data_source:
+            self.upload_data_source()
+        return self._submit(runner_mode=RunnerMode.CLOUD)
 
     @abstractmethod
-    def submit(self) -> dict:
+    def _submit(self, runner_mode: RunnerMode, **kwargs) -> Job:
         ...
 
     @abstractproperty
@@ -160,7 +194,30 @@ class Job(ABC):
             del out[f.MODEL_KEY]
         return out
 
+    @property
+    def external_data_source(self) -> bool:
+        """Returns ``True`` if the data source is external to Gretel Cloud.
+        If the data source is a Gretel Artifact, returns ``False``.
+        """
+        if self.data_source:
+            return not self.data_source.startswith("gretel_")
+        return False
+
     # Base Job Methods
+
+    def upload_data_source(self, _validate: bool = True) -> Optional[str]:
+        """Resolves and uploads the data source specified in the
+        model config.
+
+        If the data source is already a Gretel artifact, the artifact
+        will not be uploaded.
+
+        Returns:
+            A Gretel artifact key
+        """
+        if self.external_data_source and self.data_source:
+            self.data_source = self.project.upload_artifact(self.data_source, _validate)
+            return self.data_source
 
     def get_artifacts(self) -> Iterator[Tuple[str, str]]:
         """List artifact links for all known artifact types."""
@@ -236,7 +293,7 @@ class Job(ABC):
 
     def _new_job_logs(self) -> List[dict]:
         if self.logs and len(self.logs) > self._logs_iter_index:
-            next_logs = self.logs[self._logs_iter_index:]
+            next_logs = self.logs[self._logs_iter_index :]
             self._logs_iter_index += len(next_logs)
             return next_logs
         return []

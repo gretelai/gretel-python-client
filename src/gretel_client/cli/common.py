@@ -15,6 +15,7 @@ from gretel_client.config import (
     get_session_config,
 )
 from gretel_client.projects.common import ModelArtifact, ModelType, WAIT_UNTIL_DONE
+from gretel_client.projects.docker import DockerEnvironmentError, check_docker_env
 from gretel_client.projects.jobs import Job, WaitTimeExceeded
 from gretel_client.projects.models import Model
 from gretel_client.projects.projects import Project, get_project
@@ -291,7 +292,17 @@ def project_option(fn):
 def runner_option(fn):
     def callback(ctx, param: click.Option, value: str):
         sc: SessionContext = ctx.ensure_object(SessionContext)
-        return sc.runner or value
+        selected_runner = sc.runner or value
+        if selected_runner == "local":
+            try:
+                check_docker_env()
+            except DockerEnvironmentError as ex:
+                sc.log.error(
+                    "Runner is local, but docker is not running. Please check that docker is installed and running.",
+                    ex=ex,
+                )
+                sc.exit(1)
+        return selected_runner
 
     return click.option(  # type: ignore
         "--runner",

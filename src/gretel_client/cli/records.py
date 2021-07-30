@@ -128,11 +128,12 @@ def create_and_run_record_handler(
     record_handler = sc.model.create_record_handler_obj()
 
     try:
-        data = record_handler.submit(
+        data = record_handler._submit(
             params=params,
             action=action,
             runner_mode=RunnerMode(runner),
             data_source=data_source,
+            _default_manual=True
         )
         sc.register_cleanup(lambda: record_handler.cancel())
         sc.log.info(f"Record handler created {record_handler.record_id}")
@@ -143,7 +144,7 @@ def create_and_run_record_handler(
                 data={"record_handler": data, "worker_key": record_handler.worker_key}
             )
         else:
-            sc.print(data=data)
+            sc.print(data=data.print_obj)
     except Exception as ex:
         sc.log.error("Could not create record handler", ex=ex)
         sc.exit(1)

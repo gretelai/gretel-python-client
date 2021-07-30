@@ -34,6 +34,10 @@ class ContainerRunError(Exception):
     ...
 
 
+class DockerEnvironmentError(Exception):
+    ...
+
+
 DEFAULT_ARTIFACT_DIR = "/workspace"
 
 
@@ -42,8 +46,9 @@ DEFAULT_GPU_CONFIG = DeviceRequest(count=-1, capabilities=[["gpu"]])
 
 class DataVolume:
 
-    volume: Optional[Volume]
-    volume_container: Optional[Container]
+    volume: Optional[Volume] = None
+
+    volume_container: Optional[Container] = None
 
     def __init__(self, host_dir: str, docker_client: docker.DockerClient):
         self.name = f"gretel-{uuid.uuid4().hex[:5]}"
@@ -125,6 +130,7 @@ class ContainerRun:
     """Reference to a running or completed container run."""
 
     def __init__(self, job: Job):
+        check_docker_env()
         self._docker_client = docker.from_env()
         self.image = job.container_image
         self.input_volume = DataVolume("/in", self._docker_client)
@@ -152,9 +158,7 @@ class ContainerRun:
     def extract_output_dir(self, dest: str):
         if not self.container_output_dir:
             return
-        extract_container_path(
-            self._container, self.container_output_dir, dest  #
-        )
+        extract_container_path(self._container, self.container_output_dir, dest)
 
     def enable_debug(self):
         self.debug = True
@@ -165,6 +169,7 @@ class ContainerRun:
     def configure_output_dir(
         self, host_dir: str, container_dir: str = DEFAULT_ARTIFACT_DIR
     ):
+        self.host_dir = host_dir
         self.container_output_dir = container_dir
         self.run_params.extend(["--artifact-dir", container_dir])
 
@@ -292,9 +297,7 @@ class ContainerRun:
             except Exception:
                 pass
             if not self.debug:
-                self.logger.warn(
-                    "Re-run with debugging enabled for more details."
-                )
+                self.logger.warn("Re-run with debugging enabled for more details.")
             raise ContainerRunError(
                 ("Could not launch container. Please check the logs for more details.")
             )
@@ -356,3 +359,19 @@ def extract_container_path(container: Container, container_path: str, host_path:
                 member.name = Path(member.name).name
                 members_to_extact.append(member)
         tar.extractall(path=dest_path, members=members_to_extact)
+
+
+def check_docker_env():
+    """Checks that the local docker env is configured.
+
+    Raises:
+        ``DockerEnvironmentError`` if the docker environment isn't
+        configured correctly.
+    """
+    try:
+        client = docker.from_env()
+        client.ping()
+    except (docker.errors.APIError, docker.errors.DockerException) as ex:
+        raise DockerEnvironmentError(
+            "Can't connect to docker. Please check that docker is installed and running."
+        ) from ex

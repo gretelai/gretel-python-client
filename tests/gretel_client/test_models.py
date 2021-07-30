@@ -127,12 +127,10 @@ def m(
     return m
 
 
-@pytest.mark.parametrize(
-    "runner_mode", [RunnerMode.CLOUD, "cloud"]
-)
+@pytest.mark.parametrize("runner_mode", [RunnerMode.CLOUD, "cloud"])
 def test_model_create(m: Model, create_model_resp: dict, runner_mode):
     assert m.model_id is None
-    m._submit(runner_mode=runner_mode)
+    m.submit(runner_mode=runner_mode)
     m._projects_api.create_model.assert_called_once()  # type:ignore
     assert isinstance(m._data, dict)
     assert m.model_id == create_model_resp["data"]["model"]["uid"]
@@ -142,17 +140,17 @@ def test_model_create(m: Model, create_model_resp: dict, runner_mode):
 
 def test_model_submit_bad_runner_modes(m: Model):
     with pytest.raises(ValueError) as err:
-        m._submit(runner_mode="foo")
+        m.submit(runner_mode="foo")
     assert "Invalid runner_mode: foo" in str(err)
 
     with pytest.raises(ValueError) as err:
-        m._submit(runner_mode=123)
+        m.submit(runner_mode=123)
     assert "Invalid runner_mode type" in str(err)
 
 
 def test_model_submit_no_local_mode(m: Model):
     with pytest.raises(ValueError) as err:
-        m._submit(runner_mode="local")
+        m.submit(runner_mode="local")
     assert "local" in str(err)
 
 
@@ -209,7 +207,10 @@ def test_does_populate_record_details(m: Model, create_record_handler_resp: dict
     m._poll_job_endpoint()
     record_handler = m.create_record_handler_obj()
     record_handler.submit(
-        action="transform", runner_mode=RunnerMode.LOCAL, data_source="path/to/datasource.csv"
+        action="transform",
+        runner_mode=RunnerMode.LOCAL,
+        data_source="path/to/datasource.csv",
+        _default_manual=True,
     )
     assert (
         record_handler.status.value

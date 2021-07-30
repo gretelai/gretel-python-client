@@ -140,11 +140,11 @@ def create(
         if runner == RunnerMode.MANUAL.value:
             # With --runner MANUAL, we only print the worker_key and it's up to the user to run the worker
             sc.print(data={
-                "model": run,
+                "model": run.print_obj,
                 "worker_key": model.worker_key
             })
         else:
-            sc.log.info(data=run)
+            sc.log.info(data=run.print_obj)
     except ApiException as ex:
         sc.log.error("Could not create model", ex=ex)
         sc.print(data=json.loads(ex.body))  # type:ignore

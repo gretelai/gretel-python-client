@@ -15,8 +15,9 @@ from gretel_client.config import (
     GRETEL_ENDPOINT,
     GRETEL_PROJECT,
     configure_session,
-    get_session_config
+    get_session_config,
 )
+from gretel_client.projects.docker import DockerEnvironmentError
 from gretel_client.projects.jobs import Status
 
 
@@ -39,7 +40,7 @@ def test_configure_env(write_config: MagicMock, runner: CliRunner):
             GRETEL_API_KEY: orig_api,
             GRETEL_ENDPOINT: orig_endpoint,
             GRETEL_PROJECT: orig_proj,
-            GRETEL_CONFIG_FILE: "none"
+            GRETEL_CONFIG_FILE: "none",
         },
     ):
         configure_session(ClientConfig())
@@ -68,16 +69,17 @@ def test_configure_env(write_config: MagicMock, runner: CliRunner):
 @pytest.fixture
 def get_project() -> MagicMock:
     with patch("gretel_client.cli.common.get_project") as get_project:
-        get_project.return_value.create_model_obj.return_value._submit.return_value = {
-            "model_key": ""
-        }
-        get_project.return_value.create_model_obj.return_value.print_obj = {}
-        get_project.return_value.create_model_obj.return_value.billing_details = {}
-        get_project.return_value.create_model_obj.return_value.peek_report.return_value = (
-            {}
-        )
-        get_project.return_value.create_model_obj.return_value.status = Status.COMPLETED
-        get_project.return_value.create_model_obj.return_value._data = {}
+        get_project_mock = get_project.return_value.create_model_obj.return_value
+        get_project_mock._submit.return_value = {"model_key": ""}
+        get_project_mock.print_obj = {}
+        get_project_mock.billing_details = {}
+        get_project_mock.peek_report.return_value = {}
+        get_project_mock.status = Status.COMPLETED
+        get_project_mock._data = {}
+
+        model = get_project.return_value.create_model_obj.return_value
+        model._submit.return_value = model
+
         yield get_project
 
 
@@ -114,14 +116,6 @@ def test_local_model_upload_flag(
 def test_local_model_upload_disabled_by_default(
     container_run: MagicMock, get_project: MagicMock, runner: CliRunner
 ):
-    get_project.return_value.create_model_obj.return_value._submit.return_value = {
-        "model_key": ""
-    }
-    get_project.return_value.create_model_obj.return_value.print_obj = {}
-    get_project.return_value.create_model_obj.return_value.billing_details = {}
-    get_project.return_value.create_model_obj.return_value.peek_report.return_value = {}
-    get_project.return_value.create_model_obj.return_value.status = Status.COMPLETED
-    get_project.return_value.create_model_obj.return_value._data = {}
     cmd = runner.invoke(
         cli,
         [
@@ -181,3 +175,28 @@ def test_does_read_model_object_str(get_fixture: Callable):
     output = get_fixture("xf_model_create_output.json")
     model_obj = ModelObjectReader(output.read_text())
     assert model_obj.model.get("uid") == "60dca3d09c03f7c6edadee91"
+
+
+@patch("gretel_client.cli.common.check_docker_env")
+def test_does_gracefully_handler_docker_errors(
+    check_docker_env: MagicMock, runner: CliRunner
+):
+    check_docker_env.side_effect = DockerEnvironmentError()
+    cmd = runner.invoke(
+        cli,
+        [
+            "models",
+            "create",
+            "--runner",
+            "local",
+            "--config",
+            "synthetics/default",
+            "--output",
+            "tmp",
+            "--project",
+            "mocked",
+        ],
+    )
+    check_docker_env.assert_called_once()
+    assert cmd.exit_code == 1
+    assert "docker is not running" in cmd.output

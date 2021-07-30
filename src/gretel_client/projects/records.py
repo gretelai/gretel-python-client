@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, List
 from gretel_client.config import DEFAULT_RUNNER, RunnerMode
 
@@ -25,36 +26,60 @@ class RecordHandler(Job):
         model: The model to generate a record handler for
         record_id: The id of an existing record handler.
     """
-    def __init__(self, model: Model, record_id: str = None):
-        self.model = model
-        self.record_id = record_id
-        super().__init__(model.project, JOB_TYPE, self.record_id)
 
-    def submit(
+    def __init__(
         self,
-        action: str,
-        runner_mode: RunnerMode = DEFAULT_RUNNER,
+        model: Model,
+        *,
+        record_id: str = None,
         data_source: Optional[str] = None,
         params: Optional[dict] = None,
-        upload_data_source: bool = False,
-    ) -> dict:
+    ):
+        self.model = model
+        self.record_id = record_id
+        self.data_source = data_source
+        self.params = params
+        super().__init__(model.project, JOB_TYPE, self.record_id)
+
+    def _submit(
+        self,
+        runner_mode: RunnerMode = DEFAULT_RUNNER,
+        **kwargs
+    ) -> RecordHandler:
         """Submits the record handler to be run."""
+
+        # todo: we can drop the kwarg accessors after the Job.submit
+        # method is deprecated.
+        action = kwargs.get("action", self.action)
+        data_source = kwargs.get("data_source", self.data_source)
+        params = kwargs.get("params", self.params)
+        upload_data_source = kwargs.get("upload_data_source", False)
+        _default_manual = kwargs.get("_default_manual", False)
+
+        if runner_mode == RunnerMode.LOCAL and not _default_manual:
+            raise ValueError("Cannot use local mode")
+
         if upload_data_source and data_source:
             data_source = self._upload_data_source(data_source)
+
+        # If the runner mode is NOT set to cloud mode, check if we should
+        # fall back to manual mode, this is useful for when running local
+        # mode from the CLI.
+        if runner_mode != RunnerMode.CLOUD and _default_manual:
+            runner_mode = RunnerMode.MANUAL
+
         handler = self.model._projects_api.create_record_handler(
             project_id=self.model.project.project_id,
             model_id=self.model.model_id,
             body={"params": params, "data_source": data_source},
             action=action,
-            runner_mode=RunnerMode.CLOUD.value
-            if runner_mode == RunnerMode.CLOUD
-            else RunnerMode.MANUAL.value,
+            runner_mode=runner_mode.value,
         )
-        self.action = action
+
         self._data: dict = handler[f.DATA]
         self.record_id = self._data[self.job_type][f.UID]
         self.worker_key = handler[f.WORKER_KEY]
-        return self.print_obj
+        return self
 
     def _upload_data_source(self, data_source: str) -> str:
         return self.project.upload_artifact(data_source)
@@ -67,6 +92,16 @@ class RecordHandler(Job):
     def model_type(self) -> ModelType:
         """Returns the parent model type of the record handler."""
         return self.model.model_type
+
+    @property
+    def action(self) -> str:
+        if self.model_type == ModelType.SYNTHETICS:
+            return "generate"
+        if self.model_type == ModelType.TRANSFORMS:
+            return "transform"
+        if self.model_type == ModelType.CLASSIFY:
+            return "classify"
+        return "unknown"
 
     @property
     def instance_type(self) -> str:
