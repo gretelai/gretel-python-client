@@ -119,7 +119,7 @@ def test_model_crud_from_cli(
     print(cmd.output)
     assert cmd.exit_code == 0
     # 2. check that the model can be found via a search
-    model = project.search_models()[0]
+    model = next(project.search_models(factory=dict))
     model_id = model["uid"]
     assert model["status"] == "completed"
     assert not model["error_msg"]
@@ -246,7 +246,7 @@ def test_model_crud_from_cli_local_inputs(
     assert (tmpdir / "model.tar.gz").exists()
     assert (tmpdir / "model_logs.json.gz").exists()
     # 2. check that the model can be found via a search
-    model = project.search_models()[0]
+    model = next(project.search_models(factory=dict))
     model_id = model["uid"]
 
     assert model["status"] == "completed"

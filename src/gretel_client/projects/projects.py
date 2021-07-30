@@ -1,22 +1,22 @@
 """
 High level API for interacting with a Gretel Project
 """
+from contextlib import contextmanager
 from functools import wraps
 from pathlib import Path
-from typing import Any, Dict, List, Union, Optional
-from contextlib import contextmanager
+from typing import Any, Dict, Iterator, List, Optional, Type, TypeVar, Union
 from urllib.parse import urlparse
 
 import requests
 import smart_open
 
 from gretel_client.config import get_session_config
+from gretel_client.projects.common import f, validate_data_source
 from gretel_client.projects.models import Model
 from gretel_client.rest import models
 from gretel_client.rest.api.projects_api import ProjectsApi
 from gretel_client.rest.exceptions import UnauthorizedException
 from gretel_client.rest.model.artifact import Artifact
-from gretel_client.projects.common import validate_data_source
 
 DATA = "data"
 PROJECTS = "projects"
@@ -38,6 +38,9 @@ def check_not_deleted(func):
         return func(self, *args, **kwargs)
 
     return wrap
+
+
+MT = TypeVar("MT", dict, Model)
 
 
 class Project:
@@ -75,7 +78,6 @@ class Project:
         """
         if include_models:
             for model in self.search_models():
-                model = self.get_model(model_id=model["uid"])
                 model.delete()
 
         self.projects_api.delete_project(project_id=self.project_id)
@@ -89,6 +91,7 @@ class Project:
 
     @property
     def as_dict(self) -> dict:
+        """Returns a dictionary representation of the project."""
         return {
             "name": self.name,
             "project_id": self.project_id,
@@ -99,22 +102,57 @@ class Project:
 
     @check_not_deleted
     def info(self) -> dict:
+        """Return details about the project."""
         return self.projects_api.get_project(project_id=self.name).get(DATA)
 
     @check_not_deleted
-    def search_models(self, limit: int = 100) -> List[dict]:
-        return (
+    def search_models(self, factory: Type[MT] = Model, limit: int = 100) -> Iterator[MT]:
+        """Search for project models.
+
+        Args:
+            limit: Limits the number of project models to return
+            factory: Determines what type of Model representation is returned.
+                If ``Model`` is passed, a ``Model`` will be returned. If ``dict``
+                is passed, a dictionary representation of the search results
+                will be returned.
+        """
+        if factory not in (dict, Model):
+            raise ValueError("factory must be one of ``str`` or ``Model``.")
+        models = (
             self.projects_api.get_models(project_id=self.name, limit=limit)
             .get(DATA)
             .get(MODELS)
         )
+        for model in models:
+            if factory == Model:
+                model = self.get_model(model_id=model[f.UID])
+            yield model
 
     @check_not_deleted
     def get_model(self, model_id: str) -> Model:
+        """Lookup and return a Project ``Model`` by it's ``model_id``.
+
+        Args:
+            model_id: The ``model_id` to lookup
+        """
         return Model(project=self, model_id=model_id)
 
     @check_not_deleted
-    def create_model_obj(self, model_config: Union[str, Path, dict], data_source: Optional[str] = None) -> Model:
+    def create_model_obj(
+        self, model_config: Union[str, Path, dict], data_source: Optional[str] = None
+    ) -> Model:
+        """Creates a new model object. This will not submit the model
+        to Gretel's cloud API. Please refer to the ``Model`` docs for
+        more information detailing how to submit the model.
+
+        Args:
+            model_config: Specifies a model config. For more information
+                about model configs, please refer to our doc site,
+                https://docs.gretel.ai/model-configurations.
+            data_source: Defines the model data_source. If the model_config
+                already has a data_source defined, this property will
+                override the existing one.
+        """
         _model = Model(model_config=model_config, project=self)
         if data_source and not isinstance(data_source, str):
             raise ValueError("data_source must be a str")
@@ -147,9 +185,7 @@ class Project:
             validate_data_source(artifact_path)
         if isinstance(artifact_path, Path):
             artifact_path = str(artifact_path)
-        with smart_open.open(
-            artifact_path, "rb", ignore_ext=True
-        ) as src:  # type:ignore
+        with smart_open.open(artifact_path, "rb", ignore_ext=True) as src:  # type:ignore
             src_data = src.read()
             file_name = Path(urlparse(artifact_path).path).name
             art_resp = self.projects_api.create_artifact(

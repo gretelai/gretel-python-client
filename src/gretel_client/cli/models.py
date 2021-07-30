@@ -279,7 +279,7 @@ def get(sc: SessionContext, project: str, model_id: str, output: str):
 @click.option("--limit", help="Limit the number of projects.", default=100)
 @pass_session
 def search(sc: SessionContext, project: str, limit: int):
-    sc.print(data=sc.project.search_models(limit=limit))
+    sc.print(data=list(sc.project.search_models(factory=dict, limit=limit)))
 
 
 @models.command()

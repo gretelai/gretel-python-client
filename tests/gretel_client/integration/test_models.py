@@ -121,3 +121,13 @@ def test_polls_with_helper(
     captured = capsys.readouterr()
     assert "Model creation complete" in captured.err
     assert m.status == Status.COMPLETED
+
+
+def test_does_search_models(pre_trained_project: Project):
+    models = list(pre_trained_project.search_models())
+    assert len(models) > 0
+    assert all([isinstance(m, Model) for m in models])
+
+    models = list(pre_trained_project.search_models(factory=dict))
+    assert len(models) > 0
+    assert all([isinstance(m, dict) for m in models])
