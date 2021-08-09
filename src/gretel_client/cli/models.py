@@ -14,7 +14,7 @@ from gretel_client.cli.common import (
 )
 from gretel_client.projects.common import ModelArtifact, WAIT_UNTIL_DONE
 from gretel_client.projects.docker import ContainerRun, ContainerRunError
-from gretel_client.projects.jobs import Status
+from gretel_client.projects.jobs import GPU, Status
 from gretel_client.projects.models import (
     Model,
     ModelArtifactError,
@@ -174,7 +174,7 @@ def create(
         if upload_model:
             sc.log.info("Uploads to Gretel Cloud are enabled")
             run.enable_cloud_uploads()
-        if model.model_type == "synthetics":
+        if model.instance_type == GPU:
             sc.log.info("Configuring GPU for model training")
             try:
                 run.configure_gpu()

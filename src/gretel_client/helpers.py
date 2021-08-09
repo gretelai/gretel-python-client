@@ -6,9 +6,12 @@ from typing import Optional, Union
 import click
 
 from gretel_client.cli.common import SessionContext, get_description_set, poll_and_print
+from gretel_client.config import get_logger
 from gretel_client.projects.common import WAIT_UNTIL_DONE
-from gretel_client.projects.docker import ContainerRun
-from gretel_client.projects.jobs import Job
+from gretel_client.projects.docker import ContainerRun, ContainerRunError
+from gretel_client.projects.jobs import GPU, Job
+
+log = get_logger(__name__)
 
 
 class _PythonSessionContext(click.Context):
@@ -73,6 +76,13 @@ def submit_docker_local(
     job.submit_manual()
     run = ContainerRun.from_job(job)
     run.configure_output_dir(str(output_dir))
+    if job.instance_type == GPU:
+        log.info("Configuring GPU for model training")
+        try:
+            run.configure_gpu()
+            log.info("GPU device found!")
+        except ContainerRunError:
+            log.warn("Could not configure GPU. Continuing with CPU")
     if in_data:
         run.configure_input_data(in_data)
     if not in_data and job.data_source:
