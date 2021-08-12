@@ -4,7 +4,7 @@ import json
 from gretel_client.cli.common import SessionContext, pass_session
 from gretel_client.projects.projects import search_projects
 from gretel_client.projects import create_project
-from gretel_client.rest.exceptions import ApiException
+from gretel_client.rest.exceptions import ApiException, UnauthorizedException
 from gretel_client.config import GretelClientConfigurationError, write_config
 
 
@@ -67,9 +67,13 @@ def create(
 @click.option("--query", help="Filter project names by a query string.", default=None)
 @pass_session
 def search(sc: SessionContext, limit: int, query: str):
-    projects = search_projects(limit=limit, query=query)
-    projects_table = [p.as_dict for p in projects]
-    sc.print(data=projects_table)
+    try:
+        projects = search_projects(limit=limit, query=query)
+        projects_table = [p.as_dict for p in projects]
+        sc.print(data=projects_table)
+    except UnauthorizedException:
+        sc.log.error("Unauthorized. Please check your credentials.")
+        sc.exit(1)
 
 
 @projects.command()
