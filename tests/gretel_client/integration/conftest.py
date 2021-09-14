@@ -49,7 +49,7 @@ def pre_trained_project() -> Project:
 
 @pytest.fixture
 def trained_synth_model(pre_trained_project: Project) -> Model:
-    return pre_trained_project.get_model(model_id="60b8f345e00f682f45819019")
+    return pre_trained_project.get_model(model_id="613fd26a0197b41e3d09cad7")
 
 
 @pytest.fixture

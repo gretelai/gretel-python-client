@@ -1,7 +1,10 @@
 import json
 import os
 from contextlib import contextmanager
+from multiprocessing import Process, Queue
 from pathlib import Path
+from signal import SIGINT
+from threading import Timer
 from typing import Callable
 from unittest.mock import MagicMock, patch
 import uuid
@@ -18,8 +21,10 @@ from gretel_client.config import (
     _load_config,
     configure_session,
 )
+from gretel_client.projects.jobs import Status
 from gretel_client.projects.models import Model
 from gretel_client.projects.projects import Project, get_project
+from gretel_client.projects.records import RecordHandler
 
 
 @pytest.fixture
@@ -608,3 +613,55 @@ def test_does_not_download_cloud_model_data(
     )
     assert cmd.exit_code == 0
     assert not (tmpdir / "downloaded" / "model.tar.gz").exists()
+
+
+def test_manual_record_handler_cleanup(
+    runner: CliRunner, get_fixture: Callable, tmpdir: Path, trained_synth_model: Model
+):
+    """
+    Setup of this test is following:
+    - run a background process that will run a command and which will receive a SIGINT signal after 10 secs
+    - SIGINT should interrupt the run and cancel the job
+    - because we use manual runner, the worker_key should be outputted
+    """
+
+    def _generate_with_manual_runner(queue: Queue):
+        # kill the process after 10 seconds
+        Timer(10, lambda: os.kill(os.getpid(), SIGINT)).start()
+        cmd = runner.invoke(
+            cli,
+            [  # type:ignore
+                "records",
+                "generate",
+                "--project",
+                trained_synth_model.project.project_id,
+                "--model-id",
+                trained_synth_model.model_id,
+                "--runner",
+                "manual",
+            ],
+        )
+        queue.put({"out": cmd.stdout, "err": cmd.stderr})
+
+    process_queue = Queue()
+    process = Process(target=_generate_with_manual_runner, args=(process_queue,))
+    process.start()
+    process.join()
+
+    out = process_queue.get()
+
+    command_out = json.loads(out["out"])
+    assert "record_handler" in command_out
+
+    record_handler_id = command_out["record_handler"].get("uid")
+    assert record_handler_id is not None
+
+    # it's manual mode, so worker_key should be outputted
+    assert "worker_key" in command_out
+
+    assert "Got interrupt signal." in out["err"]
+    assert "Attempting graceful shutdown" in out["err"]
+
+    record_handler = RecordHandler(trained_synth_model, record_id=record_handler_id)
+    assert record_handler.status == Status.CANCELLED
+

@@ -253,10 +253,10 @@ class SessionContext(object):
             self.exit(1)
         else:
             self._shutting_down = True
-        self.log.warn("Got interupt signal.")
+        self.log.warn("Got interrupt signal.")
 
         if self.cleanup_methods:
-            self.log.warn("Attemping graceful shutdown")
+            self.log.warn("Attempting graceful shutdown")
             for method in self.cleanup_methods:
                 try:
                     method()

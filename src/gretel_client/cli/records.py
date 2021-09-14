@@ -138,13 +138,14 @@ def create_and_run_record_handler(
         sc.register_cleanup(lambda: record_handler.cancel())
         sc.log.info(f"Record handler created {record_handler.record_id}")
 
+        printable_record_handler = data.print_obj
         if runner == RunnerMode.MANUAL.value:
             # With --runner MANUAL, we only print the worker_key and it's up to the user to run the worker
             sc.print(
-                data={"record_handler": data, "worker_key": record_handler.worker_key}
+                data={"record_handler": printable_record_handler, "worker_key": record_handler.worker_key}
             )
         else:
-            sc.print(data=data.print_obj)
+            sc.print(data=printable_record_handler)
     except Exception as ex:
         sc.log.error("Could not create record handler", ex=ex)
         sc.exit(1)
