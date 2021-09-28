@@ -775,7 +775,10 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
     api_instance = projects_api.ProjectsApi(api_client)
     project_id = "project_id_example" # str | Project id
     model_id = "model_id_example" # str | Model id
-    logs = "yes" # str |  (optional)
+    logs = "yes" # str | Deprecated, use `expand` parameter instead. (optional)
+    expand = [
+        "logs",
+    ] # [str] |  (optional)
 
     # example passing only required values which don't have defaults set
     try:
@@ -789,7 +792,7 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
     # and optional values
     try:
         # Get model details
-        api_response = api_instance.get_model(project_id, model_id, logs=logs)
+        api_response = api_instance.get_model(project_id, model_id, logs=logs, expand=expand)
         pprint(api_response)
     except gretel_client.rest.ApiException as e:
         print("Exception when calling ProjectsApi->get_model: %s\n" % e)
@@ -802,7 +805,8 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **project_id** | **str**| Project id |
  **model_id** | **str**| Model id |
- **logs** | **str**|  | [optional]
+ **logs** | **str**| Deprecated, use &#x60;expand&#x60; parameter instead. | [optional]
+ **expand** | **[str]**|  | [optional]
 
 ### Return type
 
@@ -1095,7 +1099,10 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
     project_id = "project_id_example" # str | Project id
     model_id = "model_id_example" # str | Model id
     record_handler_id = "record_handler_id_example" # str | Record handler id
-    logs = "yes" # str |  (optional)
+    logs = "yes" # str | Deprecated, use `expand` parameter instead. (optional)
+    expand = [
+        "logs",
+    ] # [str] |  (optional)
 
     # example passing only required values which don't have defaults set
     try:
@@ -1109,7 +1116,7 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
     # and optional values
     try:
         # Get record handler
-        api_response = api_instance.get_record_handler(project_id, model_id, record_handler_id, logs=logs)
+        api_response = api_instance.get_record_handler(project_id, model_id, record_handler_id, logs=logs, expand=expand)
         pprint(api_response)
     except gretel_client.rest.ApiException as e:
         print("Exception when calling ProjectsApi->get_record_handler: %s\n" % e)
@@ -1123,7 +1130,8 @@ Name | Type | Description  | Notes
  **project_id** | **str**| Project id |
  **model_id** | **str**| Model id |
  **record_handler_id** | **str**| Record handler id |
- **logs** | **str**|  | [optional]
+ **logs** | **str**| Deprecated, use &#x60;expand&#x60; parameter instead. | [optional]
+ **expand** | **[str]**|  | [optional]
 
 ### Return type
 

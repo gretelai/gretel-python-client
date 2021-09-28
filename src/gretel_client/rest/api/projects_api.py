@@ -1229,7 +1229,8 @@ class ProjectsApi(object):
                 model_id (str): Model id
 
             Keyword Args:
-                logs (str): [optional]
+                logs (str): Deprecated, use `expand` parameter instead.. [optional]
+                expand ([str]): [optional]
                 _return_http_data_only (bool): response data without head status
                     code and headers. Default is True.
                 _preload_content (bool): if False, the urllib3.HTTPResponse object
@@ -1296,6 +1297,7 @@ class ProjectsApi(object):
                     'project_id',
                     'model_id',
                     'logs',
+                    'expand',
                 ],
                 'required': [
                     'project_id',
@@ -1305,6 +1307,7 @@ class ProjectsApi(object):
                 ],
                 'enum': [
                     'logs',
+                    'expand',
                 ],
                 'validation': [
                 ]
@@ -1318,6 +1321,11 @@ class ProjectsApi(object):
                         "YES": "yes",
                         "NO": "no"
                     },
+                    ('expand',): {
+
+                        "LOGS": "logs",
+                        "REPORT": "report"
+                    },
                 },
                 'openapi_types': {
                     'project_id':
@@ -1326,18 +1334,23 @@ class ProjectsApi(object):
                         (str,),
                     'logs':
                         (str,),
+                    'expand':
+                        ([str],),
                 },
                 'attribute_map': {
                     'project_id': 'project_id',
                     'model_id': 'model_id',
                     'logs': 'logs',
+                    'expand': 'expand',
                 },
                 'location_map': {
                     'project_id': 'path',
                     'model_id': 'path',
                     'logs': 'query',
+                    'expand': 'query',
                 },
                 'collection_format_map': {
+                    'expand': 'csv',
                 }
             },
             headers_map={
@@ -1762,7 +1775,8 @@ class ProjectsApi(object):
                 record_handler_id (str): Record handler id
 
             Keyword Args:
-                logs (str): [optional]
+                logs (str): Deprecated, use `expand` parameter instead.. [optional]
+                expand ([str]): [optional]
                 _return_http_data_only (bool): response data without head status
                     code and headers. Default is True.
                 _preload_content (bool): if False, the urllib3.HTTPResponse object
@@ -1832,6 +1846,7 @@ class ProjectsApi(object):
                     'model_id',
                     'record_handler_id',
                     'logs',
+                    'expand',
                 ],
                 'required': [
                     'project_id',
@@ -1842,6 +1857,7 @@ class ProjectsApi(object):
                 ],
                 'enum': [
                     'logs',
+                    'expand',
                 ],
                 'validation': [
                 ]
@@ -1855,6 +1871,10 @@ class ProjectsApi(object):
                         "YES": "yes",
                         "NO": "no"
                     },
+                    ('expand',): {
+
+                        "LOGS": "logs"
+                    },
                 },
                 'openapi_types': {
                     'project_id':
@@ -1865,20 +1885,25 @@ class ProjectsApi(object):
                         (str,),
                     'logs':
                         (str,),
+                    'expand':
+                        ([str],),
                 },
                 'attribute_map': {
                     'project_id': 'project_id',
                     'model_id': 'model_id',
                     'record_handler_id': 'record_handler_id',
                     'logs': 'logs',
+                    'expand': 'expand',
                 },
                 'location_map': {
                     'project_id': 'path',
                     'model_id': 'path',
                     'record_handler_id': 'path',
                     'logs': 'query',
+                    'expand': 'query',
                 },
                 'collection_format_map': {
+                    'expand': 'csv',
                 }
             },
             headers_map={

@@ -77,8 +77,9 @@ def peek_synthetics_report(report_contents: dict) -> dict:
         "field_correlation_stability",
         "principal_component_stability",
         "field_distribution_stability",
+        "privacy_protection_level",
     ]
-    return {f: report_contents[f] for f in fields}
+    return {f: report_contents[f] for f in fields if f in report_contents}
 
 
 def peek_classification_report(report_contents: dict) -> dict:
