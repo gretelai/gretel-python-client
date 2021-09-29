@@ -1,16 +1,17 @@
 import os
+
 from unittest.mock import patch
 
 import pytest
 
 from gretel_client.config import (
-    ClientConfig,
     _load_config,
+    ClientConfig,
     configure_session,
     get_session_config,
 )
-from gretel_client.projects.projects import get_project, Project
 from gretel_client.projects.models import Model
+from gretel_client.projects.projects import get_project, Project
 from gretel_client.rest.api.projects_api import ProjectsApi
 
 

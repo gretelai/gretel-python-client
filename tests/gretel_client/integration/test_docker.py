@@ -4,11 +4,11 @@ from typing import Callable
 
 import pytest
 
-from gretel_client.projects.docker import ContainerRun, _get_container_auth
+from gretel_client.helpers import submit_docker_local
+from gretel_client.projects.docker import _get_container_auth, ContainerRun
 from gretel_client.projects.jobs import Status
 from gretel_client.projects.models import Model
 from gretel_client.projects.projects import get_project
-from gretel_client.helpers import submit_docker_local
 
 
 @pytest.fixture

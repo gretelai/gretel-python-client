@@ -1,22 +1,24 @@
 from __future__ import annotations
+
 import base64
 import json
 import time
+
 from abc import ABC, abstractmethod, abstractproperty
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Iterator, List, Optional, Tuple, Union
+from typing import Callable, Iterator, List, Optional, Tuple, TYPE_CHECKING, Union
 
 import smart_open
-from gretel_client.config import DEFAULT_RUNNER, RunnerMode
 
+from gretel_client.config import DEFAULT_RUNNER, RunnerMode
 from gretel_client.projects.common import (
-    WAIT_UNTIL_DONE,
-    ModelType,
     f,
+    ModelType,
     peek_classification_report,
     peek_synthetics_report,
     peek_transforms_report,
+    WAIT_UNTIL_DONE,
 )
 from gretel_client.rest.api.projects_api import ProjectsApi
 
@@ -293,7 +295,7 @@ class Job(ABC):
 
     def _new_job_logs(self) -> List[dict]:
         if self.logs and len(self.logs) > self._logs_iter_index:
-            next_logs = self.logs[self._logs_iter_index:]
+            next_logs = self.logs[self._logs_iter_index :]
             self._logs_iter_index += len(next_logs)
             return next_logs
         return []
@@ -321,12 +323,16 @@ class Job(ABC):
             if self.status != current_status or len(logs) > 0:
                 transitioned = self.status != current_status
                 current_status = self.status
-                yield LogStatus(status=self.status, logs=logs, transitioned=transitioned)
+                yield LogStatus(
+                    status=self.status, logs=logs, transitioned=transitioned
+                )
             time.sleep(3)
 
         flushed_logs = self._new_job_logs()
         if len(flushed_logs) > 0 and current_status:
-            yield LogStatus(status=current_status, logs=flushed_logs, transitioned=False)
+            yield LogStatus(
+                status=current_status, logs=flushed_logs, transitioned=False
+            )
 
         if self.status == Status.ERROR.value:
             yield LogStatus(status=self.status, error=self.errors)

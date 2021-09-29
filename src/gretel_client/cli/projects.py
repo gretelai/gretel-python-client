@@ -1,11 +1,12 @@
-import click
 import json
 
-from gretel_client.cli.common import SessionContext, pass_session
-from gretel_client.projects.projects import search_projects
-from gretel_client.projects import create_project
-from gretel_client.rest.exceptions import ApiException, UnauthorizedException
+import click
+
+from gretel_client.cli.common import pass_session, SessionContext
 from gretel_client.config import GretelClientConfigurationError, write_config
+from gretel_client.projects import create_project
+from gretel_client.projects.projects import search_projects
+from gretel_client.rest.exceptions import ApiException, UnauthorizedException
 
 
 @click.group(help="Commands for working with Gretel projects.")
@@ -30,17 +31,13 @@ def create(
     sc: SessionContext, name: str, desc: str, display_name: str, set_default: bool
 ):
     try:
-        project = create_project(
-            name=name, desc=desc, display_name=display_name
-        )
+        project = create_project(name=name, desc=desc, display_name=display_name)
     except ApiException as ex:
         if ex.status == 400:
             error_dict = json.loads(ex.body)
             error_msg = error_dict.get("message")
             sc.log.error(
-                (
-                    f"Error creating project: {error_msg}"
-                ),
+                (f"Error creating project: {error_msg}"),
                 ex=ex,
             )
             sc.exit(1)

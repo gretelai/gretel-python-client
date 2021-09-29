@@ -1,16 +1,17 @@
 import json
+
 from pathlib import Path
 
 import click
 
 from gretel_client.cli.common import (
-    SessionContext,
+    download_artifacts,
     model_create_status_descriptions,
     pass_session,
     poll_and_print,
     project_option,
     runner_option,
-    download_artifacts,
+    SessionContext,
 )
 from gretel_client.projects.common import ModelArtifact, WAIT_UNTIL_DONE
 from gretel_client.projects.docker import ContainerRun, ContainerRunError
@@ -92,7 +93,7 @@ def create(
     if runner == RunnerMode.MANUAL.value and (output or in_data or upload_model):
         raise click.BadOptionUsage(
             "--runner",
-            "--runner manual cannot be used together with any of --output, --in-data, --upload-model."
+            "--runner manual cannot be used together with any of --output, --in-data, --upload-model.",
         )
 
     sc.log.info("Preparing model")
@@ -132,17 +133,14 @@ def create(
             runner_mode=RunnerMode(runner),
             dry_run=dry_run,
             _validate_data_source=False,
-            _default_manual=True
+            _default_manual=True,
         )
         sc.register_cleanup(lambda: model.cancel())
         sc.log.info(f"Model created with ID {model.model_id}")
 
         if runner == RunnerMode.MANUAL.value:
             # With --runner MANUAL, we only print the worker_key and it's up to the user to run the worker
-            sc.print(data={
-                "model": run.print_obj,
-                "worker_key": model.worker_key
-            })
+            sc.print(data={"model": run.print_obj, "worker_key": model.worker_key})
         else:
             sc.log.info(data=run.print_obj)
     except ApiException as ex:

@@ -1,21 +1,23 @@
 import os
+
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 from typing import Callable
+from unittest.mock import MagicMock, patch
 
 import pytest
+
 from click.testing import CliRunner
 
 from gretel_client.cli.cli import cli
-from gretel_client.cli.common import ModelObjectReader, download_artifacts
+from gretel_client.cli.common import download_artifacts, ModelObjectReader
 from gretel_client.config import (
     ClientConfig,
+    configure_session,
+    get_session_config,
     GRETEL_API_KEY,
     GRETEL_CONFIG_FILE,
     GRETEL_ENDPOINT,
     GRETEL_PROJECT,
-    configure_session,
-    get_session_config,
 )
 from gretel_client.projects.docker import DockerEnvironmentError
 from gretel_client.projects.jobs import Status

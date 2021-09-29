@@ -1,5 +1,7 @@
 import json
 import os
+import uuid
+
 from contextlib import contextmanager
 from multiprocessing import Process, Queue
 from pathlib import Path
@@ -7,23 +9,23 @@ from signal import SIGINT
 from threading import Timer
 from typing import Callable
 from unittest.mock import MagicMock, patch
-import uuid
 
 import pytest
+
 from click.testing import CliRunner
 
 from gretel_client.cli.cli import cli
 from gretel_client.config import (
+    _load_config,
+    ClientConfig,
+    configure_session,
     DEFAULT_GRETEL_ENDPOINT,
     DEFAULT_RUNNER,
     GRETEL_API_KEY,
-    ClientConfig,
-    _load_config,
-    configure_session,
 )
 from gretel_client.projects.jobs import Status
 from gretel_client.projects.models import Model
-from gretel_client.projects.projects import Project, get_project
+from gretel_client.projects.projects import get_project, Project
 from gretel_client.projects.records import RecordHandler
 
 
@@ -358,7 +360,9 @@ def test_local_model_params(runner: CliRunner, project: Project, get_fixture: Ca
     assert cmd.exit_code == 2 and "--wait is >= 0" in cmd.stderr
 
 
-def test_manual_model_params(runner: CliRunner, project: Project, get_fixture: Callable):
+def test_manual_model_params(
+    runner: CliRunner, project: Project, get_fixture: Callable
+):
     base_cmd = [
         "models",
         "create",
@@ -504,7 +508,10 @@ def test_records_transform(
 
 
 def test_records_classify(
-    runner: CliRunner, get_fixture: Callable, tmpdir: Path, trained_classify_model: Model
+    runner: CliRunner,
+    get_fixture: Callable,
+    tmpdir: Path,
+    trained_classify_model: Model,
 ):
     cmd = runner.invoke(
         cli,
@@ -570,7 +577,7 @@ def test_create_records_from_model_obj(
             "--runner",
             "local",
             "--in-data",
-            str(get_fixture("account-balances.csv"))
+            str(get_fixture("account-balances.csv")),
         ],
     )
     print(cmd.output)
@@ -588,7 +595,7 @@ def test_create_records_from_model_obj(
             "--model-id",
             str(model_obj),
             "--model-path",
-            str(tmpdir / "model.tar.gz")
+            str(tmpdir / "model.tar.gz"),
         ],
     )
 
@@ -608,7 +615,7 @@ def test_does_not_download_cloud_model_data(
             "--project",
             trained_synth_model.project.project_id,
             "--output",
-            str(tmpdir / "downloaded")
+            str(tmpdir / "downloaded"),
         ],
     )
     assert cmd.exit_code == 0
@@ -664,4 +671,3 @@ def test_manual_record_handler_cleanup(
 
     record_handler = RecordHandler(trained_synth_model, record_id=record_handler_id)
     assert record_handler.status == Status.CANCELLED
-

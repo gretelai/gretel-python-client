@@ -1,11 +1,12 @@
 import os
-from pathlib import Path
 import sys
+
+from pathlib import Path
 from typing import Optional, Union
 
 import click
 
-from gretel_client.cli.common import SessionContext, get_description_set, poll_and_print
+from gretel_client.cli.common import get_description_set, poll_and_print, SessionContext
 from gretel_client.config import get_logger
 from gretel_client.projects.common import WAIT_UNTIL_DONE
 from gretel_client.projects.docker import ContainerRun, ContainerRunError
@@ -16,6 +17,7 @@ log = get_logger(__name__)
 
 class _PythonSessionContext(click.Context):
     """CLI context duck"""
+
     def __init__(self):
         ...
 

@@ -1,8 +1,8 @@
 # flake8: noqa
 from gretel_client.projects.projects import (
+    create_project,
+    get_project,
     Project,
     search_projects,
-    get_project,
     tmp_project,
-    create_project,
 )

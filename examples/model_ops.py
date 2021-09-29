@@ -11,7 +11,7 @@ project = create_project()
 #   file, then it will automatically be uploaded to Gretel Cloud as part of the submission step
 model = project.create_model_obj(
     model_config="synthetics/default",
-    data_source="https://gretel-public-website.s3.us-west-2.amazonaws.com/datasets/USAdultIncome5k.csv"
+    data_source="https://gretel-public-website.s3.us-west-2.amazonaws.com/datasets/USAdultIncome5k.csv",
 )
 
 # submit the model to Gretel Cloud for training
@@ -21,4 +21,4 @@ model.submit()
 poll(model)
 
 # read out a preview data from the synthetic model
-pd.read_csv(model.get_artifact_link("data_preview"), compression='gzip')
+pd.read_csv(model.get_artifact_link("data_preview"), compression="gzip")

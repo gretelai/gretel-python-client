@@ -2,6 +2,7 @@ import json
 import signal
 import sys
 import traceback
+
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Union
 from urllib.parse import urlparse
@@ -9,19 +10,14 @@ from urllib.parse import urlparse
 import click
 import requests
 
-from gretel_client.config import (
-    RunnerMode,
-    configure_custom_logger,
-    get_session_config,
-)
+from gretel_client.config import configure_custom_logger, get_session_config, RunnerMode
 from gretel_client.projects.common import ModelArtifact, ModelType, WAIT_UNTIL_DONE
-from gretel_client.projects.docker import DockerEnvironmentError, check_docker_env
+from gretel_client.projects.docker import check_docker_env, DockerEnvironmentError
 from gretel_client.projects.jobs import Job, WaitTimeExceeded
 from gretel_client.projects.models import Model
-from gretel_client.projects.projects import Project, get_project
+from gretel_client.projects.projects import get_project, Project
 from gretel_client.projects.records import RecordHandler
 from gretel_client.rest.exceptions import ApiException, NotFoundException
-
 
 ExT = Union[str, Exception]
 

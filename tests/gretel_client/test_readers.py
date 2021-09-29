@@ -1,13 +1,15 @@
+import csv
 import io
 import json
+
 from collections import namedtuple
 from pathlib import Path
 from typing import List
-import csv
 
 import faker
 import pandas as pd
 import pytest
+
 from faker.providers import misc
 
 from gretel_client.readers import (
@@ -20,24 +22,23 @@ from gretel_client.readers import (
 
 @pytest.fixture
 def fake():
-    fake = faker.Faker('en_US')
+    fake = faker.Faker("en_US")
     fake.add_provider(misc)
     return fake
 
+
 @pytest.fixture
 def test_records(fake) -> List[dict]:
-    records  = []
-    headers = [f'header_{x}' for x in range(10)]
+    records = []
+    headers = [f"header_{x}" for x in range(10)]
     for _ in range(5):
-        row = [fake.pystr(), fake.pystr(), fake.pyfloat(), fake.pyint(),
-               fake.pystr()]
+        row = [fake.pystr(), fake.pystr(), fake.pyfloat(), fake.pyint(), fake.pystr()]
         records.append({k: v for k, v in zip(headers, row)})
     return records
 
 
 def do_generate_csv(test_records, stream):
-    csv_writer = csv.writer(stream, quoting=csv.QUOTE_NONNUMERIC,
-                            delimiter=',')
+    csv_writer = csv.writer(stream, quoting=csv.QUOTE_NONNUMERIC, delimiter=",")
     csv_writer.writerow(test_records[0].keys())
     for record in test_records:
         csv_writer.writerow(record.values())

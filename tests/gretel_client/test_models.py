@@ -1,8 +1,9 @@
 import json
+import tempfile
+
 from pathlib import Path
 from typing import Callable, List
 from unittest.mock import MagicMock
-import tempfile
 
 import pytest
 import yaml

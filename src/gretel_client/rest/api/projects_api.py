@@ -11,7 +11,10 @@
 import re  # noqa: F401
 import sys  # noqa: F401
 
-from gretel_client.rest.api_client import ApiClient, Endpoint as _Endpoint
+from gretel_client.rest.api_client import ApiClient
+from gretel_client.rest.api_client import Endpoint as _Endpoint
+from gretel_client.rest.model.artifact import Artifact
+from gretel_client.rest.model.project import Project
 from gretel_client.rest.model_utils import (  # noqa: F401
     check_allowed_values,
     check_validations,
@@ -19,10 +22,8 @@ from gretel_client.rest.model_utils import (  # noqa: F401
     datetime,
     file_type,
     none_type,
-    validate_and_convert_types
+    validate_and_convert_types,
 )
-from gretel_client.rest.model.artifact import Artifact
-from gretel_client.rest.model.project import Project
 
 
 class ProjectsApi(object):
@@ -37,12 +38,7 @@ class ProjectsApi(object):
             api_client = ApiClient()
         self.api_client = api_client
 
-        def __create_artifact(
-            self,
-            project_id,
-            artifact,
-            **kwargs
-        ):
+        def __create_artifact(self, project_id, artifact, **kwargs):
             """Create a new artifact  # noqa: E501
 
             This method makes a synchronous HTTP request by default. To make an
@@ -81,97 +77,80 @@ class ProjectsApi(object):
                     If the method is called asynchronously, returns the request
                     thread.
             """
-            kwargs['async_req'] = kwargs.get(
-                'async_req', False
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
             )
-            kwargs['_return_http_data_only'] = kwargs.get(
-                '_return_http_data_only', True
-            )
-            kwargs['_preload_content'] = kwargs.get(
-                '_preload_content', True
-            )
-            kwargs['_request_timeout'] = kwargs.get(
-                '_request_timeout', None
-            )
-            kwargs['_check_input_type'] = kwargs.get(
-                '_check_input_type', True
-            )
-            kwargs['_check_return_type'] = kwargs.get(
-                '_check_return_type', True
-            )
-            kwargs['_host_index'] = kwargs.get('_host_index')
-            kwargs['project_id'] = \
-                project_id
-            kwargs['artifact'] = \
-                artifact
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            kwargs["project_id"] = project_id
+            kwargs["artifact"] = artifact
             return self.call_with_http_info(**kwargs)
 
         self.create_artifact = _Endpoint(
             settings={
-                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
-                'auth': [
-                    'ApiKey'
-                ],
-                'endpoint_path': '/projects/{project_id}/artifacts',
-                'operation_id': 'create_artifact',
-                'http_method': 'POST',
-                'servers': None,
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/projects/{project_id}/artifacts",
+                "operation_id": "create_artifact",
+                "http_method": "POST",
+                "servers": None,
             },
             params_map={
-                'all': [
-                    'project_id',
-                    'artifact',
+                "all": [
+                    "project_id",
+                    "artifact",
                 ],
-                'required': [
-                    'project_id',
-                    'artifact',
+                "required": [
+                    "project_id",
+                    "artifact",
                 ],
-                'nullable': [
-                ],
-                'enum': [
-                ],
-                'validation': [
-                ]
+                "nullable": [],
+                "enum": [],
+                "validation": [],
             },
             root_map={
-                'validations': {
+                "validations": {},
+                "allowed_values": {},
+                "openapi_types": {
+                    "project_id": (str,),
+                    "artifact": (Artifact,),
                 },
-                'allowed_values': {
+                "attribute_map": {
+                    "project_id": "project_id",
                 },
-                'openapi_types': {
-                    'project_id':
-                        (str,),
-                    'artifact':
-                        (Artifact,),
+                "location_map": {
+                    "project_id": "path",
+                    "artifact": "body",
                 },
-                'attribute_map': {
-                    'project_id': 'project_id',
-                },
-                'location_map': {
-                    'project_id': 'path',
-                    'artifact': 'body',
-                },
-                'collection_format_map': {
-                }
+                "collection_format_map": {},
             },
             headers_map={
-                'accept': [
-                    'application/json'
-                ],
-                'content_type': [
-                    'application/json'
-                ]
+                "accept": ["application/json"],
+                "content_type": ["application/json"],
             },
             api_client=api_client,
-            callable=__create_artifact
+            callable=__create_artifact,
         )
 
-        def __create_model(
-            self,
-            project_id,
-            body,
-            **kwargs
-        ):
+        def __create_model(self, project_id, body, **kwargs):
             """Create and train a new model  # noqa: E501
 
             This method makes a synchronous HTTP request by default. To make an
@@ -212,105 +191,102 @@ class ProjectsApi(object):
                     If the method is called asynchronously, returns the request
                     thread.
             """
-            kwargs['async_req'] = kwargs.get(
-                'async_req', False
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
             )
-            kwargs['_return_http_data_only'] = kwargs.get(
-                '_return_http_data_only', True
-            )
-            kwargs['_preload_content'] = kwargs.get(
-                '_preload_content', True
-            )
-            kwargs['_request_timeout'] = kwargs.get(
-                '_request_timeout', None
-            )
-            kwargs['_check_input_type'] = kwargs.get(
-                '_check_input_type', True
-            )
-            kwargs['_check_return_type'] = kwargs.get(
-                '_check_return_type', True
-            )
-            kwargs['_host_index'] = kwargs.get('_host_index')
-            kwargs['project_id'] = \
-                project_id
-            kwargs['body'] = \
-                body
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            kwargs["project_id"] = project_id
+            kwargs["body"] = body
             return self.call_with_http_info(**kwargs)
 
         self.create_model = _Endpoint(
             settings={
-                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
-                'auth': [
-                    'ApiKey'
-                ],
-                'endpoint_path': '/projects/{project_id}/models',
-                'operation_id': 'create_model',
-                'http_method': 'POST',
-                'servers': None,
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/projects/{project_id}/models",
+                "operation_id": "create_model",
+                "http_method": "POST",
+                "servers": None,
             },
             params_map={
-                'all': [
-                    'project_id',
-                    'body',
-                    'dry_run',
-                    'runner_mode',
+                "all": [
+                    "project_id",
+                    "body",
+                    "dry_run",
+                    "runner_mode",
                 ],
-                'required': [
-                    'project_id',
-                    'body',
+                "required": [
+                    "project_id",
+                    "body",
                 ],
-                'nullable': [
-                ],
-                'enum': [
-                ],
-                'validation': [
-                ]
+                "nullable": [],
+                "enum": [],
+                "validation": [],
             },
             root_map={
-                'validations': {
+                "validations": {},
+                "allowed_values": {},
+                "openapi_types": {
+                    "project_id": (str,),
+                    "body": (
+                        {
+                            str: (
+                                bool,
+                                date,
+                                datetime,
+                                dict,
+                                float,
+                                int,
+                                list,
+                                str,
+                                none_type,
+                            )
+                        },
+                    ),
+                    "dry_run": (str,),
+                    "runner_mode": (str,),
                 },
-                'allowed_values': {
+                "attribute_map": {
+                    "project_id": "project_id",
+                    "dry_run": "dry_run",
+                    "runner_mode": "runner_mode",
                 },
-                'openapi_types': {
-                    'project_id':
-                        (str,),
-                    'body':
-                        ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
-                    'dry_run':
-                        (str,),
-                    'runner_mode':
-                        (str,),
+                "location_map": {
+                    "project_id": "path",
+                    "body": "body",
+                    "dry_run": "query",
+                    "runner_mode": "query",
                 },
-                'attribute_map': {
-                    'project_id': 'project_id',
-                    'dry_run': 'dry_run',
-                    'runner_mode': 'runner_mode',
-                },
-                'location_map': {
-                    'project_id': 'path',
-                    'body': 'body',
-                    'dry_run': 'query',
-                    'runner_mode': 'query',
-                },
-                'collection_format_map': {
-                }
+                "collection_format_map": {},
             },
             headers_map={
-                'accept': [
-                    'application/json'
-                ],
-                'content_type': [
-                    'application/json'
-                ]
+                "accept": ["application/json"],
+                "content_type": ["application/json"],
             },
             api_client=api_client,
-            callable=__create_model
+            callable=__create_model,
         )
 
-        def __create_project(
-            self,
-            **kwargs
-        ):
+        def __create_project(self, **kwargs):
             """create_project  # noqa: E501
 
             This method makes a synchronous HTTP request by default. To make an
@@ -347,86 +323,70 @@ class ProjectsApi(object):
                     If the method is called asynchronously, returns the request
                     thread.
             """
-            kwargs['async_req'] = kwargs.get(
-                'async_req', False
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
             )
-            kwargs['_return_http_data_only'] = kwargs.get(
-                '_return_http_data_only', True
-            )
-            kwargs['_preload_content'] = kwargs.get(
-                '_preload_content', True
-            )
-            kwargs['_request_timeout'] = kwargs.get(
-                '_request_timeout', None
-            )
-            kwargs['_check_input_type'] = kwargs.get(
-                '_check_input_type', True
-            )
-            kwargs['_check_return_type'] = kwargs.get(
-                '_check_return_type', True
-            )
-            kwargs['_host_index'] = kwargs.get('_host_index')
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
             return self.call_with_http_info(**kwargs)
 
         self.create_project = _Endpoint(
             settings={
-                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
-                'auth': [
-                    'ApiKey'
-                ],
-                'endpoint_path': '/projects',
-                'operation_id': 'create_project',
-                'http_method': 'POST',
-                'servers': None,
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/projects",
+                "operation_id": "create_project",
+                "http_method": "POST",
+                "servers": None,
             },
             params_map={
-                'all': [
-                    'project',
+                "all": [
+                    "project",
                 ],
-                'required': [],
-                'nullable': [
-                ],
-                'enum': [
-                ],
-                'validation': [
-                ]
+                "required": [],
+                "nullable": [],
+                "enum": [],
+                "validation": [],
             },
             root_map={
-                'validations': {
+                "validations": {},
+                "allowed_values": {},
+                "openapi_types": {
+                    "project": (Project,),
                 },
-                'allowed_values': {
+                "attribute_map": {},
+                "location_map": {
+                    "project": "body",
                 },
-                'openapi_types': {
-                    'project':
-                        (Project,),
-                },
-                'attribute_map': {
-                },
-                'location_map': {
-                    'project': 'body',
-                },
-                'collection_format_map': {
-                }
+                "collection_format_map": {},
             },
             headers_map={
-                'accept': [
-                    'application/json'
-                ],
-                'content_type': [
-                    'application/json'
-                ]
+                "accept": ["application/json"],
+                "content_type": ["application/json"],
             },
             api_client=api_client,
-            callable=__create_project
+            callable=__create_project,
         )
 
-        def __create_record_handler(
-            self,
-            project_id,
-            model_id,
-            action,
-            **kwargs
-        ):
+        def __create_record_handler(self, project_id, model_id, action, **kwargs):
             """Create a record handler for a model  # noqa: E501
 
             This method makes a synchronous HTTP request by default. To make an
@@ -468,127 +428,118 @@ class ProjectsApi(object):
                     If the method is called asynchronously, returns the request
                     thread.
             """
-            kwargs['async_req'] = kwargs.get(
-                'async_req', False
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
             )
-            kwargs['_return_http_data_only'] = kwargs.get(
-                '_return_http_data_only', True
-            )
-            kwargs['_preload_content'] = kwargs.get(
-                '_preload_content', True
-            )
-            kwargs['_request_timeout'] = kwargs.get(
-                '_request_timeout', None
-            )
-            kwargs['_check_input_type'] = kwargs.get(
-                '_check_input_type', True
-            )
-            kwargs['_check_return_type'] = kwargs.get(
-                '_check_return_type', True
-            )
-            kwargs['_host_index'] = kwargs.get('_host_index')
-            kwargs['project_id'] = \
-                project_id
-            kwargs['model_id'] = \
-                model_id
-            kwargs['action'] = \
-                action
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            kwargs["project_id"] = project_id
+            kwargs["model_id"] = model_id
+            kwargs["action"] = action
             return self.call_with_http_info(**kwargs)
 
         self.create_record_handler = _Endpoint(
             settings={
-                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
-                'auth': [
-                    'ApiKey'
-                ],
-                'endpoint_path': '/projects/{project_id}/models/{model_id}/record_handlers',
-                'operation_id': 'create_record_handler',
-                'http_method': 'POST',
-                'servers': None,
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/projects/{project_id}/models/{model_id}/record_handlers",
+                "operation_id": "create_record_handler",
+                "http_method": "POST",
+                "servers": None,
             },
             params_map={
-                'all': [
-                    'project_id',
-                    'model_id',
-                    'action',
-                    'runner_mode',
-                    'body',
+                "all": [
+                    "project_id",
+                    "model_id",
+                    "action",
+                    "runner_mode",
+                    "body",
                 ],
-                'required': [
-                    'project_id',
-                    'model_id',
-                    'action',
+                "required": [
+                    "project_id",
+                    "model_id",
+                    "action",
                 ],
-                'nullable': [
+                "nullable": [],
+                "enum": [
+                    "action",
+                    "runner_mode",
                 ],
-                'enum': [
-                    'action',
-                    'runner_mode',
-                ],
-                'validation': [
-                ]
+                "validation": [],
             },
             root_map={
-                'validations': {
-                },
-                'allowed_values': {
-                    ('action',): {
-
+                "validations": {},
+                "allowed_values": {
+                    ("action",): {
                         "GENERATE": "generate",
                         "TRANSFORM": "transform",
-                        "CLASSIFY": "classify"
+                        "CLASSIFY": "classify",
                     },
-                    ('runner_mode',): {
-
-                        "CLOUD": "cloud",
-                        "MANUAL": "manual"
-                    },
+                    ("runner_mode",): {"CLOUD": "cloud", "MANUAL": "manual"},
                 },
-                'openapi_types': {
-                    'project_id':
-                        (str,),
-                    'model_id':
-                        (str,),
-                    'action':
-                        (str,),
-                    'runner_mode':
-                        (str,),
-                    'body':
-                        ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
+                "openapi_types": {
+                    "project_id": (str,),
+                    "model_id": (str,),
+                    "action": (str,),
+                    "runner_mode": (str,),
+                    "body": (
+                        {
+                            str: (
+                                bool,
+                                date,
+                                datetime,
+                                dict,
+                                float,
+                                int,
+                                list,
+                                str,
+                                none_type,
+                            )
+                        },
+                    ),
                 },
-                'attribute_map': {
-                    'project_id': 'project_id',
-                    'model_id': 'model_id',
-                    'action': 'action',
-                    'runner_mode': 'runner_mode',
+                "attribute_map": {
+                    "project_id": "project_id",
+                    "model_id": "model_id",
+                    "action": "action",
+                    "runner_mode": "runner_mode",
                 },
-                'location_map': {
-                    'project_id': 'path',
-                    'model_id': 'path',
-                    'action': 'query',
-                    'runner_mode': 'query',
-                    'body': 'body',
+                "location_map": {
+                    "project_id": "path",
+                    "model_id": "path",
+                    "action": "query",
+                    "runner_mode": "query",
+                    "body": "body",
                 },
-                'collection_format_map': {
-                }
+                "collection_format_map": {},
             },
             headers_map={
-                'accept': [
-                    'application/json'
-                ],
-                'content_type': [
-                    'application/json'
-                ]
+                "accept": ["application/json"],
+                "content_type": ["application/json"],
             },
             api_client=api_client,
-            callable=__create_record_handler
+            callable=__create_record_handler,
         )
 
-        def __delete_artifact(
-            self,
-            project_id,
-            **kwargs
-        ):
+        def __delete_artifact(self, project_id, **kwargs):
             """Delete an artifact  # noqa: E501
 
             This method makes a synchronous HTTP request by default. To make an
@@ -627,93 +578,79 @@ class ProjectsApi(object):
                     If the method is called asynchronously, returns the request
                     thread.
             """
-            kwargs['async_req'] = kwargs.get(
-                'async_req', False
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
             )
-            kwargs['_return_http_data_only'] = kwargs.get(
-                '_return_http_data_only', True
-            )
-            kwargs['_preload_content'] = kwargs.get(
-                '_preload_content', True
-            )
-            kwargs['_request_timeout'] = kwargs.get(
-                '_request_timeout', None
-            )
-            kwargs['_check_input_type'] = kwargs.get(
-                '_check_input_type', True
-            )
-            kwargs['_check_return_type'] = kwargs.get(
-                '_check_return_type', True
-            )
-            kwargs['_host_index'] = kwargs.get('_host_index')
-            kwargs['project_id'] = \
-                project_id
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            kwargs["project_id"] = project_id
             return self.call_with_http_info(**kwargs)
 
         self.delete_artifact = _Endpoint(
             settings={
-                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
-                'auth': [
-                    'ApiKey'
-                ],
-                'endpoint_path': '/projects/{project_id}/artifacts',
-                'operation_id': 'delete_artifact',
-                'http_method': 'DELETE',
-                'servers': None,
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/projects/{project_id}/artifacts",
+                "operation_id": "delete_artifact",
+                "http_method": "DELETE",
+                "servers": None,
             },
             params_map={
-                'all': [
-                    'project_id',
-                    'key',
+                "all": [
+                    "project_id",
+                    "key",
                 ],
-                'required': [
-                    'project_id',
+                "required": [
+                    "project_id",
                 ],
-                'nullable': [
-                ],
-                'enum': [
-                ],
-                'validation': [
-                ]
+                "nullable": [],
+                "enum": [],
+                "validation": [],
             },
             root_map={
-                'validations': {
+                "validations": {},
+                "allowed_values": {},
+                "openapi_types": {
+                    "project_id": (str,),
+                    "key": (str,),
                 },
-                'allowed_values': {
+                "attribute_map": {
+                    "project_id": "project_id",
+                    "key": "key",
                 },
-                'openapi_types': {
-                    'project_id':
-                        (str,),
-                    'key':
-                        (str,),
+                "location_map": {
+                    "project_id": "path",
+                    "key": "query",
                 },
-                'attribute_map': {
-                    'project_id': 'project_id',
-                    'key': 'key',
-                },
-                'location_map': {
-                    'project_id': 'path',
-                    'key': 'query',
-                },
-                'collection_format_map': {
-                }
+                "collection_format_map": {},
             },
             headers_map={
-                'accept': [
-                    'application/json'
-                ],
-                'content_type': [],
+                "accept": ["application/json"],
+                "content_type": [],
             },
             api_client=api_client,
-            callable=__delete_artifact
+            callable=__delete_artifact,
         )
 
-        def __delete_model(
-            self,
-            project_id,
-            model_id,
-            **kwargs
-        ):
+        def __delete_model(self, project_id, model_id, **kwargs):
             """Delete a model by it's ID  # noqa: E501
 
             This method makes a synchronous HTTP request by default. To make an
@@ -752,95 +689,81 @@ class ProjectsApi(object):
                     If the method is called asynchronously, returns the request
                     thread.
             """
-            kwargs['async_req'] = kwargs.get(
-                'async_req', False
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
             )
-            kwargs['_return_http_data_only'] = kwargs.get(
-                '_return_http_data_only', True
-            )
-            kwargs['_preload_content'] = kwargs.get(
-                '_preload_content', True
-            )
-            kwargs['_request_timeout'] = kwargs.get(
-                '_request_timeout', None
-            )
-            kwargs['_check_input_type'] = kwargs.get(
-                '_check_input_type', True
-            )
-            kwargs['_check_return_type'] = kwargs.get(
-                '_check_return_type', True
-            )
-            kwargs['_host_index'] = kwargs.get('_host_index')
-            kwargs['project_id'] = \
-                project_id
-            kwargs['model_id'] = \
-                model_id
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            kwargs["project_id"] = project_id
+            kwargs["model_id"] = model_id
             return self.call_with_http_info(**kwargs)
 
         self.delete_model = _Endpoint(
             settings={
-                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
-                'auth': [
-                    'ApiKey'
-                ],
-                'endpoint_path': '/projects/{project_id}/models/{model_id}',
-                'operation_id': 'delete_model',
-                'http_method': 'DELETE',
-                'servers': None,
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/projects/{project_id}/models/{model_id}",
+                "operation_id": "delete_model",
+                "http_method": "DELETE",
+                "servers": None,
             },
             params_map={
-                'all': [
-                    'project_id',
-                    'model_id',
+                "all": [
+                    "project_id",
+                    "model_id",
                 ],
-                'required': [
-                    'project_id',
-                    'model_id',
+                "required": [
+                    "project_id",
+                    "model_id",
                 ],
-                'nullable': [
-                ],
-                'enum': [
-                ],
-                'validation': [
-                ]
+                "nullable": [],
+                "enum": [],
+                "validation": [],
             },
             root_map={
-                'validations': {
+                "validations": {},
+                "allowed_values": {},
+                "openapi_types": {
+                    "project_id": (str,),
+                    "model_id": (str,),
                 },
-                'allowed_values': {
+                "attribute_map": {
+                    "project_id": "project_id",
+                    "model_id": "model_id",
                 },
-                'openapi_types': {
-                    'project_id':
-                        (str,),
-                    'model_id':
-                        (str,),
+                "location_map": {
+                    "project_id": "path",
+                    "model_id": "path",
                 },
-                'attribute_map': {
-                    'project_id': 'project_id',
-                    'model_id': 'model_id',
-                },
-                'location_map': {
-                    'project_id': 'path',
-                    'model_id': 'path',
-                },
-                'collection_format_map': {
-                }
+                "collection_format_map": {},
             },
             headers_map={
-                'accept': [
-                    'application/json'
-                ],
-                'content_type': [],
+                "accept": ["application/json"],
+                "content_type": [],
             },
             api_client=api_client,
-            callable=__delete_model
+            callable=__delete_model,
         )
 
-        def __delete_project(
-            self,
-            project_id,
-            **kwargs
-        ):
+        def __delete_project(self, project_id, **kwargs):
             """delete_project  # noqa: E501
 
             This method makes a synchronous HTTP request by default. To make an
@@ -878,88 +801,76 @@ class ProjectsApi(object):
                     If the method is called asynchronously, returns the request
                     thread.
             """
-            kwargs['async_req'] = kwargs.get(
-                'async_req', False
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
             )
-            kwargs['_return_http_data_only'] = kwargs.get(
-                '_return_http_data_only', True
-            )
-            kwargs['_preload_content'] = kwargs.get(
-                '_preload_content', True
-            )
-            kwargs['_request_timeout'] = kwargs.get(
-                '_request_timeout', None
-            )
-            kwargs['_check_input_type'] = kwargs.get(
-                '_check_input_type', True
-            )
-            kwargs['_check_return_type'] = kwargs.get(
-                '_check_return_type', True
-            )
-            kwargs['_host_index'] = kwargs.get('_host_index')
-            kwargs['project_id'] = \
-                project_id
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            kwargs["project_id"] = project_id
             return self.call_with_http_info(**kwargs)
 
         self.delete_project = _Endpoint(
             settings={
-                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
-                'auth': [
-                    'ApiKey'
-                ],
-                'endpoint_path': '/projects/{project_id}',
-                'operation_id': 'delete_project',
-                'http_method': 'DELETE',
-                'servers': None,
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/projects/{project_id}",
+                "operation_id": "delete_project",
+                "http_method": "DELETE",
+                "servers": None,
             },
             params_map={
-                'all': [
-                    'project_id',
+                "all": [
+                    "project_id",
                 ],
-                'required': [
-                    'project_id',
+                "required": [
+                    "project_id",
                 ],
-                'nullable': [
-                ],
-                'enum': [
-                ],
-                'validation': [
-                ]
+                "nullable": [],
+                "enum": [],
+                "validation": [],
             },
             root_map={
-                'validations': {
+                "validations": {},
+                "allowed_values": {},
+                "openapi_types": {
+                    "project_id": (str,),
                 },
-                'allowed_values': {
+                "attribute_map": {
+                    "project_id": "project_id",
                 },
-                'openapi_types': {
-                    'project_id':
-                        (str,),
+                "location_map": {
+                    "project_id": "path",
                 },
-                'attribute_map': {
-                    'project_id': 'project_id',
-                },
-                'location_map': {
-                    'project_id': 'path',
-                },
-                'collection_format_map': {
-                }
+                "collection_format_map": {},
             },
             headers_map={
-                'accept': [
-                    'application/json'
-                ],
-                'content_type': [],
+                "accept": ["application/json"],
+                "content_type": [],
             },
             api_client=api_client,
-            callable=__delete_project
+            callable=__delete_project,
         )
 
         def __delete_record_handler(
-            self,
-            project_id,
-            model_id,
-            record_handler_id,
-            **kwargs
+            self, project_id, model_id, record_handler_id, **kwargs
         ):
             """delete_record_handler  # noqa: E501
 
@@ -1000,103 +911,87 @@ class ProjectsApi(object):
                     If the method is called asynchronously, returns the request
                     thread.
             """
-            kwargs['async_req'] = kwargs.get(
-                'async_req', False
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
             )
-            kwargs['_return_http_data_only'] = kwargs.get(
-                '_return_http_data_only', True
-            )
-            kwargs['_preload_content'] = kwargs.get(
-                '_preload_content', True
-            )
-            kwargs['_request_timeout'] = kwargs.get(
-                '_request_timeout', None
-            )
-            kwargs['_check_input_type'] = kwargs.get(
-                '_check_input_type', True
-            )
-            kwargs['_check_return_type'] = kwargs.get(
-                '_check_return_type', True
-            )
-            kwargs['_host_index'] = kwargs.get('_host_index')
-            kwargs['project_id'] = \
-                project_id
-            kwargs['model_id'] = \
-                model_id
-            kwargs['record_handler_id'] = \
-                record_handler_id
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            kwargs["project_id"] = project_id
+            kwargs["model_id"] = model_id
+            kwargs["record_handler_id"] = record_handler_id
             return self.call_with_http_info(**kwargs)
 
         self.delete_record_handler = _Endpoint(
             settings={
-                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
-                'auth': [
-                    'ApiKey'
-                ],
-                'endpoint_path': '/projects/{project_id}/models/{model_id}/record_handlers/{record_handler_id}',
-                'operation_id': 'delete_record_handler',
-                'http_method': 'DELETE',
-                'servers': None,
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/projects/{project_id}/models/{model_id}/record_handlers/{record_handler_id}",
+                "operation_id": "delete_record_handler",
+                "http_method": "DELETE",
+                "servers": None,
             },
             params_map={
-                'all': [
-                    'project_id',
-                    'model_id',
-                    'record_handler_id',
+                "all": [
+                    "project_id",
+                    "model_id",
+                    "record_handler_id",
                 ],
-                'required': [
-                    'project_id',
-                    'model_id',
-                    'record_handler_id',
+                "required": [
+                    "project_id",
+                    "model_id",
+                    "record_handler_id",
                 ],
-                'nullable': [
-                ],
-                'enum': [
-                ],
-                'validation': [
-                ]
+                "nullable": [],
+                "enum": [],
+                "validation": [],
             },
             root_map={
-                'validations': {
+                "validations": {},
+                "allowed_values": {},
+                "openapi_types": {
+                    "project_id": (str,),
+                    "model_id": (str,),
+                    "record_handler_id": (str,),
                 },
-                'allowed_values': {
+                "attribute_map": {
+                    "project_id": "project_id",
+                    "model_id": "model_id",
+                    "record_handler_id": "record_handler_id",
                 },
-                'openapi_types': {
-                    'project_id':
-                        (str,),
-                    'model_id':
-                        (str,),
-                    'record_handler_id':
-                        (str,),
+                "location_map": {
+                    "project_id": "path",
+                    "model_id": "path",
+                    "record_handler_id": "path",
                 },
-                'attribute_map': {
-                    'project_id': 'project_id',
-                    'model_id': 'model_id',
-                    'record_handler_id': 'record_handler_id',
-                },
-                'location_map': {
-                    'project_id': 'path',
-                    'model_id': 'path',
-                    'record_handler_id': 'path',
-                },
-                'collection_format_map': {
-                }
+                "collection_format_map": {},
             },
             headers_map={
-                'accept': [
-                    'application/json'
-                ],
-                'content_type': [],
+                "accept": ["application/json"],
+                "content_type": [],
             },
             api_client=api_client,
-            callable=__delete_record_handler
+            callable=__delete_record_handler,
         )
 
-        def __get_artifacts(
-            self,
-            project_id,
-            **kwargs
-        ):
+        def __get_artifacts(self, project_id, **kwargs):
             """List all project artifacts  # noqa: E501
 
             This method makes a synchronous HTTP request by default. To make an
@@ -1134,88 +1029,75 @@ class ProjectsApi(object):
                     If the method is called asynchronously, returns the request
                     thread.
             """
-            kwargs['async_req'] = kwargs.get(
-                'async_req', False
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
             )
-            kwargs['_return_http_data_only'] = kwargs.get(
-                '_return_http_data_only', True
-            )
-            kwargs['_preload_content'] = kwargs.get(
-                '_preload_content', True
-            )
-            kwargs['_request_timeout'] = kwargs.get(
-                '_request_timeout', None
-            )
-            kwargs['_check_input_type'] = kwargs.get(
-                '_check_input_type', True
-            )
-            kwargs['_check_return_type'] = kwargs.get(
-                '_check_return_type', True
-            )
-            kwargs['_host_index'] = kwargs.get('_host_index')
-            kwargs['project_id'] = \
-                project_id
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            kwargs["project_id"] = project_id
             return self.call_with_http_info(**kwargs)
 
         self.get_artifacts = _Endpoint(
             settings={
-                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
-                'auth': [
-                    'ApiKey'
-                ],
-                'endpoint_path': '/projects/{project_id}/artifacts',
-                'operation_id': 'get_artifacts',
-                'http_method': 'GET',
-                'servers': None,
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/projects/{project_id}/artifacts",
+                "operation_id": "get_artifacts",
+                "http_method": "GET",
+                "servers": None,
             },
             params_map={
-                'all': [
-                    'project_id',
+                "all": [
+                    "project_id",
                 ],
-                'required': [
-                    'project_id',
+                "required": [
+                    "project_id",
                 ],
-                'nullable': [
-                ],
-                'enum': [
-                ],
-                'validation': [
-                ]
+                "nullable": [],
+                "enum": [],
+                "validation": [],
             },
             root_map={
-                'validations': {
+                "validations": {},
+                "allowed_values": {},
+                "openapi_types": {
+                    "project_id": (str,),
                 },
-                'allowed_values': {
+                "attribute_map": {
+                    "project_id": "project_id",
                 },
-                'openapi_types': {
-                    'project_id':
-                        (str,),
+                "location_map": {
+                    "project_id": "path",
                 },
-                'attribute_map': {
-                    'project_id': 'project_id',
-                },
-                'location_map': {
-                    'project_id': 'path',
-                },
-                'collection_format_map': {
-                }
+                "collection_format_map": {},
             },
             headers_map={
-                'accept': [
-                    'application/json'
-                ],
-                'content_type': [],
+                "accept": ["application/json"],
+                "content_type": [],
             },
             api_client=api_client,
-            callable=__get_artifacts
+            callable=__get_artifacts,
         )
 
-        def __get_model(
-            self,
-            project_id,
-            model_id,
-            **kwargs
-        ):
+        def __get_model(self, project_id, model_id, **kwargs):
             """Get model details  # noqa: E501
 
             This method makes a synchronous HTTP request by default. To make an
@@ -1256,120 +1138,97 @@ class ProjectsApi(object):
                     If the method is called asynchronously, returns the request
                     thread.
             """
-            kwargs['async_req'] = kwargs.get(
-                'async_req', False
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
             )
-            kwargs['_return_http_data_only'] = kwargs.get(
-                '_return_http_data_only', True
-            )
-            kwargs['_preload_content'] = kwargs.get(
-                '_preload_content', True
-            )
-            kwargs['_request_timeout'] = kwargs.get(
-                '_request_timeout', None
-            )
-            kwargs['_check_input_type'] = kwargs.get(
-                '_check_input_type', True
-            )
-            kwargs['_check_return_type'] = kwargs.get(
-                '_check_return_type', True
-            )
-            kwargs['_host_index'] = kwargs.get('_host_index')
-            kwargs['project_id'] = \
-                project_id
-            kwargs['model_id'] = \
-                model_id
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            kwargs["project_id"] = project_id
+            kwargs["model_id"] = model_id
             return self.call_with_http_info(**kwargs)
 
         self.get_model = _Endpoint(
             settings={
-                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
-                'auth': [
-                    'ApiKey'
-                ],
-                'endpoint_path': '/projects/{project_id}/models/{model_id}',
-                'operation_id': 'get_model',
-                'http_method': 'GET',
-                'servers': None,
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/projects/{project_id}/models/{model_id}",
+                "operation_id": "get_model",
+                "http_method": "GET",
+                "servers": None,
             },
             params_map={
-                'all': [
-                    'project_id',
-                    'model_id',
-                    'logs',
-                    'expand',
+                "all": [
+                    "project_id",
+                    "model_id",
+                    "logs",
+                    "expand",
                 ],
-                'required': [
-                    'project_id',
-                    'model_id',
+                "required": [
+                    "project_id",
+                    "model_id",
                 ],
-                'nullable': [
+                "nullable": [],
+                "enum": [
+                    "logs",
+                    "expand",
                 ],
-                'enum': [
-                    'logs',
-                    'expand',
-                ],
-                'validation': [
-                ]
+                "validation": [],
             },
             root_map={
-                'validations': {
+                "validations": {},
+                "allowed_values": {
+                    ("logs",): {"YES": "yes", "NO": "no"},
+                    ("expand",): {"LOGS": "logs", "REPORT": "report"},
                 },
-                'allowed_values': {
-                    ('logs',): {
-
-                        "YES": "yes",
-                        "NO": "no"
-                    },
-                    ('expand',): {
-
-                        "LOGS": "logs",
-                        "REPORT": "report"
-                    },
+                "openapi_types": {
+                    "project_id": (str,),
+                    "model_id": (str,),
+                    "logs": (str,),
+                    "expand": ([str],),
                 },
-                'openapi_types': {
-                    'project_id':
-                        (str,),
-                    'model_id':
-                        (str,),
-                    'logs':
-                        (str,),
-                    'expand':
-                        ([str],),
+                "attribute_map": {
+                    "project_id": "project_id",
+                    "model_id": "model_id",
+                    "logs": "logs",
+                    "expand": "expand",
                 },
-                'attribute_map': {
-                    'project_id': 'project_id',
-                    'model_id': 'model_id',
-                    'logs': 'logs',
-                    'expand': 'expand',
+                "location_map": {
+                    "project_id": "path",
+                    "model_id": "path",
+                    "logs": "query",
+                    "expand": "query",
                 },
-                'location_map': {
-                    'project_id': 'path',
-                    'model_id': 'path',
-                    'logs': 'query',
-                    'expand': 'query',
+                "collection_format_map": {
+                    "expand": "csv",
                 },
-                'collection_format_map': {
-                    'expand': 'csv',
-                }
             },
             headers_map={
-                'accept': [
-                    'application/json'
-                ],
-                'content_type': [],
+                "accept": ["application/json"],
+                "content_type": [],
             },
             api_client=api_client,
-            callable=__get_model
+            callable=__get_model,
         )
 
-        def __get_model_artifact(
-            self,
-            project_id,
-            model_id,
-            type,
-            **kwargs
-        ):
+        def __get_model_artifact(self, project_id, model_id, type, **kwargs):
             """Get model details  # noqa: E501
 
             This method makes a synchronous HTTP request by default. To make an
@@ -1409,114 +1268,99 @@ class ProjectsApi(object):
                     If the method is called asynchronously, returns the request
                     thread.
             """
-            kwargs['async_req'] = kwargs.get(
-                'async_req', False
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
             )
-            kwargs['_return_http_data_only'] = kwargs.get(
-                '_return_http_data_only', True
-            )
-            kwargs['_preload_content'] = kwargs.get(
-                '_preload_content', True
-            )
-            kwargs['_request_timeout'] = kwargs.get(
-                '_request_timeout', None
-            )
-            kwargs['_check_input_type'] = kwargs.get(
-                '_check_input_type', True
-            )
-            kwargs['_check_return_type'] = kwargs.get(
-                '_check_return_type', True
-            )
-            kwargs['_host_index'] = kwargs.get('_host_index')
-            kwargs['project_id'] = \
-                project_id
-            kwargs['model_id'] = \
-                model_id
-            kwargs['type'] = \
-                type
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            kwargs["project_id"] = project_id
+            kwargs["model_id"] = model_id
+            kwargs["type"] = type
             return self.call_with_http_info(**kwargs)
 
         self.get_model_artifact = _Endpoint(
             settings={
-                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
-                'auth': [
-                    'ApiKey'
-                ],
-                'endpoint_path': '/projects/{project_id}/models/{model_id}/artifact',
-                'operation_id': 'get_model_artifact',
-                'http_method': 'GET',
-                'servers': None,
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/projects/{project_id}/models/{model_id}/artifact",
+                "operation_id": "get_model_artifact",
+                "http_method": "GET",
+                "servers": None,
             },
             params_map={
-                'all': [
-                    'project_id',
-                    'model_id',
-                    'type',
+                "all": [
+                    "project_id",
+                    "model_id",
+                    "type",
                 ],
-                'required': [
-                    'project_id',
-                    'model_id',
-                    'type',
+                "required": [
+                    "project_id",
+                    "model_id",
+                    "type",
                 ],
-                'nullable': [
+                "nullable": [],
+                "enum": [
+                    "type",
                 ],
-                'enum': [
-                    'type',
-                ],
-                'validation': [
-                ]
+                "validation": [],
             },
             root_map={
-                'validations': {
-                },
-                'allowed_values': {
-                    ('type',): {
-
+                "validations": {},
+                "allowed_values": {
+                    ("type",): {
                         "MODEL": "model",
                         "REPORT": "report",
                         "REPORT_JSON": "report_json",
                         "DATA_PREVIEW": "data_preview",
                         "DATA": "data",
                         "MODEL_LOGS": "model_logs",
-                        "RUN_LOGS": "run_logs"
+                        "RUN_LOGS": "run_logs",
                     },
                 },
-                'openapi_types': {
-                    'project_id':
-                        (str,),
-                    'model_id':
-                        (str,),
-                    'type':
-                        (str,),
+                "openapi_types": {
+                    "project_id": (str,),
+                    "model_id": (str,),
+                    "type": (str,),
                 },
-                'attribute_map': {
-                    'project_id': 'project_id',
-                    'model_id': 'model_id',
-                    'type': 'type',
+                "attribute_map": {
+                    "project_id": "project_id",
+                    "model_id": "model_id",
+                    "type": "type",
                 },
-                'location_map': {
-                    'project_id': 'path',
-                    'model_id': 'path',
-                    'type': 'query',
+                "location_map": {
+                    "project_id": "path",
+                    "model_id": "path",
+                    "type": "query",
                 },
-                'collection_format_map': {
-                }
+                "collection_format_map": {},
             },
             headers_map={
-                'accept': [
-                    'application/json'
-                ],
-                'content_type': [],
+                "accept": ["application/json"],
+                "content_type": [],
             },
             api_client=api_client,
-            callable=__get_model_artifact
+            callable=__get_model_artifact,
         )
 
-        def __get_models(
-            self,
-            project_id,
-            **kwargs
-        ):
+        def __get_models(self, project_id, **kwargs):
             """List all project models  # noqa: E501
 
             This method makes a synchronous HTTP request by default. To make an
@@ -1555,92 +1399,79 @@ class ProjectsApi(object):
                     If the method is called asynchronously, returns the request
                     thread.
             """
-            kwargs['async_req'] = kwargs.get(
-                'async_req', False
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
             )
-            kwargs['_return_http_data_only'] = kwargs.get(
-                '_return_http_data_only', True
-            )
-            kwargs['_preload_content'] = kwargs.get(
-                '_preload_content', True
-            )
-            kwargs['_request_timeout'] = kwargs.get(
-                '_request_timeout', None
-            )
-            kwargs['_check_input_type'] = kwargs.get(
-                '_check_input_type', True
-            )
-            kwargs['_check_return_type'] = kwargs.get(
-                '_check_return_type', True
-            )
-            kwargs['_host_index'] = kwargs.get('_host_index')
-            kwargs['project_id'] = \
-                project_id
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            kwargs["project_id"] = project_id
             return self.call_with_http_info(**kwargs)
 
         self.get_models = _Endpoint(
             settings={
-                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
-                'auth': [
-                    'ApiKey'
-                ],
-                'endpoint_path': '/projects/{project_id}/models',
-                'operation_id': 'get_models',
-                'http_method': 'GET',
-                'servers': None,
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/projects/{project_id}/models",
+                "operation_id": "get_models",
+                "http_method": "GET",
+                "servers": None,
             },
             params_map={
-                'all': [
-                    'project_id',
-                    'limit',
+                "all": [
+                    "project_id",
+                    "limit",
                 ],
-                'required': [
-                    'project_id',
+                "required": [
+                    "project_id",
                 ],
-                'nullable': [
-                ],
-                'enum': [
-                ],
-                'validation': [
-                ]
+                "nullable": [],
+                "enum": [],
+                "validation": [],
             },
             root_map={
-                'validations': {
+                "validations": {},
+                "allowed_values": {},
+                "openapi_types": {
+                    "project_id": (str,),
+                    "limit": (int,),
                 },
-                'allowed_values': {
+                "attribute_map": {
+                    "project_id": "project_id",
+                    "limit": "limit",
                 },
-                'openapi_types': {
-                    'project_id':
-                        (str,),
-                    'limit':
-                        (int,),
+                "location_map": {
+                    "project_id": "path",
+                    "limit": "query",
                 },
-                'attribute_map': {
-                    'project_id': 'project_id',
-                    'limit': 'limit',
-                },
-                'location_map': {
-                    'project_id': 'path',
-                    'limit': 'query',
-                },
-                'collection_format_map': {
-                }
+                "collection_format_map": {},
             },
             headers_map={
-                'accept': [
-                    'application/json'
-                ],
-                'content_type': [],
+                "accept": ["application/json"],
+                "content_type": [],
             },
             api_client=api_client,
-            callable=__get_models
+            callable=__get_models,
         )
 
-        def __get_project(
-            self,
-            project_id,
-            **kwargs
-        ):
+        def __get_project(self, project_id, **kwargs):
             """get_project  # noqa: E501
 
             This method makes a synchronous HTTP request by default. To make an
@@ -1678,88 +1509,76 @@ class ProjectsApi(object):
                     If the method is called asynchronously, returns the request
                     thread.
             """
-            kwargs['async_req'] = kwargs.get(
-                'async_req', False
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
             )
-            kwargs['_return_http_data_only'] = kwargs.get(
-                '_return_http_data_only', True
-            )
-            kwargs['_preload_content'] = kwargs.get(
-                '_preload_content', True
-            )
-            kwargs['_request_timeout'] = kwargs.get(
-                '_request_timeout', None
-            )
-            kwargs['_check_input_type'] = kwargs.get(
-                '_check_input_type', True
-            )
-            kwargs['_check_return_type'] = kwargs.get(
-                '_check_return_type', True
-            )
-            kwargs['_host_index'] = kwargs.get('_host_index')
-            kwargs['project_id'] = \
-                project_id
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            kwargs["project_id"] = project_id
             return self.call_with_http_info(**kwargs)
 
         self.get_project = _Endpoint(
             settings={
-                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
-                'auth': [
-                    'ApiKey'
-                ],
-                'endpoint_path': '/projects/{project_id}',
-                'operation_id': 'get_project',
-                'http_method': 'GET',
-                'servers': None,
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/projects/{project_id}",
+                "operation_id": "get_project",
+                "http_method": "GET",
+                "servers": None,
             },
             params_map={
-                'all': [
-                    'project_id',
+                "all": [
+                    "project_id",
                 ],
-                'required': [
-                    'project_id',
+                "required": [
+                    "project_id",
                 ],
-                'nullable': [
-                ],
-                'enum': [
-                ],
-                'validation': [
-                ]
+                "nullable": [],
+                "enum": [],
+                "validation": [],
             },
             root_map={
-                'validations': {
+                "validations": {},
+                "allowed_values": {},
+                "openapi_types": {
+                    "project_id": (str,),
                 },
-                'allowed_values': {
+                "attribute_map": {
+                    "project_id": "project_id",
                 },
-                'openapi_types': {
-                    'project_id':
-                        (str,),
+                "location_map": {
+                    "project_id": "path",
                 },
-                'attribute_map': {
-                    'project_id': 'project_id',
-                },
-                'location_map': {
-                    'project_id': 'path',
-                },
-                'collection_format_map': {
-                }
+                "collection_format_map": {},
             },
             headers_map={
-                'accept': [
-                    'application/json'
-                ],
-                'content_type': [],
+                "accept": ["application/json"],
+                "content_type": [],
             },
             api_client=api_client,
-            callable=__get_project
+            callable=__get_project,
         )
 
         def __get_record_handler(
-            self,
-            project_id,
-            model_id,
-            record_handler_id,
-            **kwargs
+            self, project_id, model_id, record_handler_id, **kwargs
         ):
             """Get record handler  # noqa: E501
 
@@ -1802,127 +1621,104 @@ class ProjectsApi(object):
                     If the method is called asynchronously, returns the request
                     thread.
             """
-            kwargs['async_req'] = kwargs.get(
-                'async_req', False
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
             )
-            kwargs['_return_http_data_only'] = kwargs.get(
-                '_return_http_data_only', True
-            )
-            kwargs['_preload_content'] = kwargs.get(
-                '_preload_content', True
-            )
-            kwargs['_request_timeout'] = kwargs.get(
-                '_request_timeout', None
-            )
-            kwargs['_check_input_type'] = kwargs.get(
-                '_check_input_type', True
-            )
-            kwargs['_check_return_type'] = kwargs.get(
-                '_check_return_type', True
-            )
-            kwargs['_host_index'] = kwargs.get('_host_index')
-            kwargs['project_id'] = \
-                project_id
-            kwargs['model_id'] = \
-                model_id
-            kwargs['record_handler_id'] = \
-                record_handler_id
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            kwargs["project_id"] = project_id
+            kwargs["model_id"] = model_id
+            kwargs["record_handler_id"] = record_handler_id
             return self.call_with_http_info(**kwargs)
 
         self.get_record_handler = _Endpoint(
             settings={
-                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
-                'auth': [
-                    'ApiKey'
-                ],
-                'endpoint_path': '/projects/{project_id}/models/{model_id}/record_handlers/{record_handler_id}',
-                'operation_id': 'get_record_handler',
-                'http_method': 'GET',
-                'servers': None,
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/projects/{project_id}/models/{model_id}/record_handlers/{record_handler_id}",
+                "operation_id": "get_record_handler",
+                "http_method": "GET",
+                "servers": None,
             },
             params_map={
-                'all': [
-                    'project_id',
-                    'model_id',
-                    'record_handler_id',
-                    'logs',
-                    'expand',
+                "all": [
+                    "project_id",
+                    "model_id",
+                    "record_handler_id",
+                    "logs",
+                    "expand",
                 ],
-                'required': [
-                    'project_id',
-                    'model_id',
-                    'record_handler_id',
+                "required": [
+                    "project_id",
+                    "model_id",
+                    "record_handler_id",
                 ],
-                'nullable': [
+                "nullable": [],
+                "enum": [
+                    "logs",
+                    "expand",
                 ],
-                'enum': [
-                    'logs',
-                    'expand',
-                ],
-                'validation': [
-                ]
+                "validation": [],
             },
             root_map={
-                'validations': {
+                "validations": {},
+                "allowed_values": {
+                    ("logs",): {"YES": "yes", "NO": "no"},
+                    ("expand",): {"LOGS": "logs"},
                 },
-                'allowed_values': {
-                    ('logs',): {
-
-                        "YES": "yes",
-                        "NO": "no"
-                    },
-                    ('expand',): {
-
-                        "LOGS": "logs"
-                    },
+                "openapi_types": {
+                    "project_id": (str,),
+                    "model_id": (str,),
+                    "record_handler_id": (str,),
+                    "logs": (str,),
+                    "expand": ([str],),
                 },
-                'openapi_types': {
-                    'project_id':
-                        (str,),
-                    'model_id':
-                        (str,),
-                    'record_handler_id':
-                        (str,),
-                    'logs':
-                        (str,),
-                    'expand':
-                        ([str],),
+                "attribute_map": {
+                    "project_id": "project_id",
+                    "model_id": "model_id",
+                    "record_handler_id": "record_handler_id",
+                    "logs": "logs",
+                    "expand": "expand",
                 },
-                'attribute_map': {
-                    'project_id': 'project_id',
-                    'model_id': 'model_id',
-                    'record_handler_id': 'record_handler_id',
-                    'logs': 'logs',
-                    'expand': 'expand',
+                "location_map": {
+                    "project_id": "path",
+                    "model_id": "path",
+                    "record_handler_id": "path",
+                    "logs": "query",
+                    "expand": "query",
                 },
-                'location_map': {
-                    'project_id': 'path',
-                    'model_id': 'path',
-                    'record_handler_id': 'path',
-                    'logs': 'query',
-                    'expand': 'query',
+                "collection_format_map": {
+                    "expand": "csv",
                 },
-                'collection_format_map': {
-                    'expand': 'csv',
-                }
             },
             headers_map={
-                'accept': [
-                    'application/json'
-                ],
-                'content_type': [],
+                "accept": ["application/json"],
+                "content_type": [],
             },
             api_client=api_client,
-            callable=__get_record_handler
+            callable=__get_record_handler,
         )
 
         def __get_record_handler_artifact(
-            self,
-            project_id,
-            model_id,
-            record_handler_id,
-            type,
-            **kwargs
+            self, project_id, model_id, record_handler_id, type, **kwargs
         ):
             """Get record handler artifact  # noqa: E501
 
@@ -1964,121 +1760,102 @@ class ProjectsApi(object):
                     If the method is called asynchronously, returns the request
                     thread.
             """
-            kwargs['async_req'] = kwargs.get(
-                'async_req', False
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
             )
-            kwargs['_return_http_data_only'] = kwargs.get(
-                '_return_http_data_only', True
-            )
-            kwargs['_preload_content'] = kwargs.get(
-                '_preload_content', True
-            )
-            kwargs['_request_timeout'] = kwargs.get(
-                '_request_timeout', None
-            )
-            kwargs['_check_input_type'] = kwargs.get(
-                '_check_input_type', True
-            )
-            kwargs['_check_return_type'] = kwargs.get(
-                '_check_return_type', True
-            )
-            kwargs['_host_index'] = kwargs.get('_host_index')
-            kwargs['project_id'] = \
-                project_id
-            kwargs['model_id'] = \
-                model_id
-            kwargs['record_handler_id'] = \
-                record_handler_id
-            kwargs['type'] = \
-                type
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            kwargs["project_id"] = project_id
+            kwargs["model_id"] = model_id
+            kwargs["record_handler_id"] = record_handler_id
+            kwargs["type"] = type
             return self.call_with_http_info(**kwargs)
 
         self.get_record_handler_artifact = _Endpoint(
             settings={
-                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
-                'auth': [
-                    'ApiKey'
-                ],
-                'endpoint_path': '/projects/{project_id}/models/{model_id}/record_handlers/{record_handler_id}/artifact',
-                'operation_id': 'get_record_handler_artifact',
-                'http_method': 'GET',
-                'servers': None,
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/projects/{project_id}/models/{model_id}/record_handlers/{record_handler_id}/artifact",
+                "operation_id": "get_record_handler_artifact",
+                "http_method": "GET",
+                "servers": None,
             },
             params_map={
-                'all': [
-                    'project_id',
-                    'model_id',
-                    'record_handler_id',
-                    'type',
+                "all": [
+                    "project_id",
+                    "model_id",
+                    "record_handler_id",
+                    "type",
                 ],
-                'required': [
-                    'project_id',
-                    'model_id',
-                    'record_handler_id',
-                    'type',
+                "required": [
+                    "project_id",
+                    "model_id",
+                    "record_handler_id",
+                    "type",
                 ],
-                'nullable': [
+                "nullable": [],
+                "enum": [
+                    "type",
                 ],
-                'enum': [
-                    'type',
-                ],
-                'validation': [
-                ]
+                "validation": [],
             },
             root_map={
-                'validations': {
-                },
-                'allowed_values': {
-                    ('type',): {
-
+                "validations": {},
+                "allowed_values": {
+                    ("type",): {
                         "REPORT": "report",
                         "REPORT_JSON": "report_json",
                         "DATA": "data",
-                        "RUN_LOGS": "run_logs"
+                        "RUN_LOGS": "run_logs",
                     },
                 },
-                'openapi_types': {
-                    'project_id':
-                        (str,),
-                    'model_id':
-                        (str,),
-                    'record_handler_id':
-                        (str,),
-                    'type':
-                        (str,),
+                "openapi_types": {
+                    "project_id": (str,),
+                    "model_id": (str,),
+                    "record_handler_id": (str,),
+                    "type": (str,),
                 },
-                'attribute_map': {
-                    'project_id': 'project_id',
-                    'model_id': 'model_id',
-                    'record_handler_id': 'record_handler_id',
-                    'type': 'type',
+                "attribute_map": {
+                    "project_id": "project_id",
+                    "model_id": "model_id",
+                    "record_handler_id": "record_handler_id",
+                    "type": "type",
                 },
-                'location_map': {
-                    'project_id': 'path',
-                    'model_id': 'path',
-                    'record_handler_id': 'path',
-                    'type': 'query',
+                "location_map": {
+                    "project_id": "path",
+                    "model_id": "path",
+                    "record_handler_id": "path",
+                    "type": "query",
                 },
-                'collection_format_map': {
-                }
+                "collection_format_map": {},
             },
             headers_map={
-                'accept': [
-                    'application/json'
-                ],
-                'content_type': [],
+                "accept": ["application/json"],
+                "content_type": [],
             },
             api_client=api_client,
-            callable=__get_record_handler_artifact
+            callable=__get_record_handler_artifact,
         )
 
-        def __query_record_handlers(
-            self,
-            project_id,
-            model_id,
-            status,
-            **kwargs
-        ):
+        def __query_record_handlers(self, project_id, model_id, status, **kwargs):
             """Queries record handlers  # noqa: E501
 
             This method makes a synchronous HTTP request by default. To make an
@@ -2118,113 +1895,99 @@ class ProjectsApi(object):
                     If the method is called asynchronously, returns the request
                     thread.
             """
-            kwargs['async_req'] = kwargs.get(
-                'async_req', False
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
             )
-            kwargs['_return_http_data_only'] = kwargs.get(
-                '_return_http_data_only', True
-            )
-            kwargs['_preload_content'] = kwargs.get(
-                '_preload_content', True
-            )
-            kwargs['_request_timeout'] = kwargs.get(
-                '_request_timeout', None
-            )
-            kwargs['_check_input_type'] = kwargs.get(
-                '_check_input_type', True
-            )
-            kwargs['_check_return_type'] = kwargs.get(
-                '_check_return_type', True
-            )
-            kwargs['_host_index'] = kwargs.get('_host_index')
-            kwargs['project_id'] = \
-                project_id
-            kwargs['model_id'] = \
-                model_id
-            kwargs['status'] = \
-                status
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            kwargs["project_id"] = project_id
+            kwargs["model_id"] = model_id
+            kwargs["status"] = status
             return self.call_with_http_info(**kwargs)
 
         self.query_record_handlers = _Endpoint(
             settings={
-                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
-                'auth': [
-                    'ApiKey'
-                ],
-                'endpoint_path': '/projects/{project_id}/models/{model_id}/record_handlers',
-                'operation_id': 'query_record_handlers',
-                'http_method': 'GET',
-                'servers': None,
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/projects/{project_id}/models/{model_id}/record_handlers",
+                "operation_id": "query_record_handlers",
+                "http_method": "GET",
+                "servers": None,
             },
             params_map={
-                'all': [
-                    'project_id',
-                    'model_id',
-                    'status',
+                "all": [
+                    "project_id",
+                    "model_id",
+                    "status",
                 ],
-                'required': [
-                    'project_id',
-                    'model_id',
-                    'status',
+                "required": [
+                    "project_id",
+                    "model_id",
+                    "status",
                 ],
-                'nullable': [
+                "nullable": [],
+                "enum": [
+                    "status",
                 ],
-                'enum': [
-                    'status',
-                ],
-                'validation': [
-                ]
+                "validation": [],
             },
             root_map={
-                'validations': {
-                },
-                'allowed_values': {
-                    ('status',): {
-
+                "validations": {},
+                "allowed_values": {
+                    ("status",): {
                         "COMPLETED": "completed",
                         "ERROR": "error",
                         "PENDING": "pending",
                         "ACTIVE": "active",
                         "LOST": "lost",
                         "CREATED": "created",
-                        "CANCELLED": "cancelled"
+                        "CANCELLED": "cancelled",
                     },
                 },
-                'openapi_types': {
-                    'project_id':
-                        (str,),
-                    'model_id':
-                        (str,),
-                    'status':
-                        (str,),
+                "openapi_types": {
+                    "project_id": (str,),
+                    "model_id": (str,),
+                    "status": (str,),
                 },
-                'attribute_map': {
-                    'project_id': 'project_id',
-                    'model_id': 'model_id',
-                    'status': 'status',
+                "attribute_map": {
+                    "project_id": "project_id",
+                    "model_id": "model_id",
+                    "status": "status",
                 },
-                'location_map': {
-                    'project_id': 'path',
-                    'model_id': 'path',
-                    'status': 'query',
+                "location_map": {
+                    "project_id": "path",
+                    "model_id": "path",
+                    "status": "query",
                 },
-                'collection_format_map': {
-                }
+                "collection_format_map": {},
             },
             headers_map={
-                'accept': [
-                    'application/json'
-                ],
-                'content_type': [],
+                "accept": ["application/json"],
+                "content_type": [],
             },
             api_client=api_client,
-            callable=__query_record_handlers
+            callable=__query_record_handlers,
         )
 
-        def __search_projects(
-            self,
-            **kwargs
-        ):
+        def __search_projects(self, **kwargs):
             """search_projects  # noqa: E501
 
             This method makes a synchronous HTTP request by default. To make an
@@ -2262,90 +2025,76 @@ class ProjectsApi(object):
                     If the method is called asynchronously, returns the request
                     thread.
             """
-            kwargs['async_req'] = kwargs.get(
-                'async_req', False
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
             )
-            kwargs['_return_http_data_only'] = kwargs.get(
-                '_return_http_data_only', True
-            )
-            kwargs['_preload_content'] = kwargs.get(
-                '_preload_content', True
-            )
-            kwargs['_request_timeout'] = kwargs.get(
-                '_request_timeout', None
-            )
-            kwargs['_check_input_type'] = kwargs.get(
-                '_check_input_type', True
-            )
-            kwargs['_check_return_type'] = kwargs.get(
-                '_check_return_type', True
-            )
-            kwargs['_host_index'] = kwargs.get('_host_index')
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
             return self.call_with_http_info(**kwargs)
 
         self.search_projects = _Endpoint(
             settings={
-                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
-                'auth': [
-                    'ApiKey'
-                ],
-                'endpoint_path': '/projects',
-                'operation_id': 'search_projects',
-                'http_method': 'GET',
-                'servers': None,
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/projects",
+                "operation_id": "search_projects",
+                "http_method": "GET",
+                "servers": None,
             },
             params_map={
-                'all': [
-                    'query',
-                    'limit',
+                "all": [
+                    "query",
+                    "limit",
                 ],
-                'required': [],
-                'nullable': [
-                ],
-                'enum': [
-                ],
-                'validation': [
-                ]
+                "required": [],
+                "nullable": [],
+                "enum": [],
+                "validation": [],
             },
             root_map={
-                'validations': {
+                "validations": {},
+                "allowed_values": {},
+                "openapi_types": {
+                    "query": (str,),
+                    "limit": (int,),
                 },
-                'allowed_values': {
+                "attribute_map": {
+                    "query": "query",
+                    "limit": "limit",
                 },
-                'openapi_types': {
-                    'query':
-                        (str,),
-                    'limit':
-                        (int,),
+                "location_map": {
+                    "query": "query",
+                    "limit": "query",
                 },
-                'attribute_map': {
-                    'query': 'query',
-                    'limit': 'limit',
-                },
-                'location_map': {
-                    'query': 'query',
-                    'limit': 'query',
-                },
-                'collection_format_map': {
-                }
+                "collection_format_map": {},
             },
             headers_map={
-                'accept': [
-                    'application/json'
-                ],
-                'content_type': [],
+                "accept": ["application/json"],
+                "content_type": [],
             },
             api_client=api_client,
-            callable=__search_projects
+            callable=__search_projects,
         )
 
-        def __update_model(
-            self,
-            project_id,
-            model_id,
-            body,
-            **kwargs
-        ):
+        def __update_model(self, project_id, model_id, body, **kwargs):
             """update_model  # noqa: E501
 
             This method makes a synchronous HTTP request by default. To make an
@@ -2385,106 +2134,101 @@ class ProjectsApi(object):
                     If the method is called asynchronously, returns the request
                     thread.
             """
-            kwargs['async_req'] = kwargs.get(
-                'async_req', False
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
             )
-            kwargs['_return_http_data_only'] = kwargs.get(
-                '_return_http_data_only', True
-            )
-            kwargs['_preload_content'] = kwargs.get(
-                '_preload_content', True
-            )
-            kwargs['_request_timeout'] = kwargs.get(
-                '_request_timeout', None
-            )
-            kwargs['_check_input_type'] = kwargs.get(
-                '_check_input_type', True
-            )
-            kwargs['_check_return_type'] = kwargs.get(
-                '_check_return_type', True
-            )
-            kwargs['_host_index'] = kwargs.get('_host_index')
-            kwargs['project_id'] = \
-                project_id
-            kwargs['model_id'] = \
-                model_id
-            kwargs['body'] = \
-                body
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            kwargs["project_id"] = project_id
+            kwargs["model_id"] = model_id
+            kwargs["body"] = body
             return self.call_with_http_info(**kwargs)
 
         self.update_model = _Endpoint(
             settings={
-                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
-                'auth': [
-                    'ApiKey'
-                ],
-                'endpoint_path': '/projects/{project_id}/models/{model_id}',
-                'operation_id': 'update_model',
-                'http_method': 'PATCH',
-                'servers': None,
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/projects/{project_id}/models/{model_id}",
+                "operation_id": "update_model",
+                "http_method": "PATCH",
+                "servers": None,
             },
             params_map={
-                'all': [
-                    'project_id',
-                    'model_id',
-                    'body',
+                "all": [
+                    "project_id",
+                    "model_id",
+                    "body",
                 ],
-                'required': [
-                    'project_id',
-                    'model_id',
-                    'body',
+                "required": [
+                    "project_id",
+                    "model_id",
+                    "body",
                 ],
-                'nullable': [
-                ],
-                'enum': [
-                ],
-                'validation': [
-                ]
+                "nullable": [],
+                "enum": [],
+                "validation": [],
             },
             root_map={
-                'validations': {
+                "validations": {},
+                "allowed_values": {},
+                "openapi_types": {
+                    "project_id": (str,),
+                    "model_id": (str,),
+                    "body": (
+                        {
+                            str: (
+                                bool,
+                                date,
+                                datetime,
+                                dict,
+                                float,
+                                int,
+                                list,
+                                str,
+                                none_type,
+                            )
+                        },
+                    ),
                 },
-                'allowed_values': {
+                "attribute_map": {
+                    "project_id": "project_id",
+                    "model_id": "model_id",
                 },
-                'openapi_types': {
-                    'project_id':
-                        (str,),
-                    'model_id':
-                        (str,),
-                    'body':
-                        ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
+                "location_map": {
+                    "project_id": "path",
+                    "model_id": "path",
+                    "body": "body",
                 },
-                'attribute_map': {
-                    'project_id': 'project_id',
-                    'model_id': 'model_id',
-                },
-                'location_map': {
-                    'project_id': 'path',
-                    'model_id': 'path',
-                    'body': 'body',
-                },
-                'collection_format_map': {
-                }
+                "collection_format_map": {},
             },
             headers_map={
-                'accept': [
-                    'application/json'
-                ],
-                'content_type': [
-                    'application/json'
-                ]
+                "accept": ["application/json"],
+                "content_type": ["application/json"],
             },
             api_client=api_client,
-            callable=__update_model
+            callable=__update_model,
         )
 
         def __update_record_handler(
-            self,
-            project_id,
-            model_id,
-            record_handler_id,
-            body,
-            **kwargs
+            self, project_id, model_id, record_handler_id, body, **kwargs
         ):
             """update_record_handler  # noqa: E501
 
@@ -2526,103 +2270,101 @@ class ProjectsApi(object):
                     If the method is called asynchronously, returns the request
                     thread.
             """
-            kwargs['async_req'] = kwargs.get(
-                'async_req', False
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
             )
-            kwargs['_return_http_data_only'] = kwargs.get(
-                '_return_http_data_only', True
-            )
-            kwargs['_preload_content'] = kwargs.get(
-                '_preload_content', True
-            )
-            kwargs['_request_timeout'] = kwargs.get(
-                '_request_timeout', None
-            )
-            kwargs['_check_input_type'] = kwargs.get(
-                '_check_input_type', True
-            )
-            kwargs['_check_return_type'] = kwargs.get(
-                '_check_return_type', True
-            )
-            kwargs['_host_index'] = kwargs.get('_host_index')
-            kwargs['project_id'] = \
-                project_id
-            kwargs['model_id'] = \
-                model_id
-            kwargs['record_handler_id'] = \
-                record_handler_id
-            kwargs['body'] = \
-                body
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            kwargs["project_id"] = project_id
+            kwargs["model_id"] = model_id
+            kwargs["record_handler_id"] = record_handler_id
+            kwargs["body"] = body
             return self.call_with_http_info(**kwargs)
 
         self.update_record_handler = _Endpoint(
             settings={
-                'response_type': ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
-                'auth': [
-                    'ApiKey'
-                ],
-                'endpoint_path': '/projects/{project_id}/models/{model_id}/record_handlers/{record_handler_id}',
-                'operation_id': 'update_record_handler',
-                'http_method': 'PATCH',
-                'servers': None,
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/projects/{project_id}/models/{model_id}/record_handlers/{record_handler_id}",
+                "operation_id": "update_record_handler",
+                "http_method": "PATCH",
+                "servers": None,
             },
             params_map={
-                'all': [
-                    'project_id',
-                    'model_id',
-                    'record_handler_id',
-                    'body',
+                "all": [
+                    "project_id",
+                    "model_id",
+                    "record_handler_id",
+                    "body",
                 ],
-                'required': [
-                    'project_id',
-                    'model_id',
-                    'record_handler_id',
-                    'body',
+                "required": [
+                    "project_id",
+                    "model_id",
+                    "record_handler_id",
+                    "body",
                 ],
-                'nullable': [
-                ],
-                'enum': [
-                ],
-                'validation': [
-                ]
+                "nullable": [],
+                "enum": [],
+                "validation": [],
             },
             root_map={
-                'validations': {
+                "validations": {},
+                "allowed_values": {},
+                "openapi_types": {
+                    "project_id": (str,),
+                    "model_id": (str,),
+                    "record_handler_id": (str,),
+                    "body": (
+                        {
+                            str: (
+                                bool,
+                                date,
+                                datetime,
+                                dict,
+                                float,
+                                int,
+                                list,
+                                str,
+                                none_type,
+                            )
+                        },
+                    ),
                 },
-                'allowed_values': {
+                "attribute_map": {
+                    "project_id": "project_id",
+                    "model_id": "model_id",
+                    "record_handler_id": "record_handler_id",
                 },
-                'openapi_types': {
-                    'project_id':
-                        (str,),
-                    'model_id':
-                        (str,),
-                    'record_handler_id':
-                        (str,),
-                    'body':
-                        ({str: (bool, date, datetime, dict, float, int, list, str, none_type)},),
+                "location_map": {
+                    "project_id": "path",
+                    "model_id": "path",
+                    "record_handler_id": "path",
+                    "body": "body",
                 },
-                'attribute_map': {
-                    'project_id': 'project_id',
-                    'model_id': 'model_id',
-                    'record_handler_id': 'record_handler_id',
-                },
-                'location_map': {
-                    'project_id': 'path',
-                    'model_id': 'path',
-                    'record_handler_id': 'path',
-                    'body': 'body',
-                },
-                'collection_format_map': {
-                }
+                "collection_format_map": {},
             },
             headers_map={
-                'accept': [
-                    'application/json'
-                ],
-                'content_type': [
-                    'application/json'
-                ]
+                "accept": ["application/json"],
+                "content_type": ["application/json"],
             },
             api_client=api_client,
-            callable=__update_record_handler
+            callable=__update_record_handler,
         )

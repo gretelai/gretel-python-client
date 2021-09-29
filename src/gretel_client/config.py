@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+
 from enum import Enum
 from pathlib import Path
 from typing import Optional, Type, TypeVar, Union
@@ -74,10 +75,14 @@ class ClientConfig:
         default_project_name: Optional[str] = None,
         default_runner: str = DEFAULT_RUNNER.value,
     ):
-        self.endpoint = endpoint or os.getenv(GRETEL_ENDPOINT) or DEFAULT_GRETEL_ENDPOINT
+        self.endpoint = (
+            endpoint or os.getenv(GRETEL_ENDPOINT) or DEFAULT_GRETEL_ENDPOINT
+        )
         self.api_key = api_key or os.getenv(GRETEL_API_KEY)
         self.default_runner = default_runner
-        self.default_project_name = default_project_name or os.getenv(GRETEL_PROJECT) or default_project_name
+        self.default_project_name = (
+            default_project_name or os.getenv(GRETEL_PROJECT) or default_project_name
+        )
 
     @classmethod
     def from_file(cls, file_path: Path) -> ClientConfig:
@@ -90,7 +95,9 @@ class ClientConfig:
 
     @classmethod
     def from_dict(cls, source: dict) -> ClientConfig:
-        return cls(**{k: v for k, v in source.items() if k in cls.__annotations__.keys()})
+        return cls(
+            **{k: v for k, v in source.items() if k in cls.__annotations__.keys()}
+        )
 
     def _get_api_client(self) -> ApiClient:
         configuration = Configuration(

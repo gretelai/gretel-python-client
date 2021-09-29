@@ -1,19 +1,18 @@
 import os
+
 from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
 from gretel_client.config import (
-    ClientConfig,
-    write_config,
     _load_config,
-    get_session_config,
+    ClientConfig,
     configure_session,
+    get_session_config,
+    write_config,
 )
 from gretel_client.rest.api.projects_api import ProjectsApi
-
-
 
 
 def test_does_read_and_write_config(dev_ep, tmpdir):

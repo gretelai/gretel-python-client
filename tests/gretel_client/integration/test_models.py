@@ -3,9 +3,9 @@ from typing import Callable
 
 import pytest
 import smart_open
+
 from gretel_client.config import RunnerMode
 from gretel_client.helpers import poll
-
 from gretel_client.projects.common import ModelRunArtifact
 from gretel_client.projects.docker import ContainerRun
 from gretel_client.projects.jobs import Job, Status, WaitTimeExceeded

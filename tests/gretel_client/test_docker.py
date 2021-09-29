@@ -5,10 +5,7 @@ import docker
 import docker.errors
 import pytest
 
-from gretel_client.projects.docker import (
-    DataVolume,
-    extract_container_path,
-)
+from gretel_client.projects.docker import DataVolume, extract_container_path
 
 
 def test_data_volume(tmpdir: Path, get_fixture: Callable):

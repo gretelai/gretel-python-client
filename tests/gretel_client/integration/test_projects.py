@@ -2,7 +2,7 @@ from typing import Callable
 
 import pytest
 
-from gretel_client.projects import Project, get_project, search_projects
+from gretel_client.projects import get_project, Project, search_projects
 from gretel_client.projects.projects import GretelProjectError
 from gretel_client.rest.api.projects_api import ProjectsApi
 

@@ -1,11 +1,10 @@
 import json
+
 from typing import Dict, Optional, Union
 
 import click
 
 from gretel_client.cli.common import (
-    SessionContext,
-    StatusDescriptions,
     download_artifacts,
     model_option,
     pass_session,
@@ -15,6 +14,8 @@ from gretel_client.cli.common import (
     record_generation_status_descriptions,
     record_transform_status_descriptions,
     runner_option,
+    SessionContext,
+    StatusDescriptions,
 )
 from gretel_client.config import RunnerMode
 from gretel_client.projects.docker import ContainerRun
@@ -133,7 +134,7 @@ def create_and_run_record_handler(
             action=action,
             runner_mode=RunnerMode(runner),
             data_source=data_source,
-            _default_manual=True
+            _default_manual=True,
         )
         sc.register_cleanup(lambda: record_handler.cancel())
         sc.log.info(f"Record handler created {record_handler.record_id}")
@@ -142,7 +143,10 @@ def create_and_run_record_handler(
         if runner == RunnerMode.MANUAL.value:
             # With --runner MANUAL, we only print the worker_key and it's up to the user to run the worker
             sc.print(
-                data={"record_handler": printable_record_handler, "worker_key": record_handler.worker_key}
+                data={
+                    "record_handler": printable_record_handler,
+                    "worker_key": record_handler.worker_key,
+                }
             )
         else:
             sc.print(data=printable_record_handler)

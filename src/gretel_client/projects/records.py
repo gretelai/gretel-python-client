@@ -1,9 +1,10 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, List
-from gretel_client.config import DEFAULT_RUNNER, RunnerMode
 
-from gretel_client.projects.jobs import CPU, Status, Job
-from gretel_client.projects.common import ModelRunArtifact, ModelType, YES, f
+from typing import List, Optional, TYPE_CHECKING
+
+from gretel_client.config import DEFAULT_RUNNER, RunnerMode
+from gretel_client.projects.common import f, ModelRunArtifact, ModelType, YES
+from gretel_client.projects.jobs import CPU, Job, Status
 
 if TYPE_CHECKING:
     from gretel_client.projects.models import Model
@@ -42,9 +43,7 @@ class RecordHandler(Job):
         super().__init__(model.project, JOB_TYPE, self.record_id)
 
     def _submit(
-        self,
-        runner_mode: RunnerMode = DEFAULT_RUNNER,
-        **kwargs
+        self, runner_mode: RunnerMode = DEFAULT_RUNNER, **kwargs
     ) -> RecordHandler:
         """Submits the record handler to be run."""
 

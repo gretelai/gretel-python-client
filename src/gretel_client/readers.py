@@ -1,4 +1,3 @@
-
 """
 Misc data source readers
 """
@@ -6,8 +5,9 @@ import csv
 import io
 import json
 import os
+
 from collections.abc import Iterator
-from typing import IO, TYPE_CHECKING, Any, Callable, List, Optional, Union
+from typing import Any, Callable, IO, List, Optional, TYPE_CHECKING, Union
 
 import smart_open
 

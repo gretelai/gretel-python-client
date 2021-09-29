@@ -106,7 +106,9 @@ class Project:
         return self.projects_api.get_project(project_id=self.name).get(DATA)
 
     @check_not_deleted
-    def search_models(self, factory: Type[MT] = Model, limit: int = 100) -> Iterator[MT]:
+    def search_models(
+        self, factory: Type[MT] = Model, limit: int = 100
+    ) -> Iterator[MT]:
         """Search for project models.
 
         Args:
@@ -185,7 +187,9 @@ class Project:
             validate_data_source(artifact_path)
         if isinstance(artifact_path, Path):
             artifact_path = str(artifact_path)
-        with smart_open.open(artifact_path, "rb", ignore_ext=True) as src:  # type:ignore
+        with smart_open.open(
+            artifact_path, "rb", ignore_ext=True
+        ) as src:  # type:ignore
             src_data = src.read()
             file_name = Path(urlparse(artifact_path).path).name
             art_resp = self.projects_api.create_artifact(

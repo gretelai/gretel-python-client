@@ -7,15 +7,17 @@ import atexit
 import io
 import signal
 import tarfile
-from urllib.parse import urlparse
 import uuid
+
 from pathlib import Path
 from time import sleep
-from typing import TYPE_CHECKING, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, TYPE_CHECKING, Union
+from urllib.parse import urlparse
 
 import docker
 import docker.errors
 import smart_open
+
 from docker.models.containers import Container
 from docker.models.volumes import Volume
 from docker.types.containers import DeviceRequest

@@ -1,6 +1,6 @@
 import click
 
-from gretel_client.cli.common import SessionContext, pass_session, project_option
+from gretel_client.cli.common import pass_session, project_option, SessionContext
 
 
 @click.group(help="Commands for interacting with Gretel Cloud artifacts.")
@@ -53,7 +53,7 @@ def delete(sc: SessionContext, artifact_key: str, project: str, all: bool):
         deleted_artifacts = 0
         for artifact in sc.project.artifacts:
             sc.log.info(f"Delete artifact {artifact['key']}")
-            sc.project.delete_artifact(artifact['key'])
+            sc.project.delete_artifact(artifact["key"])
             deleted_artifacts += 1
         sc.log.info(f"Deleted {deleted_artifacts} artifacts")
         sc.exit(0)

@@ -1,18 +1,18 @@
 import click
 
-from gretel_client.config import (
-    GretelClientConfigurationError,
-    RunnerMode,
-    configure_session,
-    get_session_config,
-    write_config,
-    ClientConfig,
-)
-from gretel_client.cli.common import SessionContext, pass_session
+from gretel_client.cli.artifacts import artifacts
+from gretel_client.cli.common import pass_session, SessionContext
 from gretel_client.cli.models import models
 from gretel_client.cli.projects import projects
 from gretel_client.cli.records import records
-from gretel_client.cli.artifacts import artifacts
+from gretel_client.config import (
+    ClientConfig,
+    configure_session,
+    get_session_config,
+    GretelClientConfigurationError,
+    RunnerMode,
+    write_config,
+)
 
 
 @click.group()
@@ -24,8 +24,7 @@ from gretel_client.cli.artifacts import artifacts
 )
 @click.pass_context
 def cli(ctx: click.Context, debug: bool, output: str):
-    """The Gretel CLI.
-    """
+    """The Gretel CLI."""
     ctx.obj = SessionContext(ctx, output_fmt=output, debug=debug)
 
 
@@ -41,7 +40,9 @@ def cli(ctx: click.Context, debug: bool, output: str):
     "--default-runner",
     prompt="Default Runner",
     default=lambda: get_session_config().default_runner,
-    type=click.Choice([RunnerMode.CLOUD.value, RunnerMode.LOCAL.value], case_sensitive=False),
+    type=click.Choice(
+        [RunnerMode.CLOUD.value, RunnerMode.LOCAL.value], case_sensitive=False
+    ),
     metavar="RUNNER",
     help="Specify the default runner.",
 )

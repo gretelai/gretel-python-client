@@ -2,24 +2,27 @@
 Classes and methods for working with Gretel Models
 """
 from __future__ import annotations
+
 import json
-from pathlib import Path
-from typing import TYPE_CHECKING, Iterator, List, Optional, Union
 import logging
 
+from pathlib import Path
+from typing import Iterator, List, Optional, TYPE_CHECKING, Union
+
 import yaml
+
 from smart_open import open
 
 from gretel_client.config import RunnerMode
 from gretel_client.projects.common import (
+    f,
     ModelArtifact,
     ModelType,
-    YES,
     NO,
     validate_data_source,
+    YES,
 )
 from gretel_client.projects.jobs import CPU, GPU, Job, Status
-from gretel_client.projects.common import f
 from gretel_client.projects.records import RecordHandler
 
 if TYPE_CHECKING:
@@ -247,7 +250,9 @@ class Model(Job):
                     return str(data_source_path)
             return data_source
         except (IndexError, KeyError) as ex:
-            raise ModelConfigError("Could not get data source from model config") from ex
+            raise ModelConfigError(
+                "Could not get data source from model config"
+            ) from ex
 
     @data_source.setter
     def data_source(self, data_source: str):
