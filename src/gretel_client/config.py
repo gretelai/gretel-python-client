@@ -8,6 +8,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional, Type, TypeVar, Union
 
+from urllib3.util import Retry
+
 from gretel_client.rest.api.projects_api import ProjectsApi
 from gretel_client.rest.api_client import ApiClient
 from gretel_client.rest.configuration import Configuration
@@ -103,6 +105,7 @@ class ClientConfig:
         configuration = Configuration(
             host=self.endpoint, api_key={"ApiKey": self.api_key}
         )
+        configuration.retries = Retry(connect=5, read=2, redirect=5, backoff_factor=0.2)  # type:ignore
         return ApiClient(configuration)
 
     def get_api(self, api_interface: Type[T]) -> T:
