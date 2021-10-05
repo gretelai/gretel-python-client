@@ -105,7 +105,9 @@ class ClientConfig:
         configuration = Configuration(
             host=self.endpoint, api_key={"ApiKey": self.api_key}
         )
-        configuration.retries = Retry(connect=5, read=2, redirect=5, backoff_factor=0.2)  # type:ignore
+        configuration.retries = Retry(
+            connect=5, read=2, redirect=5, backoff_factor=0.2
+        )  # type:ignore
         return ApiClient(configuration)
 
     def get_api(self, api_interface: Type[T]) -> T:
