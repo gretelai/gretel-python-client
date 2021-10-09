@@ -1,3 +1,5 @@
+import json
+
 from pathlib import Path
 from typing import Callable
 
@@ -5,7 +7,11 @@ import docker
 import docker.errors
 import pytest
 
-from gretel_client.projects.docker import DataVolume, extract_container_path
+from gretel_client.projects.docker import (
+    _PullProgressPrinter,
+    DataVolume,
+    extract_container_path,
+)
 
 
 def test_data_volume(tmpdir: Path, get_fixture: Callable):
@@ -33,3 +39,17 @@ def test_data_volume(tmpdir: Path, get_fixture: Callable):
 
     with pytest.raises(docker.errors.NotFound):
         client.containers.get(volume.volume_container.id)
+
+
+# to see the progress bar, run
+#   pytest -s test_docker.py::test_docker_pull_progress
+def test_docker_pull_progress(get_fixture: Callable):
+    update_fixture = get_fixture("docker_pull_progress.json")
+    update_mock = iter(
+        json.loads(line) for line in update_fixture.read_text().strip().split("\n")
+    )
+    progress_printer = _PullProgressPrinter(update_mock)
+    progress_printer.start()
+    # assert that all progress updates have been handled
+    with pytest.raises(StopIteration):
+        next(update_mock)

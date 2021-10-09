@@ -5,4 +5,5 @@ pyyaml>=5.3,<=5.4
 requests==2.25.0
 smart_open>=2.1.0,<3.0
 tabulate==0.8.9
+tqdm==4.62.3
 urllib3>=1.25.3,<1.26
