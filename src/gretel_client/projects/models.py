@@ -292,7 +292,7 @@ class Model(Job):
 
     def _do_get_job_details(self):
         return self._projects_api.get_model(
-            project_id=self.project.name, model_id=self.model_id, logs="yes"
+            project_id=self.project.name, model_id=self.model_id, expand=[f.LOGS]
         )
 
     def create_record_handler_obj(

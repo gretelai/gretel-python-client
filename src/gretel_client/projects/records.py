@@ -120,8 +120,8 @@ class RecordHandler(Job):
         return self._projects_api.get_record_handler(
             project_id=self.project.name,
             model_id=self.model.model_id,
-            logs=YES,
             record_handler_id=self.record_id,
+            expand=[f.LOGS],
         )
 
     def _do_cancel_job(self):
