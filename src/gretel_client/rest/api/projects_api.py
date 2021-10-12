@@ -1332,7 +1332,6 @@ class ProjectsApi(object):
                         "DATA_PREVIEW": "data_preview",
                         "DATA": "data",
                         "MODEL_LOGS": "model_logs",
-                        "RUN_LOGS": "run_logs",
                     },
                 },
                 "openapi_types": {
@@ -1821,8 +1820,7 @@ class ProjectsApi(object):
                 "validations": {},
                 "allowed_values": {
                     ("type",): {
-                        "REPORT": "report",
-                        "REPORT_JSON": "report_json",
+                        "RUN_REPORT_JSON": "run_report_json",
                         "DATA": "data",
                         "RUN_LOGS": "run_logs",
                     },

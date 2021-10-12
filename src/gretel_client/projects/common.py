@@ -106,12 +106,10 @@ class ModelArtifact(str, Enum):
     DATA_PREVIEW = "data_preview"
     DATA = "data"
     MODEL_LOGS = "model_logs"
-    RUN_LOGS = "run_logs"
 
 
 class ModelRunArtifact(str, Enum):
-    REPORT = "report"
-    REPORT_JSON = "report_json"
+    RUN_REPORT_JSON = "run_report_json"
     DATA = "data"
     RUN_LOGS = "run_logs"
 

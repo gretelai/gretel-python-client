@@ -1191,7 +1191,7 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
     project_id = "project_id_example" # str | Project id
     model_id = "model_id_example" # str | Model id
     record_handler_id = "record_handler_id_example" # str | Record handler id
-    type = "report" # str | 
+    type = "run_report_json" # str | 
 
     # example passing only required values which don't have defaults set
     try:
