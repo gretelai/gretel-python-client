@@ -424,7 +424,7 @@ class _PullUpdate:
         return "mb"
 
     def build_indicator(self) -> tqdm:
-        t = tqdm(total=self.total, unit=self.units)
+        t = tqdm(total=self.total, unit=self.units, ncols=80)
         t.set_description(self.status)
         return t
 

@@ -102,12 +102,14 @@ class ClientConfig:
         )
 
     def _get_api_client(self) -> ApiClient:
+        # disable log warnings when the retry kicks in
+        logging.getLogger("urllib3.connectionpool").setLevel(logging.ERROR)
         configuration = Configuration(
             host=self.endpoint, api_key={"ApiKey": self.api_key}
         )
-        configuration.retries = Retry(
+        configuration.retries = Retry(  # type:ignore
             connect=5, read=2, redirect=5, backoff_factor=0.2
-        )  # type:ignore
+        )
         return ApiClient(configuration)
 
     def get_api(self, api_interface: Type[T]) -> T:
