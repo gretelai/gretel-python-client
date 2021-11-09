@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 import requests
 import smart_open
 
-from gretel_client.config import get_session_config
+from gretel_client.config import get_logger, get_session_config
 from gretel_client.projects.common import f, validate_data_source
 from gretel_client.projects.models import Model
 from gretel_client.rest import models
@@ -22,6 +22,9 @@ DATA = "data"
 PROJECTS = "projects"
 PROJECT = "project"
 MODELS = "models"
+
+
+log = get_logger(__name__)
 
 
 class GretelProjectError(Exception):
@@ -69,17 +72,18 @@ class Project:
         self._deleted = False
 
     @check_not_deleted
-    def delete(self, include_models: bool = True):
+    def delete(self, *args, **kwargs):
         """Deletes a project. After the project has been deleted, functions
         relying on a project will fail with a ``GretelProjectError`` exception.
 
         Note: Deleting projects is asynchronous. It may take a few seconds
         for the project to be deleted by Gretel services.
         """
-        if include_models:
-            for model in self.search_models():
-                model.delete()
-
+        # todo(dn): remove in 0.9 release
+        if kwargs.get("include_models") or len(args) > 0:
+            log.warning(
+                "``include_models`` is deprecated and will be removed in the 0.9 release."
+            )
         self.projects_api.delete_project(project_id=self.project_id)
         self._deleted = True
 

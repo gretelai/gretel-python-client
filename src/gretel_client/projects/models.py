@@ -266,8 +266,6 @@ class Model(Job):
     def delete(self) -> Optional[dict]:
         """Deletes the remote model."""
         if self.model_id:
-            for handler in self.get_record_handlers():
-                handler.delete()
             return self._projects_api.delete_model(
                 project_id=self.project.name, model_id=self.model_id
             )
