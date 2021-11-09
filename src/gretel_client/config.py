@@ -101,19 +101,46 @@ class ClientConfig:
             **{k: v for k, v in source.items() if k in cls.__annotations__.keys()}
         )
 
-    def _get_api_client(self) -> ApiClient:
+    def _get_api_client(
+        self, max_retry_attempts: int = 3, backoff_factor: float = 1
+    ) -> ApiClient:
         # disable log warnings when the retry kicks in
         logging.getLogger("urllib3.connectionpool").setLevel(logging.ERROR)
         configuration = Configuration(
             host=self.endpoint, api_key={"ApiKey": self.api_key}
         )
         configuration.retries = Retry(  # type:ignore
-            connect=5, read=2, redirect=5, backoff_factor=0.2
+            total=max_retry_attempts,
+            connect=max_retry_attempts,
+            read=max_retry_attempts,
+            redirect=max_retry_attempts,
+            backoff_factor=backoff_factor,
+            status=max_retry_attempts,
+            method_whitelist=frozenset(
+                {"DELETE", "GET", "HEAD", "OPTIONS", "PUT", "TRACE", "POST"}
+            ),
+            status_forcelist=frozenset({413, 429, 503, 403}),
         )
         return ApiClient(configuration)
 
-    def get_api(self, api_interface: Type[T]) -> T:
-        return api_interface(self._get_api_client())
+    def get_api(
+        self,
+        api_interface: Type[T],
+        max_retry_attempts: int = 5,
+        backoff_factor: float = 1,
+    ) -> T:
+        """Instantiates and configures an api client for a given
+        component interface.
+
+        Args:
+            api_interface: The api interface to instantiate
+            max_retry_attempts: The number of times to retry a failed
+                api request.
+            backoff_factor: A back factor to apply between retry
+                attempts. A base factor of 2 will applied to this value
+                to determine the time between attempts.
+        """
+        return api_interface(self._get_api_client(max_retry_attempts, backoff_factor))
 
     def _check_project(self, project_name: str = None) -> Optional[str]:
         if not project_name:
