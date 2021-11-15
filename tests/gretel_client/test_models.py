@@ -253,3 +253,12 @@ def test_synth_report_output(m: Model, get_fixture: Callable):
     ]
     for field in expected_fields:
         assert field in peek.keys()
+
+
+def test_can_name_model(m: Model):
+    assert m.name == "my-awesome-model"
+    new_name = "my-model"
+    m.name = new_name
+    assert m.name == new_name
+    assert m.model_config["name"] == new_name
+    assert m._local_model_config["name"] == new_name

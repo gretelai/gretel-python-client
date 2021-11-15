@@ -263,6 +263,23 @@ class Model(Job):
             )
         self.model_config["models"][0][self.model_type]["data_source"] = data_source
 
+    @property
+    def name(self) -> Optional[str]:
+        """Get the name of the model. If no name is specified, a
+        random name will be selected when the model is submitted
+        to the backend.
+        """
+        return self.model_config.get("name")
+
+    @name.setter
+    def name(self, new_name: str):
+        """Update the name of the model
+
+        Args:
+            new_name: The new name of the model
+        """
+        self.model_config["name"] = new_name
+
     def delete(self) -> Optional[dict]:
         """Deletes the remote model."""
         if self.model_id:
