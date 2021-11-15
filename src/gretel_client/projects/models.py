@@ -268,6 +268,9 @@ class Model(Job):
         """Get the name of the model. If no name is specified, a
         random name will be selected when the model is submitted
         to the backend.
+
+        :getter: Returns the model name
+        :setter: Sets the model name
         """
         return self.model_config.get("name")
 
