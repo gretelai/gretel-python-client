@@ -12,6 +12,7 @@ import smart_open
 
 from gretel_client.config import get_logger, get_session_config
 from gretel_client.projects.common import f, validate_data_source
+from gretel_client.projects.exceptions import GretelProjectError
 from gretel_client.projects.models import Model
 from gretel_client.rest import models
 from gretel_client.rest.api.projects_api import ProjectsApi
@@ -25,10 +26,6 @@ MODELS = "models"
 
 
 log = get_logger(__name__)
-
-
-class GretelProjectError(Exception):
-    ...
 
 
 def check_not_deleted(func):
@@ -139,7 +136,7 @@ class Project:
         """Lookup and return a Project ``Model`` by it's ``model_id``.
 
         Args:
-            model_id: The ``model_id` to lookup
+            model_id: The ``model_id`` to lookup
         """
         return Model(project=self, model_id=model_id)
 
@@ -205,7 +202,7 @@ class Project:
                 data=src_data,
             )
             if upload_resp.status_code != 200:
-                raise GretelProjectError(f"Could not upload artifact {artifact_path}")
+                upload_resp.raise_for_status()
             return artifact_key
 
     def delete_artifact(self, key: str):
@@ -329,7 +326,7 @@ def get_project(
                 raise
 
     if not project:
-        raise GretelProjectError("Could not get or create project.")
+        raise GretelProjectError(f"Could not get or create project using '{name}'.")
 
     p = project.get(DATA).get(PROJECT)
 
@@ -348,6 +345,7 @@ def tmp_project():
     The project will be deleted from Gretel Cloud when the scope is exited.
 
     Example::
+
         with tmp_project() as proj:
             model = proj.create_model_obj()
     """

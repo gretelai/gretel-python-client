@@ -17,3 +17,4 @@ Module Reference
    models
    records
    docker
+   exceptions

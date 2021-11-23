@@ -7,8 +7,9 @@ import json
 import logging
 
 from pathlib import Path
-from typing import Iterator, List, Optional, TYPE_CHECKING, Union
+from typing import Iterator, List, Optional, Type, TYPE_CHECKING, Union
 
+import requests.exceptions
 import yaml
 
 from smart_open import open
@@ -21,6 +22,11 @@ from gretel_client.projects.common import (
     NO,
     validate_data_source,
     YES,
+)
+from gretel_client.projects.exceptions import (
+    GretelJobNotFound,
+    ModelConfigError,
+    ModelNotFoundError,
 )
 from gretel_client.projects.jobs import CPU, GPU, Job, Status
 from gretel_client.projects.records import RecordHandler
@@ -41,24 +47,12 @@ BASE_BLUEPRINT_REPO = "https://raw.githubusercontent.com/gretelai/gretel-bluepri
 _ModelConfigPathT = Union[str, Path, dict]
 
 
-class ModelConfigError(Exception):
-    ...
-
-
-class ModelError(Exception):
-    ...
-
-
-class ModelArtifactError(Exception):
-    ...
-
-
 def _resolve_config_short_path(config_path: str) -> dict:
     path = f"{BASE_BLUEPRINT_REPO}/{config_path}.yml"
     try:
         with open(path) as tpl:  # type:ignore
             return yaml.safe_load(tpl.read())
-    except Exception as ex:
+    except requests.exceptions.HTTPError as ex:
         raise ModelConfigError(
             f"Could not find or read the blueprint {config_path}"
         ) from ex
@@ -104,10 +98,13 @@ def read_model_config(model_config: _ModelConfigPathT) -> dict:
 
     # try and read a model config from a blueprint short path
     if not config and isinstance(model_config, str):
-        config = _resolve_config_short_path(model_config)
+        try:
+            config = _resolve_config_short_path(model_config)
+        except ModelConfigError:
+            pass
 
     if not config:
-        raise ModelConfigError(f"Could not load model {model_config}")
+        raise ModelConfigError(f"Could not find model config '{model_config}'")
 
     return config
 
@@ -119,6 +116,8 @@ class Model(Job):
     """Represents a Gretel Model. This class can be used to train new
     models or run and lookup existing ones.
     """
+
+    _not_found_error: Type[GretelJobNotFound] = ModelNotFoundError
 
     def __init__(
         self,
@@ -296,14 +295,14 @@ class Model(Job):
         cloud artifact data validation will be skipped.
 
         Raises:
-            - ``ModelArtifactError`` if the data source is not valid.
+            :class:`~gretel_client.projects.exceptions.DataSourceError` if the
+                file can't be opened.
+            :class:`~gretel_client.projects.exceptions.DataValidationError` if
+                the data isn't valid CSV or JSON.
         """
         if not self.external_data_source:
             return
-        try:
-            validate_data_source(self.data_source)
-        except Exception as ex:
-            raise ModelArtifactError("Could not validate data source") from ex
+        validate_data_source(self.data_source)
 
     def __repr__(self) -> str:
         return f"Model(id={self.model_id}, project={self.project.name})"

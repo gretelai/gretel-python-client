@@ -2,6 +2,7 @@ import click
 
 from gretel_client.cli.artifacts import artifacts
 from gretel_client.cli.common import pass_session, SessionContext
+from gretel_client.cli.errors import ExceptionHandler
 from gretel_client.cli.models import models
 from gretel_client.cli.projects import projects
 from gretel_client.cli.records import records
@@ -9,13 +10,16 @@ from gretel_client.config import (
     ClientConfig,
     configure_session,
     get_session_config,
-    GretelClientConfigurationError,
     RunnerMode,
     write_config,
 )
 
 
-@click.group()
+class GretelCliHandler(ExceptionHandler):
+    ...
+
+
+@click.group(cls=GretelCliHandler)
 @click.option("--debug/--no-debug", default=False, help="Show extra debug messages.")
 @click.option(
     "--output",
@@ -74,20 +78,11 @@ def configure(
     config = ClientConfig(
         endpoint=endpoint, api_key=api_key, default_runner=default_runner
     )
-
-    try:
-        config.update_default_project(project_id=project_name)
-    except GretelClientConfigurationError as ex:
-        sc.log.error(f"The project {project_name} is invalid", ex=ex)
-        sc.exit(1)
-
+    config.update_default_project(project_id=project_name)
     configure_session(config)
 
-    try:
-        config_path = write_config(config)
-        sc.log.info(f"Configuration written to {config_path}. Done.")
-    except Exception as ex:
-        sc.log.error("Could not write configuration to.", ex=ex)
+    config_path = write_config(config)
+    sc.log.info(f"Configuration written to {config_path}. Done.")
 
     sc.print(data=config.masked)
 

@@ -25,6 +25,7 @@ from docker.types.containers import DeviceRequest
 from tqdm import tqdm
 
 from gretel_client.config import get_logger, get_session_config
+from gretel_client.projects.exceptions import ContainerRunError, DockerEnvironmentError
 from gretel_client.projects.jobs import ACTIVE_STATES, Job
 from gretel_client.rest.api.opt_api import OptApi
 
@@ -32,14 +33,6 @@ if TYPE_CHECKING:
     from gretel_client.projects.models import Model
 else:
     Model = None
-
-
-class ContainerRunError(Exception):
-    ...
-
-
-class DockerEnvironmentError(Exception):
-    ...
 
 
 DEFAULT_ARTIFACT_DIR = "/workspace"

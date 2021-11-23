@@ -59,11 +59,7 @@ def delete(sc: SessionContext, artifact_key: str, project: str, all: bool):
         sc.exit(0)
 
     sc.log.info(f"Deleting artifact {artifact_key}")
-    try:
-        sc.project.delete_artifact(artifact_key)
-    except Exception as ex:
-        sc.log.error("Could not delete artifact", ex=ex)
-        sc.exit(1)
+    sc.project.delete_artifact(artifact_key)
     sc.log.info("Artifact deleted")
 
 
@@ -74,11 +70,7 @@ def delete(sc: SessionContext, artifact_key: str, project: str, all: bool):
 def upload(sc: SessionContext, in_data: str, project: str):
     sc.log.info(f'Uploading artifact from "{in_data}"')
     artifact = None
-    try:
-        artifact = sc.project.upload_artifact(in_data)
-    except Exception as ex:
-        sc.log.error("Could not upload artifact. Pass --debug for more info", ex=ex)
-        sc.exit(1)
+    artifact = sc.project.upload_artifact(in_data)
 
     if artifact:
         sc.log.info(

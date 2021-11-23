@@ -7,9 +7,11 @@ import time
 from abc import ABC, abstractmethod, abstractproperty
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, Iterator, List, Optional, Tuple, TYPE_CHECKING, Union
+from typing import Callable, Iterator, List, Optional, Tuple, Type, TYPE_CHECKING, Union
 
 import smart_open
+
+import gretel_client.rest.exceptions
 
 from gretel_client.config import DEFAULT_RUNNER, RunnerMode
 from gretel_client.projects.common import (
@@ -20,6 +22,7 @@ from gretel_client.projects.common import (
     peek_transforms_report,
     WAIT_UNTIL_DONE,
 )
+from gretel_client.projects.exceptions import GretelJobNotFound, WaitTimeExceeded
 from gretel_client.rest.api.projects_api import ProjectsApi
 
 if TYPE_CHECKING:
@@ -53,14 +56,6 @@ CPU = "cpu"
 GPU = "gpu"
 
 
-class WaitTimeExceeded(Exception):
-    """
-    Thrown when the wait time specified by the user has expired.
-    """
-
-    ...
-
-
 class Job(ABC):
     """Represents a unit of work that can be launched via
     a Gretel Worker.
@@ -75,6 +70,8 @@ class Job(ABC):
     _projects_api: ProjectsApi
 
     _data: Optional[dict] = None
+
+    _not_found_error: Type[GretelJobNotFound] = GretelJobNotFound
 
     def __init__(
         self,
@@ -158,6 +155,10 @@ class Job(ABC):
         ...
 
     # Base Job properties
+
+    @property
+    def id(self) -> Optional[str]:
+        return self._job_id
 
     @property
     def logs(self):
@@ -282,7 +283,10 @@ class Job(ABC):
             self._do_cancel_job()
 
     def _poll_job_endpoint(self):
-        resp = self._do_get_job_details()
+        try:
+            resp = self._do_get_job_details()
+        except gretel_client.rest.exceptions.NotFoundException as ex:
+            raise self._not_found_error(self) from ex
         self._data = resp.get(f.DATA)
 
     def _check_predicate(self, start: float, wait: int = WAIT_UNTIL_DONE) -> bool:

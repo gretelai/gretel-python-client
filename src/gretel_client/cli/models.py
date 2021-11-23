@@ -16,13 +16,7 @@ from gretel_client.cli.common import (
 from gretel_client.projects.common import ModelArtifact, WAIT_UNTIL_DONE
 from gretel_client.projects.docker import ContainerRun, ContainerRunError
 from gretel_client.projects.jobs import GPU, Status
-from gretel_client.projects.models import (
-    Model,
-    ModelArtifactError,
-    ModelError,
-    RunnerMode,
-)
-from gretel_client.rest.exceptions import ApiException, NotFoundException
+from gretel_client.projects.models import Model, RunnerMode
 
 
 @click.group(help="Commands for training and working with models.")
@@ -105,12 +99,8 @@ def create(
     if in_data:
         model.data_source = in_data
 
-    try:
-        if runner != RunnerMode.MANUAL.value:
-            model.validate_data_source()
-    except ModelArtifactError as ex:
-        sc.log.error(f"The data source '{model.data_source}' is not valid", ex=ex)
-        sc.exit(1)
+    if runner != RunnerMode.MANUAL.value:
+        model.validate_data_source()
 
     if runner == RunnerMode.CLOUD.value:
         sc.log.info("Uploading input data source")
@@ -127,29 +117,21 @@ def create(
         )
 
     # Create the model and the data source
-    try:
-        sc.log.info("Creating model")
-        run = model._submit(
-            runner_mode=RunnerMode(runner),
-            dry_run=dry_run,
-            _validate_data_source=False,
-            _default_manual=True,
-        )
-        sc.register_cleanup(lambda: model.cancel())
-        sc.log.info(f"Model created with ID {model.model_id}")
+    sc.log.info("Creating model")
+    run = model._submit(
+        runner_mode=RunnerMode(runner),
+        dry_run=dry_run,
+        _validate_data_source=False,
+        _default_manual=True,
+    )
+    sc.register_cleanup(lambda: model.cancel())
+    sc.log.info(f"Model created with ID {model.model_id}")
 
-        if runner == RunnerMode.MANUAL.value:
-            # With --runner MANUAL, we only print the worker_key and it's up to the user to run the worker
-            sc.print(data={"model": run.print_obj, "worker_key": model.worker_key})
-        else:
-            sc.log.info(data=run.print_obj)
-    except ApiException as ex:
-        sc.log.error("Could not create model", ex=ex)
-        sc.print(data=json.loads(ex.body))  # type:ignore
-        sc.exit(1)
-    except Exception as ex:
-        sc.log.error("Could not load model", ex=ex)
-        sc.exit(1)
+    if runner == RunnerMode.MANUAL.value:
+        # With --runner MANUAL, we only print the worker_key and it's up to the user to run the worker
+        sc.print(data={"model": run.print_obj, "worker_key": model.worker_key})
+    else:
+        sc.log.info(data=run.print_obj)
 
     if dry_run:
         sc.exit(0)
@@ -286,14 +268,6 @@ def search(sc: SessionContext, project: str, limit: int):
 @pass_session
 def delete(sc: SessionContext, project: str, model_id: str):
     sc.log.info(f"Deleting model {model_id}")
-    try:
-        model: Model = sc.project.get_model(model_id)
-        model.delete()
-    except (ModelError, NotFoundException) as ex:
-        sc.log.error(
-            "Could not delete model. Check you have the right model id.",
-            include_tb=True,
-            ex=ex,
-        )
-        sc.exit(1)
+    model: Model = sc.project.get_model(model_id)
+    model.delete()
     sc.log.info("Model deleted.")

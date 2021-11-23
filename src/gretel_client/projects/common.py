@@ -1,53 +1,61 @@
-import json
-
 from enum import Enum
 from pathlib import Path
-from typing import Any, Iterator, Union
+from typing import Iterator, Union
 
+from smart_open import open
+
+from gretel_client.projects.exceptions import DataSourceError, DataValidationError
 from gretel_client.readers import CsvReader, JsonReader
 
 Pathlike = Union[str, Path]
 
 
-class DataSourceError(Exception):
-    """Indicates there is a problem reading the data source"""
+def validate_data_source(data_source: Pathlike) -> bool:
+    """Validates the input data source. Returns ``True`` if the data
+    source is valid, raises an error otherwise.
 
-    ...
-
-
-class DataValidationError(Exception):
-    """Indicates there is a problem validating the structure of the data source."""
-
-    ...
-
-
-def validate_data_source(data_source: Any):
-    """Validates the input data source.
+    A data source is valid if we can open the file and successfully
+    parse out JSON or CSV like data.
 
     Args:
         data_source: The data source to check.
 
     Raises:
-        `DataSourceError` if the data source is not valid.
-        `DataValidationError` if the data source doesn't pass basic structure tests.
+        :class:`~gretel_client.projects.exceptions.DataSourceError` if the
+            file can't be opened.
+        :class:`~gretel_client.projects.exceptions.DataValidationError` if
+            the data isn't valid CSV or JSON.
     """
     try:
+        with open(data_source) as ds:
+            ds.seek(1)
+    except Exception as ex:
+        raise DataSourceError(f"Could not open the file '{data_source}'") from ex
+    try:
         peek = JsonReader(data_source)
-        # return _validate_from_reader(peek)  TODO add this in when we support JSON files
-    except (DataSourceError, json.decoder.JSONDecodeError):
+        return _validate_from_reader(peek)
+    except Exception:
         pass
     try:
         peek = CsvReader(data_source)
         return _validate_from_reader(peek)
-    except DataSourceError:
+    except Exception:
         pass
-    raise DataSourceError(f"Could not read or parse {data_source}")
+    raise DataValidationError(
+        f"Data validation checks for '{data_source}' failed. "
+        "Are you sure the file is valid JSON or CSV?"
+    )
 
 
-def _validate_from_reader(peek: Iterator, sample_size: int = 1):
+def _validate_from_reader(peek: Iterator, sample_size: int = 1) -> bool:
     """Perform a set of light-weight checks to ensure that the
     data is valid.
+
+    Raises:
+        :class:`~gretel_client.projects.exceptions.DataSourceError` if the
+            data source can't be validated.
     """
+    # TODO(dn): add additional checks to ensure the data is valid
     sample_set = None
     try:
         sample_set = [next(peek) for _ in range(sample_size)]
@@ -58,7 +66,7 @@ def _validate_from_reader(peek: Iterator, sample_size: int = 1):
             f"Could not read forward {sample_size} records."
         ) from ex
 
-    # todo(dn): add additional checks to ensure the data is valid
+    return True
 
 
 def peek_transforms_report(report_contents: dict) -> dict:

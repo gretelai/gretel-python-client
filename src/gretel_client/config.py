@@ -146,12 +146,7 @@ class ClientConfig:
         if not project_name:
             return None
         projects_api = self.get_api(ProjectsApi)
-        try:
-            projects_api.get_project(project_id=project_name)
-        except (UnauthorizedException, NotFoundException) as ex:
-            raise GretelClientConfigurationError(
-                f"Project {project_name} is invalid"
-            ) from ex
+        projects_api.get_project(project_id=project_name)
         return project_name
 
     def update_default_project(self, project_id: str):

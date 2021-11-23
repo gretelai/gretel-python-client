@@ -1,19 +1,16 @@
 from __future__ import annotations
 
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, Optional, Type, TYPE_CHECKING
 
 from gretel_client.config import DEFAULT_RUNNER, RunnerMode
-from gretel_client.projects.common import f, ModelRunArtifact, ModelType, YES
-from gretel_client.projects.jobs import CPU, Job, Status
+from gretel_client.projects.common import f, ModelRunArtifact, ModelType
+from gretel_client.projects.exceptions import RecordHandlerError, RecordHandlerNotFound
+from gretel_client.projects.jobs import CPU, GretelJobNotFound, Job, Status
 
 if TYPE_CHECKING:
     from gretel_client.projects.models import Model
 else:
     Model = None
-
-
-class RecordHandlerError(Exception):
-    ...
 
 
 JOB_TYPE = "handler"
@@ -27,6 +24,8 @@ class RecordHandler(Job):
         model: The model to generate a record handler for
         record_id: The id of an existing record handler.
     """
+
+    _not_found_error: Type[GretelJobNotFound] = RecordHandlerNotFound
 
     def __init__(
         self,

@@ -105,12 +105,8 @@ def _check_model_and_runner(sc: SessionContext, runner) -> str:
 def _configure_data_source(sc: SessionContext, in_data: str, runner: str):
     data_source = "__local__"
     if in_data and runner == RunnerMode.CLOUD.value:
-        try:
-            sc.log.info(f"Uploading input artifact {in_data}")
-            data_source = sc.project.upload_artifact(in_data)
-        except Exception as ex:
-            sc.log.error(f"Could not upload artifact {in_data}", ex=ex)
-            sc.exit(1)
+        sc.log.info(f"Uploading input artifact {in_data}")
+        data_source = sc.project.upload_artifact(in_data)
     return data_source
 
 
@@ -128,31 +124,27 @@ def create_and_run_record_handler(
     sc.log.info(f"Creating record handler for model {sc.model.model_id}")
     record_handler = sc.model.create_record_handler_obj()
 
-    try:
-        data = record_handler._submit(
-            params=params,
-            action=action,
-            runner_mode=RunnerMode(runner),
-            data_source=data_source,
-            _default_manual=True,
-        )
-        sc.register_cleanup(lambda: record_handler.cancel())
-        sc.log.info(f"Record handler created {record_handler.record_id}")
+    data = record_handler._submit(
+        params=params,
+        action=action,
+        runner_mode=RunnerMode(runner),
+        data_source=data_source,
+        _default_manual=True,
+    )
+    sc.register_cleanup(lambda: record_handler.cancel())
+    sc.log.info(f"Record handler created {record_handler.record_id}")
 
-        printable_record_handler = data.print_obj
-        if runner == RunnerMode.MANUAL.value:
-            # With --runner MANUAL, we only print the worker_key and it's up to the user to run the worker
-            sc.print(
-                data={
-                    "record_handler": printable_record_handler,
-                    "worker_key": record_handler.worker_key,
-                }
-            )
-        else:
-            sc.print(data=printable_record_handler)
-    except Exception as ex:
-        sc.log.error("Could not create record handler", ex=ex)
-        sc.exit(1)
+    printable_record_handler = data.print_obj
+    if runner == RunnerMode.MANUAL.value:
+        # With --runner MANUAL, we only print the worker_key and it's up to the user to run the worker
+        sc.print(
+            data={
+                "record_handler": printable_record_handler,
+                "worker_key": record_handler.worker_key,
+            }
+        )
+    else:
+        sc.print(data=printable_record_handler)
 
     run = None
     if runner == RunnerMode.LOCAL.value:

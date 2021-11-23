@@ -1,7 +1,5 @@
 import json
 import signal
-import sys
-import traceback
 
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Union
@@ -40,13 +38,13 @@ section G paragraph 2.
 
 
 class Logger:
-    """This classed is used to print CLI progress a debug messages
+    """This class is used to print CLI progress and debug messages
     to the console.
 
-    You will note that all messages are printed out to ``stderr``. This is by
-    design. All progress and debug messages go to ``stderr`` and any ``Response``
-    type classes go to ``stdout``. This keeps ``stdout`` clean so that output
-    can be piped and parsed by downstream commands.
+    All messages are printed out to ``stderr``. All progress and debug messages
+    go to ``stderr`` and any response type data goes to ``stdout``. This keeps
+    ``stdout`` clean so that output may be piped and parsed by downstream
+    commands.
     """
 
     def __init__(self, debug: bool = False):
@@ -84,15 +82,6 @@ class Logger:
         if msg:
             click.echo(click.style("ERROR: ", fg="red") + msg, err=True)
 
-        if include_tb and self.debug_mode:
-            if ex:
-                click.echo(ex, err=True)
-            if include_tb:
-                _, _, tb = sys.exc_info()
-                traceback.print_tb(tb)
-        if ex:
-            self.hint(ex)
-
     def hint(self, ex: ExT):
         hint = None
         try:
@@ -111,9 +100,6 @@ class Logger:
         """
         if self.debug_mode:
             click.echo(click.style("DEBUG: ", fg="blue") + msg, err=True)
-            if ex:
-                _, _, tb = sys.exc_info()
-                traceback.print_tb(tb)
 
 
 def _naming_hint(ex: ExT) -> Optional[str]:
@@ -208,18 +194,8 @@ class SessionContext(object):
     def model(self) -> Model:
         if self._model:
             return self._model
-        else:
-            try:
-                self._model = self.project.get_model(self.model_id)
-                return self._model
-            except NotFoundException as ex:
-                self.log.debug(f"Could not get model {self.model_id}", ex=ex)
-                raise click.BadParameter(
-                    (
-                        f"The model `{self.model_id}` was not found in the "
-                        f"project `{self.project.name}`. "
-                    )
-                )
+        self._model = self.project.get_model(self.model_id)
+        return self._model
 
     @property
     def project(self) -> Project:
@@ -227,15 +203,8 @@ class SessionContext(object):
             return self._project
         if not self._project_id:
             raise click.BadArgumentUsage("A project must be specified.")
-        else:
-            try:
-                self._project = get_project(name=self._project_id)
-                return self._project
-            except Exception as ex:
-                self.log.error(ex=ex, include_tb=True)
-                raise click.BadArgumentUsage(
-                    f"Could not load the specified project `{self._project_id}`"
-                ) from ex
+        self._project = get_project(name=self._project_id)
+        return self._project
 
     def ensure_project(self):
         if not self.project:
@@ -289,15 +258,13 @@ def runner_option(fn):
     def callback(ctx, param: click.Option, value: str):
         sc: SessionContext = ctx.ensure_object(SessionContext)
         selected_runner = sc.runner or value
-        if selected_runner == "local":
+        if selected_runner == RunnerMode.LOCAL.value:
             try:
                 check_docker_env()
             except DockerEnvironmentError as ex:
-                sc.log.error(
-                    "Runner is local, but docker is not running. Please check that docker is installed and running.",
-                    ex=ex,
-                )
-                sc.exit(1)
+                raise DockerEnvironmentError(
+                    "Runner is local, but docker is not running. Please check that docker is installed and running."
+                ) from ex
         return selected_runner
 
     return click.option(  # type: ignore
