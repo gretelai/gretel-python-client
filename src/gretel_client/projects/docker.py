@@ -22,7 +22,8 @@ import smart_open
 from docker.models.containers import Container
 from docker.models.volumes import Volume
 from docker.types.containers import DeviceRequest
-from tqdm import tqdm
+from tqdm.asyncio import tqdm as asyncio_tqdm
+from tqdm.auto import tqdm
 
 from gretel_client.config import get_logger, get_session_config
 from gretel_client.projects.exceptions import ContainerRunError, DockerEnvironmentError
@@ -417,7 +418,13 @@ class _PullUpdate:
         return "mb"
 
     def build_indicator(self) -> tqdm:
-        t = tqdm(total=self.total, unit=self.units, ncols=80)
+        params = {"total": self.total, "unit": self.units}
+        # if we're in a notebook environment, ncols shouldn't
+        # be configured. in a terminal environment tqdm
+        # should be an instance of asyncio_tqdm.
+        if tqdm == asyncio_tqdm:
+            params["ncols"] = 80
+        t = tqdm(**params)
         t.set_description(self.status)
         return t
 
