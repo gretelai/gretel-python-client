@@ -1,5 +1,6 @@
 from typing import Callable
 
+import pandas as pd
 import pytest
 
 from gretel_client.projects import get_project, Project, search_projects
@@ -48,5 +49,7 @@ def test_does_get_artifacts(project: Project, get_fixture: Callable):
     art_key = project.upload_artifact(art_to_upload)
     art_listing = project.artifacts
     assert len(art_listing) == 1
+    df = pd.read_csv(project.get_artifact_link(art_key))
+    assert df.equals(pd.read_csv(get_fixture("account-balances.csv")))
     project.delete_artifact(art_key)
     assert len(project.artifacts) == 0

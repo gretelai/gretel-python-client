@@ -213,6 +213,19 @@ class Project:
         """
         return self.projects_api.delete_artifact(project_id=self.name, key=key)
 
+    def get_artifact_link(self, key: str) -> str:
+        """Returns a link to download a project artifact.
+
+        Args:
+            key: Project artifact key to generate download url for.
+
+        Returns:
+            A signed URL that may be used to download the given
+            project artifact.
+        """
+        resp = self.projects_api.download_artifact(project_id=self.name, key=key)
+        return resp[f.DATA][f.DATA][f.URL]
+
 
 def search_projects(limit: int = 200, query: str = None) -> List[Project]:
     """Searches for project
