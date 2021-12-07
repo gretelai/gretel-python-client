@@ -11,6 +11,14 @@ from typing import Any, Callable, IO, List, Optional, TYPE_CHECKING, Union
 
 import smart_open
 
+from requests import HTTPError
+from tenacity import (
+    retry,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+)
+
 try:
     import pandas as pd
 except ImportError:  # pragma: no cover
@@ -29,6 +37,12 @@ class ReaderError(Exception):
     pass
 
 
+@retry(
+    retry=retry_if_exception_type(HTTPError),
+    reraise=True,
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(min=0.1, max=0.5),
+)
 def try_data_source(input_handle: Any) -> Any:
     """Given an input object, try to return an open file handler.
     Args:
