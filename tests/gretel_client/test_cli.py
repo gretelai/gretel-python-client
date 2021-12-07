@@ -202,3 +202,19 @@ def test_does_gracefully_handler_docker_errors(
     check_docker_env.assert_called_once()
     assert cmd.exit_code == 1
     assert "docker is not running" in cmd.output
+
+
+def test_can_name_model(get_project: MagicMock, runner: CliRunner):
+    cmd = runner.invoke(
+        cli,
+        [
+            "models",
+            "create",
+            "--config",
+            "synthetics/default",
+            "--name",
+            "test-project",
+        ],
+    )
+    assert cmd.exit_code == 0
+    assert get_project.return_value.create_model_obj.return_value.name == "test-project"

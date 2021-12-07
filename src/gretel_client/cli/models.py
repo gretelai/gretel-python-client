@@ -32,6 +32,12 @@ def models():
     required=True,
 )
 @click.option(
+    "--name",
+    metavar="MODEL",
+    help="Specify a name for the model.",
+    required=False,
+)
+@click.option(
     "--wait",
     metavar="SECONDS",
     help="Configures the time in seconds to wait for a model to finish running.",
@@ -70,6 +76,7 @@ def create(
     upload_model: bool,
     project: str,
     dry_run: bool,
+    name: str,
 ):
     if wait >= 0 and output:
         raise click.BadOptionUsage(
@@ -92,6 +99,9 @@ def create(
 
     sc.log.info("Preparing model")
     model: Model = sc.project.create_model_obj(config)
+
+    if name:
+        model.name = name
 
     # Figure out if we need to upload a data source as an artifact. By
     # default any cloud run will require an external data source to
