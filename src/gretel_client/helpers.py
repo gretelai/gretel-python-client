@@ -1,3 +1,4 @@
+import json
 import os
 import sys
 
@@ -7,7 +8,7 @@ from typing import Optional, Union
 import click
 
 from gretel_client.cli.common import get_description_set, poll_and_print, SessionContext
-from gretel_client.config import get_logger
+from gretel_client.config import get_logger, get_session_config
 from gretel_client.projects.common import WAIT_UNTIL_DONE
 from gretel_client.projects.docker import ContainerRun, ContainerRunError
 from gretel_client.projects.jobs import GPU, Job
@@ -95,3 +96,54 @@ def submit_docker_local(
     poll(job)
     run.extract_output_dir(str(output_dir))
     return run
+
+
+def do_api_call(
+    method: str,
+    path: str,
+    query_params: Optional[dict] = None,
+    body: Optional[dict] = None,
+    headers: Optional[dict] = None,
+) -> dict:
+    """
+    Make a direct API call to Gretel Cloud.
+
+    Args:
+        method: "get", "post", etc
+        path: The full path to make the request to, any path params must be already included.
+            Example: "/users/me"
+        query_params: Optional URL based query parameters
+        body: An optional JSON payload to send
+        headers: Any custom headers that need to bet set.
+
+    NOTE:
+        This function will automatically inject the appropiate API hostname and
+        authentication from the Gretel configuration.
+    """
+    if headers is None:
+        headers = {}
+
+    method = method.upper()
+
+    if not path.startswith("/"):
+        path = "/" + path
+
+    api = get_session_config()._get_api_client()
+
+    # Utilize the ApiClient method to inject the proper authentication
+    # into our headers, since Gretel only uses header-based auth we don't
+    # need to pass any other data into this
+    #
+    # NOTE: This function does a pointer-like update of ``headers``
+    api.update_params_for_auth(
+        headers, None, api.configuration.auth_settings(), None, None, None
+    )
+
+    url = api.configuration.host + path
+
+    response = api.request(
+        method, url, query_params=query_params, body=body, headers=headers
+    )
+
+    resp_dict = json.loads(response.data.decode())
+    return resp_dict.get("data")

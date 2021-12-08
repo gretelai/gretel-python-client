@@ -15,3 +15,4 @@
 # Import APIs into API package:
 from gretel_client.rest.api.opt_api import OptApi
 from gretel_client.rest.api.projects_api import ProjectsApi
+from gretel_client.rest.api.users_api import UsersApi

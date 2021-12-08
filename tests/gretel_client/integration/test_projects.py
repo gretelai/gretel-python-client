@@ -1,9 +1,16 @@
+import uuid
+
 from typing import Callable
 
 import pandas as pd
 import pytest
 
-from gretel_client.projects import get_project, Project, search_projects
+from gretel_client.projects import (
+    create_or_get_unique_project,
+    get_project,
+    Project,
+    search_projects,
+)
 from gretel_client.projects.projects import GretelProjectError
 from gretel_client.rest.api.projects_api import ProjectsApi
 
@@ -53,3 +60,31 @@ def test_does_get_artifacts(project: Project, get_fixture: Callable):
     assert df.equals(pd.read_csv(get_fixture("account-balances.csv")))
     project.delete_artifact(art_key)
     assert len(project.artifacts) == 0
+
+
+def test_create_or_get_unique_project(request):
+    name = uuid.uuid4().hex
+    description = "sauce, that is awesome"
+
+    # this project should not exist
+    assert not search_projects(query=name)
+
+    # first call should create it
+    project = create_or_get_unique_project(name=name, desc=description)
+    request.addfinalizer(project.delete)
+
+    def _assert():
+        assert project.name.startswith(name)
+        assert len(project.name.split("-")) == 2
+        assert project.description == description
+        assert project.display_name == name
+        assert len(search_projects(query=name)) == 1
+
+    _assert()
+
+    # next call should just return it
+    project = create_or_get_unique_project(
+        name=name, desc="NOPE", display_name="nope again"
+    )
+
+    _assert()

@@ -13,7 +13,6 @@ from urllib3.util import Retry
 from gretel_client.rest.api.projects_api import ProjectsApi
 from gretel_client.rest.api_client import ApiClient
 from gretel_client.rest.configuration import Configuration
-from gretel_client.rest.exceptions import NotFoundException, UnauthorizedException
 
 GRETEL = "gretel"
 """Gretel application name"""

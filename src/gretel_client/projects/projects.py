@@ -18,6 +18,7 @@ from gretel_client.rest import models
 from gretel_client.rest.api.projects_api import ProjectsApi
 from gretel_client.rest.exceptions import UnauthorizedException
 from gretel_client.rest.model.artifact import Artifact
+from gretel_client.users.users import get_me
 
 DATA = "data"
 PROJECTS = "projects"
@@ -367,3 +368,47 @@ def tmp_project():
         yield project
     finally:
         project.delete()
+
+
+def create_or_get_unique_project(
+    *, name: str, desc: str = None, display_name: str = None
+) -> Project:
+    """
+    Helper function that provides a consistent experience for creating
+    and fetching a project with the same name. Given a name of a project,
+    this helper will fetch the current user's ID and use that as a suffix
+    in order to create a project name unique to that user. Once the project
+    is created, if it can be fetched, it will not be re-created over and
+    over again.
+
+    Args:
+        name: The name of the project, which will have the User's ID appended
+            to it automatically.
+        desc: Description of the project
+        display_name: If None, the display name will be set equal to the value
+            of ``name`` _before_ the user ID is appended.
+
+    NOTE:
+        The ``desc`` and ``display_name`` parameters will only be used when
+        the project is first created. If the project already exists, these
+        params will have no affect.
+    """
+    current_user_dict = get_me()
+    unique_suffix = current_user_dict["_id"][9:19]
+    target_name = f"{name}-{unique_suffix}"
+
+    try:
+        project = get_project(name=target_name)
+        return project
+    except UnauthorizedException:
+        # Project name not found
+        pass
+    except Exception:
+        raise
+
+    # Try and create the project if we coud not find it
+    # originally
+    project = create_project(
+        name=target_name, display_name=display_name or name, desc=desc
+    )
+    return project
