@@ -7,11 +7,14 @@ from typing import Optional, Union
 
 import click
 
-from gretel_client.cli.common import get_description_set, poll_and_print, SessionContext
+from gretel_client.cli.common import poll_and_print, SessionContext
 from gretel_client.config import get_logger, get_session_config
+from gretel_client.models.config import get_model_type_config, GPU
 from gretel_client.projects.common import WAIT_UNTIL_DONE
 from gretel_client.projects.docker import ContainerRun, ContainerRunError
-from gretel_client.projects.jobs import GPU, Job
+from gretel_client.projects.jobs import Job
+from gretel_client.projects.models import Model
+from gretel_client.projects.records import RecordHandler
 
 log = get_logger(__name__)
 
@@ -44,6 +47,14 @@ def poll(job: Job, wait: int = WAIT_UNTIL_DONE):
         raise ValueError("Cannot fetch Job polling descriptions")
     sc.print(data=job.print_obj)
     poll_and_print(job, sc, job.runner_mode, descriptions, wait)
+
+
+def get_description_set(job: Job) -> Optional[dict]:
+    model_type_config = get_model_type_config(job.model_type)
+    if isinstance(job, Model):
+        return model_type_config.train_status_descriptions
+    if isinstance(job, RecordHandler):
+        return model_type_config.run_status_descriptions
 
 
 def submit_docker_local(

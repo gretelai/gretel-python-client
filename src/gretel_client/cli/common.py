@@ -2,20 +2,20 @@ import json
 import signal
 
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any, Callable, Optional, Union
 from urllib.parse import urlparse
 
 import click
 import requests
 
 from gretel_client.config import configure_custom_logger, get_session_config, RunnerMode
-from gretel_client.projects.common import ModelArtifact, ModelType, WAIT_UNTIL_DONE
+from gretel_client.models.config import get_status_description, StatusDescriptions
+from gretel_client.projects.common import ModelArtifact, WAIT_UNTIL_DONE
 from gretel_client.projects.docker import check_docker_env, DockerEnvironmentError
 from gretel_client.projects.jobs import Job, WaitTimeExceeded
 from gretel_client.projects.models import Model
 from gretel_client.projects.projects import get_project, Project
-from gretel_client.projects.records import RecordHandler
-from gretel_client.rest.exceptions import ApiException, NotFoundException
+from gretel_client.rest.exceptions import ApiException
 
 ExT = Union[str, Exception]
 
@@ -335,86 +335,6 @@ class ModelObjectReader:
             sc.runner = (
                 RunnerMode.CLOUD.value if runner == "cloud" else RunnerMode.LOCAL.value
             )
-
-
-StatusDescriptions = Dict[str, Dict[str, str]]
-
-model_create_status_descriptions: StatusDescriptions = {
-    "created": {
-        "default": "Model creation has been queued.",
-    },
-    "pending": {
-        "default": "A worker is being allocated to begin model creation.",
-        "cloud": "A Gretel Cloud worker is being allocated to begin model creation.",
-        "local": "A local container is being started to begin model creation.",
-    },
-    "active": {
-        "default": "A worker has started creating your model!",
-    },
-}
-
-record_generation_status_descriptions: StatusDescriptions = {
-    "created": {
-        "default": "A Record generation job has been queued.",
-    },
-    "pending": {
-        "default": "A worker is being allocated to begin generating synthetic records.",
-        "cloud": "A Gretel Cloud worker is being allocated to begin generating synthetic records.",
-        "local": "A local container is being started to begin record generation.",
-    },
-    "active": {
-        "default": "A worker has started!",
-    },
-}
-
-record_transform_status_descriptions: StatusDescriptions = {
-    "created": {
-        "default": "A Record transform job has been queued.",
-    },
-    "pending": {
-        "default": "A worker is being allocated to begin running a transform pipeline.",
-        "cloud": "A Gretel Cloud worker is being allocated to begin transforming records.",
-        "local": "A local container is being started to and will begin transforming records.",
-    },
-    "active": {
-        "default": "A worker has started!",
-    },
-}
-
-record_classify_status_descriptions: StatusDescriptions = {
-    "created": {
-        "default": "A Record classify job has been queued.",
-    },
-    "pending": {
-        "default": "A worker is being allocated to begin running a classification pipeline.",
-        "cloud": "A Gretel Cloud worker is being allocated to begin classifying records.",
-        "local": "A local container is being started and will begin classifying records.",
-    },
-    "active": {
-        "default": "A worker has started!",
-    },
-}
-
-
-def get_description_set(job: Job) -> Optional[dict]:
-    if isinstance(job, Model):
-        return model_create_status_descriptions
-    if isinstance(job, RecordHandler):
-        if job.model_type == ModelType.SYNTHETICS:
-            return record_generation_status_descriptions
-        if job.model_type == ModelType.TRANSFORMS:
-            return record_transform_status_descriptions
-        if job.model_type == ModelType.CLASSIFY:
-            return record_classify_status_descriptions
-
-
-def get_status_description(
-    descriptions: StatusDescriptions, status: str, runner: str
-) -> str:
-    status_desc = descriptions.get(status)
-    if not status_desc:
-        return ""
-    return status_desc.get(runner, status_desc.get("default", ""))
 
 
 def poll_and_print(

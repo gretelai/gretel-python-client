@@ -14,14 +14,8 @@ import smart_open
 import gretel_client.rest.exceptions
 
 from gretel_client.config import DEFAULT_RUNNER, RunnerMode
-from gretel_client.projects.common import (
-    f,
-    ModelType,
-    peek_classification_report,
-    peek_synthetics_report,
-    peek_transforms_report,
-    WAIT_UNTIL_DONE,
-)
+from gretel_client.models.config import get_model_type_config
+from gretel_client.projects.common import f, WAIT_UNTIL_DONE
 from gretel_client.projects.exceptions import GretelJobNotFound, WaitTimeExceeded
 from gretel_client.rest.api.projects_api import ProjectsApi
 
@@ -51,9 +45,6 @@ class Status(str, Enum):
 
 ACTIVE_STATES = [Status.CREATED, Status.ACTIVE, Status.PENDING]
 END_STATES = [Status.COMPLETED, Status.CANCELLED, Status.ERROR, Status.LOST]
-
-CPU = "cpu"
-GPU = "gpu"
 
 
 class Job(ABC):
@@ -127,7 +118,7 @@ class Job(ABC):
         ...
 
     @abstractproperty
-    def model_type(self) -> ModelType:
+    def model_type(self) -> str:
         ...
 
     @abstractmethod
@@ -241,12 +232,7 @@ class Job(ABC):
         return self._do_get_artifact(artifact_key)
 
     def _peek_report(self, report_contents: dict) -> Optional[dict]:
-        if self.model_type == ModelType.SYNTHETICS:
-            return peek_synthetics_report(report_contents)
-        if self.model_type == ModelType.TRANSFORMS:
-            return peek_transforms_report(report_contents)
-        if self.model_type == ModelType.CLASSIFY:
-            return peek_classification_report(report_contents)
+        return get_model_type_config(self.model_type).peek_report(report_contents)
 
     def peek_report(self, report_path: str = None) -> Optional[dict]:
         """Return a summary of the job results

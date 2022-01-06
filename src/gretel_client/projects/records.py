@@ -3,9 +3,10 @@ from __future__ import annotations
 from typing import List, Optional, Type, TYPE_CHECKING
 
 from gretel_client.config import DEFAULT_RUNNER, RunnerMode
-from gretel_client.projects.common import f, ModelRunArtifact, ModelType
+from gretel_client.models.config import get_model_type_config
+from gretel_client.projects.common import f, ModelRunArtifact
 from gretel_client.projects.exceptions import RecordHandlerError, RecordHandlerNotFound
-from gretel_client.projects.jobs import CPU, GretelJobNotFound, Job, Status
+from gretel_client.projects.jobs import GretelJobNotFound, Job, Status
 
 if TYPE_CHECKING:
     from gretel_client.projects.models import Model
@@ -66,12 +67,19 @@ class RecordHandler(Job):
         if runner_mode != RunnerMode.CLOUD and _default_manual:
             runner_mode = RunnerMode.MANUAL
 
+        optional_kwargs = {}
+        if action:
+            optional_kwargs["action"] = action
+
+        body = {"params": params, "data_source": data_source}
+        body = {key: value for key, value in body.items() if value is not None}
+
         handler = self.model._projects_api.create_record_handler(
             project_id=self.model.project.project_id,
             model_id=self.model.model_id,
-            body={"params": params, "data_source": data_source},
-            action=action,
+            body=body,
             runner_mode=runner_mode.value,
+            **optional_kwargs,
         )
 
         self._data: dict = handler[f.DATA]
@@ -87,24 +95,18 @@ class RecordHandler(Job):
         return self._data.get(f.HANDLER).get(f.CONTAINER_IMAGE)
 
     @property
-    def model_type(self) -> ModelType:
+    def model_type(self) -> str:
         """Returns the parent model type of the record handler."""
         return self.model.model_type
 
     @property
-    def action(self) -> str:
-        if self.model_type == ModelType.SYNTHETICS:
-            return "generate"
-        if self.model_type == ModelType.TRANSFORMS:
-            return "transform"
-        if self.model_type == ModelType.CLASSIFY:
-            return "classify"
-        return "unknown"
+    def action(self) -> Optional[str]:
+        return get_model_type_config(self.model_type).action_name
 
     @property
     def instance_type(self) -> str:
         """Return CPU or GPU based on the record handler's run requirements."""
-        return CPU
+        return get_model_type_config(self.model_type).run_instance_type
 
     @property
     def artifact_types(self) -> List[str]:

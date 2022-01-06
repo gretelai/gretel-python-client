@@ -26,8 +26,10 @@ from tqdm.asyncio import tqdm as asyncio_tqdm
 from tqdm.auto import tqdm
 
 from gretel_client.config import get_logger, get_session_config
+from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.exceptions import ContainerRunError, DockerEnvironmentError
 from gretel_client.projects.jobs import ACTIVE_STATES, Job
+from gretel_client.projects.records import RecordHandler
 from gretel_client.rest.api.opt_api import OptApi
 
 if TYPE_CHECKING:
@@ -194,8 +196,14 @@ class ContainerRun:
         self.device_requests.append(DEFAULT_GPU_CONFIG)
 
     def _check_gpu(self):
-        if "synthetics" not in self.image:
-            raise ContainerRunError("This image does not require a GPU")
+        model_type_config = get_model_type_config(self.job.model_type)
+        if isinstance(self.job, Model):
+            if model_type_config.train_instance_type != "gpu":
+                raise ContainerRunError("This image does not require a GPU")
+        elif isinstance(self.job, RecordHandler):
+            if model_type_config.run_instance_type != "gpu":
+                raise ContainerRunError("This image does not require a GPU")
+
         image = self._pull()
         self._docker_client.containers.run(
             image,

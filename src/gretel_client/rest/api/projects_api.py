@@ -386,21 +386,21 @@ class ProjectsApi(object):
             callable=__create_project,
         )
 
-        def __create_record_handler(self, project_id, model_id, action, **kwargs):
+        def __create_record_handler(self, project_id, model_id, **kwargs):
             """Create a record handler for a model  # noqa: E501
 
             This method makes a synchronous HTTP request by default. To make an
             asynchronous HTTP request, please pass async_req=True
 
-            >>> thread = api.create_record_handler(project_id, model_id, action, async_req=True)
+            >>> thread = api.create_record_handler(project_id, model_id, async_req=True)
             >>> result = thread.get()
 
             Args:
                 project_id (str): Project id
                 model_id (str): Model id
-                action (str):
 
             Keyword Args:
+                action (str, none_type): [optional]
                 runner_mode (str): [optional]
                 body ({str: (bool, date, datetime, dict, float, int, list, str, none_type)}): [optional]
                 _return_http_data_only (bool): response data without head status
@@ -439,7 +439,6 @@ class ProjectsApi(object):
             kwargs["_host_index"] = kwargs.get("_host_index")
             kwargs["project_id"] = project_id
             kwargs["model_id"] = model_id
-            kwargs["action"] = action
             return self.call_with_http_info(**kwargs)
 
         self.create_record_handler = _Endpoint(
@@ -476,11 +475,11 @@ class ProjectsApi(object):
                 "required": [
                     "project_id",
                     "model_id",
+                ],
+                "nullable": [
                     "action",
                 ],
-                "nullable": [],
                 "enum": [
-                    "action",
                     "runner_mode",
                 ],
                 "validation": [],
@@ -488,17 +487,15 @@ class ProjectsApi(object):
             root_map={
                 "validations": {},
                 "allowed_values": {
-                    ("action",): {
-                        "GENERATE": "generate",
-                        "TRANSFORM": "transform",
-                        "CLASSIFY": "classify",
-                    },
                     ("runner_mode",): {"CLOUD": "cloud", "MANUAL": "manual"},
                 },
                 "openapi_types": {
                     "project_id": (str,),
                     "model_id": (str,),
-                    "action": (str,),
+                    "action": (
+                        str,
+                        none_type,
+                    ),
                     "runner_mode": (str,),
                     "body": (
                         {

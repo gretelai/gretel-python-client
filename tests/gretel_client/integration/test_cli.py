@@ -483,6 +483,39 @@ def test_records_generate(
     assert (tmpdir / "data.gz").exists()
 
 
+def test_records_generate_with_model_run(
+    runner: CliRunner, get_fixture: Callable, tmpdir: Path, trained_synth_model: Model
+):
+    cmd = runner.invoke(
+        cli,
+        [  # type:ignore
+            "models",
+            "run",
+            "--project",
+            trained_synth_model.project.project_id,
+            "--model-id",
+            trained_synth_model.model_id,
+            # TODO: Using --action for backward compatibility.
+            #  As the current backend requires that value.
+            #  Can be removed after ENGPLAT-22 is shipped
+            "--action",
+            "generate",
+            "--output",
+            str(tmpdir),
+            "--runner",
+            "local",
+            "--param",
+            "num_records",
+            100,
+            "--param",
+            "max_invalid",
+            100,
+        ],
+    )
+    assert cmd.exit_code == 0
+    assert (tmpdir / "data.gz").exists()
+
+
 def test_records_transform(
     runner: CliRunner, get_fixture: Callable, tmpdir: Path, trained_xf_model: Model
 ):
@@ -493,6 +526,36 @@ def test_records_transform(
             "transform",
             "--model-id",
             trained_xf_model.model_id,
+            "--project",
+            trained_xf_model.project.project_id,
+            "--in-data",
+            str(get_fixture("account-balances.csv")),
+            "--output",
+            str(tmpdir),
+            "--runner",
+            "local",
+        ],
+    )
+    assert cmd.exit_code == 0
+    assert (tmpdir / "data.gz").exists()
+
+
+def test_records_transform_with_model_run(
+    runner: CliRunner, get_fixture: Callable, tmpdir: Path, trained_xf_model: Model
+):
+    cmd = runner.invoke(
+        cli,
+        [  # type:ignore
+            "--debug",
+            "models",
+            "run",
+            "--model-id",
+            trained_xf_model.model_id,
+            # TODO: Using --action for backward compatibility.
+            #  As the current backend requires that value.
+            #  Can be removed after ENGPLAT-22 is shipped
+            "--action",
+            "transform",
             "--project",
             trained_xf_model.project.project_id,
             "--in-data",

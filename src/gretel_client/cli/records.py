@@ -1,6 +1,6 @@
 import json
 
-from typing import Dict, Optional, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import click
 
@@ -10,14 +10,13 @@ from gretel_client.cli.common import (
     pass_session,
     poll_and_print,
     project_option,
-    record_classify_status_descriptions,
-    record_generation_status_descriptions,
-    record_transform_status_descriptions,
     runner_option,
     SessionContext,
     StatusDescriptions,
 )
+from gretel_client.cli.models import models
 from gretel_client.config import RunnerMode
+from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.docker import ContainerRun
 from gretel_client.projects.jobs import Status
 
@@ -112,11 +111,12 @@ def _configure_data_source(sc: SessionContext, in_data: str, runner: str):
 
 def create_and_run_record_handler(
     sc: SessionContext,
+    *,
     params: Optional[dict],
-    action: str,
+    action: Optional[str],
     runner: str,
     output: str,
-    in_data: str,
+    in_data: Optional[str],
     model_path: Optional[str],
     data_source: Optional[str],
     status_strings: StatusDescriptions,
@@ -180,7 +180,7 @@ def create_and_run_record_handler(
                 f"\n{json.dumps(record_handler.billing_details, indent=4)}"
             )
         )
-        sc.log.info(f"Done. Record {action} command done!")
+        sc.log.info(f"Done!")
     else:
         sc.log.error("The record command failed with the following error")
         sc.log.error(record_handler.errors)
@@ -233,7 +233,7 @@ def generate(
         runner=runner,
         output=output,
         in_data=in_data,
-        status_strings=record_generation_status_descriptions,
+        status_strings=get_model_type_config("synthetics").run_status_descriptions,
         model_path=model_path,
     )
 
@@ -268,7 +268,7 @@ def transform(
         runner=runner,
         output=output,
         in_data=in_data,
-        status_strings=record_transform_status_descriptions,
+        status_strings=get_model_type_config("transform").run_status_descriptions,
         model_path=model_path,
     )
 
@@ -303,6 +303,64 @@ def classify(
         runner=runner,
         output=output,
         in_data=in_data,
-        status_strings=record_classify_status_descriptions,
+        status_strings=get_model_type_config("classify").run_status_descriptions,
+        model_path=model_path,
+    )
+
+
+def action_option(fn):
+    return click.option("--action", help="Specify action to run.", type=str)(fn)
+
+
+@models.command(help="Run an existing model.")
+@project_option
+@runner_option
+@model_path_option
+@input_data_option
+@output_data_option
+@model_option
+@pass_session
+@action_option
+@click.option(
+    "--param",
+    type=(str, str),
+    multiple=True,
+    help="Specify parameters to pass into the record handler.",
+)
+def run(
+    sc: SessionContext,
+    project: str,
+    model_id: str,
+    in_data: Optional[str],
+    output: str,
+    runner: str,
+    model_path: str,
+    action: Optional[str],
+    param: List[Tuple[str, str]],
+):
+    """
+    Generic run command.
+    """
+
+    runner = _check_model_and_runner(sc, runner)
+    _validate_params(sc, runner, output, model_path, None)
+
+    data_source = None
+    if in_data:
+        data_source = _configure_data_source(sc, in_data, runner)
+
+    extra_params = None
+    if param and len(param) > 0:
+        extra_params = {key: value for key, value in param}
+
+    create_and_run_record_handler(
+        sc,
+        params=extra_params,
+        action=action,
+        data_source=data_source,
+        runner=runner,
+        output=output,
+        in_data=in_data,
+        status_strings=get_model_type_config().run_status_descriptions,
         model_path=model_path,
     )

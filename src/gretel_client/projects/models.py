@@ -15,10 +15,10 @@ import yaml
 from smart_open import open
 
 from gretel_client.config import RunnerMode
+from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.common import (
     f,
     ModelArtifact,
-    ModelType,
     NO,
     validate_data_source,
     YES,
@@ -28,7 +28,7 @@ from gretel_client.projects.exceptions import (
     ModelConfigError,
     ModelNotFoundError,
 )
-from gretel_client.projects.jobs import CPU, GPU, Job, Status
+from gretel_client.projects.jobs import Job, Status
 from gretel_client.projects.records import RecordHandler
 
 if TYPE_CHECKING:
@@ -217,7 +217,7 @@ class Model(Job):
     @property
     def instance_type(self) -> str:
         """Returns CPU or GPU based on the model being trained."""
-        return GPU if self.model_type == ModelType.SYNTHETICS else CPU
+        return get_model_type_config(self.model_type).train_instance_type
 
     @property
     def model_config(self) -> dict:
@@ -225,10 +225,10 @@ class Model(Job):
         return self._data[f.MODEL]["config"] if self._data else self._local_model_config
 
     @property
-    def model_type(self) -> ModelType:
+    def model_type(self) -> str:
         """Returns the type of model. Eg synthetics, transforms or classify."""
         try:
-            return ModelType(list(self.model_config["models"][0].keys())[0])
+            return list(self.model_config["models"][0].keys())[0]
         except (IndexError, KeyError) as ex:
             raise ModelConfigError("Could not determine model type from config") from ex
 

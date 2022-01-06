@@ -6,16 +6,16 @@ import click
 
 from gretel_client.cli.common import (
     download_artifacts,
-    model_create_status_descriptions,
     pass_session,
     poll_and_print,
     project_option,
     runner_option,
     SessionContext,
 )
+from gretel_client.models.config import get_model_type_config, GPU
 from gretel_client.projects.common import ModelArtifact, WAIT_UNTIL_DONE
 from gretel_client.projects.docker import ContainerRun, ContainerRunError
-from gretel_client.projects.jobs import GPU, Status
+from gretel_client.projects.jobs import Status
 from gretel_client.projects.models import Model, RunnerMode
 
 
@@ -183,7 +183,7 @@ def create(
         model,
         sc,
         runner,
-        model_create_status_descriptions,
+        get_model_type_config(model.model_type).train_status_descriptions,
         callback=run.is_ok if run else None,
         wait=wait,
     )
@@ -203,10 +203,13 @@ def create(
         report_path = Path(output) / f"{ModelArtifact.REPORT_JSON}.json.gz"
 
     sc.print(data=model.print_obj)
-    sc.log.info(
-        "Fetching model report...\n"
-        f"{json.dumps(model.peek_report(str(report_path)), indent=4) or 'Could not parse or open report'}"
-    )
+    sc.log.info("Fetching model report...")
+
+    report_data = model.peek_report(str(report_path))
+    if report_data:
+        sc.log.info(f"{json.dumps(report_data, indent=4)}")
+    else:
+        sc.log.info("Report is empty or could not be parsed.")
 
     if output:
         sc.log.info(
@@ -227,7 +230,7 @@ def create(
         sc.log.info(
             (
                 f"Model done training. The model id is\n\n\t{model.model_id}\n\n"
-                f"You can re-use this key for any gretel records [...] commands in the project {sc.project.name}"
+                f"You can re-use this key for gretel models run [...] commands in the project {sc.project.name}"
             )
         )
         sc.log.info("Done")

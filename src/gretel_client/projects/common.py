@@ -69,41 +69,6 @@ def _validate_from_reader(peek: Iterator, sample_size: int = 1) -> bool:
     return True
 
 
-def peek_transforms_report(report_contents: dict) -> dict:
-    fields = [
-        "training_time_seconds",
-        "record_count",
-        "field_count",
-        "field_transforms",
-        "value_transforms",
-    ]
-    return {f: report_contents[f] for f in fields}
-
-
-def peek_synthetics_report(report_contents: dict) -> dict:
-    fields = [
-        "synthetic_data_quality_score",
-        "field_correlation_stability",
-        "principal_component_stability",
-        "field_distribution_stability",
-        "privacy_protection_level",
-    ]
-    return {f: report_contents[f] for f in fields if f in report_contents}
-
-
-def peek_classification_report(report_contents: dict) -> dict:
-    fields = ["elapsed_time_seconds", "record_count", "field_count", "warnings"]
-    return {f: report_contents[f] for f in fields}
-
-
-class ModelType(str, Enum):
-    SYNTHETICS = "synthetics"
-    TRANSFORMS = "transforms"
-    MIXED = "mixed"
-    CLASSIFY = "classify"
-    TMP = "__tmp__"
-
-
 MANUAL = "manual"
 
 
