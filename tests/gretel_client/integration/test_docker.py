@@ -4,8 +4,9 @@ from typing import Callable
 
 import pytest
 
+from gretel_client.docker import get_container_auth
 from gretel_client.helpers import submit_docker_local
-from gretel_client.projects.docker import _get_container_auth, ContainerRun
+from gretel_client.projects.docker import ContainerRun
 from gretel_client.projects.jobs import Status
 from gretel_client.projects.models import Model
 from gretel_client.projects.projects import get_project
@@ -24,7 +25,7 @@ def test_does_start_local_container(model: Model):
     run = ContainerRun.from_job(model)
     run.enable_cloud_uploads()
     run.start()
-    assert run.container_status in {"created", "running"}
+    assert run.container.container_status in {"created", "running"}
     run.wait()
     model._poll_job_endpoint()
     assert model.status == Status.COMPLETED
@@ -40,14 +41,25 @@ def test_does_cleanup(model: Model, get_fixture: Callable):
     # be created or running. if we're in either one of
     # these statuses, it's a good indication things are
     # working as expected.
-    assert run.container_status in {"created", "running", "completed"}
-    sleep(3)
-    run._cleanup()
-    assert run.container_status in {"removing", "unknown", "exited"}
+    assert run.container.container_status in {"created", "running", "completed"}
+    run.graceful_shutdown()
+
+    def check():
+        return run.container.container_status in {"removing", "unknown", "exited"}
+
+    wait = 0
+    while wait < 20:
+        if check():
+            break
+        else:
+            wait += 1
+            sleep(1)
+
+    assert check
 
 
 def test_does_auth_registry():
-    auth, reg = _get_container_auth()
+    auth, reg = get_container_auth()
     assert auth
     assert reg
 

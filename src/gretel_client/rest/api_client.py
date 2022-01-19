@@ -836,11 +836,11 @@ class Endpoint(object):
         """This method is invoked when endpoints are called
         Example:
 
-        api_instance = OptApi()
-        api_instance.get_container_login  # this is an instance of the class Endpoint
-        api_instance.get_container_login()  # this invokes api_instance.get_container_login.__call__()
+        api_instance = JobsApi()
+        api_instance.receive_one  # this is an instance of the class Endpoint
+        api_instance.receive_one()  # this invokes api_instance.receive_one.__call__()
         which then invokes the callable functions stored in that endpoint at
-        api_instance.get_container_login.callable or self.callable in this class
+        api_instance.receive_one.callable or self.callable in this class
 
         """
         return self.callable(self, *args, **kwargs)

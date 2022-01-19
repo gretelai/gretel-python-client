@@ -11,7 +11,8 @@ import requests
 from gretel_client.config import configure_custom_logger, get_session_config, RunnerMode
 from gretel_client.models.config import get_status_description, StatusDescriptions
 from gretel_client.projects.common import ModelArtifact, WAIT_UNTIL_DONE
-from gretel_client.projects.docker import check_docker_env, DockerEnvironmentError
+from gretel_client.projects.docker import check_docker_env
+from gretel_client.projects.exceptions import DockerEnvironmentError
 from gretel_client.projects.jobs import Job, WaitTimeExceeded
 from gretel_client.projects.models import Model
 from gretel_client.projects.projects import get_project, Project
@@ -176,9 +177,14 @@ class SessionContext(object):
             )
             click.echo(_copyright_data + "\n\n", err=True)
 
-    def print(self, *, ok: bool = True, message: str = None, data: Union[list, dict]):
+    def print(
+        self, *, ok: bool = True, message: str = None, data: Union[list, dict, str]
+    ):
         if self.output_fmt == "json":
-            click.echo(json.dumps(data, indent=4))
+            if isinstance(data, str):
+                click.echo(data)
+            else:
+                click.echo(json.dumps(data, indent=4))
         else:
             click.UsageError("Invalid output format", ctx=self.ctx)
         if not ok:
@@ -248,6 +254,7 @@ def project_option(fn):
     return click.option(  # type:ignore
         "--project",
         allow_from_autoenv=True,
+        envvar="GRETEl_DEFAULT_PROJECT",
         help="Gretel project to execute command from",
         metavar="NAME",
         callback=callback,

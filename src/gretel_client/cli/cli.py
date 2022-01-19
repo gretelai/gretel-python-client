@@ -1,7 +1,9 @@
 import click
 
+from gretel_client.cli.agent import agent
 from gretel_client.cli.artifacts import artifacts
 from gretel_client.cli.common import pass_session, SessionContext
+from gretel_client.cli.connectors import connectors
 from gretel_client.cli.errors import ExceptionHandler
 from gretel_client.cli.models import models
 from gretel_client.cli.projects import projects
@@ -91,6 +93,8 @@ cli.add_command(models)
 cli.add_command(records)
 cli.add_command(projects)
 cli.add_command(artifacts)
+cli.add_command(connectors)
+cli.add_command(agent)
 
 
 if __name__ == "__main__":

@@ -319,7 +319,7 @@ class Model(Job):
 
         Args:
             data_source: A data source to upload to the record handler.
-             params: Any custom params for the record handler. These params
+            params: Any custom params for the record handler. These params
                 are specific to the upstream model.
         """
         return RecordHandler(self, data_source=data_source, params=params)

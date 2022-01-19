@@ -1,4 +1,5 @@
 import json
+import time
 
 from pathlib import Path
 from typing import Callable
@@ -7,10 +8,11 @@ import docker
 import docker.errors
 import pytest
 
-from gretel_client.projects.docker import (
-    _PullProgressPrinter,
+from gretel_client.docker import (
+    Container,
     DataVolume,
     extract_container_path,
+    PullProgressPrinter,
 )
 
 
@@ -48,8 +50,25 @@ def test_docker_pull_progress(get_fixture: Callable):
     update_mock = iter(
         json.loads(line) for line in update_fixture.read_text().strip().split("\n")
     )
-    progress_printer = _PullProgressPrinter(update_mock)
+    progress_printer = PullProgressPrinter(update_mock)
     progress_printer.start()
     # assert that all progress updates have been handled
     with pytest.raises(StopIteration):
         next(update_mock)
+
+
+def test_container(request):
+    c = Container(
+        image="busybox:latest",
+        auth_strategy=None,
+        params=["echo", "hello"],
+        remove=False,
+    )
+    request.addfinalizer(c.stop)  # in case the test fails, cleanup the container
+    c.start()
+    while c.active:
+        time.sleep(1)
+    assert c.get_logs().strip() == "hello"
+    c.stop()
+    with pytest.raises(docker.errors.NotFound):
+        docker.from_env().containers.get(c.run.id)

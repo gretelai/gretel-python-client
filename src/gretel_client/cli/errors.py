@@ -170,5 +170,7 @@ class ExceptionHandler(click.Group):
     def invoke(self, ctx: click.Context):
         try:
             super().invoke(ctx)
+        except click.exceptions.Exit:
+            pass
         except Exception as ex:
             handle_error(ex, ctx)

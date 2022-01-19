@@ -19,7 +19,7 @@ from gretel_client.config import (
     GRETEL_ENDPOINT,
     GRETEL_PROJECT,
 )
-from gretel_client.projects.docker import DockerEnvironmentError
+from gretel_client.projects.exceptions import DockerEnvironmentError
 from gretel_client.projects.jobs import Status
 
 
