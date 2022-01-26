@@ -1,6 +1,6 @@
 from enum import Enum
 from pathlib import Path
-from typing import Iterator, Union
+from typing import Iterator, Optional, Union
 
 from smart_open import open
 
@@ -41,10 +41,28 @@ def validate_data_source(data_source: Pathlike) -> bool:
         return _validate_from_reader(peek)
     except Exception:
         pass
+
+    ext = _get_extension(data_source)
+    if ext and ext in {".parquet", ".parq"}:
+        return True
+
     raise DataValidationError(
         f"Data validation checks for '{data_source}' failed. "
-        "Are you sure the file is valid JSON or CSV?"
+        "Are you sure the file is valid JSON, CSV or Parquet?"
     )
+
+
+def _get_extension(data_source: Pathlike) -> Optional[str]:
+    try:
+        if isinstance(data_source, str):
+            return Path(data_source).suffix
+
+        elif isinstance(data_source, Path):
+            return data_source.suffix
+    except Exception:
+        pass
+
+    return None
 
 
 def _validate_from_reader(peek: Iterator, sample_size: int = 1) -> bool:
