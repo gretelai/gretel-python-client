@@ -4,6 +4,7 @@ Classes responsible for running local Gretel worker agents.
 from __future__ import annotations
 
 import logging
+import os
 import threading
 
 from dataclasses import asdict, dataclass
@@ -18,8 +19,6 @@ from gretel_client.config import configure_custom_logger, get_session_config
 from gretel_client.docker import CloudCreds, DataVolumeDef
 from gretel_client.projects import get_project
 from gretel_client.rest.apis import JobsApi, ProjectsApi, UsersApi
-
-configure_logging()
 
 
 class AgentError(Exception):
@@ -107,7 +106,7 @@ class Job:
     @classmethod
     def from_dict(cls, source: dict, agent_config: AgentConfig) -> Job:
         return cls(
-            uid=source["run_id"],
+            uid=source["run_id"] or source["model_id"],
             job_type=source["job_type"],
             container_image=source["container_image"],
             worker_token=source["worker_token"],
@@ -126,9 +125,10 @@ class Job:
 
     @property
     def env(self) -> Dict[str, str]:
+        params = {"AWS_DEFAULT_REGION": os.getenv("AWS_DEFAULT_REGION", "")}
         if self.cloud_creds:
-            return self.cloud_creds.env
-        return {}
+            params.update(self.cloud_creds.env)
+        return params
 
 
 class RateLimiter:
@@ -240,6 +240,7 @@ class Agent:
     """Starts an agent"""
 
     def __init__(self, config: AgentConfig):
+        configure_logging()
         self._logger = logging.getLogger(__name__)
         configure_custom_logger(self._logger)
         self._config = config

@@ -11,7 +11,6 @@ sources:
     trigger:
         type: sqs
         endpoint: https://sqs.us-east-2.amazonaws.com/254655596517/s3-connector-inbound
-        max_inflight: 10
 
 sinks:
   my_s3_sink:
@@ -24,3 +23,4 @@ connectors:
     version: dev
     source: my_s3_source
     sink: my_s3_sink
+    max_active: 2
