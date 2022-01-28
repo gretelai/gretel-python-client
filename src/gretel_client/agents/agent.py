@@ -125,10 +125,19 @@ class Job:
 
     @property
     def env(self) -> Dict[str, str]:
-        params = {"AWS_DEFAULT_REGION": os.getenv("AWS_DEFAULT_REGION", "")}
+        params = {
+            "AWS_DEFAULT_REGION": os.getenv("AWS_DEFAULT_REGION", ""),
+            "GRETEL_STAGE": self.gretel_stage,
+        }
         if self.cloud_creds:
             params.update(self.cloud_creds.env)
         return params
+
+    @property
+    def gretel_stage(self) -> str:
+        if "https://api-dev.gretel.cloud" in get_session_config().endpoint:
+            return "dev"
+        return "prod"
 
 
 class RateLimiter:
