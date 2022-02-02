@@ -108,5 +108,8 @@ def start(
 def parse_connector_version(config_path: str, connector: str) -> str:
     with open(config_path, "r") as fh:
         config = yaml.safe_load(fh)
-    release = config["connectors"][connector].get("version", "latest")
+    release = "latest"
+    for config in config["connectors"]:
+        if config.get("name") == connector:
+            release = config.get("version", "latest")
     return f"{CONNECTOR_CONTAINER}:{release}"

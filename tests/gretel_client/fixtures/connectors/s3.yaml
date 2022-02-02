@@ -1,25 +1,27 @@
 version: 1
 
 sources:
-  my_s3_source:
+  - name: my_s3_source
     type: s3
-    file_type: csv
-    bucket: drew-connector-test
-    path_prefix: sandbox
-    glob_filter: "*.csv"
+    config:
+      file_type: csv
+      bucket: drew-connector-test
+      path_prefix: sandbox
+      glob_filter: "*.csv"
 
-    trigger:
-        type: sqs
-        endpoint: https://sqs.us-east-2.amazonaws.com/254655596517/s3-connector-inbound
+      trigger:
+          type: sqs
+          endpoint: https://sqs.us-east-2.amazonaws.com/254655596517/s3-connector-inbound
 
 sinks:
-  my_s3_sink:
+  - name: my_s3_sink
     type: s3
-    bucket: s3-connector-test-destination
-    path_prefix: output/sandbox
+    config:
+      bucket: s3-connector-test-destination
+      path_prefix: output/sandbox
 
 connectors:
-  default:
+  - name: default
     version: dev
     source: my_s3_source
     sink: my_s3_sink
