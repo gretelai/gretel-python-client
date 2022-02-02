@@ -63,6 +63,7 @@ def test_container(request):
         auth_strategy=None,
         params=["echo", "hello"],
         remove=False,
+        detach=True,
     )
     request.addfinalizer(c.stop)  # in case the test fails, cleanup the container
     c.start()

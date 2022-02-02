@@ -24,13 +24,8 @@ from gretel_client.docker import (
 from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.exceptions import ContainerRunError
 from gretel_client.projects.jobs import ACTIVE_STATES, Job
+from gretel_client.projects.models import Model
 from gretel_client.projects.records import RecordHandler
-
-if TYPE_CHECKING:
-    from gretel_client.projects.models import Model
-else:
-    Model = None
-
 
 DEFAULT_ARTIFACT_DIR = "/workspace"
 
@@ -114,6 +109,7 @@ class ContainerRun:
         try:
             self._check_gpu()
         except Exception as ex:
+            self.logger.debug(ex)
             raise ContainerRunError("GPU could not be configured") from ex
         self.device_requests.append(DEFAULT_GPU_CONFIG)
 
@@ -128,7 +124,7 @@ class ContainerRun:
 
         build_container(
             image=self.image,
-            device_requests=[DEFAULT_ARTIFACT_DIR],
+            device_requests=[DEFAULT_GPU_CONFIG],
             params=["-c", "nvidia-smi"],
             remove=True,
         ).start(entrypoint="bash")

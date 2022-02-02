@@ -289,7 +289,7 @@ class Container:
         self.image = image
         self._auth_strategy = auth_strategy
         self._volumes = volumes or []
-        self._device_requests = device_requests or None
+        self._device_requests = device_requests or []
         self._params = self._parse_params(params)
         self._env = [f"{k}={v}" for k, v in env.items() if v] if env else {}
         self._detach = detach
@@ -349,7 +349,7 @@ class Container:
             image,
             self._params,
             entrypoint=entrypoint,
-            detach=True,
+            detach=self._detach,
             volumes=volumes,
             environment=self._env,
             device_requests=self._device_requests,
