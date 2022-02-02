@@ -31,9 +31,18 @@ GRETEL_CONFIG_FILE = "GRETEL_CONFIG_FILE"
 GRETEL_PROJECT = "GRETEL_PROJECT"
 """Env variable name to select default project"""
 
-
 DEFAULT_GRETEL_ENDPOINT = "https://api.gretel.cloud"
 """Default gretel endpoint"""
+
+GRETEL_PREVIEW_FEATURES = "GRETEL_PREVIEW_FEATURES"
+"""Env variable to manage preview features"""
+
+
+class PreviewFeatures(Enum):
+    """Manage preview feature configurations"""
+
+    ENABLED = "enabled"
+    DISABLED = "disabled"
 
 
 class GretelClientConfigurationError(Exception):
@@ -69,12 +78,16 @@ class ClientConfig:
     default_runner: str = DEFAULT_RUNNER.value
     """Default runner"""
 
+    preview_features: str = PreviewFeatures.DISABLED.value
+    """Preview features enabled"""
+
     def __init__(
         self,
         endpoint: Optional[str] = None,
         api_key: Optional[str] = None,
         default_project_name: Optional[str] = None,
         default_runner: str = DEFAULT_RUNNER.value,
+        preview_features: str = PreviewFeatures.DISABLED.value,
     ):
         self.endpoint = (
             endpoint or os.getenv(GRETEL_ENDPOINT) or DEFAULT_GRETEL_ENDPOINT
@@ -84,6 +97,7 @@ class ClientConfig:
         self.default_project_name = (
             default_project_name or os.getenv(GRETEL_PROJECT) or default_project_name
         )
+        self.preview_features = os.getenv(GRETEL_PREVIEW_FEATURES) or preview_features
 
     @classmethod
     def from_file(cls, file_path: Path) -> ClientConfig:
@@ -180,6 +194,10 @@ class ClientConfig:
             return "None"
 
         return self.api_key[:8] + "****"
+
+    @property
+    def preview_features_enabled(self) -> bool:
+        return self.preview_features == PreviewFeatures.ENABLED.value
 
 
 def _get_config_path() -> Path:

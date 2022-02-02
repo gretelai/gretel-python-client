@@ -6,10 +6,14 @@ import click
 
 from gretel_client.agents.agent import AgentConfig, get_agent
 from gretel_client.cli.common import pass_session, project_option, SessionContext
+from gretel_client.config import get_session_config
 from gretel_client.docker import AwsCredFile
 
 
-@click.group(help="Connect Gretel with a data source")
+@click.group(
+    help="Connect Gretel with a data source",
+    hidden=not get_session_config().preview_features_enabled,
+)
 def agent():
     ...
 

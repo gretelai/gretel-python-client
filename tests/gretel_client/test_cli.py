@@ -65,6 +65,7 @@ def test_configure_env(write_config: MagicMock, runner: CliRunner):
     assert get_session_config().api_key == new_api
     assert get_session_config().endpoint == new_endpoint
     assert get_session_config().default_project_name == new_proj
+    assert not get_session_config().preview_features_enabled
     assert cmd.exit_code == 0
 
 

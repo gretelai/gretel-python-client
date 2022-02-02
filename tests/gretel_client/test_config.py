@@ -10,6 +10,8 @@ from gretel_client.config import (
     ClientConfig,
     configure_session,
     get_session_config,
+    GRETEL_PREVIEW_FEATURES,
+    PreviewFeatures,
     write_config,
 )
 from gretel_client.rest.api.projects_api import ProjectsApi
@@ -20,6 +22,7 @@ def test_does_read_and_write_config(dev_ep, tmpdir):
         endpoint=dev_ep,
         api_key="grtu...",
         default_project_name=None,
+        preview_features=PreviewFeatures.ENABLED.value,
     )
 
     tmp_config_path = Path(tmpdir / "config.json")
@@ -46,3 +49,14 @@ def test_does_set_session_factory(dev_ep):
 def test_can_get_api_bindings():
     client = get_session_config()
     assert isinstance(client.get_api(ProjectsApi), ProjectsApi)
+
+
+def test_configure_preview_features():
+    with patch.dict(
+        os.environ,
+        {GRETEL_PREVIEW_FEATURES: PreviewFeatures.ENABLED.value},
+    ):
+        configure_session(
+            _load_config()
+        )  # ensure the session is reloaded with new env variables
+        assert get_session_config().preview_features_enabled
