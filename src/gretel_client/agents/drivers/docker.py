@@ -35,7 +35,11 @@ class Docker(Driver):
         if job.cloud_creds:
             volumes.append(job.cloud_creds.volume)
         container_run = build_container(
-            image=job.container_image, params=job.params, env=job.env, volumes=volumes
+            image=job.container_image,
+            params=job.params,
+            env=job.env,
+            volumes=volumes,
+            detach=True,
         )
         container_run.start()
         if job.log:

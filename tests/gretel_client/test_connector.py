@@ -46,6 +46,7 @@ def test_does_construct_connector_container(
             )
         ],
         env={"GRETEL_API_KEY": sess.api_key, "GRETEL_ENDPOINT": sess.endpoint},
+        detach=True,
     )
 
     build_container.return_value.start.assert_called_once()

@@ -94,6 +94,7 @@ def start(
         params=params,
         volumes=volumes,
         env=env,
+        detach=True,
     )
 
     sc.register_cleanup(lambda: container.stop())

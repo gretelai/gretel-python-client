@@ -8,7 +8,7 @@ import os
 import threading
 
 from dataclasses import asdict, dataclass
-from typing import Callable, Dict, Generic, Iterator, List, Optional
+from typing import Callable, Dict, Generic, Iterator, Optional
 
 from backports.cached_property import cached_property
 
@@ -16,7 +16,7 @@ from gretel_client.agents.drivers.driver import ComputeUnit, Driver
 from gretel_client.agents.drivers.registry import get_driver
 from gretel_client.agents.logger import configure_logging
 from gretel_client.config import configure_custom_logger, get_session_config
-from gretel_client.docker import CloudCreds, DataVolumeDef
+from gretel_client.docker import CloudCreds
 from gretel_client.projects import get_project
 from gretel_client.rest.apis import JobsApi, ProjectsApi, UsersApi
 
