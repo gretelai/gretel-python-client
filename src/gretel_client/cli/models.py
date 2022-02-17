@@ -224,7 +224,6 @@ def create(
             )
         )
     sc.log.info(("Billing estimate" f"\n{json.dumps(model.billing_details, indent=4)}"))
-    sc.log.info("Note: no charges will be incurred during the beta period")
 
     if model.status == Status.COMPLETED:
         sc.log.info(
