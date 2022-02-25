@@ -394,7 +394,7 @@ def create_or_get_unique_project(
         params will have no affect.
     """
     current_user_dict = get_me()
-    unique_suffix = current_user_dict["_id"][9:19]
+    unique_suffix = current_user_dict["_id"][9:]
     target_name = f"{name}-{unique_suffix}"
 
     try:
