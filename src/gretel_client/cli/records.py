@@ -201,7 +201,7 @@ def create_and_run_record_handler(
 @click.option(
     "--max-invalid",
     help="Number of invalid records generated before failure.",
-    default=500,
+    default=None,
 )
 @pass_session
 def generate(
