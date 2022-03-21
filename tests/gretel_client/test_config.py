@@ -1,7 +1,8 @@
 import os
 
 from pathlib import Path
-from unittest.mock import patch
+from unittest import mock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -60,3 +61,39 @@ def test_configure_preview_features():
             _load_config()
         )  # ensure the session is reloaded with new env variables
         assert get_session_config().preview_features_enabled
+
+
+@patch("gretel_client.config.get_session_config")
+@patch("gretel_client.config._get_config_path")
+@patch("gretel_client.config.getpass")
+@patch("gretel_client.config.write_config")
+def test_configure_session_with_cache(
+    write_config: MagicMock,
+    get_pass: MagicMock,
+    _get_config_path: MagicMock,
+    get_session_config: MagicMock,
+):
+    get_session_config.return_value = None
+    _get_config_path.return_value = Path("/path/that/does/not/exist")
+    get_pass.return_value = "grtu..."
+
+    with mock.patch.dict("os.environ", {}, clear=True):
+        configure_session(api_key="prompt", cache="yes")
+    get_pass.assert_called_once()
+    write_config.assert_called_once()
+    assert write_config.call_args[0][0].api_key == "grtu..."
+
+    write_config.reset_mock()
+
+    configure_session(api_key="grtu...")
+    write_config.assert_not_called()
+
+
+@patch("gretel_client.config._get_config_path")
+def test_clear_gretel_config(_get_config_path: MagicMock):
+    _get_config_path.return_value.exists.return_value = False
+    with mock.patch.dict("os.environ", {}, clear=True):
+        configure_session(clear=True)
+    config_path = _get_config_path.return_value
+    config_path.unlink.assert_called_once()
+    config_path.parent.rmdir.assert_called_once()

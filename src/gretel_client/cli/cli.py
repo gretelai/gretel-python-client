@@ -15,6 +15,8 @@ from gretel_client.config import (
     RunnerMode,
     write_config,
 )
+from gretel_client.projects.common import f
+from gretel_client.users import users
 
 
 class GretelCliHandler(ExceptionHandler):
@@ -87,6 +89,13 @@ def configure(
     sc.log.info(f"Configuration written to {config_path}. Done.")
 
     sc.print(data=config.masked)
+
+
+@cli.command(help="Check account, user and configuration details.")
+@pass_session
+def whoami(sc: SessionContext):
+    me = users.get_me()
+    sc.print(data={f.EMAIL: me[f.EMAIL], "config": sc.config.masked})
 
 
 cli.add_command(models)

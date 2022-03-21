@@ -153,7 +153,7 @@ def handle_error(ex: Exception, ctx: click.Context):
             how the error came to be.
     """
 
-    if ctx.obj.debug:
+    if ctx.obj and ctx.obj.debug:
         ctx.obj.log.debug(traceback.format_exc())
 
     for ex_t, handler in exception_map().items():

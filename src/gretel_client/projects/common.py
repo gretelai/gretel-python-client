@@ -120,6 +120,7 @@ class f:
     RUNNER_MODE = "runner_mode"
     CONTAINER_IMAGE = "container_image"
     HANDLER = "handler"
+    EMAIL = "email"
 
 
 YES = "yes"

@@ -3,14 +3,17 @@ from __future__ import annotations
 import json
 import logging
 import os
+import traceback
 
 from enum import Enum
+from getpass import getpass
 from pathlib import Path
 from typing import Optional, Type, TypeVar, Union
 
 from urllib3.util import Retry
 
 from gretel_client.rest.api.projects_api import ProjectsApi
+from gretel_client.rest.api.users_api import UsersApi
 from gretel_client.rest.api_client import ApiClient
 from gretel_client.rest.configuration import Configuration
 
@@ -36,6 +39,8 @@ DEFAULT_GRETEL_ENDPOINT = "https://api.gretel.cloud"
 
 GRETEL_PREVIEW_FEATURES = "GRETEL_PREVIEW_FEATURES"
 """Env variable to manage preview features"""
+
+GRETEL_ENVS = [GRETEL_API_KEY, GRETEL_PROJECT]
 
 
 class PreviewFeatures(Enum):
@@ -136,6 +141,10 @@ class ClientConfig:
         )
         return ApiClient(configuration)
 
+    @property
+    def email(self) -> str:
+        return self.get_api(UsersApi).users_me()["data"]["me"]["email"]
+
     def get_api(
         self,
         api_interface: Type[T],
@@ -185,7 +194,7 @@ class ClientConfig:
     def masked(self) -> dict:
         """Returns a masked representation of the config object."""
         c = self.as_dict
-        c["api_key"] = "[redacted from output]"
+        c["api_key"] = self.masked_api_key
         return c
 
     @property
@@ -206,6 +215,23 @@ def _get_config_path() -> Path:
     if from_env:
         return Path(from_env)
     return Path().home() / f".{GRETEL}" / "config.json"
+
+
+def clear_gretel_config():
+    """Removes any Gretel configuration files from the host file system.
+
+    If any Gretel related  environment variables exist, this will also remove
+    them from the current processes.
+    """
+    try:
+        config = _get_config_path()
+        config.unlink()
+        config.parent.rmdir()
+    except (FileNotFoundError, OSError):
+        pass
+    for env_var in GRETEL_ENVS:
+        if env_var in os.environ:
+            del os.environ[env_var]
 
 
 def _load_config(config_path: Path = None) -> ClientConfig:
@@ -264,18 +290,70 @@ def get_session_config() -> ClientConfig:
     return _session_client_config
 
 
-def configure_session(config: Union[str, ClientConfig]):
+def configure_session(
+    config: Optional[Union[str, ClientConfig]] = None,
+    *,
+    api_key: Optional[str] = None,
+    endpoint: Optional[str] = None,
+    cache: str = "no",
+    validate: bool = False,
+    clear: bool = False,
+):
     """Updates client config for the session
 
     Args:
-        config: The config to update. If the config is a string, this function
-            will attempt to parse it as a Gretel URI.
+        config: The config to update. This config takes precedence over
+            other parameters such as ``api_key`` or ``endpoint``.
+        api_key: Configures your Gretel API key. If ``api_key`` is set to
+            "prompt" and no Api Key is found on the system, ``getpass``
+            will be used to prompt for the key.
+        endpoint: Specifies the Gretel API endpoint. This must be a fully
+            qualified URL.
+        cache: Valid options include "yes" and "no". If cache is "no"
+            the session configuration will not be written to disk. If cache is
+            "yes", session configuration will be written to disk only if a
+            configuration doesn't exist.
+        validate: If set to ``True`` this will check that login credentials
+            are valid.
+        clear: If set to ``True`` any existing Gretel credentials will be
+            removed from the host.
     """
+    if clear:
+        clear_gretel_config()
+
+    if not config:
+        config = _load_config()
+
+    if isinstance(config, str):
+        raise NotImplementedError("Gretel URIs are not supported yet.")
+
+    if api_key == "prompt":
+        if config.api_key:
+            print("Found cached Gretel credentials")
+        else:
+            api_key = getpass("Gretel Api Key")
+
+    if api_key and api_key.startswith("grt") or endpoint:
+        config = ClientConfig(endpoint=endpoint, api_key=api_key)
+
+    if cache == "yes":
+        try:
+            ClientConfig.from_file(_get_config_path())
+        except Exception:
+            print("Caching Gretel config to disk.")
+            write_config(config)
+
     global _session_client_config
     if isinstance(config, ClientConfig):
         _session_client_config = config
-    if isinstance(config, str):
-        raise NotImplementedError("Gretel URIs are not supported yet.")
+
+    if validate:
+        print(f"Using endpoint {config.endpoint}")
+        try:
+            print(f"Logged in as {config.email} \u2705")
+        except Exception:
+            print("Failed to validate credentials. Please check your config.")
+            traceback.print_exc()
 
 
 _custom_logger = None
