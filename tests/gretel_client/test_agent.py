@@ -6,7 +6,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from gretel_client.agents.agent import Agent, AgentConfig, Poller
+from gretel_client.agents.agent import Agent, AgentConfig, Job, Poller
+from gretel_client.agents.drivers.docker import Docker
+from gretel_client.docker import CaCertFile
 from gretel_client.rest.apis import JobsApi, ProjectsApi
 
 
@@ -108,3 +110,21 @@ def test_agent_job_poller(agent_config: AgentConfig):
     assert job.job_type == job_data["job_type"]
     assert job.container_image == job_data["container_image"]
     assert job.worker_token == job_data["worker_token"]
+
+
+@patch("gretel_client.agents.agent.get_session_config")
+@patch("gretel_client.agents.drivers.docker.build_container")
+def test_job_with_ca_bundle(docker_client: MagicMock, get_session_config: MagicMock):
+    cert = CaCertFile(cred_from_agent="/bundle/path")
+    config = AgentConfig(
+        driver="docker",
+        creds=[cert],
+    )
+    job = Job.from_dict(get_mock_job(), config)
+
+    assert job.env["REQUESTS_CA_BUNDLE"] == "/etc/ssl/agent_ca.crt"
+
+    docker = Docker.from_config(config)
+    docker.schedule(job)
+
+    assert cert.volume in docker_client.mock_calls[0][2]["volumes"]

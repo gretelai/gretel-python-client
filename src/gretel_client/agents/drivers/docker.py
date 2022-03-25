@@ -23,17 +23,24 @@ class Docker(Driver):
     VMs where a docker daemon is running.
     """
 
-    def __init__(self):
+    def __init__(self, agent_config: AgentConfig):
         self._docker_client = docker.from_env()
+        self._agent_config = agent_config
 
     @classmethod
     def from_config(cls, config: AgentConfig) -> Docker:
-        return cls()
+        return cls(config)
 
     def schedule(self, job: Job) -> Container:
         volumes = []
         if job.cloud_creds:
-            volumes.append(job.cloud_creds.volume)
+            for cred in job.cloud_creds:
+                volumes.append(cred.volume)
+
+        if self._agent_config.volumes:
+            for vol in self._agent_config.volumes:
+                volumes.append(vol)
+
         container_run = build_container(
             image=job.container_image,
             params=job.params,

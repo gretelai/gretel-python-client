@@ -8,7 +8,7 @@ import os
 import threading
 
 from dataclasses import asdict, dataclass
-from typing import Callable, Dict, Generic, Iterator, Optional
+from typing import Callable, Dict, Generic, Iterator, List, Optional
 
 from backports.cached_property import cached_property
 
@@ -16,7 +16,7 @@ from gretel_client.agents.drivers.driver import ComputeUnit, Driver
 from gretel_client.agents.drivers.registry import get_driver
 from gretel_client.agents.logger import configure_logging
 from gretel_client.config import configure_custom_logger, get_session_config
-from gretel_client.docker import CloudCreds
+from gretel_client.docker import CloudCreds, DataVolumeDef
 from gretel_client.projects import get_project
 from gretel_client.rest.apis import JobsApi, ProjectsApi, UsersApi
 
@@ -46,11 +46,17 @@ class AgentConfig:
     jobs from all projects will be fetched.
     """
 
-    creds: Optional[CloudCreds] = None
+    creds: Optional[List[CloudCreds]] = None
     """Provide credentials to propagate to the worker"""
 
     artifact_endpoint: Optional[str] = None
     """Configure an artifact endpoint for workers to store intermediate data on."""
+
+    volumes: Optional[List[DataVolumeDef]] = None
+    """A list of volumes to mount into the worker container"""
+
+    env_vars: Optional[dict] = None
+    """A list of environment variables to mount into the container"""
 
     _max_runtime_seconds: Optional[int] = None
     """TODO: implement"""
@@ -100,8 +106,9 @@ class Job:
     worker_token: str
     max_runtime_seconds: int
     log: Optional[Callable] = None
-    cloud_creds: Optional[CloudCreds] = None
+    cloud_creds: Optional[List[CloudCreds]] = None
     artifact_endpoint: Optional[str] = None
+    env_vars: Optional[dict] = None
 
     @classmethod
     def from_dict(cls, source: dict, agent_config: AgentConfig) -> Job:
@@ -114,6 +121,7 @@ class Job:
             max_runtime_seconds=agent_config.max_runtime_seconds,
             cloud_creds=agent_config.creds,
             artifact_endpoint=agent_config.artifact_endpoint,
+            env_vars=agent_config.env_vars,
         )
 
     @property
@@ -130,7 +138,10 @@ class Job:
             "GRETEL_STAGE": self.gretel_stage,
         }
         if self.cloud_creds:
-            params.update(self.cloud_creds.env)
+            for cred in self.cloud_creds:
+                params.update(cred.env)
+        if self.env_vars:
+            params.update(self.env_vars)
         return params
 
     @property

@@ -166,7 +166,13 @@ class AuthStrategy(Enum):
 class DataVolumeDef:
 
     target_dir: str
+    """Defines container directory to place host file"""
+
     host_files: List[Tuple[str, Optional[str]]]
+    """Specify what files to place into the container. The
+    first item in the tuple is the host file and the second
+    item optionally renames the host file on the container.
+    """
 
 
 class DataVolume:
@@ -474,6 +480,24 @@ class AwsCredFile(CloudCreds):
         return {
             "AWS_CREDENTIAL_PROFILES_FILE": f"{self.base_dir}/{self.credential_file}",
             "AWS_DEFAULT_PROFILE": "default",
+        }
+
+
+class CaCertFile(CloudCreds):
+
+    base_dir: str = "/etc/ssl"
+    credential_file = "agent_ca.crt"
+
+    @property
+    def volume(self) -> DataVolumeDef:
+        return DataVolumeDef(
+            self.base_dir, [(self.cred_from_agent, self.credential_file)]
+        )
+
+    @property
+    def env(self) -> Dict[str, str]:
+        return {
+            "REQUESTS_CA_BUNDLE": f"{self.base_dir}/{self.credential_file}",
         }
 
 
