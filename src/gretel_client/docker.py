@@ -54,8 +54,8 @@ class _PullUpdate:
     """Units in mb"""
 
     def __post_init__(self):
-        self.current = round(self.current / 2 ** 20) if self.current else None
-        self.total = round(self.total / 2 ** 20) if self.total else None
+        self.current = round(self.current / 2**20) if self.current else None
+        self.total = round(self.total / 2**20) if self.total else None
 
     @classmethod
     def from_dict(cls, source: dict) -> _PullUpdate:

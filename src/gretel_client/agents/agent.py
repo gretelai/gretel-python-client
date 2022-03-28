@@ -253,7 +253,7 @@ class Poller(Iterator):
                 wait_secs = 2
                 self._logger.info("Heartbeat from poller, still here...")
             else:
-                wait_secs += wait_secs ** 2
+                wait_secs += wait_secs**2
 
 
 class Agent:
