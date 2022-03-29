@@ -11,6 +11,7 @@ import docker
 
 from gretel_client.agents.drivers.driver import Driver
 from gretel_client.docker import build_container, Container
+from gretel_client.projects.docker import DEFAULT_GPU_CONFIG
 
 if TYPE_CHECKING:
     from gretel_client.agents.agent import AgentConfig, Job
@@ -41,11 +42,16 @@ class Docker(Driver):
             for vol in self._agent_config.volumes:
                 volumes.append(vol)
 
+        device_requests = []
+        if job.needs_gpu:
+            device_requests.append(DEFAULT_GPU_CONFIG)
+
         container_run = build_container(
             image=job.container_image,
             params=job.params,
             env=job.env,
             volumes=volumes,
+            device_requests=device_requests,
             detach=True,
         )
         container_run.start()

@@ -105,6 +105,7 @@ class Job:
     container_image: str
     worker_token: str
     max_runtime_seconds: int
+    instance_type: str
     log: Optional[Callable] = None
     cloud_creds: Optional[List[CloudCreds]] = None
     artifact_endpoint: Optional[str] = None
@@ -115,6 +116,7 @@ class Job:
         return cls(
             uid=source["run_id"] or source["model_id"],
             job_type=source["job_type"],
+            instance_type=source["instance_type"],
             container_image=source["container_image"],
             worker_token=source["worker_token"],
             log=agent_config.log_factory(source["run_id"]),
@@ -149,6 +151,10 @@ class Job:
         if "https://api-dev.gretel.cloud" in get_session_config().endpoint:
             return "dev"
         return "prod"
+
+    @property
+    def needs_gpu(self) -> bool:
+        return "gpu" in self.instance_type.lower()
 
 
 class RateLimiter:
