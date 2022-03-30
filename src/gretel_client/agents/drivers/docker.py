@@ -9,9 +9,9 @@ from typing import TYPE_CHECKING
 
 import docker
 
-from gretel_client.agents.drivers.driver import Driver
-from gretel_client.docker import build_container, Container
-from gretel_client.projects.docker import DEFAULT_GPU_CONFIG
+from gretel_client.agents.drivers.driver import Driver, GPU
+from gretel_client.config import get_logger
+from gretel_client.docker import build_container, Container, DEFAULT_GPU_CONFIG
 
 if TYPE_CHECKING:
     from gretel_client.agents.agent import AgentConfig, Job
@@ -27,6 +27,7 @@ class Docker(Driver):
     def __init__(self, agent_config: AgentConfig):
         self._docker_client = docker.from_env()
         self._agent_config = agent_config
+        self._logger = get_logger(__name__)
 
     @classmethod
     def from_config(cls, config: AgentConfig) -> Docker:
@@ -44,7 +45,13 @@ class Docker(Driver):
 
         device_requests = []
         if job.needs_gpu:
-            device_requests.append(DEFAULT_GPU_CONFIG)
+            if (
+                self._agent_config.capabilities
+                and GPU in self._agent_config.capabilities
+            ):
+                device_requests.append(DEFAULT_GPU_CONFIG)
+            else:
+                self._logger.warn("This job requires a GPU but no GPU is configured")
 
         container_run = build_container(
             image=job.container_image,

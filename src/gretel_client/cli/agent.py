@@ -6,9 +6,10 @@ from typing import Callable, List, Optional
 import click
 
 from gretel_client.agents.agent import AgentConfig, get_agent
+from gretel_client.agents.drivers.driver import GPU
 from gretel_client.cli.common import pass_session, project_option, SessionContext
 from gretel_client.config import get_session_config
-from gretel_client.docker import AwsCredFile, CaCertFile, DataVolumeDef
+from gretel_client.docker import AwsCredFile, CaCertFile, check_gpu, DataVolumeDef
 
 
 @click.group(
@@ -96,6 +97,14 @@ def start(
 
     env_dict = dict(e.split("=", maxsplit=1) for e in env) if env else None
 
+    capabilities = []
+    sc.log.info("Checking for GPU")
+    if check_gpu():
+        capabilities.append(GPU)
+        sc.log.info("GPU found")
+    else:
+        sc.log.info("No GPU found. Continuing without one.")
+
     config = AgentConfig(
         project=project,
         max_workers=max_workers,
@@ -105,6 +114,7 @@ def start(
         artifact_endpoint=artifact_endpoint,
         env_vars=env_dict,
         volumes=volumes,
+        capabilities=capabilities,
     )
     agent = get_agent(config)
     sc.register_cleanup(lambda: agent.interupt())

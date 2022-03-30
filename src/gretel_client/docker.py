@@ -23,11 +23,20 @@ import docker.models.containers
 import smart_open
 
 from docker.models.volumes import Volume
+from docker.types.containers import DeviceRequest
 from tqdm import tqdm
 from tqdm.asyncio import tqdm as asyncio_tqdm
 
 from gretel_client.config import get_logger, get_session_config
 from gretel_client.rest.api.opt_api import OptApi
+
+DEFAULT_GPU_CONFIG = DeviceRequest(count=-1, capabilities=[["gpu"]])
+
+CONTAINER_UTILS = "public.ecr.aws/f3l2x5a1/container-utils"
+
+SYSTEM_CHECK = "system-check"
+GPU_SYSTEM_CHECK = "gpu-system-check"
+VOLUME_BUILDER = "volume-builder"
 
 
 class DockerError(Exception):
@@ -205,7 +214,7 @@ class DataVolume:
         self,
         target_dir: str,
         docker_client: docker.DockerClient,
-        volume_image: str = "busybox",
+        volume_image: str = f"{CONTAINER_UTILS}:{VOLUME_BUILDER}",
     ):
         self.name = f"{self.DATA_VOLUME_PREFIX}-{uuid.uuid4().hex[:5]}"
         self.target_dir = target_dir
@@ -527,3 +536,24 @@ def build_container(**kwargs) -> Container:
     See the ``Container`` constructor for a list valid kwargs.
     """
     return Container(**kwargs)
+
+
+def check_gpu() -> bool:
+    try:
+        build_container(
+            image=f"{CONTAINER_UTILS}:{SYSTEM_CHECK}",
+            device_requests=[DEFAULT_GPU_CONFIG],
+            remove=True,
+            auth_strategy=None,
+        ).start()
+        build_container(
+            image=f"{CONTAINER_UTILS}:{GPU_SYSTEM_CHECK}",
+            device_requests=[DEFAULT_GPU_CONFIG],
+            params=["-c", "nvidia-smi"],
+            remove=True,
+            auth_strategy=None,
+        ).start(entrypoint="bash")
+    except Exception as ex:
+        get_logger(__name__).warn(str(ex))
+        return False
+    return True

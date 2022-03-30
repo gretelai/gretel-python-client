@@ -15,6 +15,8 @@ class DriverError(Exception):
     ...
 
 
+GPU = "gpu"
+
 ComputeUnit = TypeVar("ComputeUnit")
 """Defines the underlying compute unit for the driver."""
 

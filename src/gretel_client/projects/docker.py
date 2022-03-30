@@ -19,6 +19,7 @@ from gretel_client.docker import (
     check_docker_env,
     Container,
     DataVolume,
+    DEFAULT_GPU_CONFIG,
     extract_container_path,
 )
 from gretel_client.models.config import get_model_type_config
@@ -28,9 +29,6 @@ from gretel_client.projects.models import Model
 from gretel_client.projects.records import RecordHandler
 
 DEFAULT_ARTIFACT_DIR = "/workspace"
-
-
-DEFAULT_GPU_CONFIG = DeviceRequest(count=-1, capabilities=[["gpu"]])
 
 
 class ContainerRun:

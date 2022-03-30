@@ -8,8 +8,8 @@ import pytest
 
 from gretel_client.agents.agent import Agent, AgentConfig, Job, Poller
 from gretel_client.agents.drivers.docker import Docker
-from gretel_client.docker import CaCertFile
-from gretel_client.projects.docker import DEFAULT_GPU_CONFIG
+from gretel_client.agents.drivers.driver import GPU
+from gretel_client.docker import CaCertFile, DEFAULT_GPU_CONFIG
 from gretel_client.rest.apis import JobsApi, ProjectsApi
 
 
@@ -135,7 +135,7 @@ def test_job_with_ca_bundle(docker_client: MagicMock, get_session_config: MagicM
 @patch("gretel_client.agents.agent.get_session_config")
 @patch("gretel_client.agents.drivers.docker.build_container")
 def test_job_needs_gpu(build_container: MagicMock, get_session_config: MagicMock):
-    config = AgentConfig(driver="docker")
+    config = AgentConfig(driver="docker", capabilities=[GPU])
     job = Job.from_dict(get_mock_job(instance_type="gpu-standard"), config)
 
     assert job.needs_gpu

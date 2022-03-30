@@ -58,6 +58,9 @@ class AgentConfig:
     env_vars: Optional[dict] = None
     """A list of environment variables to mount into the container"""
 
+    capabilities: Optional[List[str]] = None
+    """A list of capabilities the agent has available for scheduling"""
+
     _max_runtime_seconds: Optional[int] = None
     """TODO: implement"""
 
