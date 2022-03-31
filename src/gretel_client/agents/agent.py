@@ -122,7 +122,9 @@ class Job:
             instance_type=source["instance_type"],
             container_image=source["container_image"],
             worker_token=source["worker_token"],
-            log=agent_config.log_factory(source["run_id"]),
+            log=agent_config.log_factory(
+                source.get("run_id") or source.get("model_id")
+            ),
             max_runtime_seconds=agent_config.max_runtime_seconds,
             cloud_creds=agent_config.creds,
             artifact_endpoint=agent_config.artifact_endpoint,

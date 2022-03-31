@@ -43,7 +43,7 @@ class ContainerRun:
 
         self._docker_client = docker.from_env()
         self.image = job.container_image
-        self.input_volume = DataVolume("/in", self._docker_client, "busybox")
+        self.input_volume = DataVolume("/in", self._docker_client)
         self.device_requests = []
         self.run_params = ["--disable-cloud-upload"]
         self.job = job

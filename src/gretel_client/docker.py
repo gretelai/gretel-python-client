@@ -346,12 +346,12 @@ class Container:
 
         return image
 
-    def _prepare_volumes(self, volumes: Union[dict, List[DataVolumeDef]], image: str):
+    def _prepare_volumes(self, volumes: Union[dict, List[DataVolumeDef]]):
         if isinstance(volumes, dict):
             return volumes
         mounts = {}
         for vol_def in volumes:
-            build = DataVolume(vol_def.target_dir, self._docker_client, image)
+            build = DataVolume(vol_def.target_dir, self._docker_client)
             for host_file, target_file in vol_def.host_files:
                 build.add_file(host_file, target_file)
             mounts.update(build.prepare_volume())
@@ -402,7 +402,7 @@ class Container:
         """Start the container"""
         check_docker_env()
         image = self._pull(self.image)
-        volumes = self._prepare_volumes(self._volumes, "busybox:latest")
+        volumes = self._prepare_volumes(self._volumes)
         self._run = self._start(image, entrypoint, volumes)  # type:ignore
 
     def stop(self, force: bool = False):
