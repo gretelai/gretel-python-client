@@ -375,17 +375,6 @@ def test_manual_model_params(
         project.project_id,
     ]
 
-    # assert that --runner=manual and in-data param results in an error
-    cmd = runner.invoke(
-        cli, base_cmd + ["--in-data", str(get_fixture("account-balances.csv"))]
-    )
-    assert cmd.exit_code == 2
-    assert (
-        "Usage:" in cmd.stderr
-        and "--runner manual cannot be used together with" in cmd.stderr
-        and "--in-data" in cmd.stderr
-    )
-
     # check that --runner=local and --output params are ok
     cmd = runner.invoke(cli, base_cmd + ["--output", "tmp"])
     assert (

@@ -81,10 +81,10 @@ def _validate_params(
             "--model-path", "Cannot specify a local model path for cloud models"
         )
 
-    if runner == RunnerMode.MANUAL.value and (output or in_data or model_path):
+    if runner == RunnerMode.MANUAL.value and (output or model_path):
         raise click.BadOptionUsage(
             "--runner",
-            "--runner manual cannot be used together with any of --output, --in-data, --model-path.",
+            "--runner manual cannot be used together with any of --output, --model-path.",
         )
 
 
@@ -102,7 +102,7 @@ def _check_model_and_runner(sc: SessionContext, runner) -> str:
 
 
 def _configure_data_source(sc: SessionContext, in_data: str, runner: str):
-    data_source = "__local__"
+    data_source = in_data or "__local__"
     if in_data and runner == RunnerMode.CLOUD.value:
         sc.log.info(f"Uploading input artifact {in_data}")
         data_source = sc.project.upload_artifact(in_data)

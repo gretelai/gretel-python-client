@@ -91,10 +91,10 @@ def create(
             "--runner is set to local, but --output is not set. Please specify an output directory for --output.",
         )
 
-    if runner == RunnerMode.MANUAL.value and (output or in_data or upload_model):
+    if runner == RunnerMode.MANUAL.value and (output or upload_model):
         raise click.BadOptionUsage(
             "--runner",
-            "--runner manual cannot be used together with any of --output, --in-data, --upload-model.",
+            "--runner manual cannot be used together with any of --output, --upload-model.",
         )
 
     sc.log.info("Preparing model")
