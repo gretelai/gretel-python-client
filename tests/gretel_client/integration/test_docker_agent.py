@@ -35,10 +35,13 @@ def test_docker_agent(agent_config: AgentConfig, request):
 
     model._poll_job_endpoint()
     cur_wait = 0
-    while model.status in ACTIVE_STATES and cur_wait < 30:
-        time.sleep(1)  # this test will wait a max of 30 seconds
+    while model.status in ACTIVE_STATES and cur_wait < 60:
+        time.sleep(1)  # this test will wait a max of 60 seconds
         model._poll_job_endpoint()
         cur_wait += 1
+        if model.status == Status.COMPLETED:
+            print(f"Manual job took approx {cur_wait} seconds")
+            break
 
     agent.interupt()
     assert model.status == Status.COMPLETED
