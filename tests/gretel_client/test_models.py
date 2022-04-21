@@ -8,7 +8,9 @@ from unittest.mock import MagicMock
 import pytest
 import yaml
 
+from gretel_client.cli.utils.parser_utils import RefData
 from gretel_client.config import RunnerMode
+from gretel_client.projects.exceptions import DataSourceError
 from gretel_client.projects.models import Model, ModelConfigError, read_model_config
 
 
@@ -262,3 +264,30 @@ def test_can_name_model(m: Model):
     assert m.name == new_name
     assert m.model_config["name"] == new_name
     assert m._local_model_config["name"] == new_name
+
+
+def test_ref_data(m: Model, transform_local_data_source: Path):
+    # Check non-existent ref data from config
+    assert m.ref_data.is_empty
+
+    # Cloud artifacts
+    ref_data = RefData({"foo": "gretel_abc"})
+    m.ref_data = ref_data
+    assert m.ref_data == ref_data
+    assert not m.external_ref_data
+
+    # "Local file" but cannot verify its location on disk
+    ref_data = RefData({"foo": "bar.csv"})
+    m.ref_data = ref_data
+    assert m.ref_data == ref_data
+    assert m.external_ref_data
+    with pytest.raises(DataSourceError):
+        m.validate_ref_data()
+
+    # Local file seated along with the config
+    ref_data = RefData({"foo": transform_local_data_source.name})
+    m.ref_data = ref_data
+    check = m.ref_data.ref_dict["foo"]
+    assert check.startswith(str(m._local_model_config_path.parent))
+    assert m.external_ref_data
+    m.validate_ref_data()

@@ -13,6 +13,7 @@ import smart_open
 
 import gretel_client.rest.exceptions
 
+from gretel_client.cli.utils.parser_utils import RefData
 from gretel_client.config import DEFAULT_RUNNER, RunnerMode
 from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.common import f, WAIT_UNTIL_DONE
@@ -111,6 +112,10 @@ class Job(ABC):
         """
         if self.data_source:
             self.upload_data_source()
+
+        if not self.ref_data.is_empty:
+            self.upload_ref_data()
+
         return self._submit(runner_mode=RunnerMode.CLOUD)
 
     @abstractmethod
@@ -197,6 +202,14 @@ class Job(ABC):
             return not self.data_source.startswith("gretel_")
         return False
 
+    @property
+    def external_ref_data(self) -> bool:
+        """
+        Returns ``True`` if the data refs are external to Gretel Cloud. If the
+        data refs are Gretel Artifacts, returns ``False``.
+        """
+        return not self.ref_data.is_cloud_data
+
     # Base Job Methods
 
     def upload_data_source(self, _validate: bool = True) -> Optional[str]:
@@ -210,8 +223,36 @@ class Job(ABC):
             A Gretel artifact key
         """
         if self.external_data_source and self.data_source:
+            # NOTE: This assignment re-writes the gretel artifact onto the config
             self.data_source = self.project.upload_artifact(self.data_source, _validate)
             return self.data_source
+
+    def upload_ref_data(self, _validate: bool = True) -> RefData:
+        """
+        Resolves and uploads ref data sources specificed in the model config.
+
+        If the ref data are already Gretel artifacts, we'll return
+        the ref data as-is.
+
+        Returns:
+            A ``RefData`` instance that contains the new Gretel artifact values
+        """
+        curr_ref_data = self.ref_data
+        if curr_ref_data.is_cloud_data or curr_ref_data.is_empty:
+            return curr_ref_data
+
+        # Loop over each data source and try and upload to Gretel
+        ref_data_dict = curr_ref_data.ref_dict
+        for key, data_source in ref_data_dict.items():
+            gretel_key = self.project.upload_artifact(data_source, _validate)
+            ref_data_dict[key] = gretel_key
+
+        new_ref_data = RefData(ref_data_dict)
+
+        # NOTE: This assignment re-writes the gretel artifact data onto the config
+        self.ref_data = new_ref_data
+
+        return new_ref_data
 
     def get_artifacts(self) -> Iterator[Tuple[str, str]]:
         """List artifact links for all known artifact types."""
@@ -285,7 +326,7 @@ class Job(ABC):
 
     def _new_job_logs(self) -> List[dict]:
         if self.logs and len(self.logs) > self._logs_iter_index:
-            next_logs = self.logs[self._logs_iter_index :]
+            next_logs = self.logs[self._logs_iter_index :]  # noqa
             self._logs_iter_index += len(next_logs)
             return next_logs
         return []

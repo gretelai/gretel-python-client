@@ -2,12 +2,13 @@ import json
 import signal
 
 from pathlib import Path
-from typing import Any, Callable, Optional, Union
+from typing import Any, Callable, Optional, Tuple, Union
 from urllib.parse import urlparse
 
 import click
 import requests
 
+from gretel_client.cli.utils.parser_utils import RefData
 from gretel_client.config import configure_custom_logger, get_session_config, RunnerMode
 from gretel_client.models.config import get_status_description, StatusDescriptions
 from gretel_client.projects.common import ModelArtifact, WAIT_UNTIL_DONE
@@ -145,6 +146,7 @@ class SessionContext(object):
     runner: Optional[str] = None
 
     data_source: Optional[str] = None
+    ref_data: Optional[RefData] = None
 
     def __init__(self, ctx: click.Context, output_fmt: str, debug: bool = False):
         self.debug = debug
@@ -301,6 +303,20 @@ def model_option(fn):
     )(fn)
 
 
+def ref_data_option(fn):
+    def callback(ctx, param: click.Option, value: Union[RefData, Tuple[str]]):
+        gc: SessionContext = ctx.ensure_object(SessionContext)
+        return value or gc.ref_data
+
+    return click.option(
+        "--ref-data",
+        metavar="PATH",
+        multiple=True,
+        callback=callback,
+        help="Specify additional model or record handler reference data.",
+    )(fn)
+
+
 class ModelObjectReader:
     """Reads a model config and configures the ``SessionContext`` based
     on the contents of the model.
@@ -333,6 +349,7 @@ class ModelObjectReader:
         if model_id:
             sc.set_model(model_id)
             sc.data_source = sc.model.data_source
+            sc.ref_data = sc.model.ref_data
         if not model_id:
             # if there isn't a model id, then we implicitly assume
             # the original input was a model id rather than a model

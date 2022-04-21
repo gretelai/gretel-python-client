@@ -1,6 +1,7 @@
 import json
 
 from pathlib import Path
+from typing import Tuple, Union
 
 import click
 
@@ -9,9 +10,11 @@ from gretel_client.cli.common import (
     pass_session,
     poll_and_print,
     project_option,
+    ref_data_option,
     runner_option,
     SessionContext,
 )
+from gretel_client.cli.utils.parser_utils import ref_data_factory, RefData, RefDataError
 from gretel_client.models.config import get_model_type_config, GPU
 from gretel_client.projects.common import ModelArtifact, WAIT_UNTIL_DONE
 from gretel_client.projects.docker import ContainerRun, ContainerRunError
@@ -64,6 +67,7 @@ def models():
     help="If set, the model config will be validated against Gretel APIs, but no work will be scheduled to run.",
 )
 @project_option
+@ref_data_option
 @runner_option
 @pass_session
 def create(
@@ -71,6 +75,7 @@ def create(
     config: str,
     wait: int,
     in_data: str,
+    ref_data: Union[RefData, Tuple[str]],
     output: str,
     runner: str,
     upload_model: bool,
@@ -78,6 +83,7 @@ def create(
     dry_run: bool,
     name: str,
 ):
+
     if wait >= 0 and output:
         raise click.BadOptionUsage(
             "--output",
@@ -97,6 +103,8 @@ def create(
             "--runner manual cannot be used together with any of --output, --upload-model.",
         )
 
+    ref_data_obj = ref_data_factory(ref_data)
+
     sc.log.info("Preparing model")
     model: Model = sc.project.create_model_obj(config)
 
@@ -109,11 +117,15 @@ def create(
     if in_data:
         model.data_source = in_data
 
+    if not ref_data_obj.is_empty:
+        model.ref_data = ref_data_obj
+
     if runner != RunnerMode.MANUAL.value:
         model.validate_data_source()
+        model.validate_ref_data()
 
     if runner == RunnerMode.CLOUD.value:
-        sc.log.info("Uploading input data source")
+        sc.log.info("Uploading input data source...")
         key = model.upload_data_source(
             _validate=False
         )  # the data source was validated in a previous step
@@ -125,6 +137,17 @@ def create(
                 f"You can re-use this key for any model in the project {sc.project.name}"
             )
         )
+
+        if not ref_data_obj.is_empty:
+            sc.log.info("Uploading ref data sources...")
+            uploaded_ref_data = model.upload_ref_data(_validate=False)
+            sc.log.info("Ref data uploaded")
+            sc.log.info("Gretel artifact keys for ref data are:")
+            for ref_data_source in uploaded_ref_data.values:
+                sc.log.info(f"\t{ref_data_source}")
+            sc.log.info(
+                f"You can re-use these keys for any model in the project {sc.project.name}"
+            )
 
     # Create the model and the data source
     sc.log.info("Creating model")

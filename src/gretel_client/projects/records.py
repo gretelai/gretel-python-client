@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import List, Optional, Type, TYPE_CHECKING
 
+from gretel_client.cli.utils.parser_utils import ref_data_factory, RefData, RefDataTypes
 from gretel_client.config import DEFAULT_RUNNER, RunnerMode
 from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.common import f, ModelRunArtifact
@@ -10,8 +11,6 @@ from gretel_client.projects.jobs import GretelJobNotFound, Job, Status
 
 if TYPE_CHECKING:
     from gretel_client.projects.models import Model
-else:
-    Model = None
 
 
 JOB_TYPE = "handler"
@@ -35,11 +34,13 @@ class RecordHandler(Job):
         record_id: str = None,
         data_source: Optional[str] = None,
         params: Optional[dict] = None,
+        ref_data: Optional[RefDataTypes] = None,
     ):
         self.model = model
         self.record_id = record_id
         self.data_source = data_source
         self.params = params
+        self.ref_data = ref_data_factory(ref_data)
         super().__init__(model.project, JOB_TYPE, self.record_id)
 
     def _submit(
@@ -51,6 +52,9 @@ class RecordHandler(Job):
         # method is deprecated.
         action = kwargs.get("action", self.action)
         data_source = kwargs.get("data_source", self.data_source)
+        ref_data = kwargs.get("ref_data", self.ref_data)
+        if not isinstance(ref_data, RefData):
+            ref_data = ref_data_factory(ref_data)
         params = kwargs.get("params", self.params)
         upload_data_source = kwargs.get("upload_data_source", False)
         _default_manual = kwargs.get("_default_manual", False)
@@ -60,6 +64,9 @@ class RecordHandler(Job):
 
         if upload_data_source and data_source:
             data_source = self._upload_data_source(data_source)
+
+        if upload_data_source and not ref_data.is_empty:
+            ref_data = self._upload_ref_data(ref_data)
 
         # If the runner mode is NOT set to cloud mode, check if we should
         # fall back to manual mode, this is useful for when running local
@@ -71,6 +78,8 @@ class RecordHandler(Job):
         if action:
             optional_kwargs["action"] = action
 
+        # TODO(jm): update with ref_data once we know the workers
+        # can tolerate this payload (since extra fields are forbidden for handlers)
         body = {"params": params, "data_source": data_source}
         body = {key: value for key, value in body.items() if value is not None}
 
@@ -89,6 +98,13 @@ class RecordHandler(Job):
 
     def _upload_data_source(self, data_source: str) -> str:
         return self.project.upload_artifact(data_source)
+
+    def _upload_ref_data(self, ref_data: RefData) -> RefData:
+        uploaded_refs = {}
+        for key, data_source in ref_data.ref_dict.items():
+            artifact_key = self.project.upload_artifact(data_source)
+            uploaded_refs[key] = artifact_key
+        return RefData(uploaded_refs)
 
     @property
     def container_image(self) -> str:

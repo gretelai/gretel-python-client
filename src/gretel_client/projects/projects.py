@@ -10,6 +10,7 @@ from urllib.parse import urlparse
 import requests
 import smart_open
 
+from gretel_client.cli.utils.parser_utils import ref_data_factory, RefDataTypes
 from gretel_client.config import get_logger, get_session_config
 from gretel_client.projects.common import f, validate_data_source
 from gretel_client.projects.exceptions import GretelProjectError
@@ -143,7 +144,10 @@ class Project:
 
     @check_not_deleted
     def create_model_obj(
-        self, model_config: Union[str, Path, dict], data_source: Optional[str] = None
+        self,
+        model_config: Union[str, Path, dict],
+        data_source: Optional[str] = None,
+        ref_data: Optional[RefDataTypes] = None,
     ) -> Model:
         """Creates a new model object. This will not submit the model
         to Gretel's cloud API. Please refer to the ``Model`` docs for
@@ -156,12 +160,16 @@ class Project:
             data_source: Defines the model data_source. If the model_config
                 already has a data_source defined, this property will
                 override the existing one.
+            ref_data: An Optional str, dict, or list of reference data sources
+                to upload for the job.
         """
         _model = Model(model_config=model_config, project=self)
         if data_source and not isinstance(data_source, str):
             raise ValueError("data_source must be a str")
         if data_source is not None:
             _model.data_source = data_source
+        ref_data_obj = ref_data_factory(ref_data)
+        _model.ref_data = ref_data_obj
         return _model
 
     @property

@@ -1,5 +1,4 @@
 import json
-import textwrap
 import traceback
 
 from abc import ABC, abstractmethod
@@ -94,9 +93,6 @@ class HandleConnectionError(_ErrorHandler, urllib3.exceptions.MaxRetryError):
     """Handles HTTP connection errors."""
 
     def handle(self):
-        error = "\n".join(
-            textwrap.wrap(str(self.ex), initial_indent="\t", subsequent_indent="\t")
-        )
         self.sc.log.error(f"Connection error.\nContext:\n\t{str(self.ex)}")
         self.sc.exit(1)
 

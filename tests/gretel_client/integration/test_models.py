@@ -4,6 +4,7 @@ from typing import Callable
 import pytest
 import smart_open
 
+from gretel_client.cli.utils.parser_utils import RefData
 from gretel_client.config import RunnerMode
 from gretel_client.helpers import poll
 from gretel_client.projects.common import ModelRunArtifact
@@ -38,16 +39,45 @@ def test_does_get_model_from_id(project: Project, transform_model_path: Path):
     assert model_remote.status
 
 
+def test_create_model_upload_artifacts(
+    project: Project,
+    transform_model_path: Path,
+    transform_local_data_source: Path,
+):
+    data_refs = [
+        {"foo": str(transform_local_data_source)},
+        str(transform_local_data_source),
+        [str(transform_local_data_source)],
+    ]
+
+    for ref_data in data_refs:
+        model: Model = project.create_model_obj(
+            transform_model_path,
+            data_source=str(transform_local_data_source),
+            ref_data=ref_data,
+        )
+        model.upload_data_source()
+        model.upload_ref_data()
+        assert model.data_source.startswith("gretel_")
+        assert model.ref_data.values[0].startswith("gretel_")
+
+
 def test_does_upload_local_artifact(
     project: Project, transform_model_path: Path, transform_local_data_source: Path
 ):
     ds = str(transform_local_data_source)
     m = Model(project=project, model_config=transform_model_path)
     m.data_source = ds
+    # Use the same data source as ref data, just to validate e2e upload
+    # TODO(jm): re-enable once REST APIs are stable
+    # m.ref_data = RefData.from_list([ds])
     assert m.data_source == ds
     assert m.model_config["models"][0][m.model_type]["data_source"] == ds
+    # assert m.model_config["models"][0][m.model_type]["ref_data"].get(0) == ds
     m.upload_data_source()
+    # m.upload_ref_data()
     assert m.data_source.startswith("gretel_")
+    # assert m.ref_data.values[0].startswith("gretel_")
 
 
 def test_does_train_model_and_transform_records(

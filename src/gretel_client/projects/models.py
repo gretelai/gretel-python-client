@@ -3,6 +3,7 @@ Classes and methods for working with Gretel Models
 """
 from __future__ import annotations
 
+import copy
 import json
 import logging
 
@@ -14,6 +15,7 @@ import yaml
 
 from smart_open import open
 
+from gretel_client.cli.utils.parser_utils import ref_data_factory, RefData, RefDataTypes
 from gretel_client.config import RunnerMode
 from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.common import (
@@ -117,6 +119,10 @@ class Model(Job):
     models or run and lookup existing ones.
     """
 
+    model_id: Optional[str]
+    project: Project
+    model_config: _ModelConfigPathT
+    _local_model_config_path: Optional[Path]
     _not_found_error: Type[GretelJobNotFound] = ModelNotFoundError
 
     def __init__(
@@ -174,6 +180,7 @@ class Model(Job):
 
         if upload_data_source and runner_mode == RunnerMode.CLOUD:
             self.upload_data_source(_validate=_validate_data_source)
+            self.upload_ref_data(_validate=_validate_data_source)
 
         # If the runner mode is NOT set to cloud mode, check if we should
         # fall back to manual mode, this is useful for when running local
@@ -263,6 +270,46 @@ class Model(Job):
         self.model_config["models"][0][self.model_type]["data_source"] = data_source
 
     @property
+    def ref_data(self) -> RefData:
+        """
+        Retrieves configured ref data from the model config. If there are local ref data
+        sources we will try and resolve that path relative to the location of the model config.
+        """
+        try:
+            ref_data_dict = self.model_config["models"][0][self.model_type].get(
+                "ref_data"
+            )
+            ref_data = ref_data_factory(ref_data_dict)
+
+            if ref_data.is_cloud_data:
+                return ref_data
+
+            # Below here, we will mutate `ref_data_dict` and re-create our instance
+
+            if self._local_model_config_path:
+                for key, data_source in ref_data.ref_dict.items():
+                    data_source_path = (
+                        self._local_model_config_path.parent / data_source
+                    )  # type: Path
+                    # If the path is a file, overwrite the original data source location
+                    if data_source_path.is_file():
+                        ref_data_dict[key] = str(data_source_path)
+
+            return ref_data_factory(ref_data_dict)
+        except (IndexError, KeyError) as ex:
+            return ref_data_factory()
+
+    @ref_data.setter
+    def ref_data(self, ref_data: RefData):
+        if self.model_id:
+            raise RuntimeError(
+                "Cannot update ref data after the model has been submitted"
+            )
+        self.model_config["models"][0][self.model_type]["ref_data"] = copy.deepcopy(
+            ref_data.ref_dict
+        )
+
+    @property
     def name(self) -> Optional[str]:
         """Get the name of the model. If no name is specified, a
         random name will be selected when the model is submitted
@@ -304,6 +351,13 @@ class Model(Job):
             return
         validate_data_source(self.data_source)
 
+    def validate_ref_data(self):
+        if not self.external_ref_data:
+            return
+        ref_data = self.ref_data
+        for data_source in ref_data.values:
+            validate_data_source(data_source)
+
     def __repr__(self) -> str:
         return f"Model(id={self.model_id}, project={self.project.name})"
 
@@ -313,7 +367,10 @@ class Model(Job):
         )
 
     def create_record_handler_obj(
-        self, data_source: Optional[str] = None, params: Optional[dict] = None
+        self,
+        data_source: Optional[str] = None,
+        params: Optional[dict] = None,
+        ref_data: Optional[RefDataTypes] = None,
     ) -> RecordHandler:
         """Creates a new record handler for the model.
 
@@ -322,7 +379,9 @@ class Model(Job):
             params: Any custom params for the record handler. These params
                 are specific to the upstream model.
         """
-        return RecordHandler(self, data_source=data_source, params=params)
+        return RecordHandler(
+            self, data_source=data_source, params=params, ref_data=ref_data
+        )
 
     def _do_cancel_job(self):
         return self._projects_api.update_model(

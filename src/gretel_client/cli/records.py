@@ -10,11 +10,13 @@ from gretel_client.cli.common import (
     pass_session,
     poll_and_print,
     project_option,
+    ref_data_option,
     runner_option,
     SessionContext,
     StatusDescriptions,
 )
 from gretel_client.cli.models import models
+from gretel_client.cli.utils.parser_utils import ref_data_factory, RefData, RefDataError
 from gretel_client.config import RunnerMode
 from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.docker import ContainerRun
@@ -101,12 +103,23 @@ def _check_model_and_runner(sc: SessionContext, runner) -> str:
     return runner
 
 
-def _configure_data_source(sc: SessionContext, in_data: str, runner: str):
+def _configure_data_source(sc: SessionContext, in_data: str, runner: str) -> str:
     data_source = in_data or "__local__"
     if in_data and runner == RunnerMode.CLOUD.value:
         sc.log.info(f"Uploading input artifact {in_data}")
         data_source = sc.project.upload_artifact(in_data)
     return data_source
+
+
+def _configure_ref_data(sc: SessionContext, ref_data: RefData, runner: str) -> RefData:
+    if not ref_data.is_empty and runner == RunnerMode.CLOUD.value:
+        sc.log.info("Uploading ref data...")
+        ref_dict = {}
+        for key, data_source in ref_data.ref_dict.items():
+            data_source = sc.project.upload_artifact(data_source)
+            ref_dict[key] = data_source
+        ref_data = ref_data_factory(ref_dict)
+    return ref_data
 
 
 def create_and_run_record_handler(
@@ -120,15 +133,20 @@ def create_and_run_record_handler(
     model_path: Optional[str],
     data_source: Optional[str],
     status_strings: StatusDescriptions,
+    ref_data: Optional[RefData] = None,
 ):
     sc.log.info(f"Creating record handler for model {sc.model.model_id}")
     record_handler = sc.model.create_record_handler_obj()
+
+    if ref_data is None:
+        ref_data = ref_data_factory()
 
     data = record_handler._submit(
         params=params,
         action=action,
         runner_mode=RunnerMode(runner),
         data_source=data_source,
+        ref_data=ref_data,
         _default_manual=True,
     )
     sc.register_cleanup(lambda: record_handler.cancel())
@@ -180,7 +198,7 @@ def create_and_run_record_handler(
                 f"\n{json.dumps(record_handler.billing_details, indent=4)}"
             )
         )
-        sc.log.info(f"Done!")
+        sc.log.info("Done!")
     else:
         sc.log.error("The record command failed with the following error")
         sc.log.error(record_handler.errors)
@@ -317,6 +335,7 @@ def action_option(fn):
 @runner_option
 @model_path_option
 @input_data_option
+@ref_data_option
 @output_data_option
 @model_option
 @pass_session
@@ -332,6 +351,7 @@ def run(
     project: str,
     model_id: str,
     in_data: Optional[str],
+    ref_data: Tuple[str],
     output: str,
     runner: str,
     model_path: str,
@@ -349,6 +369,9 @@ def run(
     if in_data:
         data_source = _configure_data_source(sc, in_data, runner)
 
+    ref_data_obj = ref_data_factory(ref_data)
+    ref_data_obj = _configure_ref_data(sc, ref_data_obj, runner)
+
     extra_params = None
     if param and len(param) > 0:
         extra_params = {key: value for key, value in param}
@@ -358,6 +381,7 @@ def run(
         params=extra_params,
         action=action,
         data_source=data_source,
+        ref_data=ref_data_obj,
         runner=runner,
         output=output,
         in_data=in_data,
