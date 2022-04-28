@@ -50,14 +50,14 @@ def pre_trained_project() -> Project:
 
 @pytest.fixture
 def trained_synth_model(pre_trained_project: Project) -> Model:
-    return pre_trained_project.get_model(model_id="613fd26a0197b41e3d09cad7")
+    return pre_trained_project.get_model(model_id="626ab963f7098ebecbb623b2")
 
 
 @pytest.fixture
 def trained_xf_model(pre_trained_project: Project) -> Model:
-    return pre_trained_project.get_model(model_id="60b8f50ae00f682f4581901d")
+    return pre_trained_project.get_model(model_id="626abd19f7098ebecbb623d9")
 
 
 @pytest.fixture
 def trained_classify_model(pre_trained_project: Project) -> Model:
-    return pre_trained_project.get_model(model_id="60cd03dec34d2b6362538133")
+    return pre_trained_project.get_model(model_id="626abd2ff7098ebecbb623da")
