@@ -78,9 +78,11 @@ class RecordHandler(Job):
         if action:
             optional_kwargs["action"] = action
 
-        # TODO(jm): update with ref_data once we know the workers
-        # can tolerate this payload (since extra fields are forbidden for handlers)
-        body = {"params": params, "data_source": data_source}
+        body = {
+            "params": params,
+            "data_source": data_source,
+            "ref_data": ref_data.ref_dict,
+        }
         body = {key: value for key, value in body.items() if value is not None}
 
         handler = self.model._projects_api.create_record_handler(

@@ -20,6 +20,8 @@ class RefData:
     Interface for parsing key/value reference data from CLI/SDK inputs
     """
 
+    CLI_PARAM = "--ref-data"
+
     ref_dict: Dict[Union[int, str], str] = field(default_factory=dict)
 
     @property
@@ -62,6 +64,24 @@ class RefData:
                 ref_data_dict[parts[0]] = parts[1]
 
         return cls(ref_data_dict)
+
+    @property
+    def as_cli(self) -> Optional[List[str]]:
+        """
+        Take the ref data dict and put it into CLI params.
+        """
+        if not self.ref_dict:
+            return None
+
+        parts = []
+        for key, source in self.ref_dict.items():
+            parts.append(self.CLI_PARAM)
+            if isinstance(key, int):
+                parts.append(source)
+            else:
+                parts.append(f"{key}={source}")
+
+        return parts
 
 
 def ref_data_factory(ref_data: Optional[RefDataTypes] = None) -> RefData:

@@ -11,8 +11,7 @@ import docker
 import docker.errors
 import docker.models.containers
 
-from docker.types.containers import DeviceRequest
-
+from gretel_client.cli.utils.parser_utils import ref_data_factory
 from gretel_client.config import get_logger
 from gretel_client.docker import (
     build_container,
@@ -27,6 +26,9 @@ from gretel_client.projects.exceptions import ContainerRunError
 from gretel_client.projects.jobs import ACTIVE_STATES, Job
 from gretel_client.projects.models import Model
 from gretel_client.projects.records import RecordHandler
+
+if TYPE_CHECKING:
+    from gretel_client.cli.utils.parser_utils import RefData
 
 DEFAULT_ARTIFACT_DIR = "/workspace"
 
@@ -99,6 +101,15 @@ class ContainerRun:
             input_data = str(input_data)
         in_data_path = self.input_volume.add_file(input_data)
         self.run_params.extend(["--data-source", in_data_path])
+
+    def configure_ref_data(self, ref_data: Union[dict, RefData]):
+        if isinstance(ref_data, dict):
+            for key, path in ref_data.items():
+                ref_data[key] = str(path)
+            ref_data = ref_data_factory(ref_data)
+        for data_path in ref_data.values:
+            self.input_volume.add_file(data_path)
+        self.run_params.extend(ref_data.as_cli)
 
     def enable_cloud_uploads(self):
         self.run_params.remove("--disable-cloud-upload")

@@ -296,7 +296,7 @@ class Model(Job):
                         ref_data_dict[key] = str(data_source_path)
 
             return ref_data_factory(ref_data_dict)
-        except (IndexError, KeyError) as ex:
+        except (IndexError, KeyError):
             return ref_data_factory()
 
     @ref_data.setter

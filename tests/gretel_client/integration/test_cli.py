@@ -246,15 +246,20 @@ def test_model_crud_from_cli_local_inputs(
             project.project_id,
             "--runner",
             "local",
+            "--ref-data",
+            str(get_fixture("account-balances.csv")),
         ],
     )
     print(cmd.output)
     assert cmd.exit_code == 0
     assert (tmpdir / "model.tar.gz").exists()
     assert (tmpdir / "model_logs.json.gz").exists()
+
     # 2. check that the model can be found via a search
     model = next(project.search_models(factory=dict))
     model_id = model["uid"]
+    config = model["config"]["models"][0]["transforms"]
+    assert config["ref_data"]["0"].endswith("account-balances.csv")
 
     assert model["status"] == "completed"
     assert not model["error_msg"]
@@ -292,7 +297,6 @@ def test_model_crud_from_cli_local_inputs(
             "local",
         ],
     )
-    print(cmd.output)
     assert cmd.exit_code == 0
     assert (tmpdir / "record_handler/data.gz").exists()
 
@@ -548,6 +552,8 @@ def test_records_transform_with_model_run(
             "--project",
             trained_xf_model.project.project_id,
             "--in-data",
+            str(get_fixture("account-balances.csv")),
+            "--ref-data",
             str(get_fixture("account-balances.csv")),
             "--output",
             str(tmpdir),

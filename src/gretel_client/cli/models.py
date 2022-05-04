@@ -14,7 +14,7 @@ from gretel_client.cli.common import (
     runner_option,
     SessionContext,
 )
-from gretel_client.cli.utils.parser_utils import ref_data_factory, RefData, RefDataError
+from gretel_client.cli.utils.parser_utils import ref_data_factory, RefData
 from gretel_client.models.config import get_model_type_config, GPU
 from gretel_client.projects.common import ModelArtifact, WAIT_UNTIL_DONE
 from gretel_client.projects.docker import ContainerRun, ContainerRunError
@@ -184,6 +184,8 @@ def create(
             run.configure_output_dir(output)
         if model.external_data_source:
             run.configure_input_data(model.data_source)
+        if model.external_ref_data:
+            run.configure_ref_data(model.ref_data)
         if upload_model:
             sc.log.info("Uploads to Gretel Cloud are enabled")
             run.enable_cloud_uploads()

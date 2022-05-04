@@ -16,11 +16,13 @@ from gretel_client.cli.common import (
     StatusDescriptions,
 )
 from gretel_client.cli.models import models
-from gretel_client.cli.utils.parser_utils import ref_data_factory, RefData, RefDataError
+from gretel_client.cli.utils.parser_utils import ref_data_factory, RefData
 from gretel_client.config import RunnerMode
 from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.docker import ContainerRun
 from gretel_client.projects.jobs import Status
+
+LOCAL = "__local__"
 
 
 @click.group(help="Commands for working with records and running models.")
@@ -103,11 +105,28 @@ def _check_model_and_runner(sc: SessionContext, runner) -> str:
     return runner
 
 
-def _configure_data_source(sc: SessionContext, in_data: str, runner: str) -> str:
-    data_source = in_data or "__local__"
-    if in_data and runner == RunnerMode.CLOUD.value:
+def _configure_data_source(
+    sc: SessionContext, in_data: Optional[str], runner: str
+) -> Optional[str]:
+    # NOTE: If ``in_data`` is already None, we just return None which
+    # will then be passed into the record handler API call. If the job
+    # being requested does require a data source, then the API will reject
+    # the API call. If the data source is optional, then the API call will succeed.
+    #
+    # If the job is a local then the "__local__" string will be passed into the API
+    # call and stored in the cloud config. This is pro forma in order to get the record
+    # handler config validators to pass. When the job container actually starts, this
+    # __local__ value will be replaced by the actual data source
+
+    if in_data is None:
+        return None
+
+    if runner == RunnerMode.CLOUD.value:
         sc.log.info(f"Uploading input artifact {in_data}")
         data_source = sc.project.upload_artifact(in_data)
+    else:
+        data_source = LOCAL
+
     return data_source
 
 
@@ -119,6 +138,11 @@ def _configure_ref_data(sc: SessionContext, ref_data: RefData, runner: str) -> R
             data_source = sc.project.upload_artifact(data_source)
             ref_dict[key] = data_source
         ref_data = ref_data_factory(ref_dict)
+    else:
+        # If the job is being run locally, we swap the data sources to __local__
+        # so we don't expose anything in the stored cloud config
+        for key, data_source in ref_data.ref_dict.items():
+            ref_data.ref_dict[key] = LOCAL
     return ref_data
 
 
@@ -135,6 +159,11 @@ def create_and_run_record_handler(
     status_strings: StatusDescriptions,
     ref_data: Optional[RefData] = None,
 ):
+
+    # NOTE: ``in_data`` is only evaluated to determine if we should set a --data-source
+    # for the CLI args that get passed into a local container.  The ``data_source`` value
+    # is what will be sent to the Cloud API.
+
     sc.log.info(f"Creating record handler for model {sc.model.model_id}")
     record_handler = sc.model.create_record_handler_obj()
 
@@ -176,6 +205,8 @@ def create_and_run_record_handler(
             run.configure_input_data(in_data)
         if model_path:
             run.configure_model(model_path)
+        if not ref_data.is_empty:
+            run.configure_ref_data(ref_data)
         run.start()
         sc.register_cleanup(lambda: run.graceful_shutdown())
 

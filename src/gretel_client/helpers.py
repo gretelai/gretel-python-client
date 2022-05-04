@@ -3,7 +3,7 @@ import os
 import sys
 
 from pathlib import Path
-from typing import Optional, Union
+from typing import Dict, Optional, Union
 
 import click
 
@@ -62,6 +62,7 @@ def submit_docker_local(
     *,
     output_dir: Union[str, Path] = None,
     in_data: Optional[Union[str, Path]] = None,
+    ref_data: Optional[Dict[str, Union[str, Path]]] = None,
     model_path: Optional[Union[str, Path]] = None,
 ) -> ContainerRun:
     """Run a `Job` from a local docker container.
@@ -99,6 +100,8 @@ def submit_docker_local(
             log.warn("Could not configure GPU. Continuing with CPU")
     if in_data:
         run.configure_input_data(in_data)
+    if ref_data:
+        run.configure_ref_data(ref_data)
     if not in_data and job.data_source:
         run.configure_input_data(job.data_source)
     if model_path:

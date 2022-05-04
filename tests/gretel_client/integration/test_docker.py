@@ -1,8 +1,11 @@
+import tempfile
+
 from pathlib import Path
 from time import sleep
 from typing import Callable
 
 import pytest
+import smart_open
 
 from gretel_client.docker import get_container_auth
 from gretel_client.helpers import submit_docker_local
@@ -65,19 +68,31 @@ def test_does_auth_registry():
 
 
 def test_does_run_record_handler(model: Model, get_fixture: Callable, tmpdir: Path):
-    submit_docker_local(
-        model, output_dir=tmpdir, in_data=get_fixture("account-balances.csv")
-    )
-    model._poll_job_endpoint()
-    assert model.status == Status.COMPLETED
-    record_handler = model.create_record_handler_obj(
-        data_source=str(get_fixture("account-balances.csv"))
-    )
-    submit_docker_local(
-        record_handler,
-        output_dir=tmpdir,
-        model_path=(tmpdir / "model.tar.gz"),
-    )
-    record_handler._poll_job_endpoint()
-    assert record_handler.status == Status.COMPLETED
-    assert (tmpdir / "data.gz").exists()
+    # NOTE: this test sends ref data as a local file into the worker, just to
+    # test the plumbing
+    in_data = get_fixture("account-balances.csv")
+    with tempfile.NamedTemporaryFile() as temp_ref_data:
+        with smart_open.open(in_data) as src_fin:
+            temp_ref_data.write(src_fin.read().encode())
+        temp_ref_data.seek(0)
+
+        submit_docker_local(
+            model,
+            output_dir=tmpdir,
+            in_data=in_data,
+            ref_data={"foo": temp_ref_data.name},
+        )
+        model._poll_job_endpoint()
+        assert model.status == Status.COMPLETED
+        record_handler = model.create_record_handler_obj(
+            data_source=str(get_fixture("account-balances.csv"))
+        )
+        submit_docker_local(
+            record_handler,
+            output_dir=tmpdir,
+            model_path=(tmpdir / "model.tar.gz"),
+            ref_data={"foo": temp_ref_data.name},
+        )
+        record_handler._poll_job_endpoint()
+        assert record_handler.status == Status.COMPLETED
+        assert (tmpdir / "data.gz").exists()
