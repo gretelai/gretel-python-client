@@ -10,6 +10,8 @@ from getpass import getpass
 from pathlib import Path
 from typing import Optional, Type, TypeVar, Union
 
+import certifi
+
 from urllib3.util import Retry
 
 from gretel_client.rest.api.projects_api import ProjectsApi
@@ -41,6 +43,21 @@ GRETEL_PREVIEW_FEATURES = "GRETEL_PREVIEW_FEATURES"
 """Env variable to manage preview features"""
 
 GRETEL_ENVS = [GRETEL_API_KEY, GRETEL_PROJECT]
+
+
+_custom_logger = None
+
+
+def get_logger(name: str = None) -> logging.Logger:
+    return _custom_logger or logging.getLogger(name)
+
+
+def configure_custom_logger(logger):
+    global _custom_logger
+    _custom_logger = logger
+
+
+log = get_logger(__name__)
 
 
 class PreviewFeatures(Enum):
@@ -119,13 +136,33 @@ class ClientConfig:
             **{k: v for k, v in source.items() if k in cls.__annotations__.keys()}
         )
 
+    def _cert_file(self) -> str:
+        ssl_cert_file = os.getenv("SSL_CERT_FILE")
+        requests_ca_bundle = os.getenv("REQUESTS_CA_BUNDLE")
+        default = certifi.where()
+
+        if ssl_cert_file is not None:
+            log.debug(
+                f"Overriding default cert file per $SSL_CERT_FILE to {ssl_cert_file}"
+            )
+            return ssl_cert_file
+        elif requests_ca_bundle is not None:
+            log.debug(
+                f"Overriding default cert file per $REQUESTS_CA_BUNDLE to {requests_ca_bundle}"
+            )
+            return requests_ca_bundle
+        else:
+            return default
+
     def _get_api_client(
         self, max_retry_attempts: int = 3, backoff_factor: float = 1
     ) -> ApiClient:
         # disable log warnings when the retry kicks in
         logging.getLogger("urllib3.connectionpool").setLevel(logging.ERROR)
         configuration = Configuration(
-            host=self.endpoint, api_key={"ApiKey": self.api_key}
+            host=self.endpoint,
+            api_key={"ApiKey": self.api_key},
+            ssl_ca_cert=self._cert_file(),
         )
         configuration.retries = Retry(  # type:ignore
             total=max_retry_attempts,
@@ -354,15 +391,3 @@ def configure_session(
         except Exception:
             print("Failed to validate credentials. Please check your config.")
             traceback.print_exc()
-
-
-_custom_logger = None
-
-
-def get_logger(name: str = None) -> logging.Logger:
-    return _custom_logger or logging.getLogger(name)
-
-
-def configure_custom_logger(logger):
-    global _custom_logger
-    _custom_logger = logger

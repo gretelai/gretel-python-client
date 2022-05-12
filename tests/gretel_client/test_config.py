@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
+import certifi
 import pytest
 
 from gretel_client.config import (
@@ -97,3 +98,35 @@ def test_clear_gretel_config(_get_config_path: MagicMock):
     config_path = _get_config_path.return_value
     config_path.unlink.assert_called_once()
     config_path.parent.rmdir.assert_called_once()
+
+
+@patch("urllib3.PoolManager")
+def test_defaults_to_certifi_certs(pool_manager: MagicMock):
+    config = ClientConfig.from_env()
+    client = config.get_api(ProjectsApi)
+
+    _, kwargs = pool_manager.call_args
+    assert kwargs.get("ca_certs") == certifi.where()
+
+
+@patch("urllib3.PoolManager")
+def test_override_certs_via_environment_variables(pool_manager: MagicMock):
+    with patch.dict(
+        os.environ,
+        {"SSL_CERT_FILE": "/ssl/cert/file"},
+    ):
+        config = ClientConfig.from_env()
+        client = config.get_api(ProjectsApi)
+
+        _, kwargs = pool_manager.call_args
+        assert kwargs.get("ca_certs") == "/ssl/cert/file"
+
+    with patch.dict(
+        os.environ,
+        {"REQUESTS_CA_BUNDLE": "/requests/ca/bundle"},
+    ):
+        config = ClientConfig.from_env()
+        client = config.get_api(ProjectsApi)
+
+        _, kwargs = pool_manager.call_args
+        assert kwargs.get("ca_certs") == "/requests/ca/bundle"
