@@ -1,4 +1,5 @@
 backports.cached-property==1.0.0.post2
+certifi
 click==7.1.2
 docker==4.4.1
 python_dateutil>=2.8.0
