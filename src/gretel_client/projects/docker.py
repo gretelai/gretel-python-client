@@ -3,6 +3,7 @@ Classes for running a Gretel Job as a local container
 """
 from __future__ import annotations
 
+from copy import deepcopy
 from pathlib import Path
 from time import sleep
 from typing import TYPE_CHECKING, Union
@@ -108,9 +109,13 @@ class ContainerRun:
                 ref_data[key] = str(path)
             ref_data = ref_data_factory(ref_data)
 
+        # Make a deep copy in the event we have to re-write the
+        # values of the ref data dict for the new input volume paths
+        ref_data = deepcopy(ref_data)
+
         if not ref_data.is_empty:
-            for data_path in ref_data.values:
-                self.input_volume.add_file(data_path)
+            for key, data_path in ref_data.ref_dict.items():
+                ref_data.ref_dict[key] = self.input_volume.add_file(data_path)
             self.run_params.extend(ref_data.as_cli)
 
     def enable_cloud_uploads(self):
