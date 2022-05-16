@@ -612,7 +612,7 @@ def test_invalid_project_create(runner: CliRunner):
 
 
 def test_can_create_project(runner: CliRunner, request):
-    project_name = f"{uuid.uuid4().hex[:5]}"
+    project_name = f"test-{uuid.uuid4().hex[:5]}"
     request.addfinalizer(lambda: get_project(name=project_name).delete())
     cmd = runner.invoke(
         cli,
