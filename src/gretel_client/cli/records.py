@@ -207,7 +207,7 @@ def create_and_run_record_handler(
             run.configure_input_data(in_data)
         if model_path:
             run.configure_model(model_path)
-        if not ref_data.is_empty:
+        if ref_data:
             run.configure_ref_data(ref_data)
         run.start()
         sc.register_cleanup(lambda: run.graceful_shutdown())
