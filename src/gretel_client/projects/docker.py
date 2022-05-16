@@ -107,9 +107,11 @@ class ContainerRun:
             for key, path in ref_data.items():
                 ref_data[key] = str(path)
             ref_data = ref_data_factory(ref_data)
-        for data_path in ref_data.values:
-            self.input_volume.add_file(data_path)
-        self.run_params.extend(ref_data.as_cli)
+
+        if not ref_data.is_empty:
+            for data_path in ref_data.values:
+                self.input_volume.add_file(data_path)
+            self.run_params.extend(ref_data.as_cli)
 
     def enable_cloud_uploads(self):
         self.run_params.remove("--disable-cloud-upload")

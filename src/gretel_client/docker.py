@@ -201,9 +201,8 @@ class DataVolume:
 
     DATA_VOLUME_PREFIX = "gretel"
 
-    volume: Volume
-
-    volume_container: docker.models.containers.Container
+    volume: Optional[Volume] = None
+    volume_container: Optional[docker.models.containers.Container] = None
 
     @dataclass
     class File:

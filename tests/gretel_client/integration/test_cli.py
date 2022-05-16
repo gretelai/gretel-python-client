@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from click.testing import CliRunner
+from click.testing import CliRunner, Result
 
 from gretel_client.cli.cli import cli
 from gretel_client.config import (
@@ -111,6 +111,7 @@ def test_model_crud_from_cli(
     cmd = runner.invoke(
         cli,
         [
+            "--debug",
             "models",
             "create",
             "--config",
@@ -123,8 +124,9 @@ def test_model_crud_from_cli(
             str(tmpdir),
         ],
     )
-    print(cmd.output)
+    _print_cmd_output(cmd)
     assert cmd.exit_code == 0
+
     # 2. check that the model can be found via a search
     model = next(project.search_models(factory=dict))
     model_id = model["uid"]
@@ -139,7 +141,7 @@ def test_model_crud_from_cli(
             project.project_id,
         ],
     )
-    print(cmd.output)
+    _print_cmd_output(cmd)
     assert model_id in cmd.output
     assert cmd.exit_code == 0
     # 3. check that an existing model can be downloaded back to disk
@@ -154,7 +156,7 @@ def test_model_crud_from_cli(
             project.project_id,
         ],
     )
-    print(cmd.output)
+    _print_cmd_output(cmd)
     assert cmd.exit_code == 0
     # 4. check that the model can be deleted
     cmd = runner.invoke(
@@ -168,7 +170,7 @@ def test_model_crud_from_cli(
             project.project_id,
         ],
     )
-    print(cmd.output)
+    _print_cmd_output(cmd)
     assert cmd.exit_code == 0
 
 
@@ -182,6 +184,7 @@ def test_model_crud_manual_mode(project: Project, get_fixture: Callable, tmpdir:
     cmd = runner.invoke(
         cli,
         [
+            "--debug",
             "models",
             "create",
             "--config",
@@ -194,8 +197,7 @@ def test_model_crud_manual_mode(project: Project, get_fixture: Callable, tmpdir:
             "0",
         ],
     )
-    print(cmd.stdout)
-    print(cmd.stderr)
+    _print_cmd_output(cmd)
     assert cmd.exit_code == 0
     assert "not waiting for the job completion" in cmd.stderr
 
@@ -221,8 +223,7 @@ def test_model_crud_manual_mode(project: Project, get_fixture: Callable, tmpdir:
             project.project_id,
         ],
     )
-    print(cmd.stdout)
-    print(cmd.stderr)
+    _print_cmd_output(cmd)
     assert cmd.exit_code == 0
 
 
@@ -236,6 +237,7 @@ def test_model_crud_from_cli_local_inputs(
     cmd = runner.invoke(
         cli,
         [
+            "--debug",
             "models",
             "create",
             "--config",
@@ -250,7 +252,7 @@ def test_model_crud_from_cli_local_inputs(
             str(get_fixture("account-balances.csv")),
         ],
     )
-    print(cmd.output)
+    _print_cmd_output(cmd)
     assert cmd.exit_code == 0
     assert (tmpdir / "model.tar.gz").exists()
     assert (tmpdir / "model_logs.json.gz").exists()
@@ -273,7 +275,7 @@ def test_model_crud_from_cli_local_inputs(
             project.project_id,
         ],
     )
-    print(cmd.output)
+    _print_cmd_output(cmd)
     assert model_id in cmd.output
     assert cmd.exit_code == 0
 
@@ -281,6 +283,7 @@ def test_model_crud_from_cli_local_inputs(
     cmd = runner.invoke(
         cli,
         [
+            "--debug",
             "records",
             "transform",
             "--project",
@@ -297,6 +300,7 @@ def test_model_crud_from_cli_local_inputs(
             "local",
         ],
     )
+    _print_cmd_output(cmd)
     assert cmd.exit_code == 0
     assert (tmpdir / "record_handler/data.gz").exists()
 
@@ -460,6 +464,7 @@ def test_records_generate(
     cmd = runner.invoke(
         cli,
         [  # type:ignore
+            "--debug",
             "records",
             "generate",
             "--project",
@@ -472,6 +477,7 @@ def test_records_generate(
             "local",
         ],
     )
+    _print_cmd_output(cmd)
     assert cmd.exit_code == 0
     assert (tmpdir / "data.gz").exists()
 
@@ -482,6 +488,7 @@ def test_records_generate_with_model_run(
     cmd = runner.invoke(
         cli,
         [  # type:ignore
+            "--debug",
             "models",
             "run",
             "--project",
@@ -505,6 +512,7 @@ def test_records_generate_with_model_run(
             100,
         ],
     )
+    _print_cmd_output(cmd)
     assert cmd.exit_code == 0
     assert (tmpdir / "data.gz").exists()
 
@@ -515,6 +523,7 @@ def test_records_transform(
     cmd = runner.invoke(
         cli,
         [  # type:ignore
+            "--debug",
             "records",
             "transform",
             "--model-id",
@@ -529,6 +538,7 @@ def test_records_transform(
             "local",
         ],
     )
+    _print_cmd_output(cmd)
     assert cmd.exit_code == 0
     assert (tmpdir / "data.gz").exists()
 
@@ -561,6 +571,7 @@ def test_records_transform_with_model_run(
             "local",
         ],
     )
+    _print_cmd_output(cmd)
     assert cmd.exit_code == 0
     assert (tmpdir / "data.gz").exists()
 
@@ -574,6 +585,7 @@ def test_records_classify(
     cmd = runner.invoke(
         cli,
         [  # type:ignore
+            "--debug",
             "records",
             "classify",
             "--project",
@@ -588,6 +600,7 @@ def test_records_classify(
             "local",
         ],
     )
+    _print_cmd_output(cmd)
     assert cmd.exit_code == 0
     assert (tmpdir / "data.gz").exists()
 
@@ -615,6 +628,7 @@ def test_can_create_project(runner: CliRunner, request):
             "test description",
         ],
     )
+    _print_cmd_output(cmd)
     assert cmd.exit_code == 0
 
 
@@ -624,6 +638,7 @@ def test_create_records_from_model_obj(
     cmd = runner.invoke(
         cli,
         [
+            "--debug",
             "models",
             "create",
             "--config",
@@ -638,7 +653,7 @@ def test_create_records_from_model_obj(
             str(get_fixture("account-balances.csv")),
         ],
     )
-    print(cmd.output)
+    _print_cmd_output(cmd)
     assert cmd.exit_code == 0
     assert (tmpdir / "model.tar.gz").exists()
     model_obj = Path(tmpdir / "model_obj.json")
@@ -646,6 +661,7 @@ def test_create_records_from_model_obj(
     cmd = runner.invoke(
         cli,
         [
+            "--debug",
             "records",
             "classify",
             "--output",
@@ -656,7 +672,7 @@ def test_create_records_from_model_obj(
             str(tmpdir / "model.tar.gz"),
         ],
     )
-
+    _print_cmd_output(cmd)
     assert cmd.exit_code == 0
 
 
@@ -729,3 +745,8 @@ def test_manual_record_handler_cleanup(
 
     record_handler = RecordHandler(trained_synth_model, record_id=record_handler_id)
     assert record_handler.status == Status.CANCELLED
+
+
+def _print_cmd_output(cmd: Result):
+    print(f"STDERR\n{cmd.stderr}")
+    print(f"STDOUT\n{cmd.stdout}")

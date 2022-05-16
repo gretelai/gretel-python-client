@@ -1,5 +1,6 @@
 import json
 
+from copy import deepcopy
 from typing import Dict, List, Optional, Tuple, Union
 
 import click
@@ -158,6 +159,7 @@ def create_and_run_record_handler(
     data_source: Optional[str],
     status_strings: StatusDescriptions,
     ref_data: Optional[RefData] = None,
+    config_ref_data: Optional[RefData] = None,
 ):
 
     # NOTE: ``in_data`` is only evaluated to determine if we should set a --data-source
@@ -167,15 +169,15 @@ def create_and_run_record_handler(
     sc.log.info(f"Creating record handler for model {sc.model.model_id}")
     record_handler = sc.model.create_record_handler_obj()
 
-    if ref_data is None:
-        ref_data = ref_data_factory()
+    if config_ref_data is None:
+        config_ref_data = ref_data_factory()
 
     data = record_handler._submit(
         params=params,
         action=action,
         runner_mode=RunnerMode(runner),
         data_source=data_source,
-        ref_data=ref_data,
+        ref_data=config_ref_data,
         _default_manual=True,
     )
     sc.register_cleanup(lambda: record_handler.cancel())
@@ -396,12 +398,18 @@ def run(
     runner = _check_model_and_runner(sc, runner)
     _validate_params(sc, runner, output, model_path, None)
 
+    # The idea here:
+    # - in_data is what the CLI argument was
+    # - data_source is what is going to be sent to the API in the model config
     data_source = None
     if in_data:
         data_source = _configure_data_source(sc, in_data, runner)
 
-    ref_data_obj = ref_data_factory(ref_data)
-    ref_data_obj = _configure_ref_data(sc, ref_data_obj, runner)
+    # The idea here:
+    # - ref_data is what the CLI arguments were
+    # - config_ref_data is what is going to be sent to the API in the model config
+    ref_data = ref_data_factory(ref_data)
+    config_ref_data = _configure_ref_data(sc, deepcopy(ref_data), runner)
 
     extra_params = None
     if param and len(param) > 0:
@@ -411,11 +419,12 @@ def run(
         sc,
         params=extra_params,
         action=action,
+        in_data=in_data,
         data_source=data_source,
-        ref_data=ref_data_obj,
+        ref_data=ref_data,
+        config_ref_data=config_ref_data,
         runner=runner,
         output=output,
-        in_data=in_data,
         status_strings=get_model_type_config().run_status_descriptions,
         model_path=model_path,
     )
