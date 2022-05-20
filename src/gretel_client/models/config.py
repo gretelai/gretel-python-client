@@ -166,20 +166,47 @@ class SyntheticsModelTypeConfig(ModelTypeConfig):
         }
 
     def peek_report(self, report_contents: dict) -> Optional[dict]:
-        fields = [
-            "synthetic_data_quality_score",
-            "field_correlation_stability",
-            "principal_component_stability",
-            "field_distribution_stability",
-            "privacy_protection_level",
-        ]
-        return {f: report_contents[f] for f in fields if f in report_contents}
+        return _peek_sqs_report(report_contents)
+
+
+class CtganModelTypeConfig(GenericModelTypeConfig):
+    @property
+    def train_instance_type(self) -> str:
+        return GPU
+
+    def peek_report(self, report_contents: dict) -> Optional[dict]:
+        return _peek_sqs_report(report_contents)
+
+
+class GptXModelTypeConfig(GenericModelTypeConfig):
+    @property
+    def train_instance_type(self) -> str:
+        return GPU
+
+
+class EvaluateModelTypeConfig(GenericModelTypeConfig):
+    def peek_report(self, report_contents: dict) -> Optional[dict]:
+        return _peek_sqs_report(report_contents)
+
+
+def _peek_sqs_report(report_contents) -> dict:
+    fields = [
+        "synthetic_data_quality_score",
+        "field_correlation_stability",
+        "principal_component_stability",
+        "field_distribution_stability",
+        "privacy_protection_level",
+    ]
+    return {f: report_contents[f] for f in fields if f in report_contents}
 
 
 _CONFIGS = {
     "synthetics": SyntheticsModelTypeConfig(),
     "transforms": TransformsModelTypeConfig(),
     "classify": ClassifyModelTypeConfig(),
+    "ctgan": CtganModelTypeConfig(),
+    "gpt_x": GptXModelTypeConfig(),
+    "evaluate": EvaluateModelTypeConfig(),
     "__default__": GenericModelTypeConfig(),
 }
 
