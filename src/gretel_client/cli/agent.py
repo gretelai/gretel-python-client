@@ -65,6 +65,11 @@ def build_logger(job_id: str) -> Callable:
     metavar="PATH",
     help="Mount custom CA into each worker container",
 )
+@click.option(
+    "--disable-cloud-logging",
+    help="Disable sending worker logs to Gretel Cloud.",
+    default=False,
+)
 @pass_session
 def start(
     sc: SessionContext,
@@ -76,6 +81,7 @@ def start(
     env: List[str] = None,
     volume: List[str] = None,
     ca_bundle: Optional[str] = None,
+    disable_cloud_logging: bool = False,
 ):
     sc.log.info(f"Starting Gretel agent using driver {driver}")
     creds = []
@@ -112,6 +118,7 @@ def start(
         creds=creds,
         log_factory=build_logger,
         artifact_endpoint=artifact_endpoint,
+        disable_cloud_logging=disable_cloud_logging,
         env_vars=env_dict,
         volumes=volumes,
         capabilities=capabilities,

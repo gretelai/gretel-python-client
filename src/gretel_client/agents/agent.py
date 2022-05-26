@@ -52,6 +52,9 @@ class AgentConfig:
     artifact_endpoint: Optional[str] = None
     """Configure an artifact endpoint for workers to store intermediate data on."""
 
+    disable_cloud_logging: bool = False
+    """Disable sending worker logs to the cloud"""
+
     volumes: Optional[List[DataVolumeDef]] = None
     """A list of volumes to mount into the worker container"""
 
@@ -112,6 +115,7 @@ class Job:
     log: Optional[Callable] = None
     cloud_creds: Optional[List[CloudCreds]] = None
     artifact_endpoint: Optional[str] = None
+    disable_cloud_logging: bool = False
     env_vars: Optional[dict] = None
 
     @classmethod
@@ -128,6 +132,7 @@ class Job:
             max_runtime_seconds=agent_config.max_runtime_seconds,
             cloud_creds=agent_config.creds,
             artifact_endpoint=agent_config.artifact_endpoint,
+            disable_cloud_logging=agent_config.disable_cloud_logging,
             env_vars=agent_config.env_vars,
         )
 
@@ -136,6 +141,8 @@ class Job:
         params = {"--worker-token": self.worker_token}
         if self.artifact_endpoint:
             params["--artifact-endpoint"] = self.artifact_endpoint
+        if self.disable_cloud_logging:
+            params["--disable-cloud-logging"] = ""
         return params
 
     @property

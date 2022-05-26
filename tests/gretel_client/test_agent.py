@@ -146,3 +146,10 @@ def test_job_needs_gpu(build_container: MagicMock, get_session_config: MagicMock
     assert build_container.call_args_list[0][1]["device_requests"] == [
         DEFAULT_GPU_CONFIG
     ]
+
+
+@patch("gretel_client.agents.agent.get_session_config")
+def test_job_disables_cloud_logging(get_session_config: MagicMock):
+    config = AgentConfig(driver="docker", disable_cloud_logging=True)
+    job = Job.from_dict(get_mock_job(instance_type="gpu-standard"), config)
+    assert job.params == {"--disable-cloud-logging": "", "--worker-token": "abcdef1243"}
