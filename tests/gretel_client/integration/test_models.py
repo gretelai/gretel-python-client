@@ -105,7 +105,6 @@ def test_raises_wait_time_exceeded(
     project: Project,
     transform_model_path: Path,
 ):
-    ...
     m = Model(project=project, model_config=transform_model_path)
     m.submit(runner_mode=RunnerMode.CLOUD)
 
@@ -120,11 +119,10 @@ def test_raises_wait_time_exceeded(
     assert m.status == Status.COMPLETED
 
 
-def test_does_get_synthetic_records(trained_synth_model: Model, request):
-    handler = trained_synth_model.create_record_handler_obj()
-    handler.submit(
-        action="generate", runner_mode=RunnerMode.CLOUD, params={"num_records": 100}
-    )
+def test_does_get_records(trained_synth_model: Model, get_fixture: Callable, request):
+    handler = trained_synth_model.create_record_handler_obj(params={"num_records": 10})
+    handler.submit_cloud()
+
     request.addfinalizer(handler.delete)
     logs = list(handler.poll_logs_status())
     assert handler
@@ -151,11 +149,11 @@ def test_polls_with_helper(
     assert m.status == Status.COMPLETED
 
 
-def test_does_search_models(pre_trained_project: Project):
-    models = list(pre_trained_project.search_models())
+def test_does_search_models(pretrained_project: Project):
+    models = list(pretrained_project.search_models())
     assert len(models) > 0
     assert all([isinstance(m, Model) for m in models])
 
-    models = list(pre_trained_project.search_models(factory=dict))
+    models = list(pretrained_project.search_models(factory=dict))
     assert len(models) > 0
     assert all([isinstance(m, dict) for m in models])

@@ -1,8 +1,13 @@
+import json
 import os
 
+from pathlib import Path
+from typing import Callable, Dict
 from unittest.mock import patch
 
 import pytest
+
+from click.testing import CliRunner, Result
 
 from gretel_client.config import (
     _load_config,
@@ -14,9 +19,27 @@ from gretel_client.projects.models import Model
 from gretel_client.projects.projects import get_project, Project
 from gretel_client.rest.api.projects_api import ProjectsApi
 
+fixtures = Path(__file__).parent / "../fixtures"
 
-@pytest.fixture(scope="function", autouse=True)
-def configure_session_client(configure_session_client):
+
+@pytest.fixture
+def get_fixture():
+    def _(name: str) -> Path:
+        return fixtures / name
+
+    return _
+
+
+@pytest.fixture
+def runner() -> CliRunner:
+    """Returns a CliRunner that can be used to invoke the CLI from
+    unit tests.
+    """
+    return CliRunner(mix_stderr=False)
+
+
+@pytest.fixture(autouse=True)
+def configure_session_client():
     """Ensures the the host client config is reset after each test."""
     with patch.dict(
         os.environ,
@@ -32,10 +55,10 @@ def configure_session_client(configure_session_client):
 
 
 @pytest.fixture
-def project(request):
+def project():
     p = get_project(create=True)
-    request.addfinalizer(p.delete)
-    return p
+    yield p
+    p.delete()
 
 
 @pytest.fixture
@@ -44,20 +67,40 @@ def projects_api() -> ProjectsApi:
 
 
 @pytest.fixture
-def pre_trained_project() -> Project:
-    yield get_project(name="gretel-client-project-pretrained")
+def pretrained_model_map(get_fixture: Callable) -> Dict[str, str]:
+    return json.loads(get_fixture("model_fixtures.json").read_text())
 
 
 @pytest.fixture
-def trained_synth_model(pre_trained_project: Project) -> Model:
-    return pre_trained_project.get_model(model_id="626ab963f7098ebecbb623b2")
+def pretrained_project(pretrained_model_map: Dict) -> Project:
+    return get_project(
+        name=os.getenv("GRETEL_PROJECT", pretrained_model_map["_project"])
+    )
 
 
 @pytest.fixture
-def trained_xf_model(pre_trained_project: Project) -> Model:
-    return pre_trained_project.get_model(model_id="626abd19f7098ebecbb623d9")
+def get_pretrained_model(pretrained_project: Project, pretrained_model_map: Dict):
+    def _(name: str) -> Model:
+        return pretrained_project.get_model(model_id=pretrained_model_map[name])
+
+    return _
 
 
 @pytest.fixture
-def trained_classify_model(pre_trained_project: Project) -> Model:
-    return pre_trained_project.get_model(model_id="626abd2ff7098ebecbb623da")
+def trained_synth_model(get_pretrained_model: Callable) -> Model:
+    return get_pretrained_model("synthetics_default")
+
+
+@pytest.fixture
+def trained_xf_model(get_pretrained_model: Callable) -> Model:
+    return get_pretrained_model("transforms_default")
+
+
+@pytest.fixture
+def trained_classify_model(get_pretrained_model: Callable) -> Model:
+    return get_pretrained_model("classify_default")
+
+
+def print_cmd_output(cmd: Result):
+    print(f"STDERR\n{cmd.stderr}")
+    print(f"STDOUT\n{cmd.stdout}")
