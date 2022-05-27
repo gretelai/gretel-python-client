@@ -8,6 +8,7 @@ from typing import Dict, Optional, Union
 import click
 
 from gretel_client.cli.common import poll_and_print, SessionContext
+from gretel_client.cli.utils.parser_utils import ref_data_factory
 from gretel_client.config import get_logger, get_session_config
 from gretel_client.models.config import get_model_type_config, GPU
 from gretel_client.projects.common import WAIT_UNTIL_DONE
@@ -79,6 +80,7 @@ def submit_docker_local(
             does not exist, the path will be created for you. If no path
             is specified, the current working directory is used.
         in_data: Input data path.
+        ref_data: Reference data path or dict where values are reference data path
         model_path: If you are running a ``RecordHandler``, this is the path
             to the model that is being ran.
 
@@ -98,12 +100,22 @@ def submit_docker_local(
             log.info("GPU device found!")
         except ContainerRunError:
             log.warn("Could not configure GPU. Continuing with CPU")
+
+    # If our `job` instance already has data sources set and they are
+    # local files, then we'll implicitly use them as the data sources
+    # for this local job
+    if in_data is None and Path(job.data_source).is_file():
+        in_data = job.data_source
     if in_data:
         run.configure_input_data(in_data)
-    if ref_data:
-        run.configure_ref_data(ref_data)
-    if not in_data and job.data_source:
-        run.configure_input_data(job.data_source)
+
+    ref_data_obj = ref_data_factory(ref_data)
+    # If we did not receive any local ref data but the job itself
+    # has ref data, we'll attempt to use the job's ref data instead
+    if ref_data_obj.is_empty and not job.ref_data.is_empty:
+        ref_data_obj = job.ref_data
+    run.configure_ref_data(ref_data_obj)
+
     if model_path:
         run.configure_model(model_path)
     run.start()

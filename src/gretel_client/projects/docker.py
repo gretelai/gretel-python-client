@@ -113,7 +113,8 @@ class ContainerRun:
         # values of the ref data dict for the new input volume paths
         ref_data = deepcopy(ref_data)
 
-        if not ref_data.is_empty:
+        # We only configure ref data if all data sources are local to disk
+        if ref_data.is_local_data:
             for key, data_path in ref_data.ref_dict.items():
                 ref_data.ref_dict[key] = self.input_volume.add_file(data_path)
             self.run_params.extend(ref_data.as_cli)

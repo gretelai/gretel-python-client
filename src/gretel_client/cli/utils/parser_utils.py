@@ -4,6 +4,7 @@ Helpers for parsing CLI inputs.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
 
@@ -42,6 +43,20 @@ class RefData:
             return False
 
         return self.values[0].startswith("gretel_")
+
+    @property
+    def is_local_data(self) -> bool:
+        """
+        Return True if all of the data sources are local to disk, False otherwise
+        """
+        if self.is_empty:
+            return False
+
+        for data_source in self.values:
+            if not Path(data_source).is_file():
+                return False
+
+        return True
 
     @classmethod
     def from_list(cls, ref_data: List[str]) -> RefData:
