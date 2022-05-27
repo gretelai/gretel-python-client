@@ -72,7 +72,7 @@ def test_agent_server_does_start(
     ]
 
     server = Agent(agent_config)
-    request.addfinalizer(server.interupt)
+    request.addfinalizer(server.interrupt)
 
     get_driver.assert_called_once_with(agent_config)
 
@@ -89,7 +89,7 @@ def test_agent_server_does_start(
         sleep(1)  # loop will wait a max of 2 seconds
         cur_wait += 1
 
-    server.interupt()
+    server.interrupt()
     assert mock_driver.schedule.call_count == 2
     assert server._jobs_manager.active_jobs == 0
 

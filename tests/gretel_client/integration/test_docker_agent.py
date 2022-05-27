@@ -22,10 +22,13 @@ def agent_config() -> Iterator[AgentConfig]:
 
 def test_docker_agent(agent_config: AgentConfig, request):
     agent = Agent(config=agent_config)
-    request.addfinalizer(agent.interupt)
+    request.addfinalizer(agent.interrupt)
+
     project = get_project(name=agent_config.project_id)
     model = project.create_model_obj("transform/default", fake_pii)
+
     model.submit_manual()
+    request.addfinalizer(model.cancel)
 
     def start():
         agent.start()
@@ -35,14 +38,13 @@ def test_docker_agent(agent_config: AgentConfig, request):
 
     model._poll_job_endpoint()
     cur_wait = 0
+    passing_states = (Status.COMPLETED, Status.ACTIVE)
     while model.status in ACTIVE_STATES and cur_wait < 60:
         time.sleep(1)  # this test will wait a max of 60 seconds
         model._poll_job_endpoint()
         cur_wait += 1
-        if model.status == Status.COMPLETED:
-            print(f"Manual job took approx {cur_wait} seconds")
+        if model.status in passing_states:
             break
 
-    agent.interupt()
-    # If the job is still active, that's ok, we know the agent ran it
-    assert model.status in (Status.COMPLETED, Status.ACTIVE)
+    agent.interrupt()
+    assert model.status in passing_states

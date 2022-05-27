@@ -23,10 +23,11 @@ client_deps = [
 
 all_deps = test_deps + client_deps
 
-def py_client_integration_test(name, **kwargs):
+def py_client_integration_test(name, flaky = True, **kwargs):
     deps = kwargs.get("deps", [])
     py_pytest_test(
         name = name,
         deps = deps + all_deps + ["//python/tests/gretel_client/integration:conf"],
+        flaky = flaky,
         **kwargs
     )

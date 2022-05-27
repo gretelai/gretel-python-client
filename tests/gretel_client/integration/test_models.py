@@ -84,18 +84,14 @@ def test_does_train_model_and_transform_records(
     transform_local_data_source: Path,
 ):
     m = Model(project=project, model_config=transform_model_path)
-    m.submit(runner_mode=RunnerMode.CLOUD)
+    m.submit_cloud()
     logs = list(m.poll_logs_status())
     assert len(logs) > 1
     assert m.status == Status.COMPLETED
-    record_handler = m.create_record_handler_obj()
-    record_handler.submit(
-        params=None,
-        action="transform",
-        runner_mode=RunnerMode.CLOUD,
-        data_source=str(transform_local_data_source),
-        upload_data_source=True,
+    record_handler = m.create_record_handler_obj(
+        data_source=str(transform_local_data_source)
     )
+    record_handler.submit_cloud()
     logs = list(record_handler.poll_logs_status())
     assert len(logs) > 1
     assert record_handler.status == Status.COMPLETED
@@ -142,7 +138,7 @@ def test_polls_with_helper(
     capsys,
 ):
     m = Model(project=project, model_config=transform_model_path)
-    m.submit(runner_mode=RunnerMode.CLOUD)
+    m.submit_cloud()
     poll(m)
     captured = capsys.readouterr()
     assert "Model creation complete" in captured.err

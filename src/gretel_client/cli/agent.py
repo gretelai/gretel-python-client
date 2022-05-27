@@ -124,5 +124,5 @@ def start(
         capabilities=capabilities,
     )
     agent = get_agent(config)
-    sc.register_cleanup(lambda: agent.interupt())
+    sc.register_cleanup(lambda: agent.interrupt())
     agent.start()

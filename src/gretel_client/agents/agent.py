@@ -240,13 +240,13 @@ class Poller(Iterator):
         self._jobs_api = jobs_api
         self._rate_limiter = rate_limiter
         self._logger = logging.getLogger(__name__)
-        self._interupt = threading.Event()
+        self._interrupt = threading.Event()
 
     def __iter__(self):
         return self
 
-    def interupt(self):
-        return self._interupt.set()
+    def interrupt(self):
+        return self._interrupt.set()
 
     def poll_endpoint(self) -> Optional[Job]:
         next_job = self._jobs_api.receive_one(project_id=self._agent_config.project_id)
@@ -255,7 +255,7 @@ class Poller(Iterator):
 
     def __next__(self) -> Optional[Job]:
         wait_secs = 2
-        while True and not self._interupt.is_set():
+        while True and not self._interrupt.is_set():
             if self._rate_limiter.has_capacity():
                 job = None
                 try:
@@ -266,7 +266,7 @@ class Poller(Iterator):
                     )
                 if job:
                     return job
-            self._interupt.wait(wait_secs)
+            self._interrupt.wait(wait_secs)
             if wait_secs > Poller.max_wait_secs:
                 wait_secs = 2
                 self._logger.info("Heartbeat from poller, still here...")
@@ -289,14 +289,14 @@ class Agent:
         self._jobs_api = self._client_config.get_api(JobsApi)
         self._projects_api = self._client_config.get_api(ProjectsApi)
         self._jobs = Poller(self._jobs_api, self._rate_limiter, self._config)
-        self._interupt = threading.Event()
+        self._interrupt = threading.Event()
 
     def start(self, cooloff: float = 5):
         """Start the agent"""
         self._logger.info("Agent started, waiting for work to arrive")
         for job in self._jobs:
             if not job:
-                if self._interupt.is_set():
+                if self._interrupt.is_set():
                     return
                 else:
                     continue
@@ -307,12 +307,12 @@ class Agent:
             # todo: add in read lock to jobs endpoint. this sleep is
             # a stopgap until then. without this the agent is going to
             # try and launch multiple containers of the same job.
-            self._interupt.wait(cooloff)
+            self._interrupt.wait(cooloff)
 
-    def interupt(self):
+    def interrupt(self):
         """Shuts down the agent"""
-        self._jobs.interupt()
-        self._interupt.set()
+        self._jobs.interrupt()
+        self._interrupt.set()
         self._logger.info("Server preparing to shutdown")
         self._jobs_manager.shutdown()
         self._logger.info("Server shutdown complete")
