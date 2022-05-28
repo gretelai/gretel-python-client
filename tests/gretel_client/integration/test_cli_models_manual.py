@@ -1,7 +1,8 @@
 import json
+import multiprocessing as mp
 import os
 
-from multiprocessing import Process, Queue
+from queue import Queue
 from signal import SIGINT
 from threading import Timer
 from typing import Callable
@@ -128,8 +129,9 @@ def test_manual_record_handler_cleanup(runner: CliRunner, trained_synth_model: M
         )
         queue.put({"out": cmd.stdout, "err": cmd.stderr})
 
-    process_queue = Queue()
-    process = Process(target=_generate_with_manual_runner, args=(process_queue,))
+    ctx = mp.get_context("fork")
+    process_queue = ctx.Queue()
+    process = ctx.Process(target=_generate_with_manual_runner, args=(process_queue,))
     process.start()
     process.join()
 
