@@ -104,11 +104,10 @@ def submit_docker_local(
     # If our `job` instance already has data sources set and they are
     # local files, then we'll implicitly use them as the data sources
     # for this local job
-    if in_data is None and Path(job.data_source).is_file():
+    if in_data is None and job.data_source and Path(job.data_source).is_file():
         in_data = job.data_source
     if in_data:
         run.configure_input_data(in_data)
-
     ref_data_obj = ref_data_factory(ref_data)
     # If we did not receive any local ref data but the job itself
     # has ref data, we'll attempt to use the job's ref data instead
