@@ -160,9 +160,7 @@ class Job:
 
     @property
     def gretel_stage(self) -> str:
-        if "https://api-dev.gretel.cloud" in get_session_config().endpoint:
-            return "dev"
-        return "prod"
+        return get_session_config().stage
 
     @property
     def needs_gpu(self) -> bool:

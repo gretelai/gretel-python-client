@@ -13,7 +13,7 @@ import docker.errors
 import docker.models.containers
 
 from gretel_client.cli.utils.parser_utils import ref_data_factory
-from gretel_client.config import get_logger
+from gretel_client.config import get_logger, get_session_config
 from gretel_client.docker import (
     build_container,
     check_docker_env,
@@ -155,6 +155,7 @@ class ContainerRun:
             detach=True,
             volumes=volumes,
             remove=False,
+            env={"GRETEL_STAGE": get_session_config().stage},
             device_requests=self.device_requests,
         )
         self._container.start()

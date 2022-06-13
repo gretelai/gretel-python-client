@@ -182,6 +182,12 @@ class ClientConfig:
     def email(self) -> str:
         return self.get_api(UsersApi).users_me()["data"]["me"]["email"]
 
+    @property
+    def stage(self) -> str:
+        if "https://api-dev.gretel.cloud" in self.endpoint:
+            return "dev"
+        return "prod"
+
     def get_api(
         self,
         api_interface: Type[T],
