@@ -32,7 +32,7 @@ from gretel_client.rest.api.opt_api import OptApi
 
 DEFAULT_GPU_CONFIG = DeviceRequest(count=-1, capabilities=[["gpu"]])
 
-CONTAINER_UTILS = "public.ecr.aws/f3l2x5a1/container-utils"
+CONTAINER_UTILS = "gretelai/container-utils"
 
 SYSTEM_CHECK = "system-check"
 GPU_SYSTEM_CHECK = "gpu-system-check"
@@ -253,9 +253,11 @@ class DataVolume:
 
     def prepare_volume(self) -> dict:
         self.volume = self.docker_client.volumes.create(name=self.name)  # type:ignore
-        self.docker_client.images.pull(self.volume_image)
+        image = pull_image(
+            self.volume_image, self.docker_client, AuthStrategy.AUTH_AND_RESOLVE
+        )
         self.volume_container = self.docker_client.containers.create(  # type:ignore
-            image=self.volume_image,
+            image=image,
             volumes=[f"{self.volume.name}:{self.target_dir}"],  # type: ignore
         )
 
@@ -273,6 +275,32 @@ class DataVolume:
                 self.volume.remove(force=True)
             except Exception:
                 pass
+
+
+def pull_image(
+    image: str,
+    docker_client: docker.DockerClient,
+    auth_strategy: Optional[AuthStrategy],
+) -> str:
+    logger = get_logger(__name__)
+    logger.debug("Authenticating image pull")
+
+    auth = None
+    if auth_strategy is not None:
+        auth, registry = get_container_auth()
+        if auth_strategy == AuthStrategy.AUTH_AND_RESOLVE:
+            image = f"{registry}/{image}"
+
+    logger.info(f"Pulling container image {image}")
+    try:
+        pull = docker_client.api.pull(image, auth_config=auth, stream=True, decode=True)
+        progress_printer = PullProgressPrinter(pull)
+        progress_printer.start()
+
+    except Exception as ex:
+        raise DockerError(f"Could not pull image {image}") from ex
+
+    return image
 
 
 class Container:
@@ -322,28 +350,6 @@ class Container:
             return list(itertools.chain.from_iterable(params.items()))
         if params is None:
             return []
-
-    def _pull(self, image) -> str:
-        self._logger.debug("Authenticating image pull")
-
-        auth = None
-        if self._auth_strategy is not None:
-            auth, registry = get_container_auth()
-            if self._auth_strategy == AuthStrategy.AUTH_AND_RESOLVE:
-                image = f"{registry}/{image}"
-
-        self._logger.info(f"Pulling container image {image}")
-        try:
-            pull = self._docker_client.api.pull(
-                image, auth_config=auth, stream=True, decode=True
-            )
-            progress_printer = PullProgressPrinter(pull)
-            progress_printer.start()
-
-        except Exception as ex:
-            raise DockerError(f"Could not pull image {self.image}") from ex
-
-        return image
 
     def _prepare_volumes(self, volumes: Union[dict, List[DataVolumeDef]]):
         if isinstance(volumes, dict):
@@ -400,7 +406,7 @@ class Container:
     def start(self, entrypoint: str = None):
         """Start the container"""
         check_docker_env()
-        image = self._pull(self.image)
+        image = pull_image(self.image, self._docker_client, self._auth_strategy)
         volumes = self._prepare_volumes(self._volumes)
         self._run = self._start(image, entrypoint, volumes)  # type:ignore
 
@@ -543,14 +549,14 @@ def check_gpu() -> bool:
             image=f"{CONTAINER_UTILS}:{SYSTEM_CHECK}",
             device_requests=[DEFAULT_GPU_CONFIG],
             remove=True,
-            auth_strategy=None,
+            auth_strategy=AuthStrategy.AUTH_AND_RESOLVE,
         ).start()
         build_container(
             image=f"{CONTAINER_UTILS}:{GPU_SYSTEM_CHECK}",
             device_requests=[DEFAULT_GPU_CONFIG],
             params=["-c", "nvidia-smi"],
             remove=True,
-            auth_strategy=None,
+            auth_strategy=AuthStrategy.AUTH_AND_RESOLVE,
         ).start(entrypoint="bash")
     except Exception as ex:
         get_logger(__name__).warn(str(ex))
