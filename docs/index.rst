@@ -15,6 +15,7 @@ Modules
    cli.rst
    projects/index.rst
    config.rst
+   evaluation.rst
    helpers.rst
 
 
