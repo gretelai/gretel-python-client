@@ -83,6 +83,18 @@ class OptApi(object):
             kwargs["_host_index"] = kwargs.get("_host_index")
             return self.call_with_http_info(**kwargs)
 
+        def __get_licenses(self, **kwargs):
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
+            )
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            return self.call_with_http_info(**kwargs)
+
         self.get_container_login = _Endpoint(
             settings={
                 "response_type": (
@@ -127,4 +139,50 @@ class OptApi(object):
             },
             api_client=api_client,
             callable=__get_container_login,
+        )
+
+        self.get_licenses = _Endpoint(
+            settings={
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/opt/licenses",
+                "operation_id": "get_licenses",
+                "http_method": "GET",
+                "servers": None,
+            },
+            params_map={
+                "all": [],
+                "required": [],
+                "nullable": [],
+                "enum": [],
+                "validation": [],
+            },
+            root_map={
+                "validations": {},
+                "allowed_values": {},
+                "openapi_types": {},
+                "attribute_map": {},
+                "location_map": {},
+                "collection_format_map": {},
+            },
+            headers_map={
+                "accept": ["application/json"],
+                "content_type": [],
+            },
+            api_client=api_client,
+            callable=__get_licenses,
         )
