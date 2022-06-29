@@ -133,7 +133,9 @@ def ref_data_factory(ref_data: Optional[RefDataTypes] = None) -> RefData:
     elif isinstance(ref_data, str):
         ref_data_obj = RefData.from_list([ref_data])
     elif isinstance(ref_data, (list, tuple)):
-        if isinstance(ref_data[0], _DataFrameT):
+        if len(ref_data) == 0:
+            ref_data_obj = RefData()
+        elif isinstance(ref_data[0], _DataFrameT):
             ref_data_obj = RefData.from_dataframes(ref_data)
         else:
             ref_data_obj = RefData.from_list(list(ref_data))
