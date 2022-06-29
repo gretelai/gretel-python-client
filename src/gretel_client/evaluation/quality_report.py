@@ -5,12 +5,8 @@ from typing import Optional, Union
 
 from gretel_client.config import RunnerMode
 from gretel_client.evaluation.reports import BaseReport, ReportDictType
+from gretel_client.projects.common import DataSourceTypes, RefDataTypes
 from gretel_client.projects.projects import Project
-
-try:
-    import pandas as pd
-except ImportError:
-    ...
 
 
 class QualityReport(BaseReport):
@@ -30,8 +26,8 @@ class QualityReport(BaseReport):
         self,
         *,
         project: Optional[Project] = None,
-        data_source: Union[Path, str, pd.DataFrame],
-        ref_data: Union[Path, str, pd.DataFrame],
+        data_source: DataSourceTypes,
+        ref_data: RefDataTypes,
         output_dir: Optional[Union[str, Path]] = None,
         runner_mode: Optional[RunnerMode] = RunnerMode.CLOUD,
     ):

@@ -7,23 +7,37 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
+try:
+    from pandas import DataFrame as _DataFrameT
+except ImportError:
+    pd = None
+
+    class _DataFrameT:
+        ...  # noqa
+
 
 class RefDataError(Exception):
     pass
 
 
-RefDataTypes = Optional[Union[str, Dict[str, str], List[str], Tuple[str]]]
+RefDataTypes = Optional[
+    Union[str, Dict[str, str], List[str], Tuple[str], _DataFrameT, List[_DataFrameT]]
+]
+
+DataSourceTypes = Union[str, _DataFrameT]
 
 
 @dataclass
 class RefData:
     """
-    Interface for parsing key/value reference data from CLI/SDK inputs
+    Interface for parsing key/value reference data from CLI/SDK inputs.
     """
 
     CLI_PARAM = "--ref-data"
 
-    ref_dict: Dict[Union[int, str], str] = field(default_factory=dict)
+    ref_dict: Dict[Union[int, str], Union[str, _DataFrameT]] = field(
+        default_factory=dict
+    )
 
     @property
     def values(self) -> List[str]:
@@ -39,7 +53,7 @@ class RefData:
         Return True if the ref data are artifacts in Gretel Cloud. We assume all
         or nothing here, so only check the first data source.
         """
-        if self.is_empty:
+        if self.is_empty or isinstance(self.values[0], _DataFrameT):
             return False
 
         return self.values[0].startswith("gretel_")
@@ -47,7 +61,7 @@ class RefData:
     @property
     def is_local_data(self) -> bool:
         """
-        Return True if all of the data sources are local to disk, False otherwise
+        Return True if all of the data sources are local to disk, False otherwise.
         """
         if self.is_empty:
             return False
@@ -62,7 +76,7 @@ class RefData:
     def from_list(cls, ref_data: List[str]) -> RefData:
         """
         Alternate constructor for creating an instance from CLI inputs that may
-        be provided as key/value pairs such as `foo=bar.csv`
+        be provided as key/value pairs such as `foo=bar.csv`.
         """
         ref_data_dict = {}
 
@@ -78,6 +92,16 @@ class RefData:
             else:
                 ref_data_dict[parts[0]] = parts[1]
 
+        return cls(ref_data_dict)
+
+    @classmethod
+    def from_dataframes(cls, ref_data: List[_DataFrameT]) -> RefData:
+        """
+        Alternate constructor for creating an instance from the list of dataframes input.
+        """
+        ref_data_dict = {}
+        for idx, ref in enumerate(ref_data):
+            ref_data_dict[idx] = ref
         return cls(ref_data_dict)
 
     @property
@@ -104,11 +128,16 @@ def ref_data_factory(ref_data: Optional[RefDataTypes] = None) -> RefData:
         ref_data_obj = RefData()
     elif isinstance(ref_data, dict):
         ref_data_obj = RefData(ref_data)
+    elif isinstance(ref_data, _DataFrameT):
+        ref_data_obj = RefData.from_dataframes([ref_data])
     elif isinstance(ref_data, str):
         ref_data_obj = RefData.from_list([ref_data])
     elif isinstance(ref_data, (list, tuple)):
-        ref_data_obj = RefData.from_list(list(ref_data))
+        if isinstance(ref_data[0], _DataFrameT):
+            ref_data_obj = RefData.from_dataframes(ref_data)
+        else:
+            ref_data_obj = RefData.from_list(list(ref_data))
     else:
-        raise ValueError("ref_data is not a valid str, dict, or list")
+        raise ValueError("ref_data is not a valid str, dataframe, dict, or list.")
 
     return ref_data_obj

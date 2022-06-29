@@ -5,24 +5,18 @@ import json
 import os
 
 from abc import ABC, abstractproperty
-from contextlib import contextmanager, nullcontext
 from ctypes import Union
 from pathlib import Path
-from tempfile import NamedTemporaryFile
-from typing import Any, Dict, Iterator, Optional, Union
+from typing import Any, Dict, Optional, Union
 from xmlrpc.client import boolean
 
 import smart_open
 
 from gretel_client.config import RunnerMode
 from gretel_client.helpers import poll, submit_docker_local
+from gretel_client.projects.common import DataSourceTypes, RefDataTypes
 from gretel_client.projects.models import Model
 from gretel_client.projects.projects import Project, tmp_project
-
-try:
-    import pandas as pd
-except ImportError:
-    pd = None
 
 ReportDictType = Dict[str, Any]
 _model_run_exc_message = "Please run the model to generate the report."
@@ -46,10 +40,10 @@ class BaseReport(ABC):
     project: Optional[Project]
     """Project associated with the report."""
 
-    data_source: Union[Path, str, pd.DataFrame]
+    data_source: DataSourceTypes
     """Data source used for the report."""
 
-    ref_data: Union[Path, str, pd.DataFrame]
+    ref_data: RefDataTypes
     """Reference data used for the report."""
 
     output_dir: Optional[Path]
@@ -69,14 +63,16 @@ class BaseReport(ABC):
     def __init__(
         self,
         project: Optional[Project],
-        data_source: Union[Path, str, pd.DataFrame],
-        ref_data: Union[Path, str, pd.DataFrame],
+        data_source: DataSourceTypes,
+        ref_data: RefDataTypes,
         output_dir: Optional[Union[str, Path]],
         runner_mode: RunnerMode,
     ):
         self.project = project
-        self.data_source = data_source
-        self.ref_data = ref_data
+        self.data_source = (
+            str(data_source) if isinstance(data_source, Path) else data_source
+        )
+        self.ref_data = str(ref_data) if isinstance(ref_data, Path) else ref_data
         self.output_dir = Path(output_dir) if output_dir else os.getcwd()
         self.runner_mode = runner_mode
 
@@ -103,25 +99,12 @@ class BaseReport(ABC):
             self._report_html = f.read()
 
     def _run_in_project(self, project: Project):
-        if pd and isinstance(self.data_source, pd.DataFrame):
-            data_source_context_mgr = df_to_tmp_file
-        else:
-            data_source_context_mgr = nullcontext
-
-        if pd and isinstance(self.ref_data, pd.DataFrame):
-            ref_data_context_mgr = df_to_tmp_file
-        else:
-            ref_data_context_mgr = nullcontext
-
-        with data_source_context_mgr(
-            self.data_source
-        ) as data_source, ref_data_context_mgr(self.ref_data) as ref_data:
-            model = project.create_model_obj(
-                self.model_config,
-                data_source=str(data_source),
-                ref_data=str(ref_data),
-            )
-            self._run_model(model=model)
+        model = project.create_model_obj(
+            self.model_config,
+            data_source=self.data_source,
+            ref_data=self.ref_data,
+        )
+        self._run_model(model=model)
 
     def _run(self):
         if not self.project:
@@ -153,13 +136,3 @@ class BaseReport(ABC):
     def peek(self) -> ReportDictType:
         """Returns a dictionary representation of the top level report scores."""
         pass
-
-
-@contextmanager
-def df_to_tmp_file(df: pd.DataFrame, suffix: str = ".csv") -> Iterator[str]:
-    """A temporary file context manager. Create a file that can be used inside of a "with"
-    statement for temporary purposes. The file will be deleted when the scope is exited.
-    """
-    with NamedTemporaryFile(suffix=suffix) as df_as_file:
-        df.to_csv(df_as_file.name)
-        yield df_as_file.name

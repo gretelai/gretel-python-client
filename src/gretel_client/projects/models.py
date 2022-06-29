@@ -15,10 +15,16 @@ import yaml
 
 from smart_open import open
 
-from gretel_client.cli.utils.parser_utils import ref_data_factory, RefData, RefDataTypes
+from gretel_client.cli.utils.parser_utils import (
+    DataSourceTypes,
+    ref_data_factory,
+    RefData,
+    RefDataTypes,
+)
 from gretel_client.config import RunnerMode
 from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.common import (
+    _DataFrameT,
     f,
     ModelArtifact,
     NO,
@@ -173,10 +179,12 @@ class Model(Job):
             raise RuntimeError("This model was already submitted.")
 
         if not isinstance(runner_mode, RunnerMode):
-            raise ValueError("Invalid runner_mode type, must be str or RunnerMode enum")
+            raise ValueError(
+                "Invalid runner_mode type, must be str or RunnerMode enum."
+            )
 
         if runner_mode == RunnerMode.LOCAL and not _default_manual:
-            raise ValueError("Cannot use local mode")
+            raise ValueError("Cannot use local mode.")
 
         if upload_data_source and runner_mode == RunnerMode.CLOUD:
             self.upload_data_source(_validate=_validate_data_source)
@@ -237,10 +245,12 @@ class Model(Job):
         try:
             return list(self.model_config["models"][0].keys())[0]
         except (IndexError, KeyError) as ex:
-            raise ModelConfigError("Could not determine model type from config") from ex
+            raise ModelConfigError(
+                "Could not determine model type from config."
+            ) from ex
 
     @property
-    def data_source(self) -> str:
+    def data_source(self) -> DataSourceTypes:
         """Retrieves the configured data source from the model config.
 
         If the model config has a local data_source we'll try and resolve
@@ -250,6 +260,8 @@ class Model(Job):
             data_source = self.model_config["models"][0][self.model_type]["data_source"]
             if isinstance(data_source, list):
                 data_source = data_source[0]
+            if isinstance(data_source, _DataFrameT):
+                return data_source
             if self._local_model_config_path and not data_source.startswith("gretel_"):
                 data_source_path = self._local_model_config_path.parent / data_source
                 if data_source_path.is_file():
@@ -257,15 +269,15 @@ class Model(Job):
             return data_source
         except (IndexError, KeyError) as ex:
             raise ModelConfigError(
-                "Could not get data source from model config"
+                "Could not get data source from model config."
             ) from ex
 
     @data_source.setter
-    def data_source(self, data_source: str):
+    def data_source(self, data_source: DataSourceTypes):
         """Configure a new data source for the model."""
         if self.model_id:
             raise RuntimeError(
-                "Cannot update data source after the model has been submitted"
+                "Cannot update data source after the model has been submitted."
             )
         self.model_config["models"][0][self.model_type]["data_source"] = data_source
 
@@ -280,8 +292,10 @@ class Model(Job):
                 "ref_data"
             )
             ref_data = ref_data_factory(ref_data_dict)
-
-            if ref_data.is_cloud_data:
+            if ref_data.is_cloud_data or (
+                ref_data.ref_dict
+                and isinstance(list(ref_data.ref_dict.values())[0], _DataFrameT)
+            ):
                 return ref_data
 
             # Below here, we will mutate `ref_data_dict` and re-create our instance
@@ -303,7 +317,7 @@ class Model(Job):
     def ref_data(self, ref_data: RefData):
         if self.model_id:
             raise RuntimeError(
-                "Cannot update ref data after the model has been submitted"
+                "Cannot update ref data after the model has been submitted."
             )
         self.model_config["models"][0][self.model_type]["ref_data"] = copy.deepcopy(
             ref_data.ref_dict
@@ -315,17 +329,17 @@ class Model(Job):
         random name will be selected when the model is submitted
         to the backend.
 
-        :getter: Returns the model name
-        :setter: Sets the model name
+        :getter: Returns the model name.
+        :setter: Sets the model name.
         """
         return self.model_config.get("name")
 
     @name.setter
     def name(self, new_name: str):
-        """Update the name of the model
+        """Update the name of the model.
 
         Args:
-            new_name: The new name of the model
+            new_name: The new name of the model.
         """
         self.model_config["name"] = new_name
 
@@ -368,7 +382,7 @@ class Model(Job):
 
     def create_record_handler_obj(
         self,
-        data_source: Optional[str] = None,
+        data_source: Optional[DataSourceTypes] = None,
         params: Optional[dict] = None,
         ref_data: Optional[RefDataTypes] = None,
     ) -> RecordHandler:

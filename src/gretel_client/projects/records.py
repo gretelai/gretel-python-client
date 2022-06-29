@@ -1,8 +1,13 @@
 from __future__ import annotations
 
-from typing import List, Optional, Type, TYPE_CHECKING
+from typing import List, Optional, Type, TYPE_CHECKING, Union
 
-from gretel_client.cli.utils.parser_utils import ref_data_factory, RefData, RefDataTypes
+from gretel_client.cli.utils.parser_utils import (
+    DataSourceTypes,
+    ref_data_factory,
+    RefData,
+    RefDataTypes,
+)
 from gretel_client.config import DEFAULT_RUNNER, RunnerMode
 from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.common import f, ModelRunArtifact
@@ -32,7 +37,7 @@ class RecordHandler(Job):
         model: Model,
         *,
         record_id: str = None,
-        data_source: Optional[str] = None,
+        data_source: Optional[DataSourceTypes] = None,
         params: Optional[dict] = None,
         ref_data: Optional[RefDataTypes] = None,
     ):
@@ -98,7 +103,7 @@ class RecordHandler(Job):
         self.worker_key = handler[f.WORKER_KEY]
         return self
 
-    def _upload_data_source(self, data_source: str) -> str:
+    def _upload_data_source(self, data_source: DataSourceTypes) -> str:
         return self.project.upload_artifact(data_source)
 
     def _upload_ref_data(self, ref_data: RefData) -> RefData:

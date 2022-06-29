@@ -7,7 +7,18 @@ from smart_open import open
 from gretel_client.projects.exceptions import DataSourceError, DataValidationError
 from gretel_client.readers import CsvReader, JsonReader
 
+try:
+    from pandas import DataFrame as _DataFrameT
+except ImportError:
+    pd = None
+
+    class _DataFrameT:
+        ...  # noqa
+
+
 Pathlike = Union[str, Path]
+DataSourceTypes = Union[str, Path, _DataFrameT]
+RefDataTypes = Union[Path, str, _DataFrameT]
 
 
 def validate_data_source(data_source: Pathlike) -> bool:

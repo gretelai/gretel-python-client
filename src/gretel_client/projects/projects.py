@@ -1,18 +1,23 @@
 """
 High level API for interacting with a Gretel Project
 """
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from functools import wraps
 from pathlib import Path
+from tempfile import NamedTemporaryFile
 from typing import Any, Dict, Iterator, List, Optional, Type, TypeVar, Union
 from urllib.parse import urlparse
 
 import requests
 import smart_open
 
-from gretel_client.cli.utils.parser_utils import ref_data_factory, RefDataTypes
+from gretel_client.cli.utils.parser_utils import (
+    DataSourceTypes,
+    ref_data_factory,
+    RefDataTypes,
+)
 from gretel_client.config import get_logger, get_session_config
-from gretel_client.projects.common import f, validate_data_source
+from gretel_client.projects.common import _DataFrameT, f, validate_data_source
 from gretel_client.projects.exceptions import GretelProjectError
 from gretel_client.projects.models import Model
 from gretel_client.rest import models
@@ -146,7 +151,7 @@ class Project:
     def create_model_obj(
         self,
         model_config: Union[str, Path, dict],
-        data_source: Optional[str] = None,
+        data_source: Optional[DataSourceTypes] = None,
         ref_data: Optional[RefDataTypes] = None,
     ) -> Model:
         """Creates a new model object. This will not submit the model
@@ -160,12 +165,16 @@ class Project:
             data_source: Defines the model data_source. If the model_config
                 already has a data_source defined, this property will
                 override the existing one.
-            ref_data: An Optional str, dict, or list of reference data sources
+            ref_data: An Optional str, dict, dataframe or list of reference data sources
                 to upload for the job.
         """
         _model = Model(model_config=model_config, project=self)
-        if data_source and not isinstance(data_source, str):
-            raise ValueError("data_source must be a str")
+        if (
+            not isinstance(data_source, _DataFrameT)
+            and data_source
+            and not isinstance(data_source, str)
+        ):
+            raise ValueError("data_source must be a str or dataframe")
         if data_source is not None:
             _model.data_source = data_source
         ref_data_obj = ref_data_factory(ref_data)
@@ -175,7 +184,7 @@ class Project:
     @property
     @check_not_deleted
     def artifacts(self) -> List[dict]:
-        """Returns a list of project artifacts"""
+        """Returns a list of project artifacts."""
         return (
             self.projects_api.get_artifacts(project_id=self.name)
             .get(DATA)
@@ -183,21 +192,25 @@ class Project:
         )
 
     def upload_artifact(
-        self, artifact_path: Union[Path, str], _validate: bool = True
+        self, artifact_path: Union[Path, str, _DataFrameT], _validate: bool = True
     ) -> str:
         """Resolves and uploads the data source specified in the
         model config.
 
         Returns:
-            A Gretel artifact key
+            A Gretel artifact key.
         """
         if isinstance(artifact_path, str) and artifact_path.startswith("gretel_"):
             return artifact_path
-        if _validate:
-            validate_data_source(artifact_path)
+        if isinstance(artifact_path, _DataFrameT):
+            artifact_path_context_mgr = df_to_tmp_file
+        else:
+            artifact_path_context_mgr = nullcontext
+            if _validate:
+                validate_data_source(artifact_path)
         if isinstance(artifact_path, Path):
             artifact_path = str(artifact_path)
-        with smart_open.open(
+        with artifact_path_context_mgr(artifact_path) as artifact_path, smart_open.open(
             artifact_path, "rb", ignore_ext=True
         ) as src:  # type:ignore
             src_data = src.read()
@@ -215,10 +228,10 @@ class Project:
             return artifact_key
 
     def delete_artifact(self, key: str):
-        """Deletes a project artifact
+        """Deletes a project artifact.
 
         Args:
-            key: Artifact key to delete
+            key: Artifact key to delete.
         """
         return self.projects_api.delete_artifact(project_id=self.name, key=key)
 
@@ -237,7 +250,7 @@ class Project:
 
 
 def search_projects(limit: int = 200, query: str = None) -> List[Project]:
-    """Searches for project
+    """Searches for project.
 
     Args:
         limit: The max number of projects to return.
@@ -392,7 +405,7 @@ def create_or_get_unique_project(
     Args:
         name: The name of the project, which will have the User's ID appended
             to it automatically.
-        desc: Description of the project
+        desc: Description of the project.
         display_name: If None, the display name will be set equal to the value
             of ``name`` _before_ the user ID is appended.
 
@@ -420,3 +433,13 @@ def create_or_get_unique_project(
         name=target_name, display_name=display_name or name, desc=desc
     )
     return project
+
+
+@contextmanager
+def df_to_tmp_file(df: _DataFrameT, suffix: str = ".csv") -> Iterator[str]:
+    """A temporary file context manager. Create a file that can be used inside of a "with"
+    statement for temporary purposes. The file will be deleted when the scope is exited.
+    """
+    with NamedTemporaryFile(suffix=suffix) as df_as_file:
+        df.to_csv(df_as_file.name, index=False)
+        yield df_as_file.name

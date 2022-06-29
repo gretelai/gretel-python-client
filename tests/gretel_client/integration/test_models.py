@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Callable
 
+import pandas as pd
 import pytest
 import smart_open
 
@@ -48,6 +49,7 @@ def test_create_model_upload_artifacts(
         {"foo": str(transform_local_data_source)},
         str(transform_local_data_source),
         [str(transform_local_data_source)],
+        pd.DataFrame([{"test_key": "test_value"}]),
     ]
 
     for ref_data in data_refs:

@@ -1,3 +1,4 @@
+import pandas as pd
 import pytest
 
 from gretel_client.cli.utils.parser_utils import RefData, RefDataError
@@ -32,6 +33,27 @@ def test_ref_data(input, expect, values, cli_str):
     assert ref_data.values == values
     assert not ref_data.is_empty
     assert ref_data.as_cli == cli_str
+
+
+@pytest.mark.parametrize(
+    "input,values,cli_str",
+    [
+        (
+            [pd.DataFrame([{"key1": "value1", "key2": "value2"}])],
+            ["value1", "value2"],
+            ["--ref-data", pd.DataFrame([{"key1": "value1", "key2": "value2"}])],
+        )
+    ],
+)
+def test_dataframe_ref_data(input, values, cli_str):
+    ref_data = RefData.from_dataframes(input)
+    assert (ref_data.ref_dict[0].values == values).all()
+    assert ref_data.ref_dict[0]["key1"].item() == "value1"
+    assert ref_data.ref_dict[0]["key2"].item() == "value2"
+    assert not ref_data.is_empty
+    assert not ref_data.is_cloud_data
+    assert ref_data.as_cli[0] == cli_str[0]
+    assert ref_data.as_cli[1].equals(cli_str[1])
 
 
 def test_ref_data_error():

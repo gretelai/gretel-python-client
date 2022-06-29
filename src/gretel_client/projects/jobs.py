@@ -16,7 +16,7 @@ import gretel_client.rest.exceptions
 from gretel_client.cli.utils.parser_utils import RefData
 from gretel_client.config import DEFAULT_RUNNER, RunnerMode
 from gretel_client.models.config import get_model_type_config
-from gretel_client.projects.common import f, WAIT_UNTIL_DONE
+from gretel_client.projects.common import _DataFrameT, f, WAIT_UNTIL_DONE
 from gretel_client.projects.exceptions import GretelJobNotFound, WaitTimeExceeded
 from gretel_client.rest.api.projects_api import ProjectsApi
 
@@ -54,10 +54,10 @@ class Job(ABC):
     """
 
     project: Project
-    """Project associated with the job"""
+    """Project associated with the job."""
 
     worker_key: Optional[str]
-    """Worker key used to launch the job"""
+    """Worker key used to launch the job."""
 
     _projects_api: ProjectsApi
 
@@ -110,7 +110,11 @@ class Job(ABC):
         Returns:
             The response from the Gretel API.
         """
-        if self.data_source:
+        if (
+            isinstance(self.data_source, _DataFrameT)
+            and not self.data_source.empty
+            or self.data_source
+        ):
             self.upload_data_source()
 
         if not self.ref_data.is_empty:
@@ -163,7 +167,7 @@ class Job(ABC):
 
     @property
     def status(self) -> Status:
-        """The status of the job. Is one of ``gretel_client.projects.jobs.Status``"""
+        """The status of the job. Is one of ``gretel_client.projects.jobs.Status``."""
         return Status(self._data[self.job_type][f.STATUS])
 
     @property
@@ -187,7 +191,7 @@ class Job(ABC):
 
     @property
     def print_obj(self) -> dict:
-        """Returns a printable object representation of the job"""
+        """Returns a printable object representation of the job."""
         out = self._data[self.job_type]
         if out.get(f.MODEL_KEY):
             del out[f.MODEL_KEY]
@@ -198,6 +202,8 @@ class Job(ABC):
         """Returns ``True`` if the data source is external to Gretel Cloud.
         If the data source is a Gretel Artifact, returns ``False``.
         """
+        if isinstance(self.data_source, _DataFrameT):
+            return True
         if self.data_source:
             return not self.data_source.startswith("gretel_")
         return False
@@ -220,9 +226,12 @@ class Job(ABC):
         will not be uploaded.
 
         Returns:
-            A Gretel artifact key
+            A Gretel artifact key.
         """
-        if self.external_data_source and self.data_source:
+        if self.external_data_source and (
+            (isinstance(self.data_source, _DataFrameT) and not self.data_source.empty)
+            or self.data_source
+        ):
             # NOTE: This assignment re-writes the gretel artifact onto the config
             self.data_source = self.project.upload_artifact(self.data_source, _validate)
             return self.data_source
@@ -235,7 +244,7 @@ class Job(ABC):
         the ref data as-is.
 
         Returns:
-            A ``RefData`` instance that contains the new Gretel artifact values
+            A ``RefData`` instance that contains the new Gretel artifact values.
         """
         curr_ref_data = self.ref_data
         if curr_ref_data.is_cloud_data or curr_ref_data.is_empty:
@@ -264,7 +273,7 @@ class Job(ABC):
         artifact type.
 
         Args:
-            artifact_type: Artifact type to download
+            artifact_type: Artifact type to download.
         """
         if artifact_key not in self.artifact_types:
             raise Exception(
@@ -276,7 +285,7 @@ class Job(ABC):
         return get_model_type_config(self.model_type).peek_report(report_contents)
 
     def peek_report(self, report_path: str = None) -> Optional[dict]:
-        """Return a summary of the job results
+        """Return a summary of the job results.
 
         Args:
             report_path: If a report_path is passed, that report
@@ -304,7 +313,7 @@ class Job(ABC):
                 pass
 
     def cancel(self):
-        """Cancels the active job"""
+        """Cancels the active job."""
         self._poll_job_endpoint()
         if self.status in ACTIVE_STATES:
             self._do_cancel_job()
@@ -335,7 +344,7 @@ class Job(ABC):
         self, wait: int = WAIT_UNTIL_DONE, callback: Callable = None
     ) -> Iterator[LogStatus]:
         """Returns an iterator that may be used to tail the logs
-        of a running Model
+        of a running Model.
 
         Args:
             wait: The time in seconds to wait before closing the
@@ -372,10 +381,10 @@ class Job(ABC):
 
     @property
     def billing_details(self) -> dict:
-        """Get billing details for the current Job"""
+        """Get billing details for the current job."""
         return self._data.get("billing_data", {})
 
     @abstractproperty
     def container_image(self) -> str:
-        """Return the container image for the job"""
+        """Return the container image for the job."""
         ...
