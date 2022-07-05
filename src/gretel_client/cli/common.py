@@ -348,8 +348,6 @@ class ModelObjectReader:
             sc.set_project(project_id)
         if model_id:
             sc.set_model(model_id)
-            sc.data_source = sc.model.data_source
-            sc.ref_data = sc.model.ref_data
         if not model_id:
             # if there isn't a model id, then we implicitly assume
             # the original input was a model id rather than a model

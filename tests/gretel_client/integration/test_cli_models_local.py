@@ -336,6 +336,8 @@ def test_create_records_from_model_obj(
             str(model_obj),
             "--model-path",
             str(tmpdir / "model.tar.gz"),
+            "--in-data",
+            str(get_fixture("account-balances.csv")),
         ],
     )
     print_cmd_output(cmd)
