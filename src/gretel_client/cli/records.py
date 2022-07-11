@@ -6,7 +6,6 @@ from typing import Dict, List, Optional, Tuple, Union
 import click
 
 from gretel_client.cli.common import (
-    download_artifacts,
     model_option,
     pass_session,
     poll_and_print,
@@ -218,7 +217,7 @@ def create_and_run_record_handler(
     )
 
     if output and runner == RunnerMode.CLOUD.value:
-        download_artifacts(sc, output, record_handler)
+        record_handler.download_artifacts(output)
 
     if output and run:
         sc.log.info("Extracting record artifacts from container")

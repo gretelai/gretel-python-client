@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Type, TYPE_CHECKING, Union
+from typing import List, Optional, Type, TYPE_CHECKING
 
 from gretel_client.cli.utils.parser_utils import (
     DataSourceTypes,

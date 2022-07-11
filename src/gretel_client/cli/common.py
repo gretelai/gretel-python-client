@@ -3,15 +3,13 @@ import signal
 
 from pathlib import Path
 from typing import Any, Callable, Optional, Tuple, Union
-from urllib.parse import urlparse
 
 import click
-import requests
 
 from gretel_client.cli.utils.parser_utils import RefData
 from gretel_client.config import configure_custom_logger, get_session_config, RunnerMode
 from gretel_client.models.config import get_status_description, StatusDescriptions
-from gretel_client.projects.common import ModelArtifact, WAIT_UNTIL_DONE
+from gretel_client.projects.common import WAIT_UNTIL_DONE
 from gretel_client.projects.docker import check_docker_env
 from gretel_client.projects.exceptions import DockerEnvironmentError
 from gretel_client.projects.jobs import Job, WaitTimeExceeded
@@ -396,29 +394,3 @@ def poll_and_print(
                 f"Exiting the script, but the job will remain running until it reaches the end state."
             )
         sc.exit(0)
-
-
-def download_artifacts(sc: SessionContext, output: str, job: Job):
-    output_path = Path(output)
-    output_path.mkdir(exist_ok=True, parents=True)
-    sc.log.info(f"Downloading model artifacts to {output_path.resolve()}")
-    for artifact_type, download_link in job.get_artifacts():
-        # we don't need to download cloud model artifacts
-        if (
-            isinstance(job, Model)
-            and job.is_cloud_model
-            and artifact_type == ModelArtifact.MODEL.value
-        ):
-            continue
-        try:
-            art = requests.get(download_link)
-            if art.status_code == 200:
-                art_output_path = output_path / Path(urlparse(download_link).path).name
-                with open(art_output_path, "wb+") as out:
-                    sc.log.info(f"\tWriting {artifact_type} to {art_output_path}")
-                    out.write(art.content)
-        except requests.exceptions.HTTPError as ex:
-            sc.log.error(
-                f"\tCould not download {artifact_type}. You might retry this request.",
-                ex=ex,
-            )

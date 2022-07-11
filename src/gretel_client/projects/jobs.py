@@ -7,16 +7,19 @@ import time
 from abc import ABC, abstractmethod, abstractproperty
 from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 from typing import Callable, Iterator, List, Optional, Tuple, Type, TYPE_CHECKING, Union
+from urllib.parse import urlparse
 
+import requests
 import smart_open
 
 import gretel_client.rest.exceptions
 
 from gretel_client.cli.utils.parser_utils import RefData
-from gretel_client.config import DEFAULT_RUNNER, RunnerMode
+from gretel_client.config import DEFAULT_RUNNER, get_logger, RunnerMode
 from gretel_client.models.config import get_model_type_config
-from gretel_client.projects.common import _DataFrameT, f, WAIT_UNTIL_DONE
+from gretel_client.projects.common import _DataFrameT, f, ModelArtifact, WAIT_UNTIL_DONE
 from gretel_client.projects.exceptions import GretelJobNotFound, WaitTimeExceeded
 from gretel_client.rest.api.projects_api import ProjectsApi
 
@@ -281,6 +284,37 @@ class Job(ABC):
             )
         return self._do_get_artifact(artifact_key)
 
+    def download_artifacts(self, target_dir: Union[str, Path]):
+        """Given a target directory, either as a string or a Path object, attempt to enumerate
+        and download all artifacts associated with this Job
+
+        Args:
+            target_dir: The target directory to store artifacts in. If the directory does not exist,
+                it will be created for you.
+        """
+        log = get_logger(__name__)
+        output_path = Path(target_dir)
+        output_path.mkdir(exist_ok=True, parents=True)
+        log.info(f"Downloading model artifacts to {output_path.resolve()}")
+        for artifact_type, download_link in self.get_artifacts():
+            # we don't need to download cloud model artifacts
+            if artifact_type == ModelArtifact.MODEL.value:
+                continue
+            try:
+                art = requests.get(download_link)
+                if art.status_code == 200:
+                    art_output_path = (
+                        output_path / Path(urlparse(download_link).path).name
+                    )
+                    with open(art_output_path, "wb+") as out:
+                        log.info(f"\tWriting {artifact_type} to {art_output_path}")
+                        out.write(art.content)
+            except requests.exceptions.HTTPError as ex:
+                log.error(
+                    f"\tCould not download {artifact_type}. You might retry this request.",
+                    ex=ex,
+                )
+
     def _peek_report(self, report_contents: dict) -> Optional[dict]:
         return get_model_type_config(self.model_type).peek_report(report_contents)
 
@@ -324,6 +358,12 @@ class Job(ABC):
         except gretel_client.rest.exceptions.NotFoundException as ex:
             raise self._not_found_error(self) from ex
         self._data = resp.get(f.DATA)
+
+    def refresh(self):
+        """
+        Update internal state of the job by making an API call to Gretel Cloud.
+        """
+        self._poll_job_endpoint()
 
     def _check_predicate(self, start: float, wait: int = WAIT_UNTIL_DONE) -> bool:
         self._poll_job_endpoint()

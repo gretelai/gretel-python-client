@@ -291,3 +291,20 @@ def test_ref_data(m: Model, transform_local_data_source: Path):
     assert check.startswith(str(m._local_model_config_path.parent))
     assert m.external_ref_data
     m.validate_ref_data()
+
+
+def test_does_write_artifacts_to_disk(tmpdir: Path, m: Model):
+    base_endpoint = (
+        "https://gretel-public-website.s3.us-west-2.amazonaws.com/tests/client/"
+    )
+    files = ["account-balances.csv", "report_json.json.gz", "model.tar.gz"]
+    keys = ["data_preview", "report_json", "model"]
+    m.get_artifacts = MagicMock(
+        return_value=iter(zip(keys, [base_endpoint + f for f in files]))
+    )
+    m.download_artifacts(str(tmpdir))
+    for file in files:
+        if file == "model.tar.gz":
+            assert not (tmpdir / file).exists()
+        else:
+            assert (tmpdir / file).exists()

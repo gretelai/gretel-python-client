@@ -6,7 +6,6 @@ from typing import Tuple, Union
 import click
 
 from gretel_client.cli.common import (
-    download_artifacts,
     pass_session,
     poll_and_print,
     project_option,
@@ -217,7 +216,7 @@ def create(
     # want to download the artifacts. This isn't necessary for
     # local runs since there is already a volume mount.
     if output and runner == RunnerMode.CLOUD.value and wait == WAIT_UNTIL_DONE:
-        download_artifacts(sc, output, model)
+        model.download_artifacts(output)
 
     if output and runner == RunnerMode.LOCAL.value and run:
         sc.log.info(f"Extracting run output into {output}")
@@ -287,7 +286,7 @@ def get(sc: SessionContext, project: str, model_id: str, output: str):
                 state, but is instead {model.status}"""
             )
             sc.exit(1)
-        download_artifacts(sc, output, model)
+        model.download_artifacts(output)
     sc.log.info("Done fetching model.")
 
 
