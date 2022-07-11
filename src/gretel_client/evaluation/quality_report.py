@@ -13,10 +13,10 @@ class QualityReport(BaseReport):
     """Represents a Quality Report. This class can be used to create a report.
 
     Args:
-        project: Project associated with the report.
+        project: Optional project associated with the report. If no project is passed, a temp project (:obj:`gretel_client.projects.projects.tmp_project`) will be used.
         data_source: Data source used for the report.
         ref_data: Reference data used for the report.
-        output_dir: Directory path to write the report to. If the directory does not exist, the path will be created for you.
+        output_dir: Optional directory path to write the report to. If the directory does not exist, the path will be created for you.
         runner_mode: Determines where to run the model. See :obj:`gretel_client.config.RunnerMode` for a list of valid modes. Manual mode is not explicitly supported.
     """
 

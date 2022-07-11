@@ -38,7 +38,7 @@ class BaseReport(ABC):
     https://docs.gretel.ai/model-configurations."""
 
     project: Optional[Project]
-    """Project associated with the report."""
+    """Optional project associated with the report. If no project is passed, a temp project (``tmp_project``) will be used."""
 
     data_source: DataSourceTypes
     """Data source used for the report."""
@@ -47,7 +47,7 @@ class BaseReport(ABC):
     """Reference data used for the report."""
 
     output_dir: Optional[Path]
-    """Directory path to write the report to. If the directory does not exist, the path will be created for you."""
+    """Optional directory path to write the report to. If the directory does not exist, the path will be created for you."""
 
     runner_mode: RunnerMode
     """Determines where to run the model. See ``RunnerMode`` for a list of valid modes. Manual mode is not explicitly supported."""
