@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Optional
 
+from gretel_client.cli.utils.report_utils import generate_summary_from_legacy
+
 StatusDescriptions = Dict[str, Dict[str, str]]
 
 
@@ -55,6 +57,13 @@ class ModelTypeConfig(ABC):
     @abstractmethod
     def peek_report(self, report_contents: dict) -> Optional[dict]:
         ...
+
+    def get_report_summary(self, report_contents: dict) -> dict:
+        if "summary" in report_contents:
+            return {"summary": report_contents["summary"]}
+        else:
+            # PROD-76 Legacy report, no summary. Make one on the fly with our util helper.
+            return generate_summary_from_legacy(report_contents)
 
 
 class GenericModelTypeConfig(ModelTypeConfig):

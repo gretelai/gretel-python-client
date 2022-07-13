@@ -346,6 +346,38 @@ class Job(ABC):
             except Exception:
                 pass
 
+    def _get_report_summary(self, report_contents: dict) -> dict:
+        return get_model_type_config(self.model_type).get_report_summary(
+            report_contents
+        )
+
+    def get_report_summary(self, report_path: str = None) -> Optional[dict]:
+        """Return a summary of the job results
+        Args:
+            report_path: If a report_path is passed, that report
+                will be used for the summary. If no report path
+                is passed, the function will check for a cloud
+                report artifact.
+        """
+        if not report_path:
+            try:
+                report_path = self.get_artifact_link("report_json")
+            except Exception:
+                pass
+        report_contents = None
+        if report_path:
+            try:
+                with smart_open.open(report_path, "rb") as rh:  # type:ignore
+                    report_contents = rh.read()
+            except Exception:
+                pass
+        if report_contents:
+            try:
+                report_contents = json.loads(report_contents)
+                return self._get_report_summary(report_contents)
+            except Exception:
+                pass
+
     def cancel(self):
         """Cancels the active job."""
         self._poll_job_endpoint()

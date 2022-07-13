@@ -257,6 +257,44 @@ def test_synth_report_output(m: Model, get_fixture: Callable):
         assert field in peek.keys()
 
 
+def test_xf_report_summary(m: Model, get_fixture: Callable):
+    report_json = get_fixture("xf_report_json.json.gz")
+    m.model_config["models"][0] = {
+        "transforms": {}
+    }  # pretend the model stub is a transforms model
+    summary = m.get_report_summary(str(report_json))
+    # PROD-76, new summary format
+    assert len(summary) == 1 and "summary" in summary
+    expected_fields = {
+        "training_time_seconds",
+        "record_count",
+        "field_count",
+        "field_transforms",
+        "value_transforms",
+        "warnings",
+    }
+    found_fields = {d["field"] for d in summary["summary"]}
+    assert expected_fields == found_fields
+
+
+def test_synth_report_summary(m: Model, get_fixture: Callable):
+    report_json = get_fixture("synth_report_json.json.gz")
+    m.model_config["models"][0] = {
+        "synthetics": []
+    }  # pretend the model stub is a synthetics model
+    summary = m.get_report_summary(str(report_json))
+    # PROD-76, new summary format
+    assert len(summary) == 1 and "summary" in summary
+    expected_fields = {
+        "synthetic_data_quality_score",
+        "field_correlation_stability",
+        "principal_component_stability",
+        "field_distribution_stability",
+    }
+    found_fields = {d["field"] for d in summary["summary"]}
+    assert expected_fields == found_fields
+
+
 def test_can_name_model(m: Model):
     assert m.name == "my-awesome-model"
     new_name = "my-model"
