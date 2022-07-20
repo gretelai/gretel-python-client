@@ -3,7 +3,7 @@ import click
 from gretel_client.cli.common import pass_session, SessionContext
 from gretel_client.config import write_config
 from gretel_client.projects import create_project
-from gretel_client.projects.projects import search_projects
+from gretel_client.projects.projects import get_project, search_projects
 
 
 @click.group(help="Commands for working with Gretel projects.")
@@ -63,3 +63,32 @@ def set_default(sc: SessionContext, name: str):
     write_config(sc.config)
     sc.log.info(f"Set {name} as the default project.")
     sc.print(data=sc.config.masked)
+
+
+@projects.command()
+@click.option(
+    "--name",
+    metavar="project-name",
+    help="Gretel project name, mutually exclusive with id.",
+    default=None,
+)
+@click.option(
+    "--uid",
+    metavar="project-id",
+    help="Gretel project id, mutually exclusive with name.",
+    default=None,
+)
+@pass_session
+def delete(sc: SessionContext, name: str, uid: str):
+    if name and uid:
+        raise click.BadOptionUsage(
+            "--uid",
+            f"Cannot pass both --uid and --name. Please use --name or --uid option.",
+        )
+    if name or uid:
+        project = get_project(name=name or uid)
+    else:
+        raise click.BadOptionUsage("--name", "Please use --name or --uid option.")
+    sc.print(data=project.as_dict)
+    project.delete()
+    sc.log.info("Project was deleted.")

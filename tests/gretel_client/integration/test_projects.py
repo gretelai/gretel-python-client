@@ -44,11 +44,14 @@ def test_does_get_project(project: Project):
 
 def test_cannot_call_deleted_project():
     project = get_project(create=True)
+    name = project.name
     project.delete()
     with pytest.raises(GretelProjectError):
         project.get_console_url()
     with pytest.raises(GretelProjectError):
         project.delete()
+    with pytest.raises(GretelProjectError):
+        get_project(name=name)
 
 
 def test_does_get_artifacts(project: Project, get_fixture: Callable):

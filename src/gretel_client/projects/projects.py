@@ -358,7 +358,7 @@ def get_project(
                 resp = api.create_project(project=models.Project(**project_args))
                 project = api.get_project(project_id=resp.get(DATA).get("id"))
             else:
-                raise
+                raise GretelProjectError(f"Could not get project using '{name}'.")
 
     if not project:
         raise GretelProjectError(f"Could not get or create project using '{name}'.")
@@ -421,7 +421,7 @@ def create_or_get_unique_project(
     try:
         project = get_project(name=target_name)
         return project
-    except UnauthorizedException:
+    except GretelProjectError:
         # Project name not found
         pass
     except Exception:

@@ -4,6 +4,8 @@ import uuid
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from click.testing import CliRunner
 
 from gretel_client.cli.cli import cli
@@ -15,6 +17,7 @@ from gretel_client.config import (
     DEFAULT_RUNNER,
     GRETEL_API_KEY,
 )
+from gretel_client.projects.exceptions import GretelProjectError
 from gretel_client.projects.projects import get_project, Project
 
 from .conftest import print_cmd_output
@@ -112,3 +115,71 @@ def test_can_create_project(runner: CliRunner, request):
     )
     print_cmd_output(cmd)
     assert cmd.exit_code == 0
+
+
+def test_cannot_delete_without_name_or_uid(runner: CliRunner):
+    cmd = runner.invoke(
+        cli,
+        [
+            "--debug",
+            "projects",
+            "delete",
+        ],
+    )
+    assert cmd.exit_code == 2
+    assert "Please use --name or --uid option." in cmd.stderr
+
+
+def test_cannot_delete_project_with_both_name_and_uid(runner: CliRunner, request):
+    project = get_project(create=True)
+    request.addfinalizer(lambda: get_project(name=project.name).delete())
+    cmd = runner.invoke(
+        cli,
+        [
+            "--debug",
+            "projects",
+            "delete",
+            "--name",
+            project.name,
+            "--uid",
+            project.project_id,
+        ],
+    )
+    assert cmd.exit_code == 2
+    assert (
+        "Cannot pass both --uid and --name. Please use --name or --uid option."
+        in cmd.stderr
+    )
+
+
+def test_cannot_delete__non_existing_project(runner: CliRunner):
+    cmd = runner.invoke(
+        cli,
+        [
+            "--debug",
+            "projects",
+            "delete",
+            "--name",
+            "non_existing_project",
+        ],
+    )
+    assert cmd.exit_code == 1
+    assert "Could not get project using 'non_existing_project'." in cmd.stderr
+
+
+def test_can_delete_project(runner: CliRunner):
+    project = get_project(create=True)
+    cmd = runner.invoke(
+        cli,
+        [
+            "--debug",
+            "projects",
+            "delete",
+            "--name",
+            project.name,
+        ],
+    )
+    assert cmd.exit_code == 0
+    assert "Project was deleted." in cmd.stderr
+    with pytest.raises(GretelProjectError):
+        get_project(name=project.name)
