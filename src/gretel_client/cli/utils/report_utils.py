@@ -30,14 +30,11 @@ def generate_summary_from_legacy(report_dict) -> dict:
         Summary in dict format (`{"summary": [{"field": "field1", "value": "value1"}, ...]}`)
     """
     summary_list = []
-    summary_list += [
-        {"field": f, "value": report_dict[f]}
-        for f in SIMPLE_LEGACY_FIELDS
-        if f in report_dict
-    ]
-    summary_list += [
-        {"field": f, "value": report_dict[f]["score"]}
-        for f in SQS_LEGACY_FIELDS
-        if f in report_dict
-    ]
+    for f in SIMPLE_LEGACY_FIELDS:
+        if report_dict.get(f) is not None:
+            summary_list.append({"field": f, "value": report_dict[f]})
+    for f in SQS_LEGACY_FIELDS:
+        # "privacy_protection_level" can have value None.
+        if isinstance(report_dict.get(f), dict) and report_dict.get(f).get("score"):
+            summary_list.append({"field": f, "value": report_dict[f]["score"]})
     return {"summary": summary_list}
