@@ -7,31 +7,24 @@ from typing import Dict, Optional, Union
 
 import click
 
-from gretel_client.cli.common import poll_and_print, SessionContext
 from gretel_client.cli.utils.parser_utils import ref_data_factory
 from gretel_client.config import get_logger, get_session_config
-from gretel_client.models.config import get_model_type_config, GPU
+from gretel_client.models.config import (
+    get_model_type_config,
+    get_status_description,
+    GPU,
+)
 from gretel_client.projects.common import WAIT_UNTIL_DONE
 from gretel_client.projects.docker import ContainerRun, ContainerRunError
-from gretel_client.projects.jobs import Job
+from gretel_client.projects.jobs import Job, WaitTimeExceeded
 from gretel_client.projects.models import Model
 from gretel_client.projects.records import RecordHandler
 
 log = get_logger(__name__)
 
 
-class _PythonSessionContext(click.Context):
-    """CLI context duck"""
-
-    def __init__(self):
-        ...
-
-    def exit(self, code):
-        sys.exit(code)
-
-    @property
-    def invoked_subcommand(self):
-        return None
+def _stderr_print(msg: str) -> None:
+    print(msg, file=sys.stderr)
 
 
 def poll(job: Job, wait: int = WAIT_UNTIL_DONE):
@@ -41,13 +34,34 @@ def poll(job: Job, wait: int = WAIT_UNTIL_DONE):
         job: The job to poll
         wait: The time to wait for the job to complete.
     """
-    sc = SessionContext(_PythonSessionContext(), "json")
-    sc.log.info("Starting poller")
+    _stderr_print("INFO: Starting poller")
     descriptions = get_description_set(job)
     if not descriptions:
         raise ValueError("Cannot fetch Job polling descriptions")
-    sc.print(data=job.print_obj)
-    poll_and_print(job, sc, job.runner_mode, descriptions, wait)
+    print(json.dumps(job.print_obj, indent=4))
+    try:
+        for update in job.poll_logs_status(wait=wait):
+            if update.transitioned:
+                _stderr_print(
+                    f"INFO: Status is {update.status}. {get_status_description(descriptions, update.status, job.runner_mode)}"
+                )
+            for log in update.logs:
+                msg = f"{log['ts']}  {log['msg']}"
+                if log["ctx"]:
+                    msg += f"\n{json.dumps(log['ctx'], indent=4)}"
+                _stderr_print(msg)
+            if update.error:
+                _stderr_print(f"ERROR: \t{update.error}")
+
+    except WaitTimeExceeded:
+        if wait == 0:
+            _stderr_print(
+                "INFO: Parameter wait=0 was specified, not waiting for the job completion."
+            )
+        else:
+            _stderr_print(
+                f"WARN: Job hasn't completed after waiting for {wait} seconds. Exiting the script, but the job will remain running until it reaches the end state."
+            )
 
 
 def get_description_set(job: Job) -> Optional[dict]:
