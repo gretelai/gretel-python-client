@@ -36,6 +36,13 @@ def cli(ctx: click.Context, debug: bool, output: str):
     ctx.obj = SessionContext(ctx, output_fmt=output, debug=debug)
 
 
+def _check_endpoint(endpoint: str) -> str:
+    endpoint = endpoint.strip("/")
+    if not endpoint.startswith("https://"):
+        endpoint = f"https://{endpoint.split('/')[-1]}"
+    return endpoint
+
+
 @cli.command(help="Configures the Gretel CLI.")
 @click.option(
     "--endpoint",
@@ -74,7 +81,7 @@ def configure(
     sc: SessionContext, endpoint: str, api_key: str, project: str, default_runner: str
 ):
     project_name = None if project == "none" else project
-
+    endpoint = _check_endpoint(endpoint)
     # swap the api key back to the original if one was
     # already read in from the config and not updated
     if api_key.endswith("****"):
