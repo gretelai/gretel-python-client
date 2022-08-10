@@ -16,21 +16,21 @@ CONNECTOR_CONFIG = "connector.yaml"
 
 
 @click.group(
-    help="Connect Gretel with a data source",
+    help="Connect Gretel with a data source.",
     hidden=not get_session_config().preview_features_enabled,
 )
 def connectors():
     ...
 
 
-@connectors.command(help="Start a connector")
+@connectors.command(help="Start a connector.")
 @click.option(
-    "--config", metavar="PATH", help="Path to connector config", required=True
+    "--config", metavar="PATH", help="Path to connector config.", required=True
 )
 @click.option(
     "--model",
     metavar="ID",
-    help="Reference to a local model or cloud model id",
+    help="Reference to a local model or cloud model id.",
     envvar="GRETEL_MODEL",
     required=False,
 )
@@ -45,7 +45,7 @@ def connectors():
 @click.option(
     "--connector",
     metavar="NAME",
-    help="Connector pipeline to start",
+    help="Connector pipeline to start.",
     default="default",
 )
 @click.option(
@@ -68,13 +68,13 @@ def start(
 ):
     volumes = []
     env = {"GRETEL_API_KEY": sc.config.api_key, "GRETEL_ENDPOINT": sc.config.endpoint}
-    sc.log.info("Configuring connector")
+    sc.log.info("Configuring connector.")
 
     config_volume = DataVolumeDef(CONTAINER_CONFIG_PATH, [(config, CONNECTOR_CONFIG)])
     volumes.append(config_volume)
 
     if aws_cred_path:
-        sc.log.info(f"Copying local aws credentials {aws_cred_path} to container")
+        sc.log.info(f"Copying local aws credentials {aws_cred_path} to container.")
         cred = AwsCredFile(cred_from_agent=aws_cred_path)
         volumes.append(cred.volume)
         env.update(cred.env)
@@ -99,7 +99,7 @@ def start(
 
     sc.register_cleanup(lambda: container.stop())
 
-    sc.log.info("Starting connector container")
+    sc.log.info("Starting connector container.")
     container.start()
 
     for log in container.logs():

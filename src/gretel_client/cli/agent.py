@@ -13,7 +13,7 @@ from gretel_client.docker import AwsCredFile, CaCertFile, check_gpu, DataVolumeD
 
 
 @click.group(
-    help="Connect Gretel with a data source",
+    help="Connect Gretel with a data source.",
     hidden=not get_session_config().preview_features_enabled,
 )
 def agent():
@@ -25,7 +25,7 @@ def build_logger(job_id: str) -> Callable:
     return logger.info
 
 
-@agent.command(help="Start Gretel worker agent")
+@agent.command(help="Start Gretel worker agent.")
 @click.option(
     "--driver",
     metavar="NAME",
@@ -33,7 +33,7 @@ def build_logger(job_id: str) -> Callable:
     default="docker",
 )
 @click.option(
-    "--max-workers", metavar="COUNT", help="Max number of workers to launch", default=2
+    "--max-workers", metavar="COUNT", help="Max number of workers to launch.", default=2
 )
 @project_option
 @click.option(
@@ -51,19 +51,19 @@ def build_logger(job_id: str) -> Callable:
 @click.option(
     "--env",
     metavar="KEY=VALUE",
-    help="Pass environment variables into the worker container",
+    help="Pass environment variables into the worker container.",
     multiple=True,
 )
 @click.option(
     "--volume",
     metavar="HOST:CONTAINER",
-    help="Mount single file into the worker container. HOST and CONTAINER must be files",
+    help="Mount single file into the worker container. HOST and CONTAINER must be files.",
     multiple=True,
 )
 @click.option(
     "--ca-bundle",
     metavar="PATH",
-    help="Mount custom CA into each worker container",
+    help="Mount custom CA into each worker container.",
 )
 @click.option(
     "--disable-cloud-logging",
@@ -83,7 +83,7 @@ def start(
     ca_bundle: Optional[str] = None,
     disable_cloud_logging: bool = False,
 ):
-    sc.log.info(f"Starting Gretel agent using driver {driver}")
+    sc.log.info(f"Starting Gretel agent using driver {driver}.")
     creds = []
 
     if aws_cred_path:
@@ -104,10 +104,10 @@ def start(
     env_dict = dict(e.split("=", maxsplit=1) for e in env) if env else None
 
     capabilities = []
-    sc.log.info("Checking for GPU")
+    sc.log.info("Checking for GPU.")
     if check_gpu():
         capabilities.append(GPU)
-        sc.log.info("GPU found")
+        sc.log.info("GPU found.")
     else:
         sc.log.info("No GPU found. Continuing without one.")
 

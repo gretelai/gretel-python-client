@@ -6,10 +6,12 @@ from typing import Dict, List, Optional, Tuple, Union
 import click
 
 from gretel_client.cli.common import (
+    get_model,
     model_option,
     pass_session,
     poll_and_print,
     project_option,
+    record_handler_option,
     ref_data_option,
     runner_option,
     SessionContext,
@@ -21,6 +23,7 @@ from gretel_client.config import RunnerMode
 from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.docker import ContainerRun
 from gretel_client.projects.jobs import Status
+from gretel_client.projects.records import RecordHandler
 
 LOCAL = "__local__"
 
@@ -47,7 +50,7 @@ def input_data_option(fn):
         "--in-data",
         metavar="PATH",
         callback=callback,
-        help="Specify model input data.",
+        help="Specify the model input data.",
     )(fn)
 
 
@@ -55,7 +58,7 @@ def output_data_option(fn):
     return click.option(
         "--output",
         metavar="DIR",
-        help="Specify model output directory.",
+        help="Specify the model output directory.",
     )(fn)
 
 
@@ -72,17 +75,17 @@ def _validate_params(
         and not model_path
     ):
         raise click.BadOptionUsage(
-            "--model-path", "--model-path is required when running a local model"
+            "--model-path", "--model-path is required when running a local model."
         )
     if runner == RunnerMode.LOCAL.value and not output:
         raise click.BadOptionUsage(
             "--output",
-            "--runner is set to local, but no --output flag is set. Please set an output path",
+            "--runner is set to local, but no --output flag is set. Please set an output path.",
         )
 
     if runner == RunnerMode.LOCAL.value and sc.model.is_cloud_model and model_path:
         raise click.BadOptionUsage(
-            "--model-path", "Cannot specify a local model path for cloud models"
+            "--model-path", "Cannot specify the local model path for cloud models."
         )
 
     if runner == RunnerMode.MANUAL.value and (output or model_path):
@@ -97,10 +100,10 @@ def _check_model_and_runner(sc: SessionContext, runner) -> str:
         sc.log.info(
             (
                 f"The model {sc.model.model_id} is configured for local runs, "
-                f"but runner_mode is {runner}. "
+                f"but runner_mode is {runner}."
             )
         )
-        sc.log.info("Setting runner_mode to local and running the model")
+        sc.log.info("Setting runner_mode to local and running the model.")
         return RunnerMode.LOCAL.value
     return runner
 
@@ -113,7 +116,7 @@ def _configure_data_source(
     # being requested does require a data source, then the API will reject
     # the API call. If the data source is optional, then the API call will succeed.
     #
-    # If the job is a local then the "__local__" string will be passed into the API
+    # If the job is local then the "__local__" string will be passed into the API
     # call and stored in the cloud config. This is pro forma in order to get the record
     # handler config validators to pass. When the job container actually starts, this
     # __local__ value will be replaced by the actual data source
@@ -165,7 +168,7 @@ def create_and_run_record_handler(
     # for the CLI args that get passed into a local container.  The ``data_source`` value
     # is what will be sent to the Cloud API.
 
-    sc.log.info(f"Creating record handler for model {sc.model.model_id}")
+    sc.log.info(f"Creating record handler for model {sc.model.model_id}.")
     record_handler = sc.model.create_record_handler_obj()
 
     if config_ref_data is None:
@@ -180,7 +183,7 @@ def create_and_run_record_handler(
         _default_manual=True,
     )
     sc.register_cleanup(lambda: record_handler.cancel())
-    sc.log.info(f"Record handler created {record_handler.record_id}")
+    sc.log.info(f"Record handler created {record_handler.record_id}.")
 
     printable_record_handler = data.print_obj
     if runner == RunnerMode.MANUAL.value:
@@ -198,7 +201,7 @@ def create_and_run_record_handler(
     if runner == RunnerMode.LOCAL.value:
         run = ContainerRun.from_job(record_handler)
         if sc.debug:
-            sc.log.debug("Enabling debug for the container run")
+            sc.log.debug("Enabling debug for the container run.")
             run.enable_debug()
         if output:
             run.configure_output_dir(output)
@@ -220,19 +223,25 @@ def create_and_run_record_handler(
         record_handler.download_artifacts(output)
 
     if output and run:
-        sc.log.info("Extracting record artifacts from container")
+        sc.log.info("Extracting record artifacts from the container.")
         run.extract_output_dir(output)
 
     if record_handler.status == Status.COMPLETED:
         sc.log.info(
             (
-                "Billing estimate"
-                f"\n{json.dumps(record_handler.billing_details, indent=4)}"
+                "For a more detailed view, you can download record artifacts using the CLI command \n\n"
+                f"\tgretel records get --project {sc.project.name} --model-id {sc.model.model_id} --record-handler-id {record_handler.record_id} --output .\n"
             )
         )
-        sc.log.info("Done!")
+        sc.log.info(
+            (
+                "Billing estimate"
+                f"\n{json.dumps(record_handler.billing_details, indent=4)}."
+            )
+        )
+        sc.log.info("Done.")
     else:
-        sc.log.error("The record command failed with the following error")
+        sc.log.error("The record command failed with the following error.")
         sc.log.error(record_handler.errors)
         sc.log.error(
             f"Status is {record_handler.status}. Please scroll back through the logs for more details."
@@ -427,3 +436,42 @@ def run(
         status_strings=get_model_type_config().run_status_descriptions,
         model_path=model_path,
     )
+
+
+@records.command(help="Download all record handler associated artifacts.")
+@click.option(
+    "--output",
+    metavar="DIR",
+    help="Specify the output directory to download record handler artifacts to.",
+    default=".",
+)
+@project_option
+@click.option(
+    "--model-id",
+    metavar="ID",
+    help="Specify the model.",
+    required=False,
+    callback=get_model,
+    default="None",
+)
+@record_handler_option
+@pass_session
+def get(
+    sc: SessionContext, record_handler_id: str, model_id: str, project: str, output: str
+):
+    if model_id == "None":
+        raise click.BadOptionUsage(
+            "--model-id", "Please specify the option '--model-id'."
+        )
+    record_handler: RecordHandler = sc.project.get_model(model_id).get_record_handler(
+        record_handler_id
+    )
+    if record_handler.status != "completed":
+        sc.log.error(
+            f"""
+                Cannot download record handler artifacts. Record handler should be in a completed
+                state, but is instead {record_handler.status}."""
+        )
+        sc.exit(1)
+    record_handler.download_artifacts(output)
+    sc.log.info("Done fetching record handler artifacts.")

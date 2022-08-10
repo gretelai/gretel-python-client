@@ -1,3 +1,5 @@
+import re
+
 from pathlib import Path
 from typing import Callable
 
@@ -151,9 +153,10 @@ def test_local_model_params(runner: CliRunner, project: Project, get_fixture: Ca
     assert cmd.exit_code == 2 and "--wait is >= 0" in cmd.stderr
 
 
-def test_records_generate(
+def test_records_generate_and_get_record_handler(
     runner: CliRunner, get_fixture: Callable, tmpdir: Path, trained_synth_model: Model
 ):
+    # Records generation
     cmd = runner.invoke(
         cli,
         [  # type:ignore
@@ -173,6 +176,29 @@ def test_records_generate(
     print_cmd_output(cmd)
     assert cmd.exit_code == 0
     assert (tmpdir / "data.gz").exists()
+
+    # Get record artifacts
+    record_id = re.findall(r'"uid": "[a-z,0-9]+', cmd.output)[0].split('"')[-1]
+    cmd = runner.invoke(
+        cli,
+        [  # type:ignore
+            "--debug",
+            "records",
+            "get",
+            "--project",
+            trained_synth_model.project.project_id,
+            "--model-id",
+            trained_synth_model.model_id,
+            "--record-handler-id",
+            record_id,
+            "--output",
+            str(tmpdir),
+        ],
+    )
+    print_cmd_output(cmd)
+    assert cmd.exit_code == 0
+    assert (tmpdir / "data.gz").exists()
+    assert (tmpdir / "run_logs.json.gz").exists()
 
 
 def test_records_generate_with_model_run(

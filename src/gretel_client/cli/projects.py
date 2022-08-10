@@ -11,7 +11,7 @@ def projects():
     ...
 
 
-@projects.command()
+@projects.command(help="Create a new project.")
 @click.option("--name", metavar="name", help="Gretel project name.")
 @click.option("--desc", metavar="description", help="Gretel project description.")
 @click.option(
@@ -30,7 +30,7 @@ def create(
     project = create_project(name=name, desc=desc, display_name=display_name)
 
     sc.log.info(f"Created project {project.name}.")
-    sc.log.info(f"Console link: {project.get_console_url()}")
+    sc.log.info(f"Console link: {project.get_console_url()}.")
 
     if set_default:
         sc.config.default_project_name = project.name
@@ -40,7 +40,7 @@ def create(
     sc.print(data=project.info())
 
 
-@projects.command()
+@projects.command(help="Search for projects.")
 @click.option("--limit", help="Limit the number of projects.", default=200)
 @click.option("--query", help="Filter project names by a query string.", default=None)
 @pass_session
@@ -50,7 +50,7 @@ def search(sc: SessionContext, limit: int, query: str):
     sc.print(data=projects_table)
 
 
-@projects.command()
+@projects.command(help="Set default project.")
 @click.option(
     "--name",
     metavar="project-name",
@@ -65,7 +65,7 @@ def set_default(sc: SessionContext, name: str):
     sc.print(data=sc.config.masked)
 
 
-@projects.command()
+@projects.command(help="Delete project.")
 @click.option(
     "--name",
     metavar="project-name",

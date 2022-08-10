@@ -67,7 +67,7 @@ class Logger:
         click.echo(click.style("INFO: ", fg="green") + msg, err=True)
 
     def warn(self, msg):
-        """Print warn log messages"""
+        """Prints warn log messages."""
         click.echo(click.style("WARN: ", fg="yellow") + msg, err=True)
 
     def error(self, msg: str = None, ex: ExT = None, include_tb: bool = True):
@@ -146,6 +146,8 @@ class SessionContext(object):
     data_source: Optional[str] = None
     ref_data: Optional[RefData] = None
 
+    model_id: Optional[str] = None
+
     def __init__(self, ctx: click.Context, output_fmt: str, debug: bool = False):
         self.debug = debug
         self.verbosity = 0
@@ -186,7 +188,7 @@ class SessionContext(object):
             else:
                 click.echo(json.dumps(data, indent=4))
         else:
-            click.UsageError("Invalid output format", ctx=self.ctx)
+            click.UsageError("Invalid output format.", ctx=self.ctx)
         if not ok:
             self.exit(1)
 
@@ -195,6 +197,9 @@ class SessionContext(object):
 
     def set_model(self, model_id: str):
         self.model_id = model_id
+
+    def set_record_handler(self, record_handler_id: str):
+        self.record_handler_id = record_handler_id
 
     @property
     def model(self) -> Model:
@@ -220,20 +225,20 @@ class SessionContext(object):
 
     def _cleanup(self, sig, frame):
         if self._shutting_down:
-            self.log.warn("Got a second interrupt. Shutting down")
+            self.log.warn("Got a second interrupt. Shutting down.")
             self.exit(1)
         else:
             self._shutting_down = True
         self.log.warn("Got interrupt signal.")
 
         if self.cleanup_methods:
-            self.log.warn("Attempting graceful shutdown")
+            self.log.warn("Attempting graceful shutdown.")
             for method in self.cleanup_methods:
                 try:
                     method()
                 except Exception as ex:
-                    self.log.debug("Cleanup hook failed to run", ex=ex)
-        self.log.info("Quitting")
+                    self.log.debug("Cleanup hook failed to run.", ex=ex)
+        self.log.info("Quitting.")
         self.exit(0)
 
     def register_cleanup(self, method: Callable):
@@ -255,7 +260,7 @@ def project_option(fn):
         "--project",
         allow_from_autoenv=True,
         envvar="GRETEl_DEFAULT_PROJECT",
-        help="Gretel project to execute command from",
+        help="Gretel project to execute command from.",
         metavar="NAME",
         callback=callback,
     )(fn)
@@ -285,17 +290,35 @@ def runner_option(fn):
     )(fn)
 
 
-def model_option(fn):
-    def callback(ctx, param: click.Option, value: str):
-        model_obj = ModelObjectReader(value)
-        sc: SessionContext = ctx.ensure_object(SessionContext)
+def get_model(ctx, param: click.Option, value: str):
+    model_obj = ModelObjectReader(value)
+    sc: SessionContext = ctx.ensure_object(SessionContext)
+    if not sc.model_id:
         model_obj.apply(sc)
-        return sc.model_id or value
+    return sc.model_id or value
 
+
+def model_option(fn):
     return click.option(  # type:ignore
         "--model-id",
         metavar="UID",
         help="Specify the model.",
+        callback=get_model,
+        required=True,
+    )(fn)
+
+
+def record_handler_option(fn):
+    def callback(ctx, param: click.Option, value: str):
+        record_handler_obj = JobObjectReader(value)
+        sc: SessionContext = ctx.ensure_object(SessionContext)
+        record_handler_obj.apply(sc)
+        return sc.record_handler_id or value
+
+    return click.option(  # type:ignore
+        "--record-handler-id",
+        metavar="UID",
+        help="Specify the record handler id.",
         callback=callback,
         required=True,
     )(fn)
@@ -315,6 +338,21 @@ def ref_data_option(fn):
     )(fn)
 
 
+def parse_file(val: str) -> dict:
+    contents = val
+    obj = {}
+    try:
+        if Path(val).is_file():
+            contents = Path(val).read_text()
+    except OSError:
+        pass
+    try:
+        obj = json.loads(contents)
+    except Exception:
+        pass
+    return obj
+
+
 class ModelObjectReader:
     """Reads a model config and configures the ``SessionContext`` based
     on the contents of the model.
@@ -322,21 +360,7 @@ class ModelObjectReader:
 
     def __init__(self, input: str):
         self.input = input
-        self.model = self._maybe_parse_model(input)
-
-    def _maybe_parse_model(self, val: str) -> dict:
-        contents = val
-        model_obj = {}
-        try:
-            if Path(val).is_file():
-                contents = Path(val).read_text()
-        except OSError:
-            pass
-        try:
-            model_obj = json.loads(contents)
-        except Exception:
-            pass
-        return model_obj
+        self.model = parse_file(input)
 
     def apply(self, sc: SessionContext):
         model_id = self.model.get("uid")
@@ -346,11 +370,38 @@ class ModelObjectReader:
             sc.set_project(project_id)
         if model_id:
             sc.set_model(model_id)
-        if not model_id:
+        else:
             # if there isn't a model id, then we implicitly assume
             # the original input was a model id rather than a model
             # object.
             sc.set_model(self.input)
+        if runner:
+            sc.runner = (
+                RunnerMode.CLOUD.value if runner == "cloud" else RunnerMode.LOCAL.value
+            )
+
+
+class JobObjectReader:
+    """Reads a record handler config and configures the ``SessionContext`` based
+    on the contents of the record handler."""
+
+    def __init__(self, input: str):
+        self.input = input
+        self.record_handler = parse_file(input)
+
+    def apply(self, sc: SessionContext):
+        record_handler_id = self.record_handler.get("uid")
+        model_id = self.record_handler.get("model_id")
+        project_id = self.record_handler.get("project_id")
+        runner = self.record_handler.get("runner_mode")
+        if record_handler_id:
+            sc.set_record_handler(record_handler_id)
+        else:
+            sc.set_record_handler(self.input)
+        if project_id:
+            sc.set_project(project_id)
+        if model_id:
+            sc.set_model(model_id)
         if runner:
             sc.runner = (
                 RunnerMode.CLOUD.value if runner == "cloud" else RunnerMode.LOCAL.value

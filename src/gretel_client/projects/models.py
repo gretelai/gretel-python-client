@@ -153,15 +153,15 @@ class Model(Job):
         _validate_data_source: bool = True,
         _default_manual: bool = False,
     ) -> Model:
-        """Submit a model to be run.
+        """Submits a model to be run.
 
         Args:
             runner_mode: Determines where to run the model. See ``RunnerMode``
                 for a list of valid modes. Local mode is not explicitly supported.
-            dry_run: If set to True the model config will be sumbitted for
+            dry_run: If set to True the model config will be submitted for
                 validation, but won't be run.
             upload_data_source: If set to True the model's data source will
-                be resolved and download to the host machine and then uploaded
+                be resolved and downloaded to the host machine and then uploaded
                 as a Gretel Cloud artifact. This is enabled by default to
                 ease UX for SDK users. This flag will be ignored if the
                 runner mode is not "cloud."
@@ -191,7 +191,7 @@ class Model(Job):
             self.upload_ref_data(_validate=_validate_data_source)
 
         # If the runner mode is NOT set to cloud mode, check if we should
-        # fall back to manual mode, this is useful for when running local
+        # fall back to manual mode, this is useful when running local
         # mode from the CLI.
         if runner_mode != RunnerMode.CLOUD and _default_manual:
             runner_mode = RunnerMode.MANUAL
@@ -274,7 +274,7 @@ class Model(Job):
 
     @data_source.setter
     def data_source(self, data_source: DataSourceTypes):
-        """Configure a new data source for the model."""
+        """Configures a new data source for the model."""
         if self.model_id:
             raise RuntimeError(
                 "Cannot update data source after the model has been submitted."
@@ -325,7 +325,7 @@ class Model(Job):
 
     @property
     def name(self) -> Optional[str]:
-        """Get the name of the model. If no name is specified, a
+        """Gets the name of the model. If no name is specified, a
         random name will be selected when the model is submitted
         to the backend.
 
@@ -336,7 +336,7 @@ class Model(Job):
 
     @name.setter
     def name(self, new_name: str):
-        """Update the name of the model.
+        """Updates the name of the model.
 
         Args:
             new_name: The new name of the model.
@@ -351,8 +351,8 @@ class Model(Job):
             )
 
     def validate_data_source(self):
-        """Test that the attached data source is a valid
-        Csv or Json file. If the data source is a Gretel
+        """Tests that the attached data source is a valid
+        CSV or JSON file. If the data source is a Gretel
         cloud artifact data validation will be skipped.
 
         Raises:
@@ -396,6 +396,9 @@ class Model(Job):
         return RecordHandler(
             self, data_source=data_source, params=params, ref_data=ref_data
         )
+
+    def get_record_handler(self, record_id: str) -> RecordHandler:
+        return RecordHandler(model=self, record_id=record_id)
 
     def _do_cancel_job(self):
         return self._projects_api.update_model(

@@ -6,6 +6,7 @@ from typing import Tuple, Union
 import click
 
 from gretel_client.cli.common import (
+    model_option,
     pass_session,
     poll_and_print,
     project_option,
@@ -26,11 +27,11 @@ def models():
     ...
 
 
-@models.command()
+@models.command(help="Create a new model.")
 @click.option(
     "--config",
     metavar="PATH",
-    help="Path to Gretel Config file. This can be a local or remote file path.",
+    help="Specify the path to Gretel Config file. It can be a local or remote file path.",
     required=True,
 )
 @click.option(
@@ -42,7 +43,7 @@ def models():
 @click.option(
     "--wait",
     metavar="SECONDS",
-    help="Configures the time in seconds to wait for a model to finish running.",
+    help="Configure the time in seconds to wait for a model to finish running.",
     default=WAIT_UNTIL_DONE,
 )
 @click.option(
@@ -104,7 +105,7 @@ def create(
 
     ref_data_obj = ref_data_factory(ref_data)
 
-    sc.log.info("Preparing model")
+    sc.log.info("Preparing model.")
     model: Model = sc.project.create_model_obj(config)
 
     if name:
@@ -128,28 +129,28 @@ def create(
         key = model.upload_data_source(
             _validate=False
         )  # the data source was validated in a previous step
-        sc.log.info("Data source uploaded")
+        sc.log.info("Data source uploaded.")
         sc.log.info(
             (
                 "Gretel artifact key is"
                 f"\n\n\t{key}\n\n"
-                f"You can re-use this key for any model in the project {sc.project.name}"
+                f"You can re-use this key for any model in the project {sc.project.name}."
             )
         )
 
         if not ref_data_obj.is_empty:
             sc.log.info("Uploading ref data sources...")
             uploaded_ref_data = model.upload_ref_data(_validate=False)
-            sc.log.info("Ref data uploaded")
+            sc.log.info("Ref data uploaded.")
             sc.log.info("Gretel artifact keys for ref data are:")
             for ref_data_source in uploaded_ref_data.values:
                 sc.log.info(f"\t{ref_data_source}")
             sc.log.info(
-                f"You can re-use these keys for any model in the project {sc.project.name}"
+                f"You can re-use these keys for any model in the project {sc.project.name}."
             )
 
     # Create the model and the data source
-    sc.log.info("Creating model")
+    sc.log.info("Creating model.")
     run = model._submit(
         runner_mode=RunnerMode(runner),
         dry_run=dry_run,
@@ -157,7 +158,7 @@ def create(
         _default_manual=True,
     )
     sc.register_cleanup(lambda: model.cancel())
-    sc.log.info(f"Model created with ID {model.model_id}")
+    sc.log.info(f"Model created with ID {model.model_id}.")
 
     if runner == RunnerMode.MANUAL.value:
         # With --runner MANUAL, we only print the worker_key and it's up to the user to run the worker
@@ -177,7 +178,7 @@ def create(
     if runner == RunnerMode.LOCAL.value:
         run = ContainerRun.from_job(model)
         if sc.debug:
-            sc.log.debug("Enabling debug logs for the local container")
+            sc.log.debug("Enabling debug logs for the local container.")
             run.enable_debug()
         if output:
             run.configure_output_dir(output)
@@ -186,17 +187,17 @@ def create(
         if model.external_ref_data:
             run.configure_ref_data(model.ref_data)
         if upload_model:
-            sc.log.info("Uploads to Gretel Cloud are enabled")
+            sc.log.info("Uploads to Gretel Cloud are enabled.")
             run.enable_cloud_uploads()
         if model.instance_type == GPU:
-            sc.log.info("Configuring GPU for model training")
+            sc.log.info("Configuring GPU for model training.")
             try:
                 run.configure_gpu()
                 sc.log.info("GPU device found!")
             except ContainerRunError:
-                sc.log.warn("Could not configure GPU. Continuing with CPU")
+                sc.log.warn("Could not configure GPU. Continuing with CPU.")
         sc.log.info(
-            f"This model is configured to run locally using the container {run.image}"
+            f"This model is configured to run locally using the container {run.image}."
         )
         sc.log.info("Pulling the container and starting local model training.")
         run.start()
@@ -219,7 +220,7 @@ def create(
         model.download_artifacts(output)
 
     if output and runner == RunnerMode.LOCAL.value and run:
-        sc.log.info(f"Extracting run output into {output}")
+        sc.log.info(f"Extracting run output into {output}.")
         run.extract_output_dir(output)
 
     report_path = None
@@ -238,7 +239,7 @@ def create(
     if output:
         sc.log.info(
             "For a more detailed view of the report, please refer to the "
-            f"full report artifact found under the output directory: `{output}`"
+            f"full report artifact found under the output directory: `{output}`."
         )
     else:
         sc.log.info(
@@ -253,12 +254,12 @@ def create(
         sc.log.info(
             (
                 f"Model done training. The model id is\n\n\t{model.model_id}\n\n"
-                f"You can re-use this key for gretel models run [...] commands in the project {sc.project.name}"
+                f"You can re-use this key for gretel models run [...] commands in the project {sc.project.name}."
             )
         )
-        sc.log.info("Done")
+        sc.log.info("Done.")
     else:
-        sc.log.error("The model failed with the following error")
+        sc.log.error("The model failed with the following error.")
         sc.log.error(model.errors, ex=model.traceback, include_tb=False)
         sc.log.error(
             f"Status is {model.status}. Please scroll back through the logs for more details."
@@ -266,12 +267,13 @@ def create(
         sc.exit(1)
 
 
-@models.command()
-@click.option("--model-id", metavar="UID")
+@models.command(help="Download all model associated artifacts.")
+@model_option
 @click.option(
     "--output",
     metavar="DIR",
-    help="Specify output directory to download model artifacts to.",
+    help="Specify the output directory to download model artifacts to.",
+    default=".",
 )
 @project_option
 @pass_session
@@ -283,14 +285,14 @@ def get(sc: SessionContext, project: str, model_id: str, output: str):
             sc.log.error(
                 f"""
                 Cannot download model artifacts. Model should be in a completed
-                state, but is instead {model.status}"""
+                state, but is instead {model.status}."""
             )
             sc.exit(1)
         model.download_artifacts(output)
     sc.log.info("Done fetching model.")
 
 
-@models.command()
+@models.command(help="Search for models of the project.")
 @project_option
 @click.option("--limit", help="Limit the number of projects.", default=100)
 @pass_session
@@ -298,12 +300,12 @@ def search(sc: SessionContext, project: str, limit: int):
     sc.print(data=list(sc.project.search_models(factory=dict, limit=limit)))
 
 
-@models.command()
-@click.option("--model-id", metavar="UID")
+@models.command(help="Delete model.")
+@model_option
 @project_option
 @pass_session
 def delete(sc: SessionContext, project: str, model_id: str):
-    sc.log.info(f"Deleting model {model_id}")
+    sc.log.info(f"Deleting model {model_id}.")
     model: Model = sc.project.get_model(model_id)
     model.delete()
     sc.log.info("Model deleted.")
