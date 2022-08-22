@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - PROD-137-windows-testing
 
 jobs:
   unit-tests:
