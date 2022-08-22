@@ -1,10 +1,12 @@
 """
 High level API for interacting with a Gretel Project
 """
-from contextlib import contextmanager, nullcontext
+import uuid
+
+from contextlib import contextmanager
 from functools import wraps
+from io import BytesIO
 from pathlib import Path
-from tempfile import NamedTemporaryFile
 from typing import Any, Dict, Iterator, List, Optional, Type, TypeVar, Union
 from urllib.parse import urlparse
 
@@ -203,18 +205,18 @@ class Project:
         if isinstance(artifact_path, str) and artifact_path.startswith("gretel_"):
             return artifact_path
         if isinstance(artifact_path, _DataFrameT):
-            artifact_path_context_mgr = df_to_tmp_file
+            artifact_path = BytesIO(artifact_path.to_csv(index=False).encode("utf-8"))
+            file_name = f"dataframe-{uuid.uuid4()}.csv"
         else:
-            artifact_path_context_mgr = nullcontext
             if _validate:
                 validate_data_source(artifact_path)
-        if isinstance(artifact_path, Path):
-            artifact_path = str(artifact_path)
-        with artifact_path_context_mgr(artifact_path) as artifact_path, smart_open.open(
+            if isinstance(artifact_path, Path):
+                artifact_path = str(artifact_path)
+            file_name = Path(urlparse(artifact_path).path).name
+        with smart_open.open(
             artifact_path, "rb", ignore_ext=True
         ) as src:  # type:ignore
             src_data = src.read()
-            file_name = Path(urlparse(artifact_path).path).name
             art_resp = self.projects_api.create_artifact(
                 project_id=self.name, artifact=Artifact(filename=file_name)
             )
@@ -433,13 +435,3 @@ def create_or_get_unique_project(
         name=target_name, display_name=display_name or name, desc=desc
     )
     return project
-
-
-@contextmanager
-def df_to_tmp_file(df: _DataFrameT, suffix: str = ".csv") -> Iterator[str]:
-    """A temporary file context manager. Create a file that can be used inside of a "with"
-    statement for temporary purposes. The file will be deleted when the scope is exited.
-    """
-    with NamedTemporaryFile(suffix=suffix) as df_as_file:
-        df.to_csv(df_as_file.name, index=False)
-        yield df_as_file.name

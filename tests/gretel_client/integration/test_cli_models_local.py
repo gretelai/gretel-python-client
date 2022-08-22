@@ -9,9 +9,10 @@ from gretel_client.cli.cli import cli
 from gretel_client.projects.models import Model
 from gretel_client.projects.projects import Project
 
-from .conftest import print_cmd_output
+from .conftest import print_cmd_output, pytest_skip_on_windows
 
 
+@pytest_skip_on_windows
 def test_model_crud_from_cli_local_inputs(
     runner: CliRunner, get_fixture: Callable, project: Project, tmpdir: Path
 ):
@@ -124,6 +125,7 @@ def test_model_crud_from_cli_local_inputs(
     assert cmd.exit_code == 0
 
 
+@pytest_skip_on_windows
 def test_local_model_params(runner: CliRunner, project: Project, get_fixture: Callable):
     base_cmd = [
         "models",
@@ -153,6 +155,7 @@ def test_local_model_params(runner: CliRunner, project: Project, get_fixture: Ca
     assert cmd.exit_code == 2 and "--wait is >= 0" in cmd.stderr
 
 
+@pytest_skip_on_windows
 def test_records_generate_and_get_record_handler(
     runner: CliRunner, get_fixture: Callable, tmpdir: Path, trained_synth_model: Model
 ):
@@ -201,6 +204,7 @@ def test_records_generate_and_get_record_handler(
     assert (tmpdir / "run_logs.json.gz").exists()
 
 
+@pytest_skip_on_windows
 def test_records_generate_with_model_run(
     runner: CliRunner, get_fixture: Callable, tmpdir: Path, trained_synth_model: Model
 ):
@@ -236,6 +240,7 @@ def test_records_generate_with_model_run(
     assert (tmpdir / "data.gz").exists()
 
 
+@pytest_skip_on_windows
 def test_records_transform(
     runner: CliRunner, get_fixture: Callable, tmpdir: Path, trained_xf_model: Model
 ):
@@ -262,6 +267,7 @@ def test_records_transform(
     assert (tmpdir / "data.gz").exists()
 
 
+@pytest_skip_on_windows
 def test_records_transform_with_model_run(
     runner: CliRunner, get_fixture: Callable, tmpdir: Path, trained_xf_model: Model
 ):
@@ -295,6 +301,7 @@ def test_records_transform_with_model_run(
     assert (tmpdir / "data.gz").exists()
 
 
+@pytest_skip_on_windows
 def test_records_classify(
     runner: CliRunner,
     get_fixture: Callable,
@@ -324,6 +331,7 @@ def test_records_classify(
     assert (tmpdir / "data.gz").exists()
 
 
+@pytest_skip_on_windows
 def test_create_records_from_model_obj(
     runner: CliRunner, project: Project, get_fixture: Callable, tmpdir: Path
 ):

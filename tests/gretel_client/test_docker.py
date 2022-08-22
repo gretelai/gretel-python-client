@@ -32,9 +32,9 @@ def test_docker_pull_progress(get_fixture: Callable):
 
 def test_container(request):
     c = Container(
-        image="busybox:latest",
+        image="hello-world:latest",
         auth_strategy=None,
-        params=["echo", "hello"],
+        params=[],
         remove=False,
         detach=True,
     )
@@ -42,7 +42,7 @@ def test_container(request):
     c.start()
     while c.active:
         time.sleep(1)
-    assert c.get_logs().strip() == "hello"
+    assert "Hello from Docker!" in c.get_logs().strip()
     c.stop()
     with pytest.raises(docker.errors.NotFound):
         docker.from_env().containers.get(c.run.id)

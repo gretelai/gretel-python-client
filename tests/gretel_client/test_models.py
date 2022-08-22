@@ -188,12 +188,13 @@ def test_does_read_model_short_path():
 
 
 def test_does_not_read_bad_local_data():
-    with tempfile.NamedTemporaryFile() as tmp_config:
+    with tempfile.NamedTemporaryFile(delete=False) as tmp_config:
         tmp_config.write(b"\tfoo")  # a regular string loads as YAML
         tmp_config.seek(0)
         with pytest.raises(ModelConfigError) as err:
             read_model_config(tmp_config.name)
         assert "YAML or JSON" in str(err)
+    tmp_config.close()
 
 
 def test_does_read_in_memory_model(transform_model_path: Path):

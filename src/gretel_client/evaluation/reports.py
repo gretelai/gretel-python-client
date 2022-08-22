@@ -88,7 +88,9 @@ class BaseReport(ABC):
         self._report_dict = json.loads(
             smart_open.open(job.get_artifact_link("report_json")).read()
         )
-        self._report_html = smart_open.open(job.get_artifact_link("report")).read()
+        self._report_html = smart_open.open(
+            job.get_artifact_link("report"), encoding="utf8"
+        ).read()
 
     def _run_local(self, model: Model):
         submit_docker_local(model, output_dir=self.output_dir)

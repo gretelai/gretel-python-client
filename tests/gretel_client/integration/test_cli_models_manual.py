@@ -15,7 +15,7 @@ from gretel_client.projects.models import Model
 from gretel_client.projects.projects import Project
 from gretel_client.projects.records import RecordHandler
 
-from .conftest import print_cmd_output
+from .conftest import print_cmd_output, pytest_skip_on_windows
 
 
 def test_model_crud_manual_mode(project: Project, get_fixture: Callable):
@@ -103,6 +103,7 @@ def test_manual_model_params(runner: CliRunner, project: Project):
     assert cmd.exit_code == 2
 
 
+@pytest_skip_on_windows
 def test_manual_record_handler_cleanup(runner: CliRunner, trained_synth_model: Model):
     """
     Setup of this test is following:

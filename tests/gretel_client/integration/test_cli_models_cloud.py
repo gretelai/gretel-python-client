@@ -7,9 +7,10 @@ from gretel_client.cli.cli import cli
 from gretel_client.projects.models import Model
 from gretel_client.projects.projects import Project
 
-from .conftest import print_cmd_output
+from .conftest import print_cmd_output, pytest_skip_on_windows
 
 
+@pytest_skip_on_windows
 def test_model_crud_from_cli(
     runner: CliRunner, project: Project, get_fixture: Callable, tmpdir: Path
 ):

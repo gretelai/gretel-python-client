@@ -1,5 +1,6 @@
 import json
 import os
+import platform
 
 from pathlib import Path
 from typing import Callable, Dict
@@ -104,3 +105,8 @@ def trained_classify_model(get_pretrained_model: Callable) -> Model:
 def print_cmd_output(cmd: Result):
     print(f"STDERR\n{cmd.stderr}")
     print(f"STDOUT\n{cmd.stdout}")
+
+
+pytest_skip_on_windows = pytest.mark.skipif(
+    platform.system() == "Windows", reason="Skip local runner test for Windows"
+)

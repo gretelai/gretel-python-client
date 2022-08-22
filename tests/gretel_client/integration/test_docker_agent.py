@@ -9,6 +9,8 @@ from gretel_client.agents.agent import Agent, AgentConfig
 from gretel_client.projects.jobs import ACTIVE_STATES, Status
 from gretel_client.projects.projects import get_project, tmp_project
 
+from .conftest import pytest_skip_on_windows
+
 fake_pii = (
     "https://gretel-public-website.s3-us-west-2.amazonaws.com/datasets/fake_pii.csv"
 )
@@ -20,6 +22,7 @@ def agent_config() -> Iterator[AgentConfig]:
         yield AgentConfig(driver="docker", project=project.project_id)
 
 
+@pytest_skip_on_windows
 def test_docker_agent(agent_config: AgentConfig, request):
     agent = Agent(config=agent_config)
     request.addfinalizer(agent.interrupt)

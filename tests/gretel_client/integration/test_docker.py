@@ -15,6 +15,8 @@ from gretel_client.projects.jobs import Status
 from gretel_client.projects.models import Model
 from gretel_client.projects.projects import get_project
 
+from .conftest import pytest_skip_on_windows
+
 
 @pytest.fixture
 def model(get_fixture: Callable, request):
@@ -24,6 +26,7 @@ def model(get_fixture: Callable, request):
     return model
 
 
+@pytest_skip_on_windows
 def test_does_start_local_container(model: Model):
     model.submit()
     run = ContainerRun.from_job(model)
@@ -35,6 +38,7 @@ def test_does_start_local_container(model: Model):
     assert model.status == Status.COMPLETED
 
 
+@pytest_skip_on_windows
 def test_does_cleanup(model: Model, get_fixture: Callable):
     model.submit()
     run = ContainerRun.from_job(model)
@@ -62,12 +66,14 @@ def test_does_cleanup(model: Model, get_fixture: Callable):
     assert check
 
 
+@pytest_skip_on_windows
 def test_does_auth_registry():
     auth, reg = get_container_auth()
     assert auth
     assert reg
 
 
+@pytest_skip_on_windows
 def test_data_volume(tmpdir: Path, get_fixture: Callable):
     client = docker.from_env()
     volume = DataVolume("/in", client)
@@ -95,6 +101,7 @@ def test_data_volume(tmpdir: Path, get_fixture: Callable):
         client.containers.get(volume.volume_container.id)
 
 
+@pytest_skip_on_windows
 def test_does_run_record_handler(model: Model, get_fixture: Callable, tmpdir: Path):
     # NOTE: this test sends ref data as a local file into the worker, just to
     # test the plumbing

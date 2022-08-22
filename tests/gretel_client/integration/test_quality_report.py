@@ -1,4 +1,5 @@
 import os
+import platform
 
 from pathlib import Path
 from typing import Callable
@@ -136,6 +137,8 @@ def test_hydrated_properties(
     tmpdir: Path,
     runner_mode: RunnerMode,
 ):
+    if platform.system() == "Windows" and runner_mode == RunnerMode.LOCAL:
+        pytest.skip("Skip local runner test for Windows")
     report = QualityReport(
         project=project,
         data_source=data_source,

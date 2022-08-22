@@ -1,6 +1,7 @@
 import csv
 import io
 import json
+import platform
 
 from collections import namedtuple
 from pathlib import Path
@@ -55,6 +56,9 @@ def test_csv_reader_sniffer(test_records):
         assert actual == {k: str(v) for k, v in expected.items()}
 
 
+@pytest.mark.skipif(
+    platform.system() == "Windows", reason="Skip local runner test for Windows"
+)
 def test_csv_file_reader(test_records, tmpdir_factory):
     file_path = tmpdir_factory.mktemp("test") / "test_csv.csv"
     with open(file_path, "w") as input_csv:

@@ -1,5 +1,6 @@
 import uuid
 
+from pathlib import Path
 from typing import Callable
 
 import pandas as pd
@@ -52,6 +53,17 @@ def test_cannot_call_deleted_project():
         project.delete()
     with pytest.raises(GretelProjectError):
         get_project(name=name)
+
+
+def test_upload_df_artifact(project: Project):
+    input_df = pd.DataFrame([{"test_key": "test_value"}])
+    art_key = project.upload_artifact(input_df)
+    art_listing = project.artifacts
+    assert len(art_listing) == 1
+    df = pd.read_csv(project.get_artifact_link(art_key))
+    assert df.equals(input_df)
+    project.delete_artifact(art_key)
+    assert len(project.artifacts) == 0
 
 
 def test_does_get_artifacts(project: Project, get_fixture: Callable):
