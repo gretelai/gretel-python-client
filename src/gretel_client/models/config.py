@@ -159,6 +159,10 @@ class SyntheticsModelTypeConfig(ModelTypeConfig):
         return GPU
 
     @property
+    def run_instance_type(self) -> str:
+        return GPU
+
+    @property
     def run_status_descriptions(self) -> StatusDescriptions:
         return {
             "created": {
@@ -181,6 +185,10 @@ class SyntheticsModelTypeConfig(ModelTypeConfig):
 class CtganModelTypeConfig(GenericModelTypeConfig):
     @property
     def train_instance_type(self) -> str:
+        return GPU
+
+    @property
+    def run_instance_type(self) -> str:
         return GPU
 
     def peek_report(self, report_contents: dict) -> Optional[dict]:
