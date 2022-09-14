@@ -206,6 +206,16 @@ class EvaluateModelTypeConfig(GenericModelTypeConfig):
         return _peek_sqs_report(report_contents)
 
 
+class TimeseriesDganModelTypeConfig(GenericModelTypeConfig):
+    @property
+    def train_instance_type(self) -> str:
+        return GPU
+
+    @property
+    def run_instance_type(self) -> str:
+        return GPU
+
+
 def _peek_sqs_report(report_contents) -> dict:
     fields = [
         "synthetic_data_quality_score",
@@ -224,6 +234,7 @@ _CONFIGS = {
     "ctgan": CtganModelTypeConfig(),
     "gpt_x": GptXModelTypeConfig(),
     "evaluate": EvaluateModelTypeConfig(),
+    "timeseries_dgan": TimeseriesDganModelTypeConfig(),
     "__default__": GenericModelTypeConfig(),
 }
 
