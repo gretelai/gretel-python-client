@@ -195,6 +195,19 @@ class CtganModelTypeConfig(GenericModelTypeConfig):
         return _peek_sqs_report(report_contents)
 
 
+class ActganModelTypeConfig(GenericModelTypeConfig):
+    @property
+    def train_instance_type(self) -> str:
+        return GPU
+
+    @property
+    def run_instance_type(self) -> str:
+        return GPU
+
+    def peek_report(self, report_contents: dict) -> Optional[dict]:
+        return _peek_sqs_report(report_contents)
+
+
 class GptXModelTypeConfig(GenericModelTypeConfig):
     @property
     def train_instance_type(self) -> str:
@@ -232,6 +245,7 @@ _CONFIGS = {
     "transforms": TransformsModelTypeConfig(),
     "classify": ClassifyModelTypeConfig(),
     "ctgan": CtganModelTypeConfig(),
+    "actgan": ActganModelTypeConfig(),
     "gpt_x": GptXModelTypeConfig(),
     "evaluate": EvaluateModelTypeConfig(),
     "timeseries_dgan": TimeseriesDganModelTypeConfig(),
