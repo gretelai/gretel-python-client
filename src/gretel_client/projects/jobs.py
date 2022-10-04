@@ -324,14 +324,8 @@ class Job(ABC):
         Args:
             report_path: If a report_path is passed, that report
                 will be used for the summary. If no report path
-                is passed, the function will check for a cloud
-                report artifact.
+                is passed, the function will NOT try to find it for you.
         """
-        if not report_path:
-            try:
-                report_path = self.get_artifact_link("report_json")
-            except Exception:
-                pass
         report_contents = None
         if report_path:
             try:

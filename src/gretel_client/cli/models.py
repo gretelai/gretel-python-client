@@ -224,13 +224,25 @@ def create(
         run.extract_output_dir(output)
 
     report_path = None
+    report_data = None
+
     if output:
         report_path = Path(output) / f"{ModelArtifact.REPORT_JSON}.json.gz"
 
     sc.print(data=model.print_obj)
     sc.log.info("Fetching model report...")
 
-    report_data = model.peek_report(str(report_path))
+    if report_path is None:
+        report_path = model.get_artifact_link("report_json")
+    else:
+        report_path = str(report_path)
+
+    if report_path is None:
+        # Log the problem but keep going so we print the "download here" message below.
+        sc.log.info("Unable to get report path. Cannot display preview.")
+    else:
+        report_data = model.peek_report(report_path)
+
     if report_data:
         sc.log.info(f"{json.dumps(report_data, indent=4)}")
     else:
