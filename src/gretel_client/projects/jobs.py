@@ -318,14 +318,21 @@ class Job(ABC):
     def _peek_report(self, report_contents: dict) -> Optional[dict]:
         return get_model_type_config(self.model_type).peek_report(report_contents)
 
-    def peek_report(self, report_path: str = None) -> Optional[dict]:
+    def peek_report(self, report_path: Optional[str] = None) -> Optional[dict]:
         """Return a summary of the job results.
 
         Args:
             report_path: If a report_path is passed, that report
                 will be used for the summary. If no report path
-                is passed, the function will NOT try to find it for you.
+                is passed, the function will check for a cloud
+                based artifact.
         """
+        if report_path is None:
+            try:
+                report_path = self.get_artifact_link("report_json")
+            except Exception:
+                pass
+
         report_contents = None
         if report_path:
             try:
@@ -333,6 +340,7 @@ class Job(ABC):
                     report_contents = rh.read()
             except Exception:
                 pass
+
         if report_contents:
             try:
                 report_contents = json.loads(report_contents)
