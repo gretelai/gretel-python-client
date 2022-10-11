@@ -12,11 +12,11 @@
 [![Python](https://img.shields.io/pypi/pyversions/gretel-client.svg)](https://github.com/gretelai/gretel-python-client)
 [![Downloads](https://pepy.tech/badge/gretel-client)](https://pepy.tech/project/gretel-client)
 [![GitHub stars](https://img.shields.io/github/stars/gretelai/gretel-python-client?style=social)](https://github.com/gretelai/gretel-python-client)
+[![Discord](https://img.shields.io/discord/1007817822614847500?label=Discord&logo=Discord)](https://gretel.ai/discord)
 
 ## Getting Started
 
 The following command will install the latest stable Gretel CLI and Python SDK
-
 
 ```
 pip install gretel-client
