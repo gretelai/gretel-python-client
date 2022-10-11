@@ -46,7 +46,7 @@ def test_model_crud_from_cli_local_inputs(
     # 2. check that the model can be found via a search
     model = next(project.search_models(factory=dict))
     model_id = model["uid"]
-    config = model["config"]["models"][0]["transforms"]
+    config = list(model["config"]["models"][0].values())[0]
     assert config["ref_data"]["0"].endswith("account-balances.csv")
 
     assert model["status"] == "completed"

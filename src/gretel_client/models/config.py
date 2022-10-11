@@ -91,7 +91,7 @@ class GenericModelTypeConfig(ModelTypeConfig):
         return None
 
 
-class TransformsModelTypeConfig(ModelTypeConfig):
+class TransformModelTypeConfig(ModelTypeConfig):
     @property
     def action_name(self) -> Optional[str]:
         return "transform"
@@ -242,7 +242,7 @@ def _peek_sqs_report(report_contents) -> dict:
 
 _CONFIGS = {
     "synthetics": SyntheticsModelTypeConfig(),
-    "transforms": TransformsModelTypeConfig(),
+    "transform": TransformModelTypeConfig(),
     "classify": ClassifyModelTypeConfig(),
     "ctgan": CtganModelTypeConfig(),
     "actgan": ActganModelTypeConfig(),
@@ -251,6 +251,9 @@ _CONFIGS = {
     "timeseries_dgan": TimeseriesDganModelTypeConfig(),
     "__default__": GenericModelTypeConfig(),
 }
+
+# Specify aliases
+_CONFIGS["transforms"] = _CONFIGS["transform"]
 
 
 def get_model_type_config(model_type: Optional[str] = None) -> ModelTypeConfig:
