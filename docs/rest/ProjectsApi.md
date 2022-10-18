@@ -13,6 +13,7 @@ Method | HTTP request | Description
 [**delete_project**](ProjectsApi.md#delete_project) | **DELETE** /projects/{project_id} | 
 [**delete_record_handler**](ProjectsApi.md#delete_record_handler) | **DELETE** /projects/{project_id}/models/{model_id}/record_handlers/{record_handler_id} | 
 [**download_artifact**](ProjectsApi.md#download_artifact) | **GET** /projects/{project_id}/artifacts/download | 
+[**get_artifact_manifest**](ProjectsApi.md#get_artifact_manifest) | **GET** /projects/{project_id}/artifacts/manifest | 
 [**get_artifacts**](ProjectsApi.md#get_artifacts) | **GET** /projects/{project_id}/artifacts | List all project artifacts
 [**get_model**](ProjectsApi.md#get_model) | **GET** /projects/{project_id}/models/{model_id} | Get model details
 [**get_model_artifact**](ProjectsApi.md#get_model_artifact) | **GET** /projects/{project_id}/models/{model_id}/artifact | Get model details
@@ -746,6 +747,88 @@ Name | Type | Description  | Notes
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 **200** | Download artifact by key |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **get_artifact_manifest**
+> {str: (bool, date, datetime, dict, float, int, list, str, none_type)} get_artifact_manifest(project_id)
+
+
+
+### Example
+
+* Api Key Authentication (ApiKey):
+```python
+import time
+import gretel_client.rest
+from gretel_client.rest.api import projects_api
+from pprint import pprint
+# Defining the host is optional and defaults to https://api-dev.gretel.cloud
+# See configuration.py for a list of all supported configuration parameters.
+configuration = gretel_client.rest.Configuration(
+    host = "https://api-dev.gretel.cloud"
+)
+
+# The client must configure the authentication and authorization parameters
+# in accordance with the API server security policy.
+# Examples for each auth method are provided below, use the example that
+# satisfies your auth use case.
+
+# Configure API key authorization: ApiKey
+configuration.api_key['ApiKey'] = 'YOUR_API_KEY'
+
+# Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+# configuration.api_key_prefix['ApiKey'] = 'Bearer'
+
+# Enter a context with an instance of the API client
+with gretel_client.rest.ApiClient(configuration) as api_client:
+    # Create an instance of the API class
+    api_instance = projects_api.ProjectsApi(api_client)
+    project_id = "project_id_example" # str | Project id
+    key = "key_example" # str | Get artifact manifest by key (optional)
+
+    # example passing only required values which don't have defaults set
+    try:
+        api_response = api_instance.get_artifact_manifest(project_id)
+        pprint(api_response)
+    except gretel_client.rest.ApiException as e:
+        print("Exception when calling ProjectsApi->get_artifact_manifest: %s\n" % e)
+
+    # example passing only required values which don't have defaults set
+    # and optional values
+    try:
+        api_response = api_instance.get_artifact_manifest(project_id, key=key)
+        pprint(api_response)
+    except gretel_client.rest.ApiException as e:
+        print("Exception when calling ProjectsApi->get_artifact_manifest: %s\n" % e)
+```
+
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **project_id** | **str**| Project id |
+ **key** | **str**| Get artifact manifest by key | [optional]
+
+### Return type
+
+**{str: (bool, date, datetime, dict, float, int, list, str, none_type)}**
+
+### Authorization
+
+[ApiKey](../README.md#ApiKey)
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+**200** | Get artifact manifest by key |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 

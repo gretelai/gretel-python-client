@@ -1,6 +1,7 @@
 """
 High level API for interacting with a Gretel Project
 """
+import json
 import uuid
 
 from contextlib import contextmanager
@@ -13,6 +14,8 @@ from urllib.parse import urlparse
 import requests
 import smart_open
 
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
+
 from gretel_client.cli.utils.parser_utils import (
     DataSourceTypes,
     ref_data_factory,
@@ -24,7 +27,7 @@ from gretel_client.projects.exceptions import GretelProjectError
 from gretel_client.projects.models import Model
 from gretel_client.rest import models
 from gretel_client.rest.api.projects_api import ProjectsApi
-from gretel_client.rest.exceptions import UnauthorizedException
+from gretel_client.rest.exceptions import NotFoundException, UnauthorizedException
 from gretel_client.rest.model.artifact import Artifact
 from gretel_client.users.users import get_me
 
@@ -50,6 +53,19 @@ def check_not_deleted(func):
 
 
 MT = TypeVar("MT", dict, Model)
+
+
+# These exceptions are used for control flow with retries in get_artifact_manifest.
+# They are NOT intended to bubble up out of this module.
+class ManifestNotFoundException(Exception):
+    pass
+
+
+class ManifestPendingException(Exception):
+    def __init__(self, msg: str = None, manifest: dict = {}):
+        # Piggyback the pending manifest onto the exception.  If we give up, we still want to pass it back as a normal return value.
+        self.manifest = manifest
+        super().__init__(msg)
 
 
 class Project:
@@ -249,6 +265,42 @@ class Project:
         """
         resp = self.projects_api.download_artifact(project_id=self.name, key=key)
         return resp[f.DATA][f.DATA][f.URL]
+
+    # The server side API will return manifests with PENDING status if artifact processing has not completed
+    # or it will return a 404 (not found) if you immediately request the artifact before processing has even started.
+    # This is correct but not convenient.  To keep every end user from writing their own retry logic, we add some here.
+    @retry(
+        wait=wait_fixed(2),
+        stop=stop_after_attempt(15),
+        retry=retry_if_exception_type(ManifestPendingException),
+        # Instead of throwing an exception, return the pending manifest.
+        retry_error_callback=lambda retry_state: retry_state.outcome.exception().manifest,
+    )
+    @retry(
+        wait=wait_fixed(3),
+        stop=stop_after_attempt(5),
+        retry=retry_if_exception_type(ManifestNotFoundException),
+        # Instead of throwing an exception, return None.  Given that we waited for a short grace period to let the artifact become PENDING,
+        # if we are still getting 404's the key probably does not actually exist.
+        retry_error_callback=lambda retry_state: None,
+    )
+    def get_artifact_manifest(
+        self, key: str, retry_on_not_found: bool = True, retry_on_pending: bool = True
+    ) -> dict:
+        _path = f"/projects/{self.name}/artifacts/manifest"
+        _query_params = {"key": key}
+        resp = None
+        try:
+            resp = self.projects_api.get_artifact_manifest(
+                project_id=self.name, key=key
+            )
+        except NotFoundException:
+            raise ManifestNotFoundException()
+        if retry_on_not_found and resp is None:
+            raise ManifestNotFoundException()
+        if retry_on_pending and resp is not None and resp.get("status") == "pending":
+            raise ManifestPendingException(manifest=resp)
+        return resp
 
 
 def search_projects(limit: int = 200, query: str = None) -> List[Project]:
