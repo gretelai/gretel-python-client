@@ -90,6 +90,23 @@ def test_cli_does_pass_configure_with_bad_project(
         assert cmd.exit_code == 0
 
 
+def test_missing_api_key(runner: CliRunner):
+    with clear_session_config():
+        cmd = runner.invoke(cli, ["projects", "create", "--name", "foo"])
+
+        assert cmd.exit_code == 1
+        assert "Gretel API key was not set" in cmd.stderr
+
+
+def test_invalid_api_key(runner: CliRunner):
+    with clear_session_config():
+        configure_session(ClientConfig(api_key="invalid"))
+
+        cmd = runner.invoke(cli, ["projects", "create", "--name", "foo"])
+        assert cmd.exit_code == 1
+        assert "Invalid Gretel API key" in cmd.stderr
+
+
 def test_invalid_project_create(runner: CliRunner):
     project_name = f"{uuid.uuid4().hex[:5]}_not_dns_compliant"
     cmd = runner.invoke(cli, ["--debug", "projects", "create", "--name", project_name])

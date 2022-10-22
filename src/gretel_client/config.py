@@ -159,6 +159,15 @@ class ClientConfig:
     ) -> ApiClient:
         # disable log warnings when the retry kicks in
         logging.getLogger("urllib3.connectionpool").setLevel(logging.ERROR)
+        if not self.api_key:
+            raise GretelClientConfigurationError(
+                "Gretel API key was not set. Please check your configuration and try again."
+            )
+        if not self.api_key.startswith("grt"):
+            raise GretelClientConfigurationError(
+                "Invalid Gretel API key. Please check your configuration and try again."
+            )
+
         configuration = Configuration(
             host=self.endpoint,
             api_key={"ApiKey": self.api_key},
