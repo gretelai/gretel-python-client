@@ -74,8 +74,10 @@ class HandleApiClientError(_ErrorHandler, ApiException):
         if self.ex.status == 404:
             return "The API resource was not found (404), please check your inputs."
         if self.ex.status == 403:
-            return "Your request may be rate limited, please try again later. If \
-                this problem persists please contact support."
+            return (
+                "Your request may be rate limited, please try again later. "
+                "If this problem persists please contact support."
+            )
         return f"There was a problem with the API request ({self.ex.status})."
 
     def handle(self):

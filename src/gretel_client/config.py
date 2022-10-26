@@ -184,6 +184,7 @@ class ClientConfig:
                 {"DELETE", "GET", "HEAD", "OPTIONS", "PUT", "TRACE", "POST"}
             ),
             status_forcelist=frozenset({413, 429, 503, 403}),
+            raise_on_status=False,
         )
         return ApiClient(configuration)
 
