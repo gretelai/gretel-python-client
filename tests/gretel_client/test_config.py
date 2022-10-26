@@ -48,6 +48,7 @@ def test_does_set_session_factory(dev_ep):
         configure_session(_load_config())
 
 
+@patch.dict(os.environ, {"GRETEL_API_KEY": "grtutest"})
 def test_can_get_api_bindings():
     client = get_session_config()
     assert isinstance(client.get_api(ProjectsApi), ProjectsApi)
@@ -101,6 +102,7 @@ def test_clear_gretel_config(_get_config_path: MagicMock):
 
 
 @patch("urllib3.PoolManager")
+@patch.dict(os.environ, {"GRETEL_API_KEY": "grtutest"})
 def test_defaults_to_certifi_certs(pool_manager: MagicMock):
     config = ClientConfig.from_env()
     client = config.get_api(ProjectsApi)
@@ -110,6 +112,7 @@ def test_defaults_to_certifi_certs(pool_manager: MagicMock):
 
 
 @patch("urllib3.PoolManager")
+@patch.dict(os.environ, {"GRETEL_API_KEY": "grtutest"})
 def test_override_certs_via_environment_variables(pool_manager: MagicMock):
     with patch.dict(
         os.environ,
