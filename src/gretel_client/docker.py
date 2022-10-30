@@ -532,7 +532,29 @@ def extract_container_path(
             if member.isfile():
                 member.name = Path(member.name).name
                 members_to_extact.append(member)
-        tar.extractall(path=dest_path, members=members_to_extact)
+        
+        import os
+        
+        def is_within_directory(directory, target):
+            
+            abs_directory = os.path.abspath(directory)
+            abs_target = os.path.abspath(target)
+        
+            prefix = os.path.commonprefix([abs_directory, abs_target])
+            
+            return prefix == abs_directory
+        
+        def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+        
+            for member in tar.getmembers():
+                member_path = os.path.join(path, member.name)
+                if not is_within_directory(path, member_path):
+                    raise Exception("Attempted Path Traversal in Tar File")
+        
+            tar.extractall(path, members, numeric_owner=numeric_owner) 
+            
+        
+        safe_extract(tar, path=dest_path, members=members_to_extact)
 
 
 def build_container(**kwargs) -> Container:
