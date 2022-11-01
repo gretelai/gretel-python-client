@@ -370,6 +370,10 @@ def configure_session(
             are valid.
         clear: If set to ``True`` any existing Gretel credentials will be
             removed from the host.
+
+    Raises:
+        ``GretelClientConfigurationError`` if `validate=True` and credentials
+            are invalid.
     """
     if clear:
         clear_gretel_config()
@@ -404,6 +408,7 @@ def configure_session(
         print(f"Using endpoint {config.endpoint}")
         try:
             print(f"Logged in as {config.email} \u2705")
-        except Exception:
-            print("Failed to validate credentials. Please check your config.")
-            traceback.print_exc()
+        except Exception as ex:
+            raise GretelClientConfigurationError(
+                "Failed to validate credentials. Please check your config."
+            ) from ex
