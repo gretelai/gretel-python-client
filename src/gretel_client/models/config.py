@@ -214,6 +214,12 @@ class GptXModelTypeConfig(GenericModelTypeConfig):
         return GPU
 
 
+class AmplifyModelTypeConfig(GenericModelTypeConfig):
+    @property
+    def peek_report(self, report_contents: dict) -> str:
+        return _peek_sqs_report(report_contents)
+
+
 class EvaluateModelTypeConfig(GenericModelTypeConfig):
     def peek_report(self, report_contents: dict) -> Optional[dict]:
         return _peek_sqs_report(report_contents)
@@ -247,6 +253,7 @@ _CONFIGS = {
     "ctgan": CtganModelTypeConfig(),
     "actgan": ActganModelTypeConfig(),
     "gpt_x": GptXModelTypeConfig(),
+    "amplify": AmplifyModelTypeConfig(),
     "evaluate": EvaluateModelTypeConfig(),
     "timeseries_dgan": TimeseriesDganModelTypeConfig(),
     "__default__": GenericModelTypeConfig(),
