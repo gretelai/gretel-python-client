@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import traceback
 
 from enum import Enum
 from getpass import getpass

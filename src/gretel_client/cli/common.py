@@ -54,7 +54,7 @@ class Logger:
         if obj:
             return json.dumps(obj, indent=4)
 
-    def info(self, msg: str = "", data: Optional[Any] = None):
+    def info(self, msg: str = "", data: Optional[Any] = None) -> None:
         """Prints general info statements to the console. Use this log
         level if you want to print messages that indicate progress or
         state change.
@@ -66,7 +66,10 @@ class Logger:
             msg = f"{msg}\n{self._format_object(data)}"
         click.echo(click.style("INFO: ", fg="green") + msg, err=True)
 
-    def warn(self, msg):
+    def warn(self, msg: str) -> None:
+        self.warning(msg)
+
+    def warning(self, msg: str) -> None:
         """Prints warn log messages."""
         click.echo(click.style("WARN: ", fg="yellow") + msg, err=True)
 

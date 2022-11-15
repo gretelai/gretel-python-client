@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import copy
 import json
-import logging
 
 from pathlib import Path
 from typing import Iterator, List, Optional, Type, TYPE_CHECKING, Union
@@ -21,7 +20,7 @@ from gretel_client.cli.utils.parser_utils import (
     RefData,
     RefDataTypes,
 )
-from gretel_client.config import RunnerMode
+from gretel_client.config import get_logger, RunnerMode
 from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.common import (
     _DataFrameT,
@@ -45,28 +44,58 @@ else:
     Project = None
 
 
-logging.basicConfig()
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-
 BASE_BLUEPRINT_REPO = "https://raw.githubusercontent.com/gretelai/gretel-blueprints/main/config_templates/gretel"
 
 _ModelConfigPathT = Union[str, Path, dict]
 
 
-def _resolve_config_short_path(config_path: str) -> dict:
-    path = f"{BASE_BLUEPRINT_REPO}/{config_path}.yml"
+def _maybe_warn_deprecation(config: str) -> None:
+    if not config.startswith("# deprecated"):
+        return
+
+    # A generic message in the event parsing the message in the config fails
+    warn_msg = "This config will be deprecated soon. Please see the config itself for alternative options."
+    try:
+        warn_msg = config.split("\n")[0].split(":")[-1].strip()
+    except Exception:
+        pass
+
+    get_logger(__name__).warning(warn_msg)
+
+
+def _resolve_config_short_path(
+    config_path: str, *, base_url: str = BASE_BLUEPRINT_REPO
+) -> dict:
+    path = f"{base_url}/{config_path}.yml"
     try:
         with open(path) as tpl:  # type:ignore
-            return yaml.safe_load(tpl.read())
+            tpl_str = tpl.read()
+            _maybe_warn_deprecation(tpl_str)
+            return yaml.safe_load(tpl_str)
     except requests.exceptions.HTTPError as ex:
         raise ModelConfigError(
             f"Could not find or read the blueprint {config_path}"
         ) from ex
 
 
-def read_model_config(model_config: _ModelConfigPathT) -> dict:
+def read_model_config(
+    model_config: _ModelConfigPathT, *, base_url: str = BASE_BLUEPRINT_REPO
+) -> dict:
+    """
+    Load a Gretel configuration into a dictionary.
+
+    Args:
+        model_config: This argument may be a string to a file on disk or a Gretel configuration template
+            string such as "synthetics/default". First, this function will treat string input as a
+            location on disk and attempt to read the file and parse it as YAML or JSON. If this is
+            successful, a dict of the config is returned. If the provided `model_config` str is not
+            a file on disk, the function will attempt to resolve the config as a shortcut-path
+            from URL provided by `base_url.`
+
+        base_url: A base HTTP URL that should be use to construct a fully qualified path
+            to a configuration template. This URL will be used to resolve a config shortcut string
+            to the fully qualified URL.
+    """
 
     config = None
     if isinstance(model_config, dict):
@@ -107,7 +136,7 @@ def read_model_config(model_config: _ModelConfigPathT) -> dict:
     # try and read a model config from a blueprint short path
     if not config and isinstance(model_config, str):
         try:
-            config = _resolve_config_short_path(model_config)
+            config = _resolve_config_short_path(model_config, base_url=base_url)
         except ModelConfigError:
             pass
 
