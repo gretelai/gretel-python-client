@@ -50,6 +50,8 @@ def test_does_set_session_factory(dev_ep):
 
 @patch.dict(os.environ, {"GRETEL_API_KEY": "grtutest"})
 def test_can_get_api_bindings():
+    configure_session(ClientConfig.from_env())
+
     client = get_session_config()
     assert isinstance(client.get_api(ProjectsApi), ProjectsApi)
 
