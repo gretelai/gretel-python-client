@@ -1,3 +1,5 @@
+import pathlib
+
 import click
 import yaml
 
@@ -70,9 +72,10 @@ def start(
     env = {"GRETEL_API_KEY": sc.config.api_key, "GRETEL_ENDPOINT": sc.config.endpoint}
     sc.log.info("Configuring connector.")
 
-    config_volume = DataVolumeDef(CONTAINER_CONFIG_PATH, [(config, CONNECTOR_CONFIG)])
+    config_volume = DataVolumeDef(
+        CONTAINER_CONFIG_PATH, [(pathlib.Path(config), CONNECTOR_CONFIG)]
+    )
     volumes.append(config_volume)
-
     if aws_cred_path:
         sc.log.info(f"Copying local aws credentials {aws_cred_path} to container.")
         cred = AwsCredFile(cred_from_agent=aws_cred_path)
