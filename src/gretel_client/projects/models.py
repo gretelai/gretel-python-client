@@ -439,13 +439,25 @@ class Model(Job):
     def get_record_handlers(self) -> Iterator[RecordHandler]:
         """Returns a list of record handlers associated with the model."""
         for status in Status:
-            for handler in (
-                self._projects_api.query_record_handlers(
-                    project_id=self.project.project_id,
-                    model_id=self.model_id,
-                    status=status.value,
+            # Setting the start value for offset in each query, limiting each result set to 10 records
+            offset = 0
+            limit = 10
+            while True:
+                handlers = (
+                    self._projects_api.query_record_handlers(
+                        project_id=self.project.project_id,
+                        model_id=self.model_id,
+                        status=status.value,
+                        skip=offset,
+                        limit=limit,
+                    )
+                    .get("data")
+                    .get("handlers")
                 )
-                .get("data")
-                .get("handlers")
-            ):
-                yield RecordHandler(self, record_id=handler["uid"])
+                # will break once no more handlers remain in the result set in the last pagination
+                if len(handlers) > 0:
+                    for handler in handlers:
+                        yield RecordHandler(self, record_id=handler["uid"])
+                    offset += limit + 1
+                else:
+                    break

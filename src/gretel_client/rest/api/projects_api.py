@@ -2087,6 +2087,8 @@ class ProjectsApi(object):
                 status (str):
 
             Keyword Args:
+                skip (int): The number of records being skipped before returning the next set.. [optional]
+                limit (int): The number of records returned in each result set.. [optional]
                 _return_http_data_only (bool): response data without head status
                     code and headers. Default is True.
                 _preload_content (bool): if False, the urllib3.HTTPResponse object
@@ -2154,6 +2156,8 @@ class ProjectsApi(object):
                     "project_id",
                     "model_id",
                     "status",
+                    "skip",
+                    "limit",
                 ],
                 "required": [
                     "project_id",
@@ -2183,16 +2187,22 @@ class ProjectsApi(object):
                     "project_id": (str,),
                     "model_id": (str,),
                     "status": (str,),
+                    "skip": (int,),
+                    "limit": (int,),
                 },
                 "attribute_map": {
                     "project_id": "project_id",
                     "model_id": "model_id",
                     "status": "status",
+                    "skip": "skip",
+                    "limit": "limit",
                 },
                 "location_map": {
                     "project_id": "path",
                     "model_id": "path",
                     "status": "query",
+                    "skip": "query",
+                    "limit": "query",
                 },
                 "collection_format_map": {},
             },

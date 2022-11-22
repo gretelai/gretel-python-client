@@ -1436,11 +1436,22 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
     project_id = "project_id_example" # str | Project id
     model_id = "model_id_example" # str | Model id
     status = "completed" # str | 
+    skip = 1 # int | The number of records being skipped before returning the next set. (optional)
+    limit = 1 # int | The number of records returned in each result set. (optional)
 
     # example passing only required values which don't have defaults set
     try:
         # Queries record handlers
         api_response = api_instance.query_record_handlers(project_id, model_id, status)
+        pprint(api_response)
+    except gretel_client.rest.ApiException as e:
+        print("Exception when calling ProjectsApi->query_record_handlers: %s\n" % e)
+
+    # example passing only required values which don't have defaults set
+    # and optional values
+    try:
+        # Queries record handlers
+        api_response = api_instance.query_record_handlers(project_id, model_id, status, skip=skip, limit=limit)
         pprint(api_response)
     except gretel_client.rest.ApiException as e:
         print("Exception when calling ProjectsApi->query_record_handlers: %s\n" % e)
@@ -1454,6 +1465,8 @@ Name | Type | Description  | Notes
  **project_id** | **str**| Project id |
  **model_id** | **str**| Model id |
  **status** | **str**|  |
+ **skip** | **int**| The number of records being skipped before returning the next set. | [optional]
+ **limit** | **int**| The number of records returned in each result set. | [optional]
 
 ### Return type
 
