@@ -104,12 +104,13 @@ def start(
     env_dict = dict(e.split("=", maxsplit=1) for e in env) if env else None
 
     capabilities = []
-    sc.log.info("Checking for GPU.")
-    if check_gpu():
-        capabilities.append(GPU)
-        sc.log.info("GPU found.")
-    else:
-        sc.log.info("No GPU found. Continuing without one.")
+    if driver == "docker":
+        sc.log.info("Checking for GPU.")
+        if check_gpu():
+            capabilities.append(GPU)
+            sc.log.info("GPU found.")
+        else:
+            sc.log.info("No GPU found. Continuing without one.")
 
     config = AgentConfig(
         project=project,

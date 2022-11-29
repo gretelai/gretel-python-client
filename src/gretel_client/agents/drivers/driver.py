@@ -33,7 +33,7 @@ class Driver(ABC, Generic[ComputeUnit]):
 
     @classmethod
     @abstractmethod
-    def from_config(cls, config: AgentConfig) -> Driver:
+    def from_config(cls, agent_config: AgentConfig) -> Driver:
         """Instantiate a driver from an ``AgentConfig``."""
         ...
 

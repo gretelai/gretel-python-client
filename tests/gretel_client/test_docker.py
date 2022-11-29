@@ -1,19 +1,13 @@
 import json
 import time
 
-from pathlib import Path
 from typing import Callable
 
 import docker
 import docker.errors
 import pytest
 
-from gretel_client.docker import (
-    Container,
-    DataVolume,
-    extract_container_path,
-    PullProgressPrinter,
-)
+from gretel_client.docker import Container, PullProgressPrinter
 
 
 # to see the progress bar, run

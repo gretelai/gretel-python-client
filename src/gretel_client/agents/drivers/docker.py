@@ -30,8 +30,8 @@ class Docker(Driver):
         self._logger = get_logger(__name__)
 
     @classmethod
-    def from_config(cls, config: AgentConfig) -> Docker:
-        return cls(config)
+    def from_config(cls, agent_config: AgentConfig) -> Docker:
+        return cls(agent_config)
 
     def schedule(self, job: Job) -> Container:
         volumes = []

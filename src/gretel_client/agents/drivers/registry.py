@@ -8,12 +8,13 @@ from typing import Dict, TYPE_CHECKING
 
 from gretel_client.agents.drivers.docker import Docker
 from gretel_client.agents.drivers.driver import Driver, DriverError
+from gretel_client.agents.drivers.k8s import Kubernetes
 
 if TYPE_CHECKING:
     from gretel_client.agents.agent import AgentConfig
 
 
-_registry: Dict[str, type[Driver]] = {"docker": Docker}
+_registry: Dict[str, type[Driver]] = {"docker": Docker, "k8s": Kubernetes}
 """New drivers that implement ``Driver`` should be added to this registry"""
 
 
