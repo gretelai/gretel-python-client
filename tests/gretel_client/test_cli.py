@@ -1,7 +1,7 @@
 import os
 
 from typing import Callable
-from unittest.mock import MagicMock, patch
+from unittest.mock import ANY, MagicMock, patch
 
 import pytest
 
@@ -9,6 +9,7 @@ from click.testing import CliRunner
 
 from gretel_client.cli.cli import cli
 from gretel_client.cli.common import ModelObjectReader
+from gretel_client.cli.utils.parser_utils import RefData
 from gretel_client.config import (
     ClientConfig,
     configure_session,
@@ -204,3 +205,77 @@ def test_can_name_model(get_project: MagicMock, runner: CliRunner):
     )
     assert cmd.exit_code == 0
     assert get_project.return_value.create_model_obj.return_value.name == "test-project"
+
+
+@patch("gretel_client.cli.records.create_and_run_record_handler")
+def test_does_pass_through_manual_artifacts(
+    create_record_handler: MagicMock, get_project: MagicMock, runner: CliRunner
+):
+    cmd = runner.invoke(
+        cli,
+        [
+            "records",
+            "transform",
+            "--model-id",
+            "test_model_id",
+            "--in-data",
+            "s3://test/object.csv",
+            "--runner",
+            "manual",
+        ],
+    )
+    print(cmd.output)
+    assert cmd.exit_code == 0
+    create_record_handler.assert_called_once_with(
+        ANY,
+        params=None,
+        data_source="s3://test/object.csv",
+        action="transform",
+        runner="manual",
+        output=None,
+        in_data="s3://test/object.csv",
+        status_strings=ANY,
+        model_path=None,
+    )
+
+
+@patch("gretel_client.cli.records.create_and_run_record_handler")
+def test_does_run_manual_artifacts(
+    create_record_handler: MagicMock, get_project: MagicMock, runner: CliRunner
+):
+    cmd = runner.invoke(
+        cli,
+        [
+            "models",
+            "run",
+            "--model-id",
+            "test_model_id",
+            "--in-data",
+            "s3://test/object.csv",
+            "--ref-data",
+            "gcs://test/test-data.csv",
+            "--ref-data",
+            "azure://test.csv",
+            "--runner",
+            "manual",
+        ],
+    )
+    print(cmd.output)
+    assert cmd.exit_code == 0
+    create_record_handler.assert_called_once_with(
+        ANY,
+        params=None,
+        action=None,
+        in_data="s3://test/object.csv",
+        data_source="s3://test/object.csv",
+        ref_data=RefData(
+            ref_dict={0: "gcs://test/test-data.csv", 1: "azure://test.csv"}
+        ),
+        config_ref_data=RefData(
+            ref_dict={0: "gcs://test/test-data.csv", 1: "azure://test.csv"}
+        ),
+        runner="manual",
+        output=None,
+        status_strings=ANY,
+        model_path=None,
+    )

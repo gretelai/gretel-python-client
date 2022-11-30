@@ -124,7 +124,9 @@ def _configure_data_source(
     if in_data is None:
         return None
 
-    if runner == RunnerMode.CLOUD.value:
+    if runner == RunnerMode.MANUAL.value:
+        data_source = in_data
+    elif runner == RunnerMode.CLOUD.value:
         sc.log.info(f"Uploading input artifact {in_data}")
         data_source = sc.project.upload_artifact(in_data)
     else:
@@ -134,6 +136,8 @@ def _configure_data_source(
 
 
 def _configure_ref_data(sc: SessionContext, ref_data: RefData, runner: str) -> RefData:
+    if not ref_data.is_empty and runner == RunnerMode.MANUAL.value:
+        return ref_data
     if not ref_data.is_empty and runner == RunnerMode.CLOUD.value:
         sc.log.info("Uploading ref data...")
         ref_dict = {}
