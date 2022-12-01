@@ -24,7 +24,7 @@ from gretel_client.docker import get_container_auth
 
 logger = get_logger(__name__)
 
-GRETEL_WORKER_SA = os.getenv("GRETEL_WORKER_SA")
+GRETEL_WORKER_SA = os.getenv("GRETEL_WORKER_SA", "gretel-agent")
 GRETEL_WORKER_NAMESPACE = os.getenv("GRETEL_WORKER_NAMESPACE", "gretel-workers")
 GRETEL_AGENT_SECRET_NAME = os.getenv("GRETEL_AGENT_SECRET_NAME", "gretel-agent-secret")
 GRETEL_PULL_SECRET = os.getenv("GRETEL_PULL_SECRET", "gretel-pull-secret")
@@ -115,9 +115,7 @@ class Kubernetes(Driver):
             env = [
                 client.V1EnvVar(name=k, value=v) for k, v in job_config.env_vars.items()
             ]
-        env.append(
-            client.V1EnvVar(name="GRETEL_STAGE", value=os.environ.get("GRETEL_STAGE"))
-        )
+        env.append(client.V1EnvVar(name="GRETEL_STAGE", value=job_config.gretel_stage))
         args = list(itertools.chain.from_iterable(job_config.params.items()))
         container = client.V1Container(
             name=job_config.uid,
