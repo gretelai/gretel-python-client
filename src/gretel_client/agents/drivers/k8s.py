@@ -13,7 +13,7 @@ import traceback
 from pathlib import Path
 from threading import Thread
 from time import sleep
-from typing import TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
 
 from kubernetes import client, config
 from kubernetes.client import ApiClient, BatchV1Api, CoreV1Api
@@ -116,7 +116,9 @@ class Kubernetes(Driver):
                 client.V1EnvVar(name=k, value=v) for k, v in job_config.env_vars.items()
             ]
         env.append(client.V1EnvVar(name="GRETEL_STAGE", value=job_config.gretel_stage))
+
         args = list(itertools.chain.from_iterable(job_config.params.items()))
+
         container = client.V1Container(
             name=job_config.uid,
             image=job_config.container_image,
@@ -159,8 +161,11 @@ class Kubernetes(Driver):
 
         return job
 
-    def _delete_kubernetes_job(self, job: client.V1Job):
+    def _delete_kubernetes_job(self, job: Optional[client.V1Job]):
         """Deletes the input V1Job in the cluster pointed to by the input Api Client."""
+        if not job:
+            logger.warning("Could not delete job, no metadata found")
+            return
         logger.info(f"Deleting job:{job.metadata.name} from Kubernetes cluster.")
         try:
             self._batch_api.delete_namespaced_job(

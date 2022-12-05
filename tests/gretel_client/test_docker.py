@@ -35,7 +35,7 @@ def test_container(request):
     request.addfinalizer(c.stop)  # in case the test fails, cleanup the container
     c.start()
     while c.active:
-        time.sleep(1)
+        time.sleep(0.1)
     assert "Hello from Docker!" in c.get_logs().strip()
     c.stop()
     with pytest.raises(docker.errors.NotFound):

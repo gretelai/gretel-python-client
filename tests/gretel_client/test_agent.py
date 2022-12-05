@@ -1,3 +1,6 @@
+import base64
+import json
+import logging
 import threading
 
 from time import sleep
@@ -12,13 +15,16 @@ from gretel_client.agents.drivers.driver import GPU
 from gretel_client.docker import CaCertFile, DEFAULT_GPU_CONFIG
 from gretel_client.rest.apis import JobsApi, ProjectsApi
 
+worker_token_json = json.dumps({"model_key": "grtu123456abc"})
+worker_token = base64.standard_b64encode(worker_token_json.encode("ascii"))
+
 
 def get_mock_job(instance_type: str = "cpu-standard") -> dict:
     return {
         "run_id": "run-id",
         "job_type": "run",
         "container_image": "gretelai/transforms",
-        "worker_token": "abcdef1243",
+        "worker_token": worker_token,
         "instance_type": instance_type,
     }
 
@@ -34,7 +40,7 @@ def agent_config() -> Iterator[AgentConfig]:
         }
         config = AgentConfig(
             driver="docker",
-            max_workers=1,
+            max_workers=2,
             project="my-project-name",
             log_factory=MagicMock(),
             creds=None,
@@ -50,7 +56,9 @@ def test_agent_config_fixture(agent_config: AgentConfig):
 
 @patch("gretel_client.agents.agent.get_session_config")
 @patch("gretel_client.agents.agent.get_driver")
+@patch("requests.patch")
 def test_agent_server_does_start(
+    requests_patch: MagicMock,
     get_driver: MagicMock,
     get_session_config: MagicMock,
     agent_config: AgentConfig,
@@ -72,6 +80,7 @@ def test_agent_server_does_start(
     ]
 
     server = Agent(agent_config)
+    assert server._rate_limiter._max_active_jobs == 2
     request.addfinalizer(server.interrupt)
 
     get_driver.assert_called_once_with(agent_config)
@@ -91,6 +100,7 @@ def test_agent_server_does_start(
 
     server.interrupt()
     assert mock_driver.schedule.call_count == 2
+    assert requests_patch.call_count == 2
     assert server._jobs_manager.active_jobs == 0
 
 
@@ -152,4 +162,20 @@ def test_job_needs_gpu(build_container: MagicMock, get_session_config: MagicMock
 def test_job_disables_cloud_logging(get_session_config: MagicMock):
     config = AgentConfig(driver="docker", disable_cloud_logging=True)
     job = Job.from_dict(get_mock_job(instance_type="gpu-standard"), config)
-    assert job.params == {"--disable-cloud-logging": "", "--worker-token": "abcdef1243"}
+    assert job.params == {"--disable-cloud-logging": "", "--worker-token": worker_token}
+
+
+@patch("requests.patch")
+def test_update_job_status_fails_no_error(
+    requests_patch: MagicMock, agent_config: AgentConfig
+):
+    expected_exception = Exception("Whoopsie")
+    requests_patch.side_effect = expected_exception
+    agent = Agent(agent_config)
+    mock_logger = MagicMock()
+    agent._logger = mock_logger
+    job = Job.from_dict(get_mock_job(instance_type="gpu-standard"), agent_config)
+    agent._update_job_status(job)
+    mock_logger.error.assert_called_once_with(
+        "There was an error updating the job status: %s", expected_exception
+    )

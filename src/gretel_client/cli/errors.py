@@ -55,16 +55,23 @@ class HandleApiClientError(_ErrorHandler, ApiException):
     error.
     """
 
+    def _build_from_context_item(self, s: str, context_item: dict) -> str:
+        for field, errors in context_item.items():
+            s += f"\t{field}\n"
+            s += f"\t\t{errors}\n"
+        return s
+
     def _context_to_str(self, err_body: dict) -> Optional[str]:
         context = err_body.get("context")
         if not context:
             return "\tNone"
-        s = ""
-        for field, errors in context.items():
-            s += f"\t{field}\n"
-            for error in errors:
-                s += f"\t\t{error}\n"
-        return s
+        output = ""
+        if isinstance(context, list):
+            for context_item in context:
+                output = self._build_from_context_item(output, context_item)
+        else:
+            output = self._build_from_context_item(output, context)
+        return output
 
     def _get_error_message(self) -> str:
         if self.ex.status == 400:

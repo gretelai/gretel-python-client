@@ -3,7 +3,7 @@ import tempfile
 
 from pathlib import Path
 from typing import Callable, List
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 import yaml
@@ -157,7 +157,8 @@ def test_model_submit_no_local_mode(m: Model):
     assert "local" in str(err)
 
 
-def test_does_poll_status_and_logs(m: Model, model_logs: List[dict]):
+@patch("time.sleep")
+def test_does_poll_status_and_logs(sleep_patch, m: Model, model_logs: List[dict]):
     m._submit(runner_mode=RunnerMode.LOCAL, _default_manual=True)
     m._projects_api.get_model.side_effect = [  # type:ignore
         {"data": {"model": {"status": "created"}}},

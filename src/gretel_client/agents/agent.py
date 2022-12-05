@@ -3,12 +3,16 @@ Classes responsible for running local Gretel worker agents.
 """
 from __future__ import annotations
 
+import base64
+import json
 import logging
 import os
 import threading
 
 from dataclasses import asdict, dataclass
 from typing import Callable, Dict, Generic, Iterator, List, Optional
+
+import requests
 
 from backports.cached_property import cached_property
 
@@ -163,6 +167,10 @@ class Job:
         return get_session_config().stage
 
     @property
+    def gretel_endpoint(self) -> str:
+        return get_session_config().endpoint
+
+    @property
     def needs_gpu(self) -> bool:
         return "gpu" in self.instance_type.lower()
 
@@ -192,15 +200,18 @@ class JobManager(Generic[ComputeUnit]):
         self._driver = driver
         self._logger = logging.getLogger(__name__)
 
-    def add_job(self, job: Job, unit: ComputeUnit):
+    def add_job(self, job: Job, unit: ComputeUnit) -> None:
         self._active_jobs[job.uid] = unit
 
-    def _update_active_jobs(self):
+    def _update_active_jobs(self) -> None:
         for job in list(self._active_jobs):
             if not self._driver.active(self._active_jobs[job]):
                 self._logger.info(f"Job {job} completed")
                 self._driver.clean(self._active_jobs[job])
                 self._active_jobs.pop(job)
+
+    def contains_job(self, job: Job) -> bool:
+        return job.uid in self._active_jobs
 
     @property
     def active_jobs(self) -> int:
@@ -283,7 +294,7 @@ class Agent:
         self._client_config = get_session_config()
         self._driver = get_driver(config)
         self._jobs_manager = JobManager(self._driver)
-        self._rate_limiter = RateLimiter(AgentConfig.max_workers, self._jobs_manager)
+        self._rate_limiter = RateLimiter(config.max_workers, self._jobs_manager)
         self._jobs_api = self._client_config.get_api(JobsApi)
         self._projects_api = self._client_config.get_api(ProjectsApi)
         self._jobs = Poller(self._jobs_api, self._rate_limiter, self._config)
@@ -298,14 +309,42 @@ class Agent:
                     return
                 else:
                     continue
+            if self._jobs_manager.contains_job(job):
+                self._logger.info(f"Job {job.uid} already in process, skipping")
+                continue
             self._logger.info(f"Got {job.job_type} job {job.uid}, scheduling now.")
+            unit = self._driver.schedule(job)
+            if not unit:
+                self._logger.warning(f"Unable to schedule job {job.uid}")
+            else:
+                self._jobs_manager.add_job(job, unit)
+                self._logger.info(f"Container for job {job.uid} scheduled")
+                self._update_job_status(job)
 
-            self._jobs_manager.add_job(job, self._driver.schedule(job))
-            self._logger.info(f"Container for job {job.uid} scheduled")
             # todo: add in read lock to jobs endpoint. this sleep is
             # a stopgap until then. without this the agent is going to
             # try and launch multiple containers of the same job.
             self._interrupt.wait(cooloff)
+
+    def _update_job_status(self, job: Job) -> None:
+        try:
+            worker_json = base64.standard_b64decode(job.worker_token).decode("ascii")
+            worker_key = json.loads(worker_json)["model_key"]
+            headers = {"Authorization": worker_key}
+            url = f"{job.gretel_endpoint}/projects/models"
+            params = {"uid": job.uid, "type": job.job_type}
+            data = {"uid": job.uid, "status": "pending"}
+            self._logger.debug(url, headers, params, data)
+            resp = requests.patch(
+                url,
+                headers=headers,
+                json=data,
+                params=params,
+            )
+            self._logger.debug(resp.text)
+            resp.raise_for_status()
+        except Exception as ex:
+            self._logger.error("There was an error updating the job status: %s", ex)
 
     def interrupt(self):
         """Shuts down the agent"""
