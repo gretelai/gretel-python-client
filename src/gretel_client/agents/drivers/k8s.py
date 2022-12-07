@@ -147,6 +147,22 @@ class Kubernetes(Driver):
                 ],
             ),
         )
+        gpu_node_selector = os.getenv("GPU_NODE_SELECTOR", "")
+        if job_config.needs_gpu and gpu_node_selector:
+            pod_spec: client.V1PodSpec = template.spec
+            if pod_spec:
+                try:
+                    selector_dict = json.loads(gpu_node_selector)
+                except json.decoder.JSONDecodeError as ex:
+                    raise KubernetesError(
+                        "Could not deserialize JSON for GPU_NODE_SELECTOR"
+                    ) from ex
+                if not isinstance(selector_dict, dict):
+                    raise KubernetesError(
+                        f"The GPU_NODE_SELECTOR was not a JSON dictionary, received {gpu_node_selector}"
+                    )
+                if selector_dict:
+                    pod_spec.node_selector = selector_dict
 
         spec = client.V1JobSpec(
             template=template, backoff_limit=0, ttl_seconds_after_finished=86400

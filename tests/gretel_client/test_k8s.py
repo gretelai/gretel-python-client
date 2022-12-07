@@ -1,5 +1,6 @@
 import os
 
+from contextlib import contextmanager
 from functools import wraps
 from typing import Callable
 from unittest import TestCase
@@ -54,6 +55,15 @@ def patch_auth(func: Callable):
             return func(*args, **kwargs)
 
     return inner_func
+
+
+@contextmanager
+def patch_gpu_environ(var_value: str):
+    try:
+        os.environ["GPU_NODE_SELECTOR"] = var_value
+        yield
+    finally:
+        os.environ.pop("GPU_NODE_SELECTOR")
 
 
 class TestKubernetesDriver(TestCase):
@@ -127,16 +137,52 @@ class TestKubernetesDriver(TestCase):
         self.core_api.read_namespaced_secret.assert_called_once()
 
     def test_build_job_gpu_req(self):
-        job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
+        with patch_gpu_environ(""):
+            job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
 
-        k8s_job = self.driver._build_job(job)
+            k8s_job = self.driver._build_job(job)
 
-        job_spec: V1JobSpec = k8s_job.spec
-        job_template: V1PodTemplateSpec = job_spec.template
-        self.assertEqual(
-            {"memory": "14Gi", "nvidia.com/gpu": "1"},
-            job_template.spec.containers[0].resources.limits,
-        )
+            job_spec: V1JobSpec = k8s_job.spec
+            job_template: V1PodTemplateSpec = job_spec.template
+            self.assertEqual(
+                {"memory": "14Gi", "nvidia.com/gpu": "1"},
+                job_template.spec.containers[0].resources.limits,
+            )
+
+    def test_build_job_gpu_req_node_selector_set(self):
+        with patch_gpu_environ(
+            '{"cloud.google.com/gke-accelerator":"nvidia-tesla-t4"}'
+        ):
+            job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
+
+            k8s_job = self.driver._build_job(job)
+
+            job_spec: V1JobSpec = k8s_job.spec
+            job_template: V1PodTemplateSpec = job_spec.template
+            self.assertEqual(
+                {"memory": "14Gi", "nvidia.com/gpu": "1"},
+                job_template.spec.containers[0].resources.limits,
+            )
+            print(job_template.spec)
+            self.assertEqual(
+                {"cloud.google.com/gke-accelerator": "nvidia-tesla-t4"},
+                job_template.spec.node_selector,
+            )
+
+    def test_build_job_gpu_req_node_selector_set_invalid(self):
+        with patch_gpu_environ("{"):
+            job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
+            with self.assertRaisesRegex(KubernetesError, "Could not deserialize JSON"):
+                self.driver._build_job(job)
+
+    def test_build_job_gpu_req_node_selector_set_not_dictionary(self):
+        for test_val in ["1", "[1,2,3]", "[]"]:
+            with patch_gpu_environ(test_val):
+                job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
+                with self.assertRaisesRegex(
+                    KubernetesError, "The GPU_NODE_SELECTOR was not a JSON dictionary"
+                ):
+                    self.driver._build_job(job)
 
     def test_is_job_active_true_then_false(self):
         self.batch_api.read_namespaced_job.side_effect = [
@@ -169,6 +215,9 @@ class TestKubernetesDriver(TestCase):
     def test_delete_job_successful_shutdown(self):
         self.driver.shutdown(self.k8s_job)
         self.batch_api.delete_namespaced_job.assert_called_once()
+
+    def test_delete_job_warns_empty_job_passed(self):
+        self.driver.clean(None)
 
     def test_delete_job_fails_not_found(self):
         self._stub_api_exception_for_batch(404, '{"reason":"NotFound"}')
