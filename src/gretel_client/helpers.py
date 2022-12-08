@@ -5,8 +5,6 @@ import sys
 from pathlib import Path
 from typing import Dict, Optional, Union
 
-import click
-
 from gretel_client.cli.utils.parser_utils import ref_data_factory
 from gretel_client.config import get_logger, get_session_config
 from gretel_client.models.config import (

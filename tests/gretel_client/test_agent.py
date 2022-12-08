@@ -1,15 +1,15 @@
 import base64
 import json
-import logging
 import threading
 
+from contextlib import contextmanager
 from time import sleep
 from typing import Iterator
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from gretel_client.agents.agent import Agent, AgentConfig, Job, Poller
+from gretel_client.agents.agent import Agent, AgentConfig, AgentError, Job, Poller
 from gretel_client.agents.drivers.docker import Docker
 from gretel_client.agents.drivers.driver import GPU
 from gretel_client.docker import CaCertFile, DEFAULT_GPU_CONFIG
@@ -29,15 +29,26 @@ def get_mock_job(instance_type: str = "cpu-standard") -> dict:
     }
 
 
-@pytest.fixture
-def agent_config() -> Iterator[AgentConfig]:
+@contextmanager
+def patch_auth_api_calls():
     with patch("gretel_client.agents.agent.get_project") as get_project, patch(
         "gretel_client.agents.agent.get_session_config"
-    ) as get_session_config:
+    ) as get_session_config, patch(
+        "gretel_client.agents.agent.do_api_call"
+    ) as do_api_call:
         get_project.return_value.project_id = "project1234"
         get_session_config.return_value.get_api.return_value.users_me.return_value = {
             "data": {"me": {"service_limits": {"max_job_runtime": 100}}}
         }
+        do_api_call.return_value = {
+            "billing": {"me": {"service_limits": {"max_jobs_active": 5}}}
+        }
+        yield (get_project, get_session_config, do_api_call)
+
+
+@pytest.fixture
+def agent_config() -> Iterator[AgentConfig]:
+    with patch_auth_api_calls():
         config = AgentConfig(
             driver="docker",
             max_workers=2,
@@ -95,7 +106,7 @@ def test_agent_server_does_start(
 
     cur_wait = 0
     while mock_driver.schedule.call_count < 2 and cur_wait < 20:
-        sleep(1)  # loop will wait a max of 2 seconds
+        sleep(0.05)  # loop will wait a max of 0.1 seconds
         cur_wait += 1
 
     server.interrupt()
@@ -179,3 +190,25 @@ def test_update_job_status_fails_no_error(
     mock_logger.error.assert_called_once_with(
         "There was an error updating the job status: %s", expected_exception
     )
+
+
+def test_agent_config_over_max():
+    with patch_auth_api_calls():
+        config = AgentConfig(driver="docker", max_workers=6)
+        assert config.max_workers == 5
+
+
+def test_agent_config_wrong_data_shape():
+    with patch_auth_api_calls():
+        with patch("gretel_client.agents.agent.do_api_call") as do_api_call:
+            do_api_call.return_value = {}
+            with pytest.raises(AgentError):
+                AgentConfig(driver="docker", max_workers=10)
+
+
+def test_agent_config_errors_out():
+    with patch_auth_api_calls():
+        with patch("gretel_client.agents.agent.do_api_call") as do_api_call:
+            do_api_call.side_effect = Exception("nooooo")
+            with pytest.raises(AgentError):
+                AgentConfig(driver="docker", max_workers=10)

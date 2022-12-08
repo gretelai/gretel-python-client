@@ -21,8 +21,12 @@ from gretel_client.agents.drivers.registry import get_driver
 from gretel_client.agents.logger import configure_logging
 from gretel_client.config import configure_custom_logger, get_session_config
 from gretel_client.docker import CloudCreds, DataVolumeDef
+from gretel_client.helpers import do_api_call
 from gretel_client.projects import get_project
 from gretel_client.rest.apis import JobsApi, ProjectsApi, UsersApi
+from gretel_client.rest.exceptions import ApiException
+
+configure_logging()
 
 
 class AgentError(Exception):
@@ -74,6 +78,18 @@ class AgentConfig:
     def __post_init__(self):
         if not self._max_runtime_seconds:
             self._max_runtime_seconds = self._lookup_max_runtime()
+        if self.max_workers > 1:
+            max_jobs_active = self._lookup_max_jobs_active()
+            if max_jobs_active < self.max_workers:
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    "Max workers value supplied via CLI: '%d' "
+                    "is greater than the max allowed by your account: '%d'",
+                    self.max_workers,
+                    max_jobs_active,
+                )
+                logger.warning("Setting max workers to be %d", max_jobs_active)
+                self.max_workers = max_jobs_active
 
     @property
     def max_runtime_seconds(self) -> int:
@@ -90,6 +106,24 @@ class AgentConfig:
             .get("service_limits")
             .get("max_job_runtime")
         )
+
+    def _lookup_max_jobs_active(self) -> int:
+        try:
+            resp = do_api_call("GET", "/users/me/billing")
+            return (
+                resp.get("billing")
+                .get("me")
+                .get("service_limits")
+                .get("max_jobs_active")
+            )
+        except Exception as ex:
+            logger = logging.getLogger(__name__)
+            logger.exception("")
+            raise AgentError(
+                "Error looking up service limits from the Gretel Cloud API. "
+                "Please ensure your Gretel endpoint and API key are correct "
+                "and that you have connectivity to Gretel Cloud."
+            ) from ex
 
     @property
     def as_dict(self) -> dict:
@@ -287,7 +321,6 @@ class Agent:
     """Starts an agent"""
 
     def __init__(self, config: AgentConfig):
-        configure_logging()
         self._logger = logging.getLogger(__name__)
         configure_custom_logger(self._logger)
         self._config = config

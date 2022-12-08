@@ -158,7 +158,9 @@ def test_model_submit_no_local_mode(m: Model):
 
 
 @patch("time.sleep")
-def test_does_poll_status_and_logs(sleep_patch, m: Model, model_logs: List[dict]):
+def test_does_poll_status_and_logs(
+    sleep_patch: MagicMock, m: Model, model_logs: List[dict]
+):
     m._submit(runner_mode=RunnerMode.LOCAL, _default_manual=True)
     m._projects_api.get_model.side_effect = [  # type:ignore
         {"data": {"model": {"status": "created"}}},
