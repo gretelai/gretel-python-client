@@ -279,18 +279,14 @@ class Model(Job):
             ) from ex
 
     @property
-    def data_source(self) -> Optional[DataSourceTypes]:
+    def data_source(self) -> DataSourceTypes:
         """Retrieves the configured data source from the model config.
 
         If the model config has a local data_source we'll try and resolve
         that path relative to the location of the model config.
         """
         try:
-            model_config = self.model_config["models"][0][self.model_type]
-            if "data_source" not in model_config:
-                return None
-
-            data_source = model_config["data_source"]
+            data_source = self.model_config["models"][0][self.model_type]["data_source"]
             if isinstance(data_source, list):
                 data_source = data_source[0]
             if isinstance(data_source, _DataFrameT):
@@ -394,12 +390,8 @@ class Model(Job):
             :class:`~gretel_client.projects.exceptions.DataValidationError` if
                 the data isn't valid CSV or JSON.
         """
-        if self.data_source is None:
-            return
-
         if not self.external_data_source:
             return
-
         validate_data_source(self.data_source)
 
     def validate_ref_data(self):
