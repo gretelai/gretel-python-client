@@ -3,6 +3,7 @@ from __future__ import annotations
 import gzip
 import json
 import os
+import time
 
 from abc import ABC, abstractproperty
 from ctypes import Union
@@ -12,9 +13,10 @@ from xmlrpc.client import boolean
 
 import smart_open
 
-from gretel_client.config import RunnerMode
-from gretel_client.helpers import poll, submit_docker_local
+from gretel_client.config import get_logger, RunnerMode
+from gretel_client.helpers import submit_docker_local
 from gretel_client.projects.common import DataSourceTypes, RefDataTypes
+from gretel_client.projects.jobs import END_STATES, Job, Status
 from gretel_client.projects.models import Model
 from gretel_client.projects.projects import Project, tmp_project
 
@@ -82,9 +84,40 @@ class BaseReport(ABC):
         elif self.runner_mode == RunnerMode.LOCAL:
             self._run_local(model=model)
 
+    def _await_completion(self, job: Job):
+        refresh_attempts = 0
+        log = get_logger(__name__)
+        while True:
+            exception = None
+            if refresh_attempts >= 5:
+                raise ModelRunException("Lost contact with job") from exception
+
+            time.sleep(10)
+
+            try:
+                job.refresh()
+                refresh_attempts = 0
+            except Exception as e:
+                exception = e
+                refresh_attempts = refresh_attempts + 1
+                attempts_remaining = 5 - refresh_attempts
+                log.debug(
+                    f"Failed to refresh job status. Will re-attempt up to {attempts_remaining} more times. {e}"
+                )
+
+            status = job.status
+
+            if status == Status.COMPLETED:
+                break
+            elif status in END_STATES:
+                raise ModelRunException("Job finished unsuccessfully")
+            else:
+                continue
+
     def _run_cloud(self, model: Model):
         job = model.submit_cloud()
-        poll(job)
+        self._await_completion(job)
+
         self._report_dict = json.loads(
             smart_open.open(job.get_artifact_link("report_json")).read()
         )
