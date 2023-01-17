@@ -179,7 +179,7 @@ class Project:
         Args:
             model_config: Specifies a model config. For more information
                 about model configs, please refer to our doc site,
-                https://docs.gretel.ai/model-configurations.
+                https://docs.gretel.ai/reference/model-configurations.
             data_source: Defines the model data_source. If the model_config
                 already has a data_source defined, this property will
                 override the existing one.

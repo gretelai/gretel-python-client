@@ -37,7 +37,7 @@ class BaseReport(ABC):
 
     """Specifies a model config. For more information
     about model configs, please refer to our doc site,
-    https://docs.gretel.ai/model-configurations."""
+    https://docs.gretel.ai/reference/model-configurations."""
 
     project: Optional[Project]
     """Optional project associated with the report. If no project is passed, a temp project (``tmp_project``) will be used."""
