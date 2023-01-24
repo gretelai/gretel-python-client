@@ -2042,6 +2042,7 @@ class ProjectsApi(object):
                         "RUN_REPORT_JSON": "run_report_json",
                         "DATA": "data",
                         "RUN_LOGS": "run_logs",
+                        "OUTPUT_FILES": "output_files",
                     },
                 },
                 "openapi_types": {
