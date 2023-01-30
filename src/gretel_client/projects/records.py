@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Type, TYPE_CHECKING
+from typing import Any, List, Optional, Type, TYPE_CHECKING
 
 from gretel_client.cli.utils.parser_utils import (
     DataSourceTypes,
@@ -43,9 +43,9 @@ class RecordHandler(Job):
     ):
         self.model = model
         self.record_id = record_id
-        self.data_source = data_source
-        self.params = params
-        self.ref_data = ref_data_factory(ref_data)
+        self._data_source = data_source
+        self._params = params
+        self._ref_data = ref_data
         super().__init__(model.project, JOB_TYPE, self.record_id)
 
     def _submit(
@@ -135,6 +135,48 @@ class RecordHandler(Job):
     def artifact_types(self) -> List[str]:
         """Returns a list of valid artifacts for the record handler."""
         return [a.value for a in ModelRunArtifact]
+
+    @property
+    def data_source(self) -> Optional[DataSourceTypes]:
+        """Returns the data source with which the record handler was configured, if any.
+
+        If the record handler has been submitted, returns the resolved artifact ID.
+        Otherwise, returns the originally-supplied data_source argument."""
+        data_source = self._data_source
+        if self._data:
+            data_source = self._get_config_field_from_data("data_source")
+        return data_source
+
+    @data_source.setter
+    def data_source(self, data_source: DataSourceTypes) -> None:
+        self._data_source = data_source
+
+    @property
+    def params(self) -> Optional[dict]:
+        """Returns the params with which the record handler was configured, if any."""
+        params = self._params
+        if self._data:
+            params = self._get_config_field_from_data("params")
+        return params
+
+    @params.setter
+    def params(self, params: dict) -> None:
+        self._params = params
+
+    @property
+    def ref_data(self) -> Optional[RefDataTypes]:
+        """Returns the ref_data with which the record handler was configured, if any."""
+        ref_data = self._ref_data
+        if self._data:
+            ref_data = self._get_config_field_from_data("ref_data")
+        return ref_data_factory(ref_data)
+
+    @ref_data.setter
+    def ref_data(self, ref_data: dict) -> None:
+        self._ref_data = ref_data
+
+    def _get_config_field_from_data(self, field: str) -> Optional[Any]:
+        return self._data.get(f.HANDLER, {}).get("config", {}).get(field)
 
     def _do_get_job_details(self):
         if not self.record_id:

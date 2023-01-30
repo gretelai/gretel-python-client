@@ -40,6 +40,13 @@ def create_record_handler_resp(get_fixture: Callable) -> dict:
 
 
 @pytest.fixture
+def get_record_handler_resp(get_fixture: Callable) -> dict:
+    return json.loads(
+        get_fixture("api/completed_record_handler_details.json").read_text()
+    )
+
+
+@pytest.fixture
 def model_logs() -> List[dict]:
     return [
         {
@@ -117,6 +124,7 @@ def m(
     create_model_resp: dict,
     transform_model_path: Path,
     create_record_handler_resp: dict,
+    get_record_handler_resp: dict,
     get_model_resp: dict,
 ) -> Model:
     projects_api = MagicMock()
@@ -124,9 +132,10 @@ def m(
     projects_api.create_model.return_value = create_model_resp
     projects_api.create_artifact.return_value = create_artifact_resp
     projects_api.create_record_handler.return_value = create_record_handler_resp
-    projects_api.get_record_handler.return_value = {}  # todo
-    m = Model(project=MagicMock(), model_config=transform_model_path)
-    m._projects_api = projects_api
+    projects_api.get_record_handler.return_value = get_record_handler_resp
+    project = MagicMock()
+    project.projects_api = projects_api
+    m = Model(project=project, model_config=transform_model_path)
     return m
 
 
@@ -210,7 +219,9 @@ def test_does_read_local_model(transform_model_path: Path):
     assert read_model_config(str(transform_model_path))
 
 
-def test_does_populate_record_details(m: Model, create_record_handler_resp: dict):
+def test_does_populate_record_details(
+    m: Model, create_record_handler_resp: dict, get_record_handler_resp: dict
+):
     m._poll_job_endpoint()
     record_handler = m.create_record_handler_obj()
     record_handler.submit(
@@ -224,6 +235,14 @@ def test_does_populate_record_details(m: Model, create_record_handler_resp: dict
         == create_record_handler_resp["data"]["handler"]["status"]
     )
     assert record_handler.worker_key == create_record_handler_resp["worker_key"]
+
+    # Can access attributes of record handler fetched from cloud
+    rh = m.get_record_handler(record_handler.record_id)
+    assert rh.params == get_record_handler_resp["data"]["handler"]["config"]["params"]
+    assert (
+        rh.data_source
+        == get_record_handler_resp["data"]["handler"]["config"]["data_source"]
+    )
 
 
 def test_billing_output(m: Model):

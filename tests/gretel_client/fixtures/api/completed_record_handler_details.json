@@ -1,0 +1,52 @@
+{
+    "data": {
+        "handler": {
+            "uid": "63d4158c509c02c7ec0bb012",
+            "guid": "model_run_2Kv883bOtBJXF9Imdb6ERqhoIss",
+            "model_name": "None",
+            "model_key": "grtme8b1a45787420e531d0f23dd3dfecb715387805bfe2de327283512d80e02607e",
+            "runner_mode": "cloud",
+            "user_id": "62582d16492fbf4777065e2e",
+            "user_guid": "user_27nBH4nM7HggjF1QnmP28qg8Dw1",
+            "billing_domain": "gretel.ai",
+            "billing_domain_guid": "domain_28bzIokk1eQdWUYsovba0VN1gtY",
+            "project_id": "63d41502089941b03dbeb1a1",
+            "project_guid": "proj_2Kv7qgXYkQSlRS62VEF7vC9m6mk",
+            "status_history": {
+                "created": "2023-01-27T18:18:52.119000Z",
+                "pending": "2023-01-27T18:18:52.452000Z",
+                "active": "2023-01-27T18:18:57.645000Z",
+                "completed": "2023-01-27T18:19:10.947000Z"
+            },
+            "last_modified": "2023-01-27T18:19:10.944000Z",
+            "status": "completed",
+            "last_active_hb": "2023-01-27T18:19:10.166000Z",
+            "duration_minutes": "None",
+            "error_msg": "None",
+            "error_id": "None",
+            "traceback": "None",
+            "annotations": {
+                "cpu_count": 4,
+                "process_count_cpu": 3
+            },
+            "container_image": "074762682575.dkr.ecr.us-east-2.amazonaws.com/models/amplify@sha256:d3a61bbccab89446f70adeb42612ed195381d0d9f433029fc210d3b8b9246fa3",
+            "container_image_version": "4ee3f2d1",
+            "model_id": "63d4150de826eec84ab192f8",
+            "model_guid": "model_2Kv7s1oKivSRzn361RsDRXJluQf",
+            "model_type": "amplify",
+            "action": "amplify_run",
+            "config": {
+                "data_source": "gretel_abcdefg_seeds.csv",
+                "ref_data": {},
+                "params": {
+                    "target_size_mb": "None",
+                    "num_records": 10000,
+                    "sample_size": 50000,
+                    "process_count_cpu": 0
+                }
+            },
+            "is_autouse": "False",
+            "auth_source": "grtu"
+        }
+    }
+}
