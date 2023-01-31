@@ -126,7 +126,7 @@ class ContainerRun:
         try:
             self._check_gpu()
         except Exception as ex:
-            self.logger.debug(ex)
+            self.logger.debug("Error running GPU check container: %s" % str(ex))
             raise ContainerRunError("GPU could not be configured") from ex
         self.device_requests.append(DEFAULT_GPU_CONFIG)
 

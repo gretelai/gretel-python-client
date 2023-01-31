@@ -1,9 +1,11 @@
 import json
 
 from copy import deepcopy
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
 import click
+import yaml
 
 from gretel_client.cli.common import (
     get_model,
@@ -20,8 +22,8 @@ from gretel_client.cli.common import (
 from gretel_client.cli.models import models
 from gretel_client.cli.utils.parser_utils import ref_data_factory, RefData
 from gretel_client.config import RunnerMode
-from gretel_client.models.config import get_model_type_config
-from gretel_client.projects.docker import ContainerRun
+from gretel_client.models.config import get_model_type_config, GPU
+from gretel_client.projects.docker import ContainerRun, ContainerRunError
 from gretel_client.projects.jobs import Status
 from gretel_client.projects.records import RecordHandler
 
@@ -215,6 +217,13 @@ def create_and_run_record_handler(
             run.configure_model(model_path)
         if ref_data:
             run.configure_ref_data(ref_data)
+        if record_handler.instance_type == GPU:
+            sc.log.info("Configuring GPU for running model.")
+            try:
+                run.configure_gpu()
+                sc.log.info("GPU device found!")
+            except ContainerRunError:
+                sc.log.warn("Could not configure GPU. Continuing with CPU.")
         run.start()
         sc.register_cleanup(lambda: run.graceful_shutdown())
 
@@ -391,6 +400,11 @@ def action_option(fn):
     multiple=True,
     help="Specify parameters to pass into the record handler.",
 )
+@click.option(
+    "--params-file",
+    type=Path,
+    help="Specify a file (YAML or JSON) with all parameters to pass into the record handler.",
+)
 def run(
     sc: SessionContext,
     project: str,
@@ -402,10 +416,23 @@ def run(
     model_path: str,
     action: Optional[str],
     param: List[Tuple[str, str]],
+    params_file: Optional[Path],
 ):
     """
     Generic run command.
     """
+
+    extra_params = None
+    if params_file is not None:
+        with open(params_file, "r") as f:
+            extra_params = yaml.safe_load(f)
+    if param and len(param) > 0:
+        if extra_params is not None:
+            raise click.BadOptionUsage(
+                "--param",
+                "The --param option cannot be used in conjunction with --params-file.",
+            )
+        extra_params = {key: value for key, value in param}
 
     runner = _check_model_and_runner(sc, runner)
     _validate_params(sc, runner, output, model_path, None)
@@ -422,10 +449,6 @@ def run(
     # - config_ref_data is what is going to be sent to the API in the model config
     ref_data = ref_data_factory(ref_data)
     config_ref_data = _configure_ref_data(sc, deepcopy(ref_data), runner)
-
-    extra_params = None
-    if param and len(param) > 0:
-        extra_params = {key: value for key, value in param}
 
     create_and_run_record_handler(
         sc,

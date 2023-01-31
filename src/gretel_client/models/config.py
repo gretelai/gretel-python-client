@@ -235,6 +235,8 @@ class TimeseriesDganModelTypeConfig(GenericModelTypeConfig):
         return GPU
 
 
+
+
 def _peek_sqs_report(report_contents) -> dict:
     fields = [
         "synthetic_data_quality_score",
