@@ -17,6 +17,8 @@ from gretel_client.rest.api.projects_api import ProjectsApi
 from gretel_client.rest.api.users_api import UsersApi
 from gretel_client.rest.api_client import ApiClient
 from gretel_client.rest.configuration import Configuration
+from gretel_client.rest_v1.api_client import ApiClient as V1ApiClient
+from gretel_client.rest_v1.configuration import Configuration as V1Configuration
 
 GRETEL = "gretel"
 """Gretel application name"""
@@ -70,7 +72,7 @@ class GretelClientConfigurationError(Exception):
     ...
 
 
-T = TypeVar("T")
+T = TypeVar("T", bound=Type)
 
 
 class RunnerMode(Enum):
@@ -215,6 +217,15 @@ class ClientConfig:
                 to determine the time between attempts.
         """
         return api_interface(self._get_api_client(max_retry_attempts, backoff_factor))
+
+    def get_v1_api(self, api_interface: Type[T]) -> T:
+        api_client = V1ApiClient(
+            header_name="Authorization",
+            header_value=self.api_key,
+            configuration=V1Configuration(host=self.endpoint),
+        )
+
+        return api_interface(api_client)
 
     def _check_project(self, project_name: str = None) -> Optional[str]:
         if not project_name:
