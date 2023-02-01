@@ -105,6 +105,10 @@ class ModelArtifact(str, Enum):
     MODEL = "model"
     REPORT = "report"
     REPORT_JSON = "report_json"
+    CLASSIFICATION_REPORT = "classification_report"
+    CLASSIFICATION_REPORT_JSON = "classification_report_json"
+    REGRESSION_REPORT = "regression_report"
+    REGRESSION_REPORT_JSON = "regression_report_json"
     DATA_PREVIEW = "data_preview"
     MODEL_LOGS = "model_logs"
 

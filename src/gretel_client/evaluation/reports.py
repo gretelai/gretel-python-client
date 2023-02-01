@@ -114,23 +114,25 @@ class BaseReport(ABC):
             else:
                 continue
 
-    def _run_cloud(self, model: Model):
+    def _run_cloud(self, model: Model, base_artifact_name: str = "report"):
         job = model.submit_cloud()
         self._await_completion(job)
 
         self._report_dict = json.loads(
-            smart_open.open(job.get_artifact_link("report_json")).read()
+            smart_open.open(job.get_artifact_link(f"{base_artifact_name}_json")).read()
         )
         self._report_html = smart_open.open(
-            job.get_artifact_link("report"), encoding="utf8"
+            job.get_artifact_link(f"{base_artifact_name}"), encoding="utf8"
         ).read()
 
-    def _run_local(self, model: Model):
+    def _run_local(self, model: Model, base_artifact_name: str = "report"):
         submit_docker_local(model, output_dir=self.output_dir)
-        with gzip.open(f"{self.output_dir}/report_json.json.gz", "rt") as f:
+        with gzip.open(
+            f"{self.output_dir}/{base_artifact_name}_json.json.gz", "rt"
+        ) as f:
             lines = [json.loads(line) for line in f.readlines()]
         self._report_dict = lines[0]
-        with gzip.open(f"{self.output_dir}/report.html.gz", "rt") as f:
+        with gzip.open(f"{self.output_dir}/{base_artifact_name}.html.gz", "rt") as f:
             self._report_html = f.read()
 
     def _run_in_project(self, project: Project):
