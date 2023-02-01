@@ -16,6 +16,8 @@ import requests
 
 from backports.cached_property import cached_property
 
+import gretel_client.agents.agent_telemetry as telemetry
+
 from gretel_client.agents.drivers.driver import ComputeUnit, Driver
 from gretel_client.agents.drivers.registry import get_driver
 from gretel_client.agents.logger import configure_logging
@@ -24,7 +26,6 @@ from gretel_client.docker import CloudCreds, DataVolumeDef
 from gretel_client.helpers import do_api_call
 from gretel_client.projects import get_project
 from gretel_client.rest.apis import JobsApi, ProjectsApi, UsersApi
-from gretel_client.rest.exceptions import ApiException
 
 configure_logging()
 
@@ -71,6 +72,9 @@ class AgentConfig:
 
     capabilities: Optional[List[str]] = None
     """A list of capabilities the agent has available for scheduling"""
+
+    enable_prometheus: bool = False
+    """Sets up the prometheus endpoint for the running agent"""
 
     _max_runtime_seconds: Optional[int] = None
     """TODO: implement"""
@@ -236,6 +240,7 @@ class JobManager(Generic[ComputeUnit]):
 
     def add_job(self, job: Job, unit: ComputeUnit) -> None:
         self._active_jobs[job.uid] = unit
+        telemetry.increase_active_jobs()
 
     def _update_active_jobs(self) -> None:
         for job in list(self._active_jobs):
@@ -243,6 +248,7 @@ class JobManager(Generic[ComputeUnit]):
                 self._logger.info(f"Job {job} completed")
                 self._driver.clean(self._active_jobs[job])
                 self._active_jobs.pop(job)
+                telemetry.decrease_active_jobs()
 
     def contains_job(self, job: Job) -> bool:
         return job.uid in self._active_jobs
@@ -334,6 +340,13 @@ class Agent:
         self._interrupt = threading.Event()
 
     def start(self, cooloff: float = 5):
+        if self._config.enable_prometheus:
+            self._logger.info("Enabling prometheus client")
+            telemetry.setup_prometheus()
+            telemetry.set_config_metrics(
+                max_workers=self._config.max_workers,
+                max_runtime_seconds=self._config.max_runtime_seconds,
+            )
         """Start the agent"""
         self._logger.info("Agent started, waiting for work to arrive")
         for job in self._jobs:
@@ -347,11 +360,14 @@ class Agent:
                 continue
             self._logger.info(f"Got {job.job_type} job {job.uid}, scheduling now.")
             unit = self._driver.schedule(job)
+
             if not unit:
                 self._logger.warning(f"Unable to schedule job {job.uid}")
+                telemetry.increment_job_count(error=True)
             else:
                 self._jobs_manager.add_job(job, unit)
                 self._logger.info(f"Container for job {job.uid} scheduled")
+                telemetry.increment_job_count()
                 self._update_job_status(job)
 
             # todo: add in read lock to jobs endpoint. this sleep is

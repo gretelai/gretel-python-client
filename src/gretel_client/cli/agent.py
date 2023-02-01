@@ -70,6 +70,11 @@ def build_logger(job_id: str) -> Callable:
     help="Disable sending worker logs to Gretel Cloud.",
     default=False,
 )
+@click.option(
+    "--enable-prometheus",
+    help="Enable the prometheus metrics endpoint on port 8080",
+    default=False,
+)
 @pass_session
 def start(
     sc: SessionContext,
@@ -82,6 +87,7 @@ def start(
     volume: List[str] = None,
     ca_bundle: Optional[str] = None,
     disable_cloud_logging: bool = False,
+    enable_prometheus: bool = False,
 ):
     sc.log.info(f"Starting Gretel agent using driver {driver}.")
     creds = []
@@ -123,6 +129,7 @@ def start(
         env_vars=env_dict,
         volumes=volumes,
         capabilities=capabilities,
+        enable_prometheus=enable_prometheus,
     )
     agent = get_agent(config)
     sc.register_cleanup(lambda: agent.interrupt())
