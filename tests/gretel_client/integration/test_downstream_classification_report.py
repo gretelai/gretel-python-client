@@ -1,4 +1,3 @@
-import json
 import os
 import platform
 
@@ -54,7 +53,7 @@ def test_manual_runner_mode_raises_an_exception(
         RunnerMode.LOCAL,
     ],
 )
-def test_report_initialization(
+def test_report_initialization_with_defaults(
     project: Project,
     data_source: Path,
     ref_data: Path,
@@ -63,9 +62,6 @@ def test_report_initialization(
 ):
     report = DownstreamClassificationReport(
         target="foo",
-        holdout=0.3,
-        models=["lr"],
-        metric="auc",
         project=project,
         data_source=data_source,
         ref_data=ref_data,
@@ -77,26 +73,67 @@ def test_report_initialization(
     assert report.ref_data
     assert report.runner_mode
     assert report.output_dir
-    assert report.model_config == json.dumps(
-        {
-            "schema_version": "1.0",
-            "name": "evaluate downstream classification model",
-            "models": [
-                {
-                    "evaluate": {
-                        "task": {"type": "classification"},
-                        "data_source": "__tmp__",
-                        "params": {
-                            "target": "foo",
-                            "holdout": 0.3,
-                            "models": ["lr"],
-                            "metric": "auc",
-                        },
-                    }
+    assert report.model_config == {
+        "schema_version": "1.0",
+        "name": "evaluate downstream classification model",
+        "models": [
+            {
+                "evaluate": {
+                    "task": {"type": "classification"},
+                    "data_source": "__tmp__",
+                    "params": {
+                        "target": "foo",
+                        "holdout": 0.2,
+                        "models": [],
+                        "metric": "acc",
+                    },
                 }
-            ],
-        }
+            }
+        ],
+    }
+
+
+def test_report_initialization_with_custom_params(
+    project: Project,
+    data_source: Path,
+    ref_data: Path,
+    tmpdir: Path,
+):
+    report = DownstreamClassificationReport(
+        target="foo",
+        holdout=0.3,
+        models=["lr"],
+        metric="auc",
+        project=project,
+        name="my-preferred-name",
+        data_source=data_source,
+        ref_data=ref_data,
+        output_dir=tmpdir,
+        runner_mode=RunnerMode.CLOUD,
     )
+    assert report.project
+    assert report.data_source
+    assert report.ref_data
+    assert report.runner_mode
+    assert report.output_dir
+    assert report.model_config == {
+        "schema_version": "1.0",
+        "name": "my-preferred-name",
+        "models": [
+            {
+                "evaluate": {
+                    "task": {"type": "classification"},
+                    "data_source": "__tmp__",
+                    "params": {
+                        "target": "foo",
+                        "holdout": 0.3,
+                        "models": ["lr"],
+                        "metric": "auc",
+                    },
+                }
+            }
+        ],
+    }
 
 
 def test_no_report_raises_exception(

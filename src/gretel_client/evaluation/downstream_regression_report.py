@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import json
-
 from pathlib import Path
 from typing import Optional, Union
 
 from gretel_client.config import RunnerMode
 from gretel_client.evaluation.reports import BaseReport, ReportDictType
 from gretel_client.projects.common import DataSourceTypes, RefDataTypes
+from gretel_client.projects.models import Model
 from gretel_client.projects.projects import Project
 
 
@@ -46,8 +45,8 @@ class DownstreamRegressionReport(BaseReport):
     }
 
     @property
-    def model_config(self):
-        return json.dumps(self._model_dict)
+    def model_config(self) -> dict:
+        return self._model_dict
 
     # TODO alternative with config file??
     def __init__(
@@ -58,6 +57,7 @@ class DownstreamRegressionReport(BaseReport):
         models: List[str] = [],
         metric: str = "r2",
         project: Optional[Project] = None,
+        name: Optional[str] = None,
         data_source: DataSourceTypes,
         ref_data: RefDataTypes,
         output_dir: Optional[Union[str, Path]] = None,
@@ -74,6 +74,10 @@ class DownstreamRegressionReport(BaseReport):
 
         if holdout <= 0 or holdout >= 1.0:
             raise ValueError("Holdout must be between 0.0 and 1.0.")
+
+        # Update the model name if one was provided
+        if name is not None:
+            self._model_dict["name"] = name
 
         # Update the report params in our config
         params = self._model_dict["models"][0]["evaluate"]["params"]

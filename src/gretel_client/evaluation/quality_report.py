@@ -20,12 +20,24 @@ class QualityReport(BaseReport):
         runner_mode: Determines where to run the model. See :obj:`gretel_client.config.RunnerMode` for a list of valid modes. Manual mode is not explicitly supported.
     """
 
-    model_config: str = "evaluate/default"
+    _model_dict: dict = {
+        "schema_version": "1.0",
+        "models": [
+            {
+                "evaluate": {"data_source": "__tmp__"},
+            }
+        ],
+    }
+
+    @property
+    def model_config(self) -> dict:
+        return self._model_dict
 
     def __init__(
         self,
         *,
         project: Optional[Project] = None,
+        name: Optional[str] = None,
         data_source: DataSourceTypes,
         ref_data: RefDataTypes,
         output_dir: Optional[Union[str, Path]] = None,
@@ -36,6 +48,10 @@ class QualityReport(BaseReport):
 
         if runner_mode == RunnerMode.MANUAL:
             raise ValueError("Cannot use manual mode. Please use CLOUD or LOCAL.")
+
+        # Update the model name if one was provided
+        if name is not None:
+            self._model_dict["name"] = name
 
         super().__init__(project, data_source, ref_data, output_dir, runner_mode)
 

@@ -32,7 +32,7 @@ class BaseReport(ABC):
     """Report that can be generated for data_source and ref_data."""
 
     @abstractproperty
-    def model_config(self) -> str:
+    def model_config(self) -> dict:
         ...
 
     """Specifies a model config. For more information
