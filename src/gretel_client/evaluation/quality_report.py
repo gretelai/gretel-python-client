@@ -55,6 +55,7 @@ class QualityReport(BaseReport):
 
         super().__init__(project, data_source, ref_data, output_dir, runner_mode)
 
-    def peek(self) -> ReportDictType:
+    def peek(self) -> Optional[ReportDictType]:
         super()._check_model_run()
-        return self._report_dict["synthetic_data_quality_score"]
+        if self._report_dict:
+            return self._report_dict.get("synthetic_data_quality_score")

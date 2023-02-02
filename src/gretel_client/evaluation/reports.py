@@ -170,6 +170,6 @@ class BaseReport(ABC):
         self._check_model_run()
         return self._report_html
 
-    def peek(self) -> ReportDictType:
+    def peek(self) -> Optional[ReportDictType]:
         """Returns a dictionary representation of the top level report scores."""
         pass

@@ -94,7 +94,10 @@ class DownstreamClassificationReport(BaseReport):
     def _run_local(self, model: Model):
         super()._run_local(model, base_artifact_name="classification_report")
 
-    def peek(self) -> ReportDictType:
+    def peek(self) -> Optional[ReportDictType]:
         super()._check_model_run()
         # Will return dict {"field": "average_metric_difference", "value": \d\d}
-        return self._report_dict[0]
+        if self._report_dict is not None:
+            _summary = self._report_dict.get("summary")
+            if _summary:
+                return _summary[0]
