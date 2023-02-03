@@ -10,6 +10,7 @@ import urllib3.exceptions
 from gretel_client.cli.common import SessionContext
 from gretel_client.projects.exceptions import GretelResourceNotFound
 from gretel_client.rest.exceptions import ApiException
+from gretel_client.rest_v1.exceptions import ApiException as ApiExceptionV1
 
 E = TypeVar("E", bound="Exception")
 
@@ -47,7 +48,7 @@ class HandleGretelResourceNotFoundError(_ErrorHandler, GretelResourceNotFound):
         self.ctx.exit(1)
 
 
-class HandleApiClientError(_ErrorHandler, ApiException):
+class HandleApiClientError(_ErrorHandler, ApiException, ApiExceptionV1):
     """Handle Gretel API errors.
 
     Errors coming from the Gretel API have a ``context`` object that
@@ -139,6 +140,7 @@ def exception_map() -> Dict[Type[Exception], Type[_ErrorHandler]]:
     """
     return {
         ApiException: HandleApiClientError,
+        ApiExceptionV1: HandleApiClientError,
         GretelResourceNotFound: HandleGretelResourceNotFoundError,
         urllib3.exceptions.MaxRetryError: HandleConnectionError,
         click.exceptions.Exit: HandleClickExitNoop,

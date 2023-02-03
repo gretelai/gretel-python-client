@@ -189,7 +189,7 @@ class SessionContext(object):
             if isinstance(data, str):
                 click.echo(data)
             else:
-                click.echo(json.dumps(data, indent=4))
+                click.echo(json.dumps(data, indent=4, default=str))
         else:
             click.UsageError("Invalid output format.", ctx=self.ctx)
         if not ok:
