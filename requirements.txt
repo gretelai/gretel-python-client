@@ -7,7 +7,7 @@ opentelemetry-distro==0.36b0
 opentelemetry-exporter-prometheus==1.12.0rc1
 python_dateutil>=2.8.0
 pyyaml==5.4.1
-requests==2.25.0
+requests>=2.25,<2.29
 smart_open>=2.1.0,<6.0
 tabulate==0.8.9
 tenacity==6.2.0
