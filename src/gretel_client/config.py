@@ -124,6 +124,7 @@ class ClientConfig:
 
     @classmethod
     def from_file(cls, file_path: Path) -> ClientConfig:
+        _check_config_perms(file_path)
         config = json.loads(file_path.read_bytes())
         return cls.from_dict(config)
 
@@ -272,12 +273,15 @@ class ClientConfig:
         return self.preview_features == PreviewFeatures.ENABLED.value
 
 
+_DEFAULT_CONFIG_PATH = Path().home() / f".{GRETEL}" / "config.json"  # noqa
+
+
 def _get_config_path() -> Path:
     """Returns the path to the system's Gretel config"""
     from_env = os.getenv(GRETEL_CONFIG_FILE)
     if from_env:
         return Path(from_env)
-    return Path().home() / f".{GRETEL}" / "config.json"
+    return _DEFAULT_CONFIG_PATH
 
 
 def clear_gretel_config():
@@ -321,6 +325,24 @@ def _load_config(config_path: Path = None) -> ClientConfig:
         ) from ex
 
 
+def _check_config_perms(config_path: Path):
+    if not config_path.exists():
+        return
+    mode = config_path.stat().st_mode
+    if mode & 0o077 == 0:
+        return
+    log.warn(f"Config file {config_path} is group- and/or world-readable!")
+    if config_path == _DEFAULT_CONFIG_PATH:
+        # For the default config file, automatically change the mode.
+        log.warn("Setting permissions to be readable by the owner only.")
+        os.chmod(config_path, mode & ~0o077)
+    else:
+        # Only issue a warning, but leave it to the user to fix this.
+        log.warn(
+            f"Please set the correct permissions by running `chmod 0600 {config_path}` as soon as possible."
+        )
+
+
 def write_config(config: ClientConfig, config_path: Union[str, Path] = None) -> Path:
     """Writes a Gretel client config to disk.
 
@@ -336,8 +358,10 @@ def write_config(config: ClientConfig, config_path: Union[str, Path] = None) -> 
     try:
         if not config_path.exists():
             config_path.parent.mkdir(exist_ok=True, parents=True)
-            config_path.touch()
-        config_path.write_text(json.dumps(config.as_dict, indent=4) + "\n")
+            config_path.touch(mode=0o600)
+        _check_config_perms(config_path)
+        with open(config_path, "w", opener=_create_mode_opener(0o600)) as f:
+            f.write(json.dumps(config.as_dict, indent=4) + "\n")
         return config_path
     except Exception as ex:
         raise GretelClientConfigurationError(
@@ -422,3 +446,8 @@ def configure_session(
             raise GretelClientConfigurationError(
                 "Failed to validate credentials. Please check your config."
             ) from ex
+
+
+def _create_mode_opener(mode):
+    """Returns an opener to be used with open() that sets the file mode."""
+    return lambda path, flags: os.open(path, flags, mode=mode)
