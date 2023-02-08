@@ -25,7 +25,7 @@ ACTIVE_JOBS_COUNTER = meter.create_up_down_counter(name="active_jobs", unit="cou
 
 def setup_prometheus(port: int = 8080):
     # Start Prometheus client
-    start_http_server(port=port, addr="localhost")
+    start_http_server(port=port)
 
 
 def increment_job_count(error: bool = False):

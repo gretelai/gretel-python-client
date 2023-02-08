@@ -13,7 +13,7 @@ import traceback
 from pathlib import Path
 from threading import Thread
 from time import sleep
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, Type, TYPE_CHECKING, TypeVar
 
 from kubernetes import client, config
 from kubernetes.client import ApiClient, BatchV1Api, CoreV1Api
@@ -29,6 +29,13 @@ GRETEL_WORKER_NAMESPACE = os.getenv("GRETEL_WORKER_NAMESPACE", "gretel-workers")
 GRETEL_AGENT_SECRET_NAME = os.getenv("GRETEL_AGENT_SECRET_NAME", "gretel-agent-secret")
 GRETEL_PULL_SECRET = os.getenv("GRETEL_PULL_SECRET", "gretel-pull-secret")
 LIVENESS_FILE = os.getenv("LIVENESS_FILE", "/tmp/liveness.txt")
+
+T = TypeVar("T")
+
+GPU_NODE_SELECTOR_ENV_NAME = "GPU_NODE_SELECTOR"
+CPU_NODE_SELECTOR_ENV_NAME = "CPU_NODE_SELECTOR"
+GPU_TOLERATIONS_ENV_NAME = "GPU_TOLERATIONS"
+CPU_TOLERATIONS_ENV_NAME = "CPU_TOLERATIONS"
 
 
 if TYPE_CHECKING:
@@ -147,22 +154,13 @@ class Kubernetes(Driver):
                 ],
             ),
         )
-        gpu_node_selector = os.getenv("GPU_NODE_SELECTOR", "")
-        if job_config.needs_gpu and gpu_node_selector:
-            pod_spec: client.V1PodSpec = template.spec
-            if pod_spec:
-                try:
-                    selector_dict = json.loads(gpu_node_selector)
-                except json.decoder.JSONDecodeError as ex:
-                    raise KubernetesError(
-                        "Could not deserialize JSON for GPU_NODE_SELECTOR"
-                    ) from ex
-                if not isinstance(selector_dict, dict):
-                    raise KubernetesError(
-                        f"The GPU_NODE_SELECTOR was not a JSON dictionary, received {gpu_node_selector}"
-                    )
-                if selector_dict:
-                    pod_spec.node_selector = selector_dict
+
+        if job_config.needs_gpu:
+            self._add_selector_if_present(template, GPU_NODE_SELECTOR_ENV_NAME)
+            self._add_tolerations_if_present(template, GPU_TOLERATIONS_ENV_NAME)
+        else:
+            self._add_selector_if_present(template, CPU_NODE_SELECTOR_ENV_NAME)
+            self._add_tolerations_if_present(template, CPU_TOLERATIONS_ENV_NAME)
 
         spec = client.V1JobSpec(
             template=template, backoff_limit=0, ttl_seconds_after_finished=86400
@@ -176,6 +174,42 @@ class Kubernetes(Driver):
         )
 
         return job
+
+    def _add_selector_if_present(
+        self, template: client.V1PodTemplateSpec, env_var_name: str
+    ) -> None:
+        selector_dict = self._parse_kube_env_var(env_var_name, dict)
+
+        if selector_dict:
+            pod_spec: client.V1PodSpec = template.spec
+            pod_spec.node_selector = selector_dict
+
+    def _add_tolerations_if_present(
+        self, template: client.V1PodTemplateSpec, env_var_name: str
+    ) -> None:
+        tolerations_list = self._parse_kube_env_var(env_var_name, list)
+
+        if tolerations_list:
+            pod_spec: client.V1PodSpec = template.spec
+            pod_spec.tolerations = tolerations_list
+
+    def _parse_kube_env_var(
+        self, env_var_name: str, expected_type: Type[T]
+    ) -> Optional[T]:
+        env_var_value = os.getenv(env_var_name, "")
+        if not env_var_value:
+            return None
+        try:
+            result = json.loads(env_var_value)
+        except json.decoder.JSONDecodeError as ex:
+            raise KubernetesError(
+                f"Could not deserialize JSON for {env_var_name}"
+            ) from ex
+        if not isinstance(result, expected_type):
+            raise KubernetesError(
+                f"The {env_var_name} variable was not a JSON {expected_type.__name__}, received {env_var_value}"
+            )
+        return result
 
     def _delete_kubernetes_job(self, job: Optional[client.V1Job]):
         """Deletes the input V1Job in the cluster pointed to by the input Api Client."""

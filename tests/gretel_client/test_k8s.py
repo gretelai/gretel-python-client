@@ -19,6 +19,10 @@ from kubernetes.client import (
 
 from gretel_client.agents.agent import AgentConfig, Job
 from gretel_client.agents.drivers.k8s import (
+    CPU_NODE_SELECTOR_ENV_NAME,
+    CPU_TOLERATIONS_ENV_NAME,
+    GPU_NODE_SELECTOR_ENV_NAME,
+    GPU_TOLERATIONS_ENV_NAME,
     Kubernetes,
     KubernetesDriverDaemon,
     KubernetesError,
@@ -59,11 +63,23 @@ def patch_auth(func: Callable):
 
 @contextmanager
 def patch_gpu_environ(var_value: str):
-    try:
-        os.environ["GPU_NODE_SELECTOR"] = var_value
+    with patch.dict(os.environ, {GPU_NODE_SELECTOR_ENV_NAME: var_value}):
         yield
-    finally:
-        os.environ.pop("GPU_NODE_SELECTOR")
+
+
+@contextmanager
+def patch_cpu_environ(var_value: str):
+    with patch.dict(os.environ, {CPU_NODE_SELECTOR_ENV_NAME: var_value}):
+        yield
+
+
+@contextmanager
+def patch_toleration_environ(var_value: str):
+    with patch.dict(
+        os.environ,
+        {GPU_TOLERATIONS_ENV_NAME: var_value, CPU_TOLERATIONS_ENV_NAME: var_value},
+    ):
+        yield
 
 
 class TestKubernetesDriver(TestCase):
@@ -163,9 +179,44 @@ class TestKubernetesDriver(TestCase):
                 {"memory": "14Gi", "nvidia.com/gpu": "1"},
                 job_template.spec.containers[0].resources.limits,
             )
-            print(job_template.spec)
+
             self.assertEqual(
                 {"cloud.google.com/gke-accelerator": "nvidia-tesla-t4"},
+                job_template.spec.node_selector,
+            )
+
+    def test_build_job_tolerations_set(self):
+        for job_data in [get_mock_job(), get_mock_job("gpu-standard")]:
+            with patch_toleration_environ(
+                '[{"key":"dedicated", "value": "gpu-standard"}]'
+            ):
+                job = Job.from_dict(job_data, self.config)
+
+                k8s_job = self.driver._build_job(job)
+
+                job_spec: V1JobSpec = k8s_job.spec
+                job_template: V1PodTemplateSpec = job_spec.template
+
+                self.assertEqual(
+                    [{"key": "dedicated", "value": "gpu-standard"}],
+                    job_template.spec.tolerations,
+                )
+
+    def test_build_job_cpu_req_node_selector_set(self):
+        with patch_cpu_environ('{"selector":"my-cpu-node"}'):
+            job = Job.from_dict(get_mock_job(), self.config)
+
+            k8s_job = self.driver._build_job(job)
+
+            job_spec: V1JobSpec = k8s_job.spec
+            job_template: V1PodTemplateSpec = job_spec.template
+            self.assertEqual(
+                {"memory": "14Gi"},
+                job_template.spec.containers[0].resources.limits,
+            )
+            print(job_template.spec)
+            self.assertEqual(
+                {"selector": "my-cpu-node"},
                 job_template.spec.node_selector,
             )
 
@@ -175,12 +226,49 @@ class TestKubernetesDriver(TestCase):
             with self.assertRaisesRegex(KubernetesError, "Could not deserialize JSON"):
                 self.driver._build_job(job)
 
+    def test_build_job_node_toleration_set_invalid(self):
+        with patch_toleration_environ("{"):
+            job = Job.from_dict(get_mock_job(), self.config)
+            with self.assertRaisesRegex(KubernetesError, "Could not deserialize JSON"):
+                self.driver._build_job(job)
+
     def test_build_job_gpu_req_node_selector_set_not_dictionary(self):
         for test_val in ["1", "[1,2,3]", "[]"]:
             with patch_gpu_environ(test_val):
                 job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
                 with self.assertRaisesRegex(
-                    KubernetesError, "The GPU_NODE_SELECTOR was not a JSON dictionary"
+                    KubernetesError,
+                    "The GPU_NODE_SELECTOR variable was not a JSON dict",
+                ):
+                    self.driver._build_job(job)
+
+    def test_build_job_cpu_req_node_selector_set_invalid(self):
+        with patch_cpu_environ("{"):
+            job = Job.from_dict(get_mock_job(), self.config)
+            with self.assertRaisesRegex(KubernetesError, "Could not deserialize JSON"):
+                self.driver._build_job(job)
+
+    def test_build_job_cpu_req_node_selector_set_not_dictionary(self):
+        for test_val in ["1", "[1,2,3]", "[]"]:
+            with patch_cpu_environ(test_val):
+                job = Job.from_dict(get_mock_job(), self.config)
+                with self.assertRaisesRegex(
+                    KubernetesError,
+                    "The CPU_NODE_SELECTOR variable was not a JSON dict",
+                ):
+                    self.driver._build_job(job)
+
+    def test_tolerations_set_not_list(self):
+        for test_val in ["1", '{"key":"val"}', '"abc"']:
+            with patch_toleration_environ(test_val):
+                job = Job.from_dict(get_mock_job(), self.config)
+                with self.assertRaisesRegex(
+                    KubernetesError, "The CPU_TOLERATIONS variable was not a JSON list"
+                ):
+                    self.driver._build_job(job)
+                job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
+                with self.assertRaisesRegex(
+                    KubernetesError, "The GPU_TOLERATIONS variable was not a JSON list"
                 ):
                     self.driver._build_job(job)
 
