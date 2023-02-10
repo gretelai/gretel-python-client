@@ -1,0 +1,7 @@
+name: my-helloworld-workflow
+
+actions:
+  - name: run-helloworld
+    type: helloworld
+    config:
+      name: hello world!

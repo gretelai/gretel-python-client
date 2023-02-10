@@ -1,7 +1,6 @@
 """
 High level API for interacting with a Gretel Project
 """
-import json
 import uuid
 
 from contextlib import contextmanager
@@ -62,7 +61,7 @@ class ManifestNotFoundException(Exception):
 
 
 class ManifestPendingException(Exception):
-    def __init__(self, msg: str = None, manifest: dict = {}):
+    def __init__(self, msg: Optional[str] = None, manifest: dict = {}):
         # Piggyback the pending manifest onto the exception.  If we give up, we still want to pass it back as a normal return value.
         self.manifest = manifest
         super().__init__(msg)
@@ -83,12 +82,19 @@ class Project:
     """
 
     def __init__(
-        self, *, name: str, project_id: str, desc: str = None, display_name: str = None
+        self,
+        *,
+        name: str,
+        project_id: str,
+        project_guid: Optional[str] = None,
+        desc: Optional[str] = None,
+        display_name: Optional[str] = None,
     ):
         self.client_config = get_session_config()
         self.projects_api = self.client_config.get_api(ProjectsApi)
         self.name = name
         self.project_id = project_id
+        self.project_guid = project_guid
         self.description = desc
         self.display_name = display_name
         self._deleted = False
@@ -303,7 +309,7 @@ class Project:
         return resp
 
 
-def search_projects(limit: int = 200, query: str = None) -> List[Project]:
+def search_projects(limit: int = 200, query: Optional[str] = None) -> List[Project]:
     """Searches for project.
 
     Args:
@@ -323,6 +329,7 @@ def search_projects(limit: int = 200, query: str = None) -> List[Project]:
         Project(
             name=p.get("name"),
             project_id=p.get("_id"),
+            project_guid=p.get("guid"),
             desc=p.get("description"),
             display_name=p.get("display_name"),
         )
@@ -353,22 +360,23 @@ def create_project(
     resp = api.create_project(project=models.Project(**payload))
     project = api.get_project(project_id=resp.get(DATA).get("id"))
 
-    p = project.get(DATA).get(PROJECT)
+    proj = project.get(DATA).get(PROJECT)
 
     return Project(
-        name=p.get("name"),
-        project_id=p.get("_id"),
-        desc=p.get("description"),
-        display_name=p.get("display_name"),
+        name=proj.get("name"),
+        project_id=proj.get("_id"),
+        project_guid=proj.get("guid"),
+        desc=proj.get("description"),
+        display_name=proj.get("display_name"),
     )
 
 
 def get_project(
     *,
-    name: str = None,
+    name: Optional[str] = None,
     create: bool = False,
-    desc: str = None,
-    display_name: str = None,
+    desc: Optional[str] = None,
+    display_name: Optional[str] = None,
 ) -> Project:
     """Used to get or create a Gretel project.
 
@@ -422,6 +430,7 @@ def get_project(
     return Project(
         name=p.get("name"),
         project_id=p.get("_id"),
+        project_guid=p.get("guid"),
         desc=p.get("description"),
         display_name=p.get("display_name"),
     )
@@ -446,7 +455,7 @@ def tmp_project():
 
 
 def create_or_get_unique_project(
-    *, name: str, desc: str = None, display_name: str = None
+    *, name: str, desc: Optional[str] = None, display_name: Optional[str] = None
 ) -> Project:
     """
     Helper function that provides a consistent experience for creating

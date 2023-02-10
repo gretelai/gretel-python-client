@@ -9,6 +9,7 @@ from gretel_client.cli.errors import ExceptionHandler
 from gretel_client.cli.models import models
 from gretel_client.cli.projects import projects
 from gretel_client.cli.records import records
+from gretel_client.cli.workflows import workflows
 from gretel_client.config import (
     ClientConfig,
     configure_session,
@@ -112,6 +113,7 @@ cli.add_command(projects)
 cli.add_command(artifacts)
 cli.add_command(connections)
 cli.add_command(connectors)
+cli.add_command(workflows)
 cli.add_command(agent)
 
 

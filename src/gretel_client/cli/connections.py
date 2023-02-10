@@ -39,7 +39,9 @@ def create(sc: SessionContext, from_file: str):
 @click.option(
     "--from-file", metavar="PATH", help="Path to the file containing Gretel connection."
 )
-@click.option("--id", metavar="id", help="Gretel connection id.", required=True)
+@click.option(
+    "--id", metavar="CONNECTION-ID", help="Gretel connection id.", required=True
+)
 @pass_session
 def update(sc: SessionContext, id: str, from_file: str):
     connection_api = get_connections_api()
@@ -51,7 +53,7 @@ def update(sc: SessionContext, id: str, from_file: str):
 
 
 @connections.command(help="Delete a connection.")
-@click.option("--id", metavar="id", help="Gretel connection id.")
+@click.option("--id", metavar="CONNECTION-ID", help="Gretel connection id.")
 @pass_session
 def delete(sc: SessionContext, id: str):
     sc.log.info(f"Deleting connection {id}.")
@@ -65,14 +67,19 @@ def delete(sc: SessionContext, id: str):
 @pass_session
 def list(sc: SessionContext):
     connection_api = get_connections_api()
-    conns = connection_api.list_connections()
+    conns = connection_api.list_connections().data
+    if not conns:
+        sc.log.info("No connections found.")
+        return
     sc.log.info("Connections:")
-    for conn in conns.data:
+    for conn in conns:
         sc.print(data=conn.to_dict())
 
 
 @connections.command(help="Get a connection.")
-@click.option("--id", metavar="id", help="Gretel connection id.", required=True)
+@click.option(
+    "--id", metavar="CONNECTION-ID", help="Gretel connection id.", required=True
+)
 @pass_session
 def get(sc: SessionContext, id: str):
     connection_api = get_connections_api()

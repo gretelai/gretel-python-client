@@ -12,10 +12,10 @@ def projects():
 
 
 @projects.command(help="Create a new project.")
-@click.option("--name", metavar="name", help="Gretel project name.")
-@click.option("--desc", metavar="description", help="Gretel project description.")
+@click.option("--name", metavar="NAME", help="Gretel project name.")
+@click.option("--desc", metavar="DESCRIPTION", help="Gretel project description.")
 @click.option(
-    "--display-name", metavar="display-name", help="This will show on the console."
+    "--display-name", metavar="DISPLAY-NAME", help="This will show on the console."
 )
 @click.option(
     "--set-default",
@@ -53,7 +53,7 @@ def search(sc: SessionContext, limit: int, query: str):
 @projects.command(help="Set default project.")
 @click.option(
     "--name",
-    metavar="project-name",
+    metavar="PROJECT-NAME",
     help="Project name to set as default.",
     required=True,
 )
@@ -68,13 +68,13 @@ def set_default(sc: SessionContext, name: str):
 @projects.command(help="Delete project.")
 @click.option(
     "--name",
-    metavar="project-name",
+    metavar="PROJECT-NAME",
     help="Gretel project name, mutually exclusive with id.",
     default=None,
 )
 @click.option(
     "--uid",
-    metavar="project-id",
+    metavar="PROJECT-ID",
     help="Gretel project id, mutually exclusive with name.",
     default=None,
 )
