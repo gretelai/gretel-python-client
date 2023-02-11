@@ -26,7 +26,6 @@ logger = get_logger(__name__)
 
 GRETEL_WORKER_SA = os.getenv("GRETEL_WORKER_SA", "gretel-agent")
 GRETEL_WORKER_NAMESPACE = os.getenv("GRETEL_WORKER_NAMESPACE", "gretel-workers")
-GRETEL_AGENT_SECRET_NAME = os.getenv("GRETEL_AGENT_SECRET_NAME", "gretel-agent-secret")
 GRETEL_PULL_SECRET = os.getenv("GRETEL_PULL_SECRET", "gretel-pull-secret")
 LIVENESS_FILE = os.getenv("LIVENESS_FILE", "/tmp/liveness.txt")
 
@@ -86,27 +85,52 @@ class Kubernetes(Driver):
     def shutdown(self, unit: client.V1Job):
         self._delete_kubernetes_job(unit)
 
-    def _create_kubernetes_job(self, agent_job: Job) -> client.V1Job:
+    def _create_kubernetes_job(self, agent_job: Job) -> Optional[client.V1Job]:
         """Creates a job for the input job config in the cluster pointed to by the input Api Client."""
         logger.info(f"Creating job:{agent_job.uid} in Kubernetes cluster.")
         kubernetes_job = self._build_job(agent_job)
         try:
-            response = self._batch_api.create_namespaced_job(
-                body=kubernetes_job, namespace=GRETEL_WORKER_NAMESPACE
-            )
-            return response
+            created_k8s_job: Optional[client.V1Job] = None
+            try:
+                k8s_job = self._batch_api.create_namespaced_job(
+                    body=kubernetes_job, namespace=GRETEL_WORKER_NAMESPACE
+                )
+                created_k8s_job = k8s_job
+            except client.ApiException as ex:
+                err_resp = json.loads(ex.body)
+                if err_resp.get("reason") != "AlreadyExists":
+                    raise
+                logger.warning(
+                    f"job={agent_job.uid} already scheduled. Skipping job deployment."
+                )
+                k8s_job = self._batch_api.read_namespaced_job(
+                    name=kubernetes_job.metadata.name,
+                    namespace=GRETEL_WORKER_NAMESPACE,
+                )
+
+            job_secret = self._build_secret(agent_job, k8s_job)
+            try:
+                self._core_api.create_namespaced_secret(
+                    body=job_secret,
+                    namespace=GRETEL_WORKER_NAMESPACE,
+                )
+            except client.ApiException as ex:
+                err_resp = json.loads(ex.body)
+                if err_resp.get("reason") != "AlreadyExists":
+                    raise
+                logger.warning(
+                    f"secret={agent_job.uid} already created. Skipping secret creation."
+                )
+
+            return created_k8s_job
         except client.ApiException as ex:
             err_resp = json.loads(ex.body)
-            if err_resp.get("reason") == "AlreadyExists":
-                logger.warning(f"job={agent_job.uid} already scheduled. Skipping.")
-            else:
-                logger.error(f"Could not deploy job={agent_job.uid}")
-                logger.error(err_resp)
-                logger.error(traceback.format_exc())
-                raise KubernetesError(
-                    f"Count not create job name={agent_job.uid} namespace={GRETEL_WORKER_NAMESPACE}"
-                ) from ex
-            return None
+            logger.error(f"Could not deploy job={agent_job.uid}")
+            logger.error(err_resp)
+            logger.error(traceback.format_exc())
+            raise KubernetesError(
+                f"Could not create job name={agent_job.uid} namespace={GRETEL_WORKER_NAMESPACE}"
+            ) from ex
         except Exception as ex:
             logger.error(traceback.format_exc())
             raise ex
@@ -122,6 +146,9 @@ class Kubernetes(Driver):
             env = [
                 client.V1EnvVar(name=k, value=v) for k, v in job_config.env_vars.items()
             ]
+        env.append(
+            client.V1EnvVar(name="GRETEL_ENDPOINT", value=job_config.gretel_endpoint)
+        )
         env.append(client.V1EnvVar(name="GRETEL_STAGE", value=job_config.gretel_stage))
 
         args = list(itertools.chain.from_iterable(job_config.params.items()))
@@ -135,8 +162,10 @@ class Kubernetes(Driver):
             image_pull_policy="IfNotPresent",
             env_from=[
                 client.V1EnvFromSource(
-                    secret_ref=client.V1SecretEnvSource(name=GRETEL_AGENT_SECRET_NAME)
-                )
+                    secret_ref=client.V1SecretEnvSource(
+                        name=job_config.uid, optional=False
+                    ),
+                ),
             ],
         )
 
@@ -149,6 +178,7 @@ class Kubernetes(Driver):
                 restart_policy="Never",
                 containers=[container],
                 service_account_name=GRETEL_WORKER_SA,
+                automount_service_account_token=False,
                 image_pull_secrets=[
                     client.V1LocalObjectReference(name=GRETEL_PULL_SECRET)
                 ],
@@ -174,6 +204,26 @@ class Kubernetes(Driver):
         )
 
         return job
+
+    def _build_secret(self, job_config: Job, k8s_job: client.V1Job) -> client.V1Secret:
+        return client.V1Secret(
+            api_version="v1",
+            kind="Secret",
+            metadata=client.V1ObjectMeta(
+                name=job_config.uid,
+                owner_references=[
+                    client.V1OwnerReference(
+                        api_version=k8s_job.api_version,
+                        kind=k8s_job.kind,
+                        name=k8s_job.metadata.name,
+                        uid=k8s_job.metadata.uid,
+                        block_owner_deletion=False,
+                        controller=False,
+                    ),
+                ],
+            ),
+            string_data=job_config.secret_env,
+        )
 
     def _add_selector_if_present(
         self, template: client.V1PodTemplateSpec, env_var_name: str

@@ -201,6 +201,11 @@ class Job:
         return params
 
     @property
+    def secret_env(self) -> Dict[str, str]:
+        env = {"GRETEL_WORKER_TOKEN": self.worker_token}
+        return env
+
+    @property
     def gretel_stage(self) -> str:
         return get_session_config().stage
 

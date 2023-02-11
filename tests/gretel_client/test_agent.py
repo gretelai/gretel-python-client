@@ -174,6 +174,7 @@ def test_job_disables_cloud_logging(get_session_config: MagicMock):
     config = AgentConfig(driver="docker", disable_cloud_logging=True)
     job = Job.from_dict(get_mock_job(instance_type="gpu-standard"), config)
     assert job.params == {"--disable-cloud-logging": "", "--worker-token": worker_token}
+    assert job.secret_env == {"GRETEL_WORKER_TOKEN": worker_token}
 
 
 @patch("requests.patch")

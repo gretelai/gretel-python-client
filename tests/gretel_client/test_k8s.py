@@ -1,4 +1,5 @@
 import os
+import uuid
 
 from contextlib import contextmanager
 from functools import wraps
@@ -15,6 +16,7 @@ from kubernetes.client import (
     V1JobStatus,
     V1ObjectMeta,
     V1PodTemplateSpec,
+    V1Secret,
 )
 
 from gretel_client.agents.agent import AgentConfig, Job
@@ -125,7 +127,7 @@ class TestKubernetesDriver(TestCase):
         self._stub_api_exception_for_batch(500, "{}")
 
         with self.assertRaisesRegex(
-            KubernetesError, "Count not create job name=run-id"
+            KubernetesError, "Could not create job name=run-id"
         ):
             self.driver.schedule(self.job)
 
@@ -145,6 +147,15 @@ class TestKubernetesDriver(TestCase):
 
     def test_schedule_job_with_errors_already_exists(self):
         self._stub_api_exception_for_batch(405, '{"reason":"AlreadyExists"}')
+        self.batch_api.read_namespaced_job.return_value = V1Job(
+            api_version="batch/v1",
+            kind="Job",
+            metadata=V1ObjectMeta(
+                name=self.job.uid,
+                uid=str(uuid.uuid4()),
+            ),
+        )
+        self.core_api.create_namespaced_secret.return_value = V1Secret()
 
         result = self.driver.schedule(self.job)
         self.assertIsNone(result)
