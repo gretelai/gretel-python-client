@@ -1,9 +1,11 @@
+import gzip
+
 from pathlib import Path
 from typing import Callable
 
 import pandas as pd
 import pytest
-import smart_open
+import requests
 
 from gretel_client.cli.utils.parser_utils import RefData
 from gretel_client.config import RunnerMode
@@ -127,11 +129,12 @@ def test_does_get_records(trained_synth_model: Model, get_fixture: Callable, req
     assert len(logs) > 1
     assert handler.status == Status.COMPLETED
 
-    with smart_open.open(
-        handler.get_artifact_link(ModelRunArtifact.DATA.value), "rb"  # type:ignore
-    ) as syn_data:
-        contents = syn_data.read()
-        assert len(contents) > 0
+    artifact_link = handler.get_artifact_link(ModelRunArtifact.DATA.value)
+    resp = requests.get(artifact_link)
+    contents = resp.content
+    assert resp.status_code == 200
+    assert len(contents) > 0
+    assert "CREDIT - INTEREST CREDITED" in gzip.decompress(resp.content).decode()
 
 
 def test_polls_with_helper(
