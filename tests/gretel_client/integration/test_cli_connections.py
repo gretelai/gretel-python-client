@@ -66,7 +66,7 @@ def test_connection_crud_from_cli(
         ],
     )
     assert "Updated connection:" in cmd.output
-    assert "unit test name - edited" in cmd.output
+    assert "unit_test_name_edited" in cmd.output
     assert "AWS" in cmd.output
     assert cmd.exit_code == 0
 

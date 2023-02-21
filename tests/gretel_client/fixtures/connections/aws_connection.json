@@ -1,6 +1,6 @@
 {
-    "type": "aws",
-    "name": "unit test name - edited",
+    "type": "AWS",
+    "name": "unit_test_name_edited",
     "credentials": {
         "access_key_id": "aa",
         "secret_access_key": "zz"

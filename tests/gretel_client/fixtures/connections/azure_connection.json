@@ -1,6 +1,6 @@
 {
     "type": "azure",
-    "name": "unit test name",
+    "name": "unit_test_name",
     "credentials": {
         "access_key_id": "aa",
         "secret_access_key": "zz"
