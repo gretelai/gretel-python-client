@@ -156,7 +156,9 @@ class Kubernetes(Driver):
         container = client.V1Container(
             name=job_config.uid,
             image=job_config.container_image,
-            resources=client.V1ResourceRequirements(limits=res_limits),
+            resources=client.V1ResourceRequirements(
+                requests=res_limits, limits=res_limits
+            ),
             args=args,
             env=env,
             image_pull_policy="IfNotPresent",
