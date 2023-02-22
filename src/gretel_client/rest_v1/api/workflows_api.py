@@ -751,7 +751,7 @@ class WorkflowsApi(object):
             root_map={
                 "validations": {},
                 "allowed_values": {
-                    ("expand",): {"LOGS": "LOGS"},
+                    ("expand",): {"EXPAND_OPTIONS_LOGS": "EXPAND_OPTIONS_LOGS"},
                 },
                 "openapi_types": {
                     "query": (str,),

@@ -667,11 +667,11 @@ class ModelsApi(object):
                 "validations": {},
                 "allowed_values": {
                     ("expand",): {
-                        "LOGS": "LOGS",
-                        "HISTORY": "HISTORY",
-                        "INPUTS": "INPUTS",
-                        "OUTPUTS": "OUTPUTS",
-                        "LINEAGE": "LINEAGE",
+                        "LOGS": "EXPAND_OPTIONS_LOGS",
+                        "HISTORY": "EXPAND_OPTIONS_HISTORY",
+                        "INPUTS": "EXPAND_OPTIONS_INPUTS",
+                        "OUTPUTS": "EXPAND_OPTIONS_OUTPUTS",
+                        "LINEAGE": "EXPAND_OPTIONS_LINEAGE",
                     },
                 },
                 "openapi_types": {

@@ -52,13 +52,13 @@ class WorkflowTask(ModelNormal):
 
     allowed_values = {
         ("status",): {
-            "UNKNOWN_RUN_STATUS": "UNKNOWN_RUN_STATUS",
-            "CREATED": "CREATED",
-            "PENDING": "PENDING",
-            "ACTIVE": "ACTIVE",
-            "ERROR": "ERROR",
-            "LOST": "LOST",
-            "COMPLETED_RUN_STATUS": "COMPLETED_RUN_STATUS",
+            "UNKNOWN": "RUN_STATUS_UNKNOWN",
+            "CREATED": "RUN_STATUS_CREATED",
+            "PENDING": "RUN_STATUS_PENDING",
+            "ACTIVE": "RUN_STATUS_ACTIVE",
+            "ERROR": "RUN_STATUS_ERROR",
+            "LOST": "RUN_STATUS_LOST",
+            "COMPLETED": "RUN_STATUS_COMPLETED",
         },
     }
 
@@ -80,6 +80,7 @@ class WorkflowTask(ModelNormal):
         """
         return {
             "workflow_run_id": (str,),  # noqa: E501
+            "log_location": (str,),  # noqa: E501
             "id": (str,),  # noqa: E501
             "status": (str,),  # noqa: E501
             "action": (
@@ -103,6 +104,7 @@ class WorkflowTask(ModelNormal):
 
     attribute_map = {
         "workflow_run_id": "workflow_run_id",  # noqa: E501
+        "log_location": "log_location",  # noqa: E501
         "id": "id",  # noqa: E501
         "status": "status",  # noqa: E501
         "action": "action",  # noqa: E501
@@ -130,11 +132,12 @@ class WorkflowTask(ModelNormal):
     )
 
     @convert_js_args_to_python_args
-    def __init__(self, workflow_run_id, *args, **kwargs):  # noqa: E501
+    def __init__(self, workflow_run_id, log_location, *args, **kwargs):  # noqa: E501
         """WorkflowTask - a model defined in OpenAPI
 
         Args:
             workflow_run_id (str):
+            log_location (str):
 
         Keyword Args:
             _check_type (bool): if True, values for parameters in openapi_types
@@ -205,6 +208,7 @@ class WorkflowTask(ModelNormal):
         self._visited_composed_classes = _visited_composed_classes + (self.__class__,)
 
         self.workflow_run_id = workflow_run_id
+        self.log_location = log_location
         for var_name, var_value in kwargs.items():
             if (
                 var_name not in self.attribute_map

@@ -671,13 +671,13 @@ class ConnectionsApi(object):
             callable=__update_connection,
         )
 
-        def __validate_credentials(self, connection_id, **kwargs):
-            """validate_credentials  # noqa: E501
+        def __validate_connection_credentials(self, connection_id, **kwargs):
+            """validate_connection_credentials  # noqa: E501
 
             This method makes a synchronous HTTP request by default. To make an
             asynchronous HTTP request, please pass async_req=True
 
-            >>> thread = api.validate_credentials(connection_id, async_req=True)
+            >>> thread = api.validate_connection_credentials(connection_id, async_req=True)
             >>> result = thread.get()
 
             Args:
@@ -721,12 +721,12 @@ class ConnectionsApi(object):
             kwargs["connection_id"] = connection_id
             return self.call_with_http_info(**kwargs)
 
-        self.validate_credentials = _Endpoint(
+        self.validate_connection_credentials = _Endpoint(
             settings={
                 "response_type": (Connection,),
                 "auth": [],
                 "endpoint_path": "/v1/connections/{connection_id}/validate-credentials",
-                "operation_id": "validate_credentials",
+                "operation_id": "validate_connection_credentials",
                 "http_method": "POST",
                 "servers": None,
             },
@@ -760,5 +760,5 @@ class ConnectionsApi(object):
                 "content_type": [],
             },
             api_client=api_client,
-            callable=__validate_credentials,
+            callable=__validate_connection_credentials,
         )

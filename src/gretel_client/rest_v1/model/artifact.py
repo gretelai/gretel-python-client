@@ -52,16 +52,16 @@ class Artifact(ModelNormal):
 
     allowed_values = {
         ("type",): {
-            "TYPE_UNKNOWN": "TYPE_UNKNOWN",
-            "DATA": "DATA",
-            "MODEL_ARCHIVE": "MODEL_ARCHIVE",
-            "LOG": "LOG",
+            "UNKNOWN": "ARTIFACT_TYPE_UNKNOWN",
+            "DATA": "ARTIFACT_TYPE_DATA",
+            "MODEL_ARCHIVE": "ARTIFACT_TYPE_MODEL_ARCHIVE",
+            "LOG": "ARTIFACT_TYPE_LOG",
         },
         ("scope",): {
-            "SCOPE_UNKNOWN": "SCOPE_UNKNOWN",
-            "PROJECT": "PROJECT",
-            "MODEL": "MODEL",
-            "MODEL_RUN": "MODEL_RUN",
+            "UNKNOWN": "ARTIFACT_SCOPE_UNKNOWN",
+            "PROJECT": "ARTIFACT_SCOPE_PROJECT",
+            "MODEL": "ARTIFACT_SCOPE_MODEL",
+            "MODEL_RUN": "ARTIFACT_SCOPE_MODEL_RUN",
         },
     }
 

@@ -60,13 +60,13 @@ class ModelRun(ModelNormal):
 
     allowed_values = {
         ("status",): {
-            "UNKNOWN_RUN_STATUS": "UNKNOWN_RUN_STATUS",
-            "CREATED": "CREATED",
-            "PENDING": "PENDING",
-            "ACTIVE": "ACTIVE",
-            "ERROR": "ERROR",
-            "LOST": "LOST",
-            "COMPLETED_RUN_STATUS": "COMPLETED_RUN_STATUS",
+            "UNKNOWN": "RUN_STATUS_UNKNOWN",
+            "CREATED": "RUN_STATUS_CREATED",
+            "PENDING": "RUN_STATUS_PENDING",
+            "ACTIVE": "RUN_STATUS_ACTIVE",
+            "ERROR": "RUN_STATUS_ERROR",
+            "LOST": "RUN_STATUS_LOST",
+            "COMPLETED": "RUN_STATUS_COMPLETED",
         },
     }
 

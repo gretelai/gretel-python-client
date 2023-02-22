@@ -52,10 +52,10 @@ class Connection(ModelNormal):
 
     allowed_values = {
         ("validation_status",): {
-            "UNKNOWN": "UNKNOWN",
-            "VALIDATING": "VALIDATING",
-            "VALID": "VALID",
-            "INVALID": "INVALID",
+            "UNKNOWN": "VALIDATION_STATUS_UNKNOWN",
+            "VALIDATING": "VALIDATION_STATUS_VALIDATING",
+            "VALID": "VALIDATION_STATUS_VALID",
+            "INVALID": "VALIDATION_STATUS_INVALID",
         },
     }
 
