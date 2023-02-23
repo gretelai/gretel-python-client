@@ -35,6 +35,7 @@ GPU_NODE_SELECTOR_ENV_NAME = "GPU_NODE_SELECTOR"
 CPU_NODE_SELECTOR_ENV_NAME = "CPU_NODE_SELECTOR"
 GPU_TOLERATIONS_ENV_NAME = "GPU_TOLERATIONS"
 CPU_TOLERATIONS_ENV_NAME = "CPU_TOLERATIONS"
+CPU_COUNT_ENV_NAME = "GRETEL_CPU_COUNT"
 
 
 if TYPE_CHECKING:
@@ -137,9 +138,9 @@ class Kubernetes(Driver):
 
     def _build_job(self, job_config: Job) -> client.V1Job:
         memory_limit_in_gb = os.environ.get("MEMORY_LIMIT_IN_GB", 14)
-        res_limits = {"memory": f"{memory_limit_in_gb}Gi"}
+        resource_requests = {"memory": f"{memory_limit_in_gb}Gi"}
         if job_config.needs_gpu:
-            res_limits["nvidia.com/gpu"] = "1"
+            resource_requests["nvidia.com/gpu"] = "1"
 
         env = []
         if job_config.env_vars:
@@ -151,13 +152,26 @@ class Kubernetes(Driver):
         )
         env.append(client.V1EnvVar(name="GRETEL_STAGE", value=job_config.gretel_stage))
 
+        # Make a copy here in case we need to change the requests but not the limits
+        limits = resource_requests.copy()
+        # TODO: Separate value for CPU and GPU jobs?
+        gretel_cpu_count = os.getenv(CPU_COUNT_ENV_NAME)
+        resource_requests["cpu"] = "1"
+        if gretel_cpu_count:
+            if not gretel_cpu_count.isdigit():
+                raise KubernetesError(
+                    f"Gretel CPU Count must be an integer, instead received {gretel_cpu_count}"
+                )
+            env.append(client.V1EnvVar(name=CPU_COUNT_ENV_NAME, value=gretel_cpu_count))
+            resource_requests["cpu"] = gretel_cpu_count
+
         args = list(itertools.chain.from_iterable(job_config.params.items()))
 
         container = client.V1Container(
             name=job_config.uid,
             image=job_config.container_image,
             resources=client.V1ResourceRequirements(
-                requests=res_limits, limits=res_limits
+                requests=resource_requests, limits=limits
             ),
             args=args,
             env=env,

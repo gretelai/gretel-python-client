@@ -21,6 +21,7 @@ from kubernetes.client import (
 
 from gretel_client.agents.agent import AgentConfig, Job
 from gretel_client.agents.drivers.k8s import (
+    CPU_COUNT_ENV_NAME,
     CPU_NODE_SELECTOR_ENV_NAME,
     CPU_TOLERATIONS_ENV_NAME,
     GPU_NODE_SELECTOR_ENV_NAME,
@@ -81,6 +82,12 @@ def patch_toleration_environ(var_value: str):
         os.environ,
         {GPU_TOLERATIONS_ENV_NAME: var_value, CPU_TOLERATIONS_ENV_NAME: var_value},
     ):
+        yield
+
+
+@contextmanager
+def patch_cpu_count_environ(var_value: str):
+    with patch.dict(os.environ, {CPU_COUNT_ENV_NAME: var_value}):
         yield
 
 
@@ -171,9 +178,15 @@ class TestKubernetesDriver(TestCase):
 
             job_spec: V1JobSpec = k8s_job.spec
             job_template: V1PodTemplateSpec = job_spec.template
+            expected_resources = {"memory": "14Gi", "nvidia.com/gpu": "1"}
             self.assertEqual(
-                {"memory": "14Gi", "nvidia.com/gpu": "1"},
+                expected_resources,
                 job_template.spec.containers[0].resources.limits,
+            )
+            expected_resources["cpu"] = "1"
+            self.assertEqual(
+                expected_resources,
+                job_template.spec.containers[0].resources.requests,
             )
 
     def test_build_job_gpu_req_node_selector_set(self):
@@ -282,6 +295,32 @@ class TestKubernetesDriver(TestCase):
                     KubernetesError, "The GPU_TOLERATIONS variable was not a JSON list"
                 ):
                     self.driver._build_job(job)
+
+    def test_cpu_count_not_set_properly(self):
+        for val in ["5.3", "-1", "something"]:
+            with patch_cpu_count_environ(val):
+                job = Job.from_dict(get_mock_job(), self.config)
+                with self.assertRaisesRegex(
+                    KubernetesError,
+                    f"Gretel CPU Count must be an integer, instead received {val}",
+                ):
+                    self.driver._build_job(job)
+
+    def test_cpu_count_set_properly(self):
+        with patch_cpu_count_environ("5"):
+            job = Job.from_dict(get_mock_job(), self.config)
+            k8s_job = self.driver._build_job(job)
+
+            job_spec: V1JobSpec = k8s_job.spec
+            job_template: V1PodTemplateSpec = job_spec.template
+            self.assertEqual(
+                {"memory": "14Gi", "cpu": "5"},
+                job_template.spec.containers[0].resources.requests,
+            )
+            self.assertEqual(
+                {"memory": "14Gi"},
+                job_template.spec.containers[0].resources.limits,
+            )
 
     def test_is_job_active_true_then_false(self):
         self.batch_api.read_namespaced_job.side_effect = [
