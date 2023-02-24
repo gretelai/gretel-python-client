@@ -43,6 +43,12 @@ def test_does_get_project(project: Project):
     assert p.project_id == project.project_id
 
 
+def test_project_guid_url(project: Project):
+    project = get_project(name=project.project_id)
+    url = project.get_console_url()
+    assert project.project_guid in url
+
+
 def test_cannot_call_deleted_project():
     project = get_project(create=True)
     name = project.name
