@@ -11,16 +11,22 @@ from kubernetes.client import (
     ApiException,
     BatchV1Api,
     CoreV1Api,
+    V1ConfigMapVolumeSource,
+    V1Container,
     V1Job,
     V1JobSpec,
     V1JobStatus,
     V1ObjectMeta,
+    V1PodSpec,
     V1PodTemplateSpec,
     V1Secret,
+    V1Volume,
+    V1VolumeMount,
 )
 
 from gretel_client.agents.agent import AgentConfig, Job
 from gretel_client.agents.drivers.k8s import (
+    CA_CERT_CONFIGMAP_ENV_NAME,
     CPU_COUNT_ENV_NAME,
     CPU_NODE_SELECTOR_ENV_NAME,
     CPU_TOLERATIONS_ENV_NAME,
@@ -29,6 +35,7 @@ from gretel_client.agents.drivers.k8s import (
     Kubernetes,
     KubernetesDriverDaemon,
     KubernetesError,
+    OVERRIDE_CERT_NAME,
 )
 
 
@@ -88,6 +95,17 @@ def patch_toleration_environ(var_value: str):
 @contextmanager
 def patch_cpu_count_environ(var_value: str):
     with patch.dict(os.environ, {CPU_COUNT_ENV_NAME: var_value}):
+        yield
+
+
+@contextmanager
+def patch_cert_env(configmap_name: str, cert_path: str):
+    with patch.dict(
+        os.environ,
+        {
+            CA_CERT_CONFIGMAP_ENV_NAME: configmap_name,
+        },
+    ):
         yield
 
 
@@ -392,3 +410,27 @@ class TestKubernetesDriver(TestCase):
         daemon._update_pull_secrets()
         core_api.patch_namespaced_secret.assert_called_once()
         core_api.create_namespaced_secret.assert_called_once()
+
+    @patch_cert_env("my-cert-configmap", "/usr/local/share/ca-certificates/ca.crt")
+    def test_build_job_with_custom_certs(self):
+        job = Job.from_dict(get_mock_job(), self.config)
+
+        k8s_job = self.driver._build_job(job)
+
+        job_spec: V1JobSpec = k8s_job.spec
+        pod_template: V1PodTemplateSpec = job_spec.template
+        pod_spec: V1PodSpec = pod_template.spec
+        container: V1Container = pod_spec.containers[0]
+
+        assert len(container.volume_mounts) == 1
+        mount: V1VolumeMount = container.volume_mounts[0]
+        assert mount.name == OVERRIDE_CERT_NAME
+        assert mount.mount_path == "/usr/local/share/ca-certificates/"
+
+        assert len(pod_spec.volumes) == 1
+        volume: V1Volume = pod_spec.volumes[0]
+        assert volume.name == OVERRIDE_CERT_NAME
+        config_map: V1ConfigMapVolumeSource = volume.config_map
+        assert config_map.optional
+        assert config_map.name == "my-cert-configmap"
+        assert config_map.default_mode == 0o0644

@@ -13,7 +13,7 @@ import traceback
 from pathlib import Path
 from threading import Thread
 from time import sleep
-from typing import Optional, Type, TYPE_CHECKING, TypeVar
+from typing import List, Optional, Tuple, Type, TYPE_CHECKING, TypeVar
 
 from kubernetes import client, config
 from kubernetes.client import ApiClient, BatchV1Api, CoreV1Api
@@ -27,15 +27,21 @@ logger = get_logger(__name__)
 GRETEL_WORKER_SA = os.getenv("GRETEL_WORKER_SA", "gretel-agent")
 GRETEL_WORKER_NAMESPACE = os.getenv("GRETEL_WORKER_NAMESPACE", "gretel-workers")
 GRETEL_PULL_SECRET = os.getenv("GRETEL_PULL_SECRET", "gretel-pull-secret")
+GRETEL_WORKER_SECRET_NAME = os.getenv(
+    "GRETEL_WORKER_SECRET_NAME", "gretel-worker-secret"
+)
 LIVENESS_FILE = os.getenv("LIVENESS_FILE", "/tmp/liveness.txt")
 
 T = TypeVar("T")
+
+OVERRIDE_CERT_NAME = "override-cert"
 
 GPU_NODE_SELECTOR_ENV_NAME = "GPU_NODE_SELECTOR"
 CPU_NODE_SELECTOR_ENV_NAME = "CPU_NODE_SELECTOR"
 GPU_TOLERATIONS_ENV_NAME = "GPU_TOLERATIONS"
 CPU_TOLERATIONS_ENV_NAME = "CPU_TOLERATIONS"
 CPU_COUNT_ENV_NAME = "GRETEL_CPU_COUNT"
+CA_CERT_CONFIGMAP_ENV_NAME = "GRETEL_CA_CERT_CONFIGMAP_NAME"
 
 
 if TYPE_CHECKING:
@@ -137,33 +143,8 @@ class Kubernetes(Driver):
             raise ex
 
     def _build_job(self, job_config: Job) -> client.V1Job:
-        memory_limit_in_gb = os.environ.get("MEMORY_LIMIT_IN_GB", 14)
-        resource_requests = {"memory": f"{memory_limit_in_gb}Gi"}
-        if job_config.needs_gpu:
-            resource_requests["nvidia.com/gpu"] = "1"
-
-        env = []
-        if job_config.env_vars:
-            env = [
-                client.V1EnvVar(name=k, value=v) for k, v in job_config.env_vars.items()
-            ]
-        env.append(
-            client.V1EnvVar(name="GRETEL_ENDPOINT", value=job_config.gretel_endpoint)
-        )
-        env.append(client.V1EnvVar(name="GRETEL_STAGE", value=job_config.gretel_stage))
-
-        # Make a copy here in case we need to change the requests but not the limits
-        limits = resource_requests.copy()
-        # TODO: Separate value for CPU and GPU jobs?
-        gretel_cpu_count = os.getenv(CPU_COUNT_ENV_NAME)
-        resource_requests["cpu"] = "1"
-        if gretel_cpu_count:
-            if not gretel_cpu_count.isdigit():
-                raise KubernetesError(
-                    f"Gretel CPU Count must be an integer, instead received {gretel_cpu_count}"
-                )
-            env.append(client.V1EnvVar(name=CPU_COUNT_ENV_NAME, value=gretel_cpu_count))
-            resource_requests["cpu"] = gretel_cpu_count
+        resource_requests, limits = self._setup_resources(job_config)
+        env = self._setup_environment_variables(job_config)
 
         args = list(itertools.chain.from_iterable(job_config.params.items()))
 
@@ -177,6 +158,9 @@ class Kubernetes(Driver):
             env=env,
             image_pull_policy="IfNotPresent",
             env_from=[
+                client.V1EnvFromSource(
+                    secret_ref=client.V1SecretEnvSource(name=GRETEL_WORKER_SECRET_NAME)
+                ),
                 client.V1EnvFromSource(
                     secret_ref=client.V1SecretEnvSource(
                         name=job_config.uid, optional=False
@@ -201,6 +185,8 @@ class Kubernetes(Driver):
             ),
         )
 
+        self._setup_certificate(container, template)
+
         if job_config.needs_gpu:
             self._add_selector_if_present(template, GPU_NODE_SELECTOR_ENV_NAME)
             self._add_tolerations_if_present(template, GPU_TOLERATIONS_ENV_NAME)
@@ -220,6 +206,70 @@ class Kubernetes(Driver):
         )
 
         return job
+
+    def _setup_resources(self, job_config: Job) -> Tuple[dict, dict]:
+        memory_limit_in_gb = os.environ.get("MEMORY_LIMIT_IN_GB") or "14"
+        resource_requests = {"memory": f"{memory_limit_in_gb}Gi"}
+        if job_config.needs_gpu:
+            resource_requests["nvidia.com/gpu"] = "1"
+
+        limits = resource_requests.copy()
+
+        gretel_cpu_count = os.getenv(CPU_COUNT_ENV_NAME) or "1"
+        if not gretel_cpu_count.isdigit():
+            raise KubernetesError(
+                f"Gretel CPU Count must be an integer, instead received {gretel_cpu_count}"
+            )
+        resource_requests["cpu"] = gretel_cpu_count
+
+        return resource_requests, limits
+
+    def _setup_environment_variables(self, job_config: Job) -> List[client.V1EnvVar]:
+        env = []
+        if job_config.env_vars:
+            env = [
+                client.V1EnvVar(name=k, value=v) for k, v in job_config.env_vars.items()
+            ]
+        env.append(
+            client.V1EnvVar(name="GRETEL_ENDPOINT", value=job_config.gretel_endpoint)
+        )
+        env.append(client.V1EnvVar(name="GRETEL_STAGE", value=job_config.gretel_stage))
+
+        gretel_cpu_count = os.getenv(CPU_COUNT_ENV_NAME)
+        if gretel_cpu_count:
+            env.append(client.V1EnvVar(name=CPU_COUNT_ENV_NAME, value=gretel_cpu_count))
+
+        return env
+
+    def _setup_certificate(
+        self, container: client.V1Container, template: client.V1PodTemplateSpec
+    ):
+        cert_override = os.getenv(CA_CERT_CONFIGMAP_ENV_NAME)
+        if not cert_override:
+            return
+        if container.volume_mounts is None:
+            container.volume_mounts = []
+        container.volume_mounts += [
+            client.V1VolumeMount(
+                mount_path="/usr/local/share/ca-certificates/",
+                name=OVERRIDE_CERT_NAME,
+            )
+        ]
+
+        pod_spec: client.V1PodSpec = template.spec
+
+        if pod_spec.volumes is None:
+            pod_spec.volumes = []
+        pod_spec.volumes += [
+            client.V1Volume(
+                name=OVERRIDE_CERT_NAME,
+                config_map=client.V1ConfigMapVolumeSource(
+                    name=cert_override,
+                    default_mode=0o644,
+                    optional=True,
+                ),
+            )
+        ]
 
     def _build_secret(self, job_config: Job, k8s_job: client.V1Job) -> client.V1Secret:
         return client.V1Secret(
