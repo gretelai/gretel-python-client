@@ -134,7 +134,8 @@ def test_does_get_records(trained_synth_model: Model, get_fixture: Callable, req
     contents = resp.content
     assert resp.status_code == 200
     assert len(contents) > 0
-    assert "CREDIT - INTEREST CREDITED" in gzip.decompress(resp.content).decode()
+    unzipped_content = gzip.decompress(resp.content).decode()
+    assert "CREDIT - INTEREST CREDITED" in unzipped_content
 
 
 def test_polls_with_helper(
