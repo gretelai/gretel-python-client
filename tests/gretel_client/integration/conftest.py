@@ -42,6 +42,8 @@ def runner() -> CliRunner:
 @pytest.fixture(autouse=True)
 def configure_session_client():
     """Ensures the the host client config is reset after each test."""
+    gretel_api_key = os.getenv("GRETEL_API_KEY")
+    assert gretel_api_key is not None, "GRETEL_API_KEY must be set!"
     with patch.dict(
         os.environ,
         {
