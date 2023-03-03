@@ -411,6 +411,21 @@ class TestKubernetesDriver(TestCase):
         core_api.patch_namespaced_secret.assert_called_once()
         core_api.create_namespaced_secret.assert_called_once()
 
+    @patch_auth
+    def test_daemon_create_secret_loop_with_exceptions(self):
+        core_api = Mock()
+        daemon = KubernetesDriverDaemon(self.config, core_api, sleep_length=0)
+        core_api.patch_namespaced_secret.side_effect = [
+            self._create_api_exception(500, '{"reason":"NotFound"}'),
+            self._create_api_exception(403, '{"reason":"Forbidden"}'),
+            Exception(),
+            KeyboardInterrupt(),
+        ]
+        with self.assertRaises(KeyboardInterrupt):
+            daemon._run_pull_secret_thread()
+        assert 4 == core_api.patch_namespaced_secret.call_count
+        assert 1 == core_api.create_namespaced_secret.call_count
+
     @patch_cert_env("my-cert-configmap", "/usr/local/share/ca-certificates/ca.crt")
     def test_build_job_with_custom_certs(self):
         job = Job.from_dict(get_mock_job(), self.config)

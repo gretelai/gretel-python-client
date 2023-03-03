@@ -370,13 +370,12 @@ class KubernetesDriverDaemon:
     """
 
     def __init__(
-        self,
-        agent_config: AgentConfig,
-        core_api: CoreV1Api,
+        self, agent_config: AgentConfig, core_api: CoreV1Api, sleep_length: int = 300
     ):
         self._agent_config = agent_config
         config.load_incluster_config()
         self._core_api = core_api
+        self.sleep_length = sleep_length
 
     def update_pull_secret_thread(self) -> None:
         thread = Thread(target=self._run_pull_secret_thread, daemon=True)
@@ -384,8 +383,16 @@ class KubernetesDriverDaemon:
 
     def _run_pull_secret_thread(self) -> None:
         while True:
-            self._update_pull_secrets()
-            sleep(300)
+            try:
+                self._update_pull_secrets()
+            # We don't want the thread to die unless a
+            # keyboard interrupt occurs
+            except KeyboardInterrupt as ex:
+                logger.info("Exiting early")
+                raise ex
+            except Exception:
+                logger.exception("Error updating pull secret")
+            sleep(self.sleep_length)
 
     def update_liveness_file_thread(self) -> None:
         thread = Thread(target=self._run_liveness_file_thread, daemon=True)
@@ -442,6 +449,8 @@ class KubernetesDriverDaemon:
                 self._core_api.create_namespaced_secret(
                     namespace=GRETEL_WORKER_NAMESPACE, body=secret
                 )
+            else:
+                raise ex
 
 
 class KubernetesError(Exception):
