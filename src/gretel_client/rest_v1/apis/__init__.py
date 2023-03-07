@@ -5,7 +5,7 @@
 # raise a `RecursionError`.
 # In order to avoid this, import only the API that you directly need like:
 #
-#   from .api.artifacts_api import ArtifactsApi
+#   from .api.activity_api import ActivityApi
 #
 # or import this package, but before doing it, use:
 #
@@ -13,6 +13,7 @@
 #   sys.setrecursionlimit(n)
 
 # Import APIs into API package:
+from gretel_client.rest_v1.api.activity_api import ActivityApi
 from gretel_client.rest_v1.api.artifacts_api import ArtifactsApi
 from gretel_client.rest_v1.api.connections_api import ConnectionsApi
 from gretel_client.rest_v1.api.logs_api import LogsApi

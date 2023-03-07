@@ -9,9 +9,11 @@
 # import sys
 # sys.setrecursionlimit(n)
 
+from gretel_client.rest_v1.model.activity_event import ActivityEvent
 from gretel_client.rest_v1.model.artifact import Artifact
 from gretel_client.rest_v1.model.connection import Connection
 from gretel_client.rest_v1.model.create_artifact_response import CreateArtifactResponse
+from gretel_client.rest_v1.model.event_component import EventComponent
 from gretel_client.rest_v1.model.get_artifact_download_response import (
     GetArtifactDownloadResponse,
 )
@@ -26,6 +28,7 @@ from gretel_client.rest_v1.model.log_envelope import LogEnvelope
 from gretel_client.rest_v1.model.model import Model
 from gretel_client.rest_v1.model.model_run import ModelRun
 from gretel_client.rest_v1.model.model_run_artifact import ModelRunArtifact
+from gretel_client.rest_v1.model.search_activity_response import SearchActivityResponse
 from gretel_client.rest_v1.model.search_artifacts_response import (
     SearchArtifactsResponse,
 )

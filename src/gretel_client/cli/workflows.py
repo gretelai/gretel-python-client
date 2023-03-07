@@ -44,7 +44,9 @@ def create(sc: SessionContext, config: str, name: str, project: str):
 
     project_id = sc.project.project_guid
 
-    wfl = Workflow(config=workflow_config, project_id=project_id)
+    wfl = Workflow(
+        config=workflow_config, name=workflow_config["name"], project_id=project_id
+    )
 
     workflow_api = get_workflows_api()
     workflow = workflow_api.create_workflow(workflow=wfl)
