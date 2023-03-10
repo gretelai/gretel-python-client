@@ -69,9 +69,9 @@ class Workflow(ModelNormal):
                 and the value is attribute type.
         """
         return {
-            "name": (str,),  # noqa: E501
             "project_id": (str,),  # noqa: E501
             "id": (str,),  # noqa: E501
+            "name": (str,),  # noqa: E501
             "config": (
                 {str: (bool, date, datetime, dict, float, int, list, str, none_type)},
             ),  # noqa: E501
@@ -85,9 +85,9 @@ class Workflow(ModelNormal):
         return None
 
     attribute_map = {
-        "name": "name",  # noqa: E501
         "project_id": "project_id",  # noqa: E501
         "id": "id",  # noqa: E501
+        "name": "name",  # noqa: E501
         "config": "config",  # noqa: E501
         "created_by": "created_by",  # noqa: E501
         "created_at": "created_at",  # noqa: E501
@@ -108,11 +108,10 @@ class Workflow(ModelNormal):
     )
 
     @convert_js_args_to_python_args
-    def __init__(self, name, project_id, *args, **kwargs):  # noqa: E501
+    def __init__(self, project_id, *args, **kwargs):  # noqa: E501
         """Workflow - a model defined in OpenAPI
 
         Args:
-            name (str):
             project_id (str):
 
         Keyword Args:
@@ -147,6 +146,7 @@ class Workflow(ModelNormal):
                                 through its discriminator because we passed in
                                 _visited_composed_classes = (Animal,)
             id (str): [optional]  # noqa: E501
+            name (str): [optional]  # noqa: E501
             config ({str: (bool, date, datetime, dict, float, int, list, str, none_type)}): [optional]  # noqa: E501
             created_by (str): [optional]  # noqa: E501
             created_at (datetime): [optional]  # noqa: E501
@@ -177,7 +177,6 @@ class Workflow(ModelNormal):
         self._configuration = _configuration
         self._visited_composed_classes = _visited_composed_classes + (self.__class__,)
 
-        self.name = name
         self.project_id = project_id
         for var_name, var_value in kwargs.items():
             if (
