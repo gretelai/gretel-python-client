@@ -56,7 +56,11 @@ class ActivityEvent(ModelNormal):
           as additional properties values.
     """
 
-    allowed_values = {}
+    allowed_values = {
+        ("predicate",): {
+            "PREDICATE_CREATED_AT": "PREDICATE_CREATED_AT",
+        },
+    }
 
     validations = {}
 
@@ -109,10 +113,19 @@ class ActivityEvent(ModelNormal):
     )
 
     @convert_js_args_to_python_args
-    def __init__(self, *args, **kwargs):  # noqa: E501
+    def __init__(
+        self, occured_at, subject, object, status, *args, **kwargs
+    ):  # noqa: E501
         """ActivityEvent - a model defined in OpenAPI
 
+        Args:
+            occured_at (datetime):
+            subject (EventComponent):
+            object (EventComponent):
+            status (str):
+
         Keyword Args:
+            predicate (str): defaults to "PREDICATE_CREATED_AT", must be one of ["PREDICATE_CREATED_AT", ]  # noqa: E501
             _check_type (bool): if True, values for parameters in openapi_types
                                 will be type checked and a TypeError will be
                                 raised if the wrong type is input.
@@ -143,13 +156,9 @@ class ActivityEvent(ModelNormal):
                                 Animal class but this time we won't travel
                                 through its discriminator because we passed in
                                 _visited_composed_classes = (Animal,)
-            occured_at (datetime): [optional]  # noqa: E501
-            subject (EventComponent): [optional]  # noqa: E501
-            predicate (str): [optional]  # noqa: E501
-            object (EventComponent): [optional]  # noqa: E501
-            status (str): [optional]  # noqa: E501
         """
 
+        predicate = kwargs.get("predicate", "PREDICATE_CREATED_AT")
         _check_type = kwargs.pop("_check_type", True)
         _spec_property_naming = kwargs.pop("_spec_property_naming", False)
         _path_to_item = kwargs.pop("_path_to_item", ())
@@ -174,6 +183,11 @@ class ActivityEvent(ModelNormal):
         self._configuration = _configuration
         self._visited_composed_classes = _visited_composed_classes + (self.__class__,)
 
+        self.occured_at = occured_at
+        self.subject = subject
+        self.predicate = predicate
+        self.object = object
+        self.status = status
         for var_name, var_value in kwargs.items():
             if (
                 var_name not in self.attribute_map

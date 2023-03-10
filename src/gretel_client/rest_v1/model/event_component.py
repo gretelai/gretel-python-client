@@ -71,6 +71,9 @@ class EventComponent(ModelNormal):
         return {
             "name": (str,),  # noqa: E501
             "id": (str,),  # noqa: E501
+            "meta": (
+                {str: (bool, date, datetime, dict, float, int, list, str, none_type)},
+            ),  # noqa: E501
         }
 
     @cached_property
@@ -80,6 +83,7 @@ class EventComponent(ModelNormal):
     attribute_map = {
         "name": "name",  # noqa: E501
         "id": "id",  # noqa: E501
+        "meta": "meta",  # noqa: E501
     }
 
     _composed_schemas = {}
@@ -96,8 +100,12 @@ class EventComponent(ModelNormal):
     )
 
     @convert_js_args_to_python_args
-    def __init__(self, *args, **kwargs):  # noqa: E501
+    def __init__(self, name, id, *args, **kwargs):  # noqa: E501
         """EventComponent - a model defined in OpenAPI
+
+        Args:
+            name (str):
+            id (str):
 
         Keyword Args:
             _check_type (bool): if True, values for parameters in openapi_types
@@ -130,8 +138,7 @@ class EventComponent(ModelNormal):
                                 Animal class but this time we won't travel
                                 through its discriminator because we passed in
                                 _visited_composed_classes = (Animal,)
-            name (str): [optional]  # noqa: E501
-            id (str): [optional]  # noqa: E501
+            meta ({str: (bool, date, datetime, dict, float, int, list, str, none_type)}): [optional]  # noqa: E501
         """
 
         _check_type = kwargs.pop("_check_type", True)
@@ -158,6 +165,8 @@ class EventComponent(ModelNormal):
         self._configuration = _configuration
         self._visited_composed_classes = _visited_composed_classes + (self.__class__,)
 
+        self.name = name
+        self.id = id
         for var_name, var_value in kwargs.items():
             if (
                 var_name not in self.attribute_map
