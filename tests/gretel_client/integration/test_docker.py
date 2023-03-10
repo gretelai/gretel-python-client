@@ -33,7 +33,9 @@ def test_does_start_local_container(model: Model):
     run.enable_cloud_uploads()
     run.start()
     assert run.container.container_status in {"created", "running"}
-    run.wait()
+    # The default timeout is 30 seconds, but we need to give sufficient time
+    # to pull the transforms image
+    run.wait(180)
     model._poll_job_endpoint()
     assert model.status == Status.COMPLETED
 
