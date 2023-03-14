@@ -344,7 +344,7 @@ class Agent:
         self._jobs = Poller(self._jobs_api, self._rate_limiter, self._config)
         self._interrupt = threading.Event()
 
-    def start(self, cooloff: float = 5):
+    def start(self):
         if self._config.enable_prometheus:
             self._logger.info("Enabling prometheus client")
             telemetry.setup_prometheus()
@@ -375,13 +375,9 @@ class Agent:
                 telemetry.increment_job_count()
                 self._update_job_status(job)
 
-            # todo: add in read lock to jobs endpoint. this sleep is
-            # a stopgap until then. without this the agent is going to
-            # try and launch multiple containers of the same job.
-            self._interrupt.wait(cooloff)
-
     def _update_job_status(self, job: Job) -> None:
         try:
+            self._logger.info(f"Updating status to Pending for job {job.uid}")
             worker_json = base64.standard_b64decode(job.worker_token).decode("ascii")
             worker_key = json.loads(worker_json)["model_key"]
             headers = {"Authorization": worker_key}

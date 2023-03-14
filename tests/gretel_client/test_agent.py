@@ -97,7 +97,7 @@ def test_agent_server_does_start(
     get_driver.assert_called_once_with(agent_config)
 
     def start():
-        server.start(cooloff=0.1)
+        server.start()
 
     t = threading.Thread(target=start)
     t.start()
