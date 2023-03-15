@@ -16,6 +16,9 @@ from gretel_client.rest_v1.model.get_workflows_response import GetWorkflowsRespo
 from gretel_client.rest_v1.model.search_workflow_runs_response import (
     SearchWorkflowRunsResponse,
 )
+from gretel_client.rest_v1.model.search_workflow_tasks_response import (
+    SearchWorkflowTasksResponse,
+)
 from gretel_client.rest_v1.model.status import Status
 from gretel_client.rest_v1.model.update_workflow_run_status_request import (
     UpdateWorkflowRunStatusRequest,
@@ -688,7 +691,7 @@ class WorkflowsApi(object):
                 query (str): [optional]
                 expand ([str]): [optional]
                 limit (int): [optional]
-                next_page (str): [optional]
+                skip (int): [optional]
                 _return_http_data_only (bool): response data without head status
                     code and headers. Default is True.
                 _preload_content (bool): if False, the urllib3.HTTPResponse object
@@ -739,7 +742,7 @@ class WorkflowsApi(object):
                     "query",
                     "expand",
                     "limit",
-                    "next_page",
+                    "skip",
                 ],
                 "required": [],
                 "nullable": [],
@@ -757,19 +760,19 @@ class WorkflowsApi(object):
                     "query": (str,),
                     "expand": ([str],),
                     "limit": (int,),
-                    "next_page": (str,),
+                    "skip": (int,),
                 },
                 "attribute_map": {
                     "query": "query",
                     "expand": "expand",
                     "limit": "limit",
-                    "next_page": "next_page",
+                    "skip": "skip",
                 },
                 "location_map": {
                     "query": "query",
                     "expand": "query",
                     "limit": "query",
-                    "next_page": "query",
+                    "skip": "query",
                 },
                 "collection_format_map": {
                     "expand": "multi",
@@ -781,6 +784,104 @@ class WorkflowsApi(object):
             },
             api_client=api_client,
             callable=__search_workflow_runs,
+        )
+
+        def __search_workflow_tasks(self, **kwargs):
+            """search_workflow_tasks  # noqa: E501
+
+            This method makes a synchronous HTTP request by default. To make an
+            asynchronous HTTP request, please pass async_req=True
+
+            >>> thread = api.search_workflow_tasks(async_req=True)
+            >>> result = thread.get()
+
+
+            Keyword Args:
+                query (str): [optional]
+                limit (int): [optional]
+                skip (int): [optional]
+                _return_http_data_only (bool): response data without head status
+                    code and headers. Default is True.
+                _preload_content (bool): if False, the urllib3.HTTPResponse object
+                    will be returned without reading/decoding response data.
+                    Default is True.
+                _request_timeout (float/tuple): timeout setting for this request. If one
+                    number provided, it will be total request timeout. It can also
+                    be a pair (tuple) of (connection, read) timeouts.
+                    Default is None.
+                _check_input_type (bool): specifies if type checking
+                    should be done one the data sent to the server.
+                    Default is True.
+                _check_return_type (bool): specifies if type checking
+                    should be done one the data received from the server.
+                    Default is True.
+                _host_index (int/None): specifies the index of the server
+                    that we want to use.
+                    Default is read from the configuration.
+                async_req (bool): execute request asynchronously
+
+            Returns:
+                SearchWorkflowTasksResponse
+                    If the method is called asynchronously, returns the request
+                    thread.
+            """
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
+            )
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            return self.call_with_http_info(**kwargs)
+
+        self.search_workflow_tasks = _Endpoint(
+            settings={
+                "response_type": (SearchWorkflowTasksResponse,),
+                "auth": [],
+                "endpoint_path": "/v1/workflows/runs/tasks/search",
+                "operation_id": "search_workflow_tasks",
+                "http_method": "GET",
+                "servers": None,
+            },
+            params_map={
+                "all": [
+                    "query",
+                    "limit",
+                    "skip",
+                ],
+                "required": [],
+                "nullable": [],
+                "enum": [],
+                "validation": [],
+            },
+            root_map={
+                "validations": {},
+                "allowed_values": {},
+                "openapi_types": {
+                    "query": (str,),
+                    "limit": (int,),
+                    "skip": (int,),
+                },
+                "attribute_map": {
+                    "query": "query",
+                    "limit": "limit",
+                    "skip": "skip",
+                },
+                "location_map": {
+                    "query": "query",
+                    "limit": "query",
+                    "skip": "query",
+                },
+                "collection_format_map": {},
+            },
+            headers_map={
+                "accept": ["application/json"],
+                "content_type": [],
+            },
+            api_client=api_client,
+            callable=__search_workflow_tasks,
         )
 
         def __update_workflow_run_status(

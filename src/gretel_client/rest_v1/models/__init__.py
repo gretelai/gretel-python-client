@@ -38,6 +38,9 @@ from gretel_client.rest_v1.model.search_model_runs_response import (
 from gretel_client.rest_v1.model.search_workflow_runs_response import (
     SearchWorkflowRunsResponse,
 )
+from gretel_client.rest_v1.model.search_workflow_tasks_response import (
+    SearchWorkflowTasksResponse,
+)
 from gretel_client.rest_v1.model.status import Status
 from gretel_client.rest_v1.model.update_model_run_status_request import (
     UpdateModelRunStatusRequest,
