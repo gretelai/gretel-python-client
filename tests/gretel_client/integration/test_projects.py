@@ -46,6 +46,7 @@ def test_does_get_project(project: Project):
 def test_project_guid_url(project: Project):
     project = get_project(name=project.project_id)
     url = project.get_console_url()
+    assert url.startswith("https://console-dev.gretel.ai")
     assert project.project_guid in url
 
 
