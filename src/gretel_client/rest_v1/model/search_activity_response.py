@@ -78,7 +78,6 @@ class SearchActivityResponse(ModelNormal):
         return {
             "events": ([ActivityEvent],),  # noqa: E501
             "total": (int,),  # noqa: E501
-            "next_page": (str,),  # noqa: E501
         }
 
     @cached_property
@@ -88,7 +87,6 @@ class SearchActivityResponse(ModelNormal):
     attribute_map = {
         "events": "events",  # noqa: E501
         "total": "total",  # noqa: E501
-        "next_page": "next_page",  # noqa: E501
     }
 
     _composed_schemas = {}
@@ -105,13 +103,12 @@ class SearchActivityResponse(ModelNormal):
     )
 
     @convert_js_args_to_python_args
-    def __init__(self, events, total, next_page, *args, **kwargs):  # noqa: E501
+    def __init__(self, events, total, *args, **kwargs):  # noqa: E501
         """SearchActivityResponse - a model defined in OpenAPI
 
         Args:
             events ([ActivityEvent]):
             total (int):
-            next_page (str):
 
         Keyword Args:
             _check_type (bool): if True, values for parameters in openapi_types
@@ -172,7 +169,6 @@ class SearchActivityResponse(ModelNormal):
 
         self.events = events
         self.total = total
-        self.next_page = next_page
         for var_name, var_value in kwargs.items():
             if (
                 var_name not in self.attribute_map

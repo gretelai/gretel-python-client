@@ -51,7 +51,7 @@ class ActivityApi(object):
                 query (str): [optional]
                 sort (str): [optional]
                 limit (int): [optional]
-                next_page (str): [optional]
+                skip (int): [optional]
                 _return_http_data_only (bool): response data without head status
                     code and headers. Default is True.
                 _preload_content (bool): if False, the urllib3.HTTPResponse object
@@ -102,7 +102,7 @@ class ActivityApi(object):
                     "query",
                     "sort",
                     "limit",
-                    "next_page",
+                    "skip",
                 ],
                 "required": [],
                 "nullable": [],
@@ -116,19 +116,19 @@ class ActivityApi(object):
                     "query": (str,),
                     "sort": (str,),
                     "limit": (int,),
-                    "next_page": (str,),
+                    "skip": (int,),
                 },
                 "attribute_map": {
                     "query": "query",
                     "sort": "sort",
                     "limit": "limit",
-                    "next_page": "next_page",
+                    "skip": "skip",
                 },
                 "location_map": {
                     "query": "query",
                     "sort": "query",
                     "limit": "query",
-                    "next_page": "query",
+                    "skip": "query",
                 },
                 "collection_format_map": {},
             },
