@@ -10,7 +10,6 @@ import json
 import os
 import traceback
 
-from pathlib import Path
 from threading import Thread
 from time import sleep
 from typing import List, Optional, Tuple, Type, TYPE_CHECKING, TypeVar
@@ -24,24 +23,19 @@ from gretel_client.docker import get_container_auth
 
 logger = get_logger(__name__)
 
-GRETEL_WORKER_SA = os.getenv("GRETEL_WORKER_SA", "gretel-agent")
-GRETEL_WORKER_NAMESPACE = os.getenv("GRETEL_WORKER_NAMESPACE", "gretel-workers")
-GRETEL_PULL_SECRET = os.getenv("GRETEL_PULL_SECRET", "gretel-pull-secret")
-GRETEL_WORKER_SECRET_NAME = os.getenv(
-    "GRETEL_WORKER_SECRET_NAME", "gretel-worker-secret"
-)
-LIVENESS_FILE = os.getenv("LIVENESS_FILE", "/tmp/liveness.txt")
-
 T = TypeVar("T")
 
 OVERRIDE_CERT_NAME = "override-cert"
 
+WORKER_NAMESPACE_ENV_NAME = "GRETEL_WORKER_NAMESPACE"
+PULL_SECRET_ENV_NAME = "GRETEL_PULL_SECRET"
 GPU_NODE_SELECTOR_ENV_NAME = "GPU_NODE_SELECTOR"
 CPU_NODE_SELECTOR_ENV_NAME = "CPU_NODE_SELECTOR"
 GPU_TOLERATIONS_ENV_NAME = "GPU_TOLERATIONS"
 CPU_TOLERATIONS_ENV_NAME = "CPU_TOLERATIONS"
 CPU_COUNT_ENV_NAME = "GRETEL_CPU_COUNT"
 CA_CERT_CONFIGMAP_ENV_NAME = "GRETEL_CA_CERT_CONFIGMAP_NAME"
+IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME = "IMAGE_REGISTRY_OVERRIDE_HOST"
 
 
 if TYPE_CHECKING:
@@ -67,11 +61,55 @@ class Kubernetes(Driver):
         self._agent_config = agent_config
         self._batch_api = batch_api
         self._core_api = core_api
+        self._load_env_and_set_vars()
         worker = KubernetesDriverDaemon(
             agent_config=agent_config, core_api=self._core_api
         )
-        worker.update_pull_secret_thread()
-        worker.update_liveness_file_thread()
+        worker.start_update_pull_secret_thread()
+
+    def _load_env_and_set_vars(self):
+        self._memory_limit_in_gb = os.getenv("MEMORY_LIMIT_IN_GB") or "14"
+        self._gretel_cpu_count = os.getenv(CPU_COUNT_ENV_NAME) or "1"
+        self._cert_override = os.getenv(CA_CERT_CONFIGMAP_ENV_NAME)
+
+        self._gpu_node_selector = self._parse_kube_env_var(
+            GPU_NODE_SELECTOR_ENV_NAME, dict
+        )
+        self._cpu_node_selector = self._parse_kube_env_var(
+            CPU_NODE_SELECTOR_ENV_NAME, dict
+        )
+        self._gpu_tolerations = self._parse_kube_env_var(GPU_TOLERATIONS_ENV_NAME, list)
+        self._cpu_tolerations = self._parse_kube_env_var(CPU_TOLERATIONS_ENV_NAME, list)
+
+        self._gretel_worker_sa = os.getenv("GRETEL_WORKER_SA") or "gretel-agent"
+        self._gretel_worker_secret_name = (
+            os.getenv("GRETEL_WORKER_SECRET_NAME") or "gretel-worker-secret"
+        )
+        self._gretel_worker_namespace = (
+            os.getenv(WORKER_NAMESPACE_ENV_NAME) or "gretel-workers"
+        )
+        self._gretel_pull_secret = (
+            os.getenv(PULL_SECRET_ENV_NAME) or "gretel-pull-secret"
+        )
+        self._override_host = os.environ.get(IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME)
+
+    def _parse_kube_env_var(
+        self, env_var_name: str, expected_type: Type[T]
+    ) -> Optional[T]:
+        env_var_value = os.getenv(env_var_name)
+        if not env_var_value:
+            return None
+        try:
+            result = json.loads(env_var_value)
+        except json.decoder.JSONDecodeError as ex:
+            raise KubernetesError(
+                f"Could not deserialize JSON for {env_var_name}"
+            ) from ex
+        if not isinstance(result, expected_type):
+            raise KubernetesError(
+                f"The {env_var_name} variable was not a JSON {expected_type.__name__}, received {env_var_value}"
+            )
+        return result
 
     @classmethod
     def from_config(cls, agent_config: AgentConfig) -> Kubernetes:
@@ -100,7 +138,7 @@ class Kubernetes(Driver):
             created_k8s_job: Optional[client.V1Job] = None
             try:
                 k8s_job = self._batch_api.create_namespaced_job(
-                    body=kubernetes_job, namespace=GRETEL_WORKER_NAMESPACE
+                    body=kubernetes_job, namespace=self._gretel_worker_namespace
                 )
                 created_k8s_job = k8s_job
             except client.ApiException as ex:
@@ -112,14 +150,14 @@ class Kubernetes(Driver):
                 )
                 k8s_job = self._batch_api.read_namespaced_job(
                     name=kubernetes_job.metadata.name,
-                    namespace=GRETEL_WORKER_NAMESPACE,
+                    namespace=self._gretel_worker_namespace,
                 )
 
             job_secret = self._build_secret(agent_job, k8s_job)
             try:
                 self._core_api.create_namespaced_secret(
                     body=job_secret,
-                    namespace=GRETEL_WORKER_NAMESPACE,
+                    namespace=self._gretel_worker_namespace,
                 )
             except client.ApiException as ex:
                 err_resp = json.loads(ex.body)
@@ -136,7 +174,7 @@ class Kubernetes(Driver):
             logger.error(err_resp)
             logger.error(traceback.format_exc())
             raise KubernetesError(
-                f"Could not create job name={agent_job.uid} namespace={GRETEL_WORKER_NAMESPACE}"
+                f"Could not create job name={agent_job.uid} namespace={self._gretel_worker_namespace}"
             ) from ex
         except Exception as ex:
             logger.error(traceback.format_exc())
@@ -144,13 +182,16 @@ class Kubernetes(Driver):
 
     def _build_job(self, job_config: Job) -> client.V1Job:
         resource_requests, limits = self._setup_resources(job_config)
+
         env = self._setup_environment_variables(job_config)
 
         args = list(itertools.chain.from_iterable(job_config.params.items()))
 
+        image = self._resolve_image(job_config)
+
         container = client.V1Container(
             name=job_config.uid,
-            image=job_config.container_image,
+            image=image,
             resources=client.V1ResourceRequirements(
                 requests=resource_requests, limits=limits
             ),
@@ -159,7 +200,9 @@ class Kubernetes(Driver):
             image_pull_policy="IfNotPresent",
             env_from=[
                 client.V1EnvFromSource(
-                    secret_ref=client.V1SecretEnvSource(name=GRETEL_WORKER_SECRET_NAME)
+                    secret_ref=client.V1SecretEnvSource(
+                        name=self._gretel_worker_secret_name
+                    )
                 ),
                 client.V1EnvFromSource(
                     secret_ref=client.V1SecretEnvSource(
@@ -172,15 +215,15 @@ class Kubernetes(Driver):
         template = client.V1PodTemplateSpec(
             metadata=client.V1ObjectMeta(
                 labels={"app": "gretel-jobs-worker"},
-                namespace=GRETEL_WORKER_NAMESPACE,
+                namespace=self._gretel_worker_namespace,
             ),
             spec=client.V1PodSpec(
                 restart_policy="Never",
                 containers=[container],
-                service_account_name=GRETEL_WORKER_SA,
+                service_account_name=self._gretel_worker_sa,
                 automount_service_account_token=False,
                 image_pull_secrets=[
-                    client.V1LocalObjectReference(name=GRETEL_PULL_SECRET)
+                    client.V1LocalObjectReference(name=self._gretel_pull_secret)
                 ],
             ),
         )
@@ -188,11 +231,11 @@ class Kubernetes(Driver):
         self._setup_certificate(container, template)
 
         if job_config.needs_gpu:
-            self._add_selector_if_present(template, GPU_NODE_SELECTOR_ENV_NAME)
-            self._add_tolerations_if_present(template, GPU_TOLERATIONS_ENV_NAME)
+            self._add_selector_if_present(template, self._gpu_node_selector)
+            self._add_tolerations_if_present(template, self._gpu_tolerations)
         else:
-            self._add_selector_if_present(template, CPU_NODE_SELECTOR_ENV_NAME)
-            self._add_tolerations_if_present(template, CPU_TOLERATIONS_ENV_NAME)
+            self._add_selector_if_present(template, self._cpu_node_selector)
+            self._add_tolerations_if_present(template, self._cpu_tolerations)
 
         spec = client.V1JobSpec(
             template=template, backoff_limit=0, ttl_seconds_after_finished=86400
@@ -208,19 +251,17 @@ class Kubernetes(Driver):
         return job
 
     def _setup_resources(self, job_config: Job) -> Tuple[dict, dict]:
-        memory_limit_in_gb = os.environ.get("MEMORY_LIMIT_IN_GB") or "14"
-        resource_requests = {"memory": f"{memory_limit_in_gb}Gi"}
+        resource_requests = {"memory": f"{self._memory_limit_in_gb}Gi"}
         if job_config.needs_gpu:
             resource_requests["nvidia.com/gpu"] = "1"
 
         limits = resource_requests.copy()
 
-        gretel_cpu_count = os.getenv(CPU_COUNT_ENV_NAME) or "1"
-        if not gretel_cpu_count.isdigit():
+        if not self._gretel_cpu_count.isdigit():
             raise KubernetesError(
-                f"Gretel CPU Count must be an integer, instead received {gretel_cpu_count}"
+                f"Gretel CPU Count must be an integer, instead received {self._gretel_cpu_count}"
             )
-        resource_requests["cpu"] = gretel_cpu_count
+        resource_requests["cpu"] = self._gretel_cpu_count
 
         return resource_requests, limits
 
@@ -235,7 +276,7 @@ class Kubernetes(Driver):
         )
         env.append(client.V1EnvVar(name="GRETEL_STAGE", value=job_config.gretel_stage))
 
-        gretel_cpu_count = os.getenv(CPU_COUNT_ENV_NAME)
+        gretel_cpu_count = self._gretel_cpu_count
         if gretel_cpu_count:
             env.append(client.V1EnvVar(name=CPU_COUNT_ENV_NAME, value=gretel_cpu_count))
 
@@ -244,8 +285,7 @@ class Kubernetes(Driver):
     def _setup_certificate(
         self, container: client.V1Container, template: client.V1PodTemplateSpec
     ):
-        cert_override = os.getenv(CA_CERT_CONFIGMAP_ENV_NAME)
-        if not cert_override:
+        if not self._cert_override:
             return
         if container.volume_mounts is None:
             container.volume_mounts = []
@@ -264,12 +304,21 @@ class Kubernetes(Driver):
             client.V1Volume(
                 name=OVERRIDE_CERT_NAME,
                 config_map=client.V1ConfigMapVolumeSource(
-                    name=cert_override,
+                    name=self._cert_override,
                     default_mode=0o644,
                     optional=True,
                 ),
             )
         ]
+
+    def _resolve_image(self, job_config: Job) -> str:
+        image = job_config.container_image
+        if self._override_host:
+            image_parts = image.split("/")
+            if len(image_parts) > 1:
+                image_parts[0] = self._override_host
+                image = "/".join(image_parts)
+        return image
 
     def _build_secret(self, job_config: Job, k8s_job: client.V1Job) -> client.V1Secret:
         return client.V1Secret(
@@ -292,40 +341,18 @@ class Kubernetes(Driver):
         )
 
     def _add_selector_if_present(
-        self, template: client.V1PodTemplateSpec, env_var_name: str
+        self, template: client.V1PodTemplateSpec, selector_dict: dict
     ) -> None:
-        selector_dict = self._parse_kube_env_var(env_var_name, dict)
-
         if selector_dict:
             pod_spec: client.V1PodSpec = template.spec
             pod_spec.node_selector = selector_dict
 
     def _add_tolerations_if_present(
-        self, template: client.V1PodTemplateSpec, env_var_name: str
+        self, template: client.V1PodTemplateSpec, tolerations_list: list
     ) -> None:
-        tolerations_list = self._parse_kube_env_var(env_var_name, list)
-
         if tolerations_list:
             pod_spec: client.V1PodSpec = template.spec
             pod_spec.tolerations = tolerations_list
-
-    def _parse_kube_env_var(
-        self, env_var_name: str, expected_type: Type[T]
-    ) -> Optional[T]:
-        env_var_value = os.getenv(env_var_name, "")
-        if not env_var_value:
-            return None
-        try:
-            result = json.loads(env_var_value)
-        except json.decoder.JSONDecodeError as ex:
-            raise KubernetesError(
-                f"Could not deserialize JSON for {env_var_name}"
-            ) from ex
-        if not isinstance(result, expected_type):
-            raise KubernetesError(
-                f"The {env_var_name} variable was not a JSON {expected_type.__name__}, received {env_var_value}"
-            )
-        return result
 
     def _delete_kubernetes_job(self, job: Optional[client.V1Job]):
         """Deletes the input V1Job in the cluster pointed to by the input Api Client."""
@@ -349,12 +376,12 @@ class Kubernetes(Driver):
                 logger.error(f"Could not delete job={job.metadata.name}")
                 logger.error(err_resp)
                 raise KubernetesError(
-                    f"Could not delete job name={job.metadata.name} namespace={GRETEL_WORKER_NAMESPACE}"
+                    f"Could not delete job name={job.metadata.name} namespace={self._gretel_worker_namespace}"
                 ) from ex
 
     def _is_job_active(self, job: client.V1Job) -> bool:
         job_resp: client.V1Job = self._batch_api.read_namespaced_job(
-            job.metadata.name, namespace=GRETEL_WORKER_NAMESPACE
+            job.metadata.name, namespace=self._gretel_worker_namespace
         )
         if not job_resp:
             return False
@@ -376,8 +403,15 @@ class KubernetesDriverDaemon:
         config.load_incluster_config()
         self._core_api = core_api
         self.sleep_length = sleep_length
+        self._gretel_worker_namespace = (
+            os.getenv(WORKER_NAMESPACE_ENV_NAME) or "gretel-workers"
+        )
+        self._gretel_pull_secret = (
+            os.getenv(PULL_SECRET_ENV_NAME) or "gretel-pull-secret"
+        )
+        self._override_host = os.getenv(IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME)
 
-    def update_pull_secret_thread(self) -> None:
+    def start_update_pull_secret_thread(self) -> None:
         thread = Thread(target=self._run_pull_secret_thread, daemon=True)
         thread.start()
 
@@ -394,20 +428,10 @@ class KubernetesDriverDaemon:
                 logger.exception("Error updating pull secret")
             sleep(self.sleep_length)
 
-    def update_liveness_file_thread(self) -> None:
-        thread = Thread(target=self._run_liveness_file_thread, daemon=True)
-        thread.start()
-
-    def _run_liveness_file_thread(self) -> None:
-        while True:
-            self._update_liveness_file()
-            sleep(30)
-
-    def _update_liveness_file(self) -> None:
-        Path(LIVENESS_FILE).touch()
-
     def _create_secret_body(self) -> client.V1Secret:
         auth, server = get_container_auth()
+        if self._override_host:  # We need to authenticate to the appropriate registry
+            server = self._override_host
         username = auth.get("username")
         password = auth.get("password")
         config_json = json.dumps(
@@ -424,7 +448,7 @@ class KubernetesDriverDaemon:
         )
         data = {".dockerconfigjson": _base64_str(config_json)}
         secret = client.V1Secret(
-            metadata=client.V1ObjectMeta(name=GRETEL_PULL_SECRET),
+            metadata=client.V1ObjectMeta(name=self._gretel_pull_secret),
             data=data,
             type="kubernetes.io/dockerconfigjson",
         )
@@ -433,12 +457,12 @@ class KubernetesDriverDaemon:
     def _update_pull_secrets(self) -> None:
         try:
             self._core_api.read_namespaced_secret(
-                GRETEL_PULL_SECRET, GRETEL_WORKER_NAMESPACE
+                self._gretel_pull_secret, self._gretel_worker_namespace
             )
             secret = self._create_secret_body()
             logger.info("Updating pull secret")
             self._core_api.patch_namespaced_secret(
-                GRETEL_PULL_SECRET, GRETEL_WORKER_NAMESPACE, secret
+                self._gretel_pull_secret, self._gretel_worker_namespace, secret
             )
 
         except client.ApiException as ex:
@@ -447,7 +471,7 @@ class KubernetesDriverDaemon:
                 logger.info("Creating pull secret")
                 secret = self._create_secret_body()
                 self._core_api.create_namespaced_secret(
-                    namespace=GRETEL_WORKER_NAMESPACE, body=secret
+                    namespace=self._gretel_worker_namespace, body=secret
                 )
             else:
                 raise ex

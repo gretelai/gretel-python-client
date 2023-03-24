@@ -1,6 +1,8 @@
+import json
 import os
 import uuid
 
+from base64 import b64decode
 from contextlib import contextmanager
 from functools import wraps
 from typing import Callable
@@ -16,6 +18,7 @@ from kubernetes.client import (
     V1Job,
     V1JobSpec,
     V1JobStatus,
+    V1LocalObjectReference,
     V1ObjectMeta,
     V1PodSpec,
     V1PodTemplateSpec,
@@ -32,6 +35,7 @@ from gretel_client.agents.drivers.k8s import (
     CPU_TOLERATIONS_ENV_NAME,
     GPU_NODE_SELECTOR_ENV_NAME,
     GPU_TOLERATIONS_ENV_NAME,
+    IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME,
     Kubernetes,
     KubernetesDriverDaemon,
     KubernetesError,
@@ -43,7 +47,7 @@ def get_mock_job(instance_type: str = "cpu-standard") -> dict:
     return {
         "run_id": "run-id",
         "job_type": "run",
-        "container_image": "gretelai/transforms",
+        "container_image": "555.dkr.ecr.us-east-1.amazonaws.com/gretelai/transforms",
         "worker_token": "abcdef1243",
         "instance_type": instance_type,
     }
@@ -84,10 +88,19 @@ def patch_cpu_environ(var_value: str):
 
 
 @contextmanager
-def patch_toleration_environ(var_value: str):
+def patch_gpu_toleration_environ(var_value: str):
     with patch.dict(
         os.environ,
-        {GPU_TOLERATIONS_ENV_NAME: var_value, CPU_TOLERATIONS_ENV_NAME: var_value},
+        {GPU_TOLERATIONS_ENV_NAME: var_value},
+    ):
+        yield
+
+
+@contextmanager
+def patch_cpu_toleration_environ(var_value: str):
+    with patch.dict(
+        os.environ,
+        {CPU_TOLERATIONS_ENV_NAME: var_value},
     ):
         yield
 
@@ -99,7 +112,7 @@ def patch_cpu_count_environ(var_value: str):
 
 
 @contextmanager
-def patch_cert_env(configmap_name: str, cert_path: str):
+def patch_cert_env(configmap_name: str):
     with patch.dict(
         os.environ,
         {
@@ -109,10 +122,20 @@ def patch_cert_env(configmap_name: str, cert_path: str):
         yield
 
 
+@contextmanager
+def patch_image_registry(override_url: str):
+    with patch.dict(
+        os.environ,
+        {
+            IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME: override_url,
+        },
+    ):
+        yield
+
+
 class TestKubernetesDriver(TestCase):
     @patch_auth
     def setUp(self) -> None:
-        os.environ["SHOULD_RUN_THREAD_ONCE"] = "true"
         self.config = AgentConfig(
             driver="k8s",
             creds=[],
@@ -127,6 +150,10 @@ class TestKubernetesDriver(TestCase):
         self.driver = Kubernetes(
             self.config, batch_api=self.batch_api, core_api=self.core_api
         )
+
+    def reload_env_and_build_job(self, job: Job) -> V1Job:
+        self.driver._load_env_and_set_vars()
+        return self.driver._build_job(job)
 
     def test_job_active_none(self):
         self.assertFalse(self.driver.active(None))
@@ -188,64 +215,81 @@ class TestKubernetesDriver(TestCase):
         self.batch_api.create_namespaced_job.assert_called_once()
         self.core_api.read_namespaced_secret.assert_called_once()
 
+    def test_schedule_job_secret_already_exists(self):
+        self.core_api.create_namespaced_secret.side_effect = self._create_api_exception(
+            405, '{"reason":"AlreadyExists"}'
+        )
+
+        result = self.driver.schedule(self.job)
+        assert result is not None
+        self.batch_api.create_namespaced_job.assert_called_once()
+        self.core_api.create_namespaced_secret.assert_called_once()
+
+    def test_schedule_job_secret_error(self):
+        self.core_api.create_namespaced_secret.side_effect = self._create_api_exception(
+            500, '{"reason":"SomethingBad"}'
+        )
+        with self.assertRaisesRegex(KubernetesError, "Could not create job"):
+            self.driver.schedule(self.job)
+
+    @patch_gpu_environ("")
     def test_build_job_gpu_req(self):
-        with patch_gpu_environ(""):
-            job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
+        job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
 
-            k8s_job = self.driver._build_job(job)
+        k8s_job = self.reload_env_and_build_job(job)
 
-            job_spec: V1JobSpec = k8s_job.spec
-            job_template: V1PodTemplateSpec = job_spec.template
-            expected_resources = {"memory": "14Gi", "nvidia.com/gpu": "1"}
-            self.assertEqual(
-                expected_resources,
-                job_template.spec.containers[0].resources.limits,
-            )
-            expected_resources["cpu"] = "1"
-            self.assertEqual(
-                expected_resources,
-                job_template.spec.containers[0].resources.requests,
-            )
+        job_spec: V1JobSpec = k8s_job.spec
+        job_template: V1PodTemplateSpec = job_spec.template
+        expected_resources = {"memory": "14Gi", "nvidia.com/gpu": "1"}
+        self.assertEqual(
+            expected_resources,
+            job_template.spec.containers[0].resources.limits,
+        )
+        expected_resources["cpu"] = "1"
+        self.assertEqual(
+            expected_resources,
+            job_template.spec.containers[0].resources.requests,
+        )
 
+    @patch_gpu_environ('{"cloud.google.com/gke-accelerator":"nvidia-tesla-t4"}')
     def test_build_job_gpu_req_node_selector_set(self):
-        with patch_gpu_environ(
-            '{"cloud.google.com/gke-accelerator":"nvidia-tesla-t4"}'
-        ):
-            job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
+        job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
 
-            k8s_job = self.driver._build_job(job)
+        k8s_job = self.reload_env_and_build_job(job)
 
-            job_spec: V1JobSpec = k8s_job.spec
-            job_template: V1PodTemplateSpec = job_spec.template
-            self.assertEqual(
-                {"memory": "14Gi", "nvidia.com/gpu": "1"},
-                job_template.spec.containers[0].resources.limits,
-            )
+        job_spec: V1JobSpec = k8s_job.spec
+        job_template: V1PodTemplateSpec = job_spec.template
+        self.assertEqual(
+            {"memory": "14Gi", "nvidia.com/gpu": "1"},
+            job_template.spec.containers[0].resources.limits,
+        )
 
-            self.assertEqual(
-                {"cloud.google.com/gke-accelerator": "nvidia-tesla-t4"},
-                job_template.spec.node_selector,
-            )
+        self.assertEqual(
+            {"cloud.google.com/gke-accelerator": "nvidia-tesla-t4"},
+            job_template.spec.node_selector,
+        )
 
+    @patch_cpu_toleration_environ('[{"key":"dedicated", "value": "gretel"}]')
+    @patch_gpu_toleration_environ('[{"key":"dedicated", "value": "gretel"}]')
     def test_build_job_tolerations_set(self):
-        for job_data in [get_mock_job(), get_mock_job("gpu-standard")]:
-            with patch_toleration_environ(
-                '[{"key":"dedicated", "value": "gpu-standard"}]'
-            ):
+        for job_type in ["cpu-standard", "gpu-standard"]:
+            with self.subTest(job_type):
+                job_data = get_mock_job(job_type)
                 job = Job.from_dict(job_data, self.config)
 
-                k8s_job = self.driver._build_job(job)
+                k8s_job = self.reload_env_and_build_job(job)
 
                 job_spec: V1JobSpec = k8s_job.spec
                 job_template: V1PodTemplateSpec = job_spec.template
 
                 self.assertEqual(
-                    [{"key": "dedicated", "value": "gpu-standard"}],
+                    [{"key": "dedicated", "value": "gretel"}],
                     job_template.spec.tolerations,
                 )
 
     def test_build_job_cpu_req_node_selector_set(self):
         with patch_cpu_environ('{"selector":"my-cpu-node"}'):
+            self.driver._load_env_and_set_vars()
             job = Job.from_dict(get_mock_job(), self.config)
 
             k8s_job = self.driver._build_job(job)
@@ -256,7 +300,7 @@ class TestKubernetesDriver(TestCase):
                 {"memory": "14Gi"},
                 job_template.spec.containers[0].resources.limits,
             )
-            print(job_template.spec)
+
             self.assertEqual(
                 {"selector": "my-cpu-node"},
                 job_template.spec.node_selector,
@@ -264,55 +308,53 @@ class TestKubernetesDriver(TestCase):
 
     def test_build_job_gpu_req_node_selector_set_invalid(self):
         with patch_gpu_environ("{"):
-            job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
             with self.assertRaisesRegex(KubernetesError, "Could not deserialize JSON"):
-                self.driver._build_job(job)
+                Kubernetes(
+                    self.config, batch_api=self.batch_api, core_api=self.core_api
+                )
 
     def test_build_job_node_toleration_set_invalid(self):
-        with patch_toleration_environ("{"):
-            job = Job.from_dict(get_mock_job(), self.config)
+        with patch_cpu_toleration_environ("{"):
             with self.assertRaisesRegex(KubernetesError, "Could not deserialize JSON"):
-                self.driver._build_job(job)
+                Kubernetes(
+                    self.config, batch_api=self.batch_api, core_api=self.core_api
+                )
 
     def test_build_job_gpu_req_node_selector_set_not_dictionary(self):
         for test_val in ["1", "[1,2,3]", "[]"]:
             with patch_gpu_environ(test_val):
-                job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
                 with self.assertRaisesRegex(
                     KubernetesError,
                     "The GPU_NODE_SELECTOR variable was not a JSON dict",
                 ):
-                    self.driver._build_job(job)
+                    self.driver._load_env_and_set_vars()
 
+    @patch_cpu_environ("{")
     def test_build_job_cpu_req_node_selector_set_invalid(self):
-        with patch_cpu_environ("{"):
-            job = Job.from_dict(get_mock_job(), self.config)
-            with self.assertRaisesRegex(KubernetesError, "Could not deserialize JSON"):
-                self.driver._build_job(job)
+        with self.assertRaisesRegex(KubernetesError, "Could not deserialize JSON"):
+            self.driver._load_env_and_set_vars()
 
     def test_build_job_cpu_req_node_selector_set_not_dictionary(self):
         for test_val in ["1", "[1,2,3]", "[]"]:
             with patch_cpu_environ(test_val):
-                job = Job.from_dict(get_mock_job(), self.config)
                 with self.assertRaisesRegex(
                     KubernetesError,
                     "The CPU_NODE_SELECTOR variable was not a JSON dict",
                 ):
-                    self.driver._build_job(job)
+                    self.driver._load_env_and_set_vars()
 
     def test_tolerations_set_not_list(self):
         for test_val in ["1", '{"key":"val"}', '"abc"']:
-            with patch_toleration_environ(test_val):
-                job = Job.from_dict(get_mock_job(), self.config)
+            with patch_cpu_toleration_environ(test_val):
                 with self.assertRaisesRegex(
                     KubernetesError, "The CPU_TOLERATIONS variable was not a JSON list"
                 ):
-                    self.driver._build_job(job)
-                job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
+                    self.driver._load_env_and_set_vars()
+            with patch_gpu_toleration_environ(test_val):
                 with self.assertRaisesRegex(
                     KubernetesError, "The GPU_TOLERATIONS variable was not a JSON list"
                 ):
-                    self.driver._build_job(job)
+                    self.driver._load_env_and_set_vars()
 
     def test_cpu_count_not_set_properly(self):
         for val in ["5.3", "-1", "something"]:
@@ -322,12 +364,12 @@ class TestKubernetesDriver(TestCase):
                     KubernetesError,
                     f"Gretel CPU Count must be an integer, instead received {val}",
                 ):
-                    self.driver._build_job(job)
+                    self.reload_env_and_build_job(job)
 
     def test_cpu_count_set_properly(self):
         with patch_cpu_count_environ("5"):
             job = Job.from_dict(get_mock_job(), self.config)
-            k8s_job = self.driver._build_job(job)
+            k8s_job = self.reload_env_and_build_job(job)
 
             job_spec: V1JobSpec = k8s_job.spec
             job_template: V1PodTemplateSpec = job_spec.template
@@ -388,11 +430,7 @@ class TestKubernetesDriver(TestCase):
 
     @patch_auth
     @patch(
-        "gretel_client.agents.drivers.k8s.KubernetesDriverDaemon.update_pull_secret_thread",
-        lambda *args: None,
-    )
-    @patch(
-        "gretel_client.agents.drivers.k8s.KubernetesDriverDaemon.update_liveness_file_thread",
+        "gretel_client.agents.drivers.k8s.KubernetesDriverDaemon.start_update_pull_secret_thread",
         lambda *args: None,
     )
     def test_contruct_driver(self):
@@ -426,11 +464,11 @@ class TestKubernetesDriver(TestCase):
         assert 4 == core_api.patch_namespaced_secret.call_count
         assert 1 == core_api.create_namespaced_secret.call_count
 
-    @patch_cert_env("my-cert-configmap", "/usr/local/share/ca-certificates/ca.crt")
+    @patch_cert_env("my-cert-configmap")
     def test_build_job_with_custom_certs(self):
         job = Job.from_dict(get_mock_job(), self.config)
 
-        k8s_job = self.driver._build_job(job)
+        k8s_job = self.reload_env_and_build_job(job)
 
         job_spec: V1JobSpec = k8s_job.spec
         pod_template: V1PodTemplateSpec = job_spec.template
@@ -449,3 +487,38 @@ class TestKubernetesDriver(TestCase):
         assert config_map.optional
         assert config_map.name == "my-cert-configmap"
         assert config_map.default_mode == 0o0644
+
+    @patch_image_registry("shiny-new-reg.example.ai")
+    def test_build_job_image_url_override(self):
+        job = Job.from_dict(get_mock_job(), self.config)
+        k8s_job = self.reload_env_and_build_job(job)
+
+        job_spec: V1JobSpec = k8s_job.spec
+        pod_template: V1PodTemplateSpec = job_spec.template
+        pod_spec: V1PodSpec = pod_template.spec
+        container: V1Container = pod_spec.containers[0]
+
+        assert container.image == "shiny-new-reg.example.ai/gretelai/transforms"
+        assert pod_spec.image_pull_secrets == [
+            V1LocalObjectReference(name="gretel-pull-secret")
+        ]
+
+    @patch_image_registry("shiny-new-reg.example.ai")
+    def test_resolve_image_only_one_part(self):
+        job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
+        original_image = "busybox:latest"
+        job.container_image = original_image
+
+        image = self.driver._resolve_image(job)
+
+        assert image == original_image
+
+    @patch_auth
+    @patch_image_registry("shiny-new-reg.example.ai")
+    def test_create_secret_with_override(self):
+        worker = KubernetesDriverDaemon(self.config, self.core_api)
+        secret = worker._create_secret_body()
+        decoded_str = b64decode(secret.data[".dockerconfigjson"]).decode("utf-8")
+        dockerconfig_json = json.loads(decoded_str)
+        assert "auths" in dockerconfig_json
+        assert list(dockerconfig_json["auths"].keys())[0] == "shiny-new-reg.example.ai"
