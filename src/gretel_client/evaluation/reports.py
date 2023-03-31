@@ -118,12 +118,12 @@ class BaseReport(ABC):
         job = model.submit_cloud()
         self._await_completion(job)
 
-        self._report_dict = json.loads(
-            smart_open.open(job.get_artifact_link(f"{base_artifact_name}_json")).read()
-        )
-        self._report_html = smart_open.open(
+        with smart_open.open(job.get_artifact_link(f"{base_artifact_name}_json")) as f:
+            self._report_dict = json.load(f)
+        with smart_open.open(
             job.get_artifact_link(f"{base_artifact_name}"), encoding="utf8"
-        ).read()
+        ) as f:
+            self._report_html = f.read()
 
     def _run_local(self, model: Model, base_artifact_name: str = "report"):
         submit_docker_local(model, output_dir=self.output_dir)

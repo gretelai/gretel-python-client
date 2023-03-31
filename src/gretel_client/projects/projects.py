@@ -240,14 +240,13 @@ class Project:
         with smart_open.open(
             artifact_path, "rb", ignore_ext=True
         ) as src:  # type:ignore
-            src_data = src.read()
             art_resp = self.projects_api.create_artifact(
                 project_id=self.name, artifact=Artifact(filename=file_name)
             )
             artifact_key = art_resp["data"]["key"]
             upload_resp = requests.put(
                 art_resp["data"]["url"],
-                data=src_data,
+                data=src,
             )
             if upload_resp.status_code != 200:
                 upload_resp.raise_for_status()
