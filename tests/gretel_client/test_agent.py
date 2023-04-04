@@ -135,6 +135,28 @@ def test_agent_job_poller(agent_config: AgentConfig):
     assert job.worker_token == job_data["worker_token"]
 
 
+def test_agent_job_poller_without_project_specified(agent_config: AgentConfig):
+    agent_config.project = None
+
+    jobs_api = MagicMock()
+    rate_limiter = MagicMock()
+    poller = Poller(jobs_api, rate_limiter, agent_config)
+
+    job_data = get_mock_job()
+
+    jobs_api.receive_one.return_value = {"data": {"job": job_data}}
+
+    job = next(poller)
+
+    jobs_api.receive_one.assert_called_once_with()
+
+    assert job
+    assert job.uid == job_data["run_id"]
+    assert job.job_type == job_data["job_type"]
+    assert job.container_image == job_data["container_image"]
+    assert job.worker_token == job_data["worker_token"]
+
+
 @patch("gretel_client.agents.agent.get_session_config")
 @patch("gretel_client.agents.drivers.docker.build_container")
 def test_job_with_ca_bundle(docker_client: MagicMock, get_session_config: MagicMock):

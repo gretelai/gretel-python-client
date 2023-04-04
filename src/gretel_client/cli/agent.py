@@ -7,7 +7,7 @@ import click
 
 from gretel_client.agents.agent import AgentConfig, get_agent
 from gretel_client.agents.drivers.driver import GPU
-from gretel_client.cli.common import pass_session, project_option, SessionContext
+from gretel_client.cli.common import pass_session, SessionContext
 from gretel_client.config import get_session_config
 from gretel_client.docker import AwsCredFile, CaCertFile, check_gpu, DataVolumeDef
 
@@ -35,7 +35,13 @@ def build_logger(job_id: str) -> Callable:
 @click.option(
     "--max-workers", metavar="COUNT", help="Max number of workers to launch.", default=2
 )
-@project_option
+@click.option(
+    "--project",
+    allow_from_autoenv=True,
+    envvar="GRETEL_DEFAULT_PROJECT",
+    help="Gretel project to execute command from.",
+    metavar="NAME",
+)
 @click.option(
     "--aws-cred-path",
     metavar="PATH",

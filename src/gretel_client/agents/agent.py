@@ -134,7 +134,10 @@ class AgentConfig:
         return asdict(self)
 
     @cached_property
-    def project_id(self) -> str:
+    def project_id(self) -> Optional[str]:
+        if self.project is None:
+            return None
+
         project = get_project(name=self.project)
         return project.project_id
 
@@ -303,7 +306,11 @@ class Poller(Iterator):
         return self._interrupt.set()
 
     def poll_endpoint(self) -> Optional[Job]:
-        next_job = self._jobs_api.receive_one(project_id=self._agent_config.project_id)
+        api_kwargs = {}
+        project_id = self._agent_config.project_id
+        if project_id is not None:
+            api_kwargs["project_id"] = project_id
+        next_job = self._jobs_api.receive_one(**api_kwargs)
         if next_job["data"]["job"] is not None:
             return Job.from_dict(next_job["data"]["job"], self._agent_config)
 

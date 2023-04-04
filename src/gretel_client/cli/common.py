@@ -275,7 +275,7 @@ def project_option(fn):
     return click.option(  # type:ignore
         "--project",
         allow_from_autoenv=True,
-        envvar="GRETEl_DEFAULT_PROJECT",
+        envvar="GRETEL_DEFAULT_PROJECT",
         help="Gretel project to execute command from.",
         metavar="NAME",
         callback=callback,
