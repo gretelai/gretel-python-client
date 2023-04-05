@@ -1,4 +1,6 @@
+import json
 import os
+import tempfile
 
 from pathlib import Path
 from unittest import mock
@@ -13,10 +15,22 @@ from gretel_client.config import (
     configure_session,
     get_session_config,
     GRETEL_PREVIEW_FEATURES,
+    GretelClientConfigurationError,
     PreviewFeatures,
+    RunnerMode,
     write_config,
 )
 from gretel_client.rest.api.projects_api import ProjectsApi
+
+
+def test_custom_artifact_endpoint_requires_hybrid_runner():
+    with pytest.raises(GretelClientConfigurationError):
+        ClientConfig(artifact_endpoint="s3://my-bucket")
+
+
+def test_hybrid_runner_cannot_run_without_custom_artifact_endpoint():
+    with pytest.raises(GretelClientConfigurationError):
+        ClientConfig(default_runner="hybrid")
 
 
 def test_does_read_and_write_config(dev_ep, tmpdir):
@@ -101,6 +115,93 @@ def test_clear_gretel_config(_get_config_path: MagicMock):
     config_path = _get_config_path.return_value
     config_path.unlink.assert_called_once()
     config_path.parent.rmdir.assert_called_once()
+
+
+@patch("gretel_client.config._get_config_path")
+def test_configure_hybrid_session(_get_config_path, dev_ep):
+    _get_config_path.return_value = Path("/path/that/does/not/exist")
+    with patch.dict(os.environ, {}, clear=True):
+        configure_session(
+            api_key="grtu...",
+            endpoint=dev_ep,
+            default_runner="hybrid",
+            artifact_endpoint="s3://my-bucket",
+        )
+    config = get_session_config()
+
+    assert config.api_key == "grtu..."
+    assert config.endpoint == dev_ep
+    assert config.default_runner == RunnerMode.HYBRID
+    assert config.artifact_endpoint == "s3://my-bucket"
+
+
+@patch("gretel_client.config._get_config_path")
+@pytest.mark.parametrize("cache", ["yes", "no"])
+@pytest.mark.parametrize("api_key", ["prompt", "grtu...NEW", None])
+def test_configure_session_cached_values_plus_overrides(
+    _get_config_path, api_key, cache, dev_ep
+):
+
+    cached_config = {
+        "api_key": "grtu...CACHED",
+        "default_runner": "hybrid",
+        "artifact_endpoint": "s3://bucket-abc",
+        "endpoint": dev_ep,
+    }
+    with tempfile.NamedTemporaryFile() as tmp:
+        with open(tmp.name, "w") as f:
+            json.dump(cached_config, f)
+
+        _get_config_path.return_value = Path(tmp.name)
+
+        configure_session(
+            artifact_endpoint="s3://bucket-xyz",
+            api_key=api_key,
+            cache=cache,
+        )
+        config = get_session_config()
+
+        cached_config_after = json.load(tmp)
+
+    if api_key == "prompt" or api_key is None:
+        # We pick up the cached api key
+        expected_api_key = "grtu...CACHED"
+    elif api_key == "grtu...NEW":
+        # We set the explicit api key
+        expected_api_key = "grtu...NEW"
+
+    # Override values are set on session
+    assert config.artifact_endpoint == "s3://bucket-xyz"
+    assert config.api_key == expected_api_key
+    # Keys not specified in configure_session inherit values from cached file
+    assert config.default_runner == "hybrid"
+    assert config.endpoint == dev_ep
+
+    # Cached file is not mutated, even when cache="yes" (which only writes to disk if a file is not already present)
+    assert cached_config_after == cached_config
+
+
+@patch("gretel_client.config._get_config_path")
+def test_configure_session_cached_values_plus_invalid_overrides(
+    _get_config_path, dev_ep
+):
+    cached_config = {
+        "api_key": "GRTU...",
+        "default_runner": "cloud",
+        "artifact_endpoint": "cloud",
+        "endpoint": dev_ep,
+    }
+    with tempfile.NamedTemporaryFile() as tmp:
+        with open(tmp.name, "w") as f:
+            json.dump(cached_config, f)
+
+        _get_config_path.return_value = Path(tmp.name)
+
+        with pytest.raises(GretelClientConfigurationError):
+            configure_session(
+                api_key="grtu...",
+                artifact_endpoint="s3://bucket-xyz",
+            )
 
 
 @patch("urllib3.PoolManager")

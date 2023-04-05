@@ -3,7 +3,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from gretel_client.config import configure_session
+from gretel_client.config import (
+    configure_session,
+    DEFAULT_GRETEL_ARTIFACT_ENDPOINT,
+    DEFAULT_RUNNER,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -18,7 +22,12 @@ def get_fixture():
 
 @pytest.fixture(scope="function", autouse=True)
 def configure_session_client():
-    configure_session(MagicMock())
+    configure_session(
+        MagicMock(
+            default_runner=DEFAULT_RUNNER,
+            artifact_endpoint=DEFAULT_GRETEL_ARTIFACT_ENDPOINT,
+        )
+    )
 
 
 @pytest.fixture

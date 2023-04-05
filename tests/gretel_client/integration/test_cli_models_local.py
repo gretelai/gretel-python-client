@@ -218,11 +218,6 @@ def test_records_generate_with_model_run(
             trained_synth_model.project.project_id,
             "--model-id",
             trained_synth_model.model_id,
-            # TODO: Using --action for backward compatibility.
-            #  As the current backend requires that value.
-            #  Can be removed after ENGPLAT-22 is shipped
-            "--action",
-            "generate",
             "--output",
             str(tmpdir),
             "--runner",
@@ -279,11 +274,6 @@ def test_records_transform_with_model_run(
             "run",
             "--model-id",
             trained_xf_model.model_id,
-            # TODO: Using --action for backward compatibility.
-            #  As the current backend requires that value.
-            #  Can be removed after ENGPLAT-22 is shipped
-            "--action",
-            "transform",
             "--project",
             trained_xf_model.project.project_id,
             "--in-data",

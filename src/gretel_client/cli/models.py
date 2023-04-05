@@ -151,11 +151,9 @@ def create(
 
     # Create the model and the data source
     sc.log.info("Creating model.")
-    run = model._submit(
-        runner_mode=RunnerMode(runner),
+    run = model.submit(
+        runner_mode=RunnerMode.parse(runner),
         dry_run=dry_run,
-        _validate_data_source=False,
-        _default_manual=True,
     )
     sc.register_cleanup(lambda: model.cancel())
     sc.log.info(f"Model created with ID {model.model_id}.")
@@ -171,9 +169,8 @@ def create(
 
     # Start a local container when --runner is LOCAL
     #
-    # The `_default_manual` flag in the call to `Model._submit()` above will
-    # trigger the model to have been created in manual mode so at this point
-    # the model instance is hydrated with the data from the Cloud API
+    # The submit call above will have triggered the model to have been created in manual mode
+    # so at this point the model instance is hydrated with the data from the Cloud API
     run = None
     if runner == RunnerMode.LOCAL.value:
         run = ContainerRun.from_job(model)

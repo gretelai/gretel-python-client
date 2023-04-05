@@ -10,6 +10,7 @@ import yaml
 
 from gretel_client.cli.utils.parser_utils import RefData
 from gretel_client.config import RunnerMode
+from gretel_client.projects.artifact_handlers import CloudArtifactsHandler
 from gretel_client.projects.exceptions import DataSourceError
 from gretel_client.projects.models import Model, ModelConfigError, read_model_config
 
@@ -157,20 +158,14 @@ def test_model_submit_bad_runner_modes(m: Model):
 
     with pytest.raises(ValueError) as err:
         m.submit(runner_mode=123)
-    assert "Invalid runner_mode type" in str(err)
-
-
-def test_model_submit_no_local_mode(m: Model):
-    with pytest.raises(ValueError) as err:
-        m.submit(runner_mode="local")
-    assert "local" in str(err)
+    assert "Invalid runner_mode: 123" in str(err)
 
 
 @patch("time.sleep")
 def test_does_poll_status_and_logs(
     sleep_patch: MagicMock, m: Model, model_logs: List[dict]
 ):
-    m._submit(runner_mode=RunnerMode.LOCAL, _default_manual=True)
+    m.submit(runner_mode=RunnerMode.LOCAL)
     m._projects_api.get_model.side_effect = [  # type:ignore
         {"data": {"model": {"status": "created"}}},
         {"data": {"model": {"status": "pending"}}},
@@ -223,12 +218,11 @@ def test_does_populate_record_details(
     m: Model, create_record_handler_resp: dict, get_record_handler_resp: dict
 ):
     m._poll_job_endpoint()
-    record_handler = m.create_record_handler_obj()
-    record_handler.submit(
-        action="transform",
-        runner_mode=RunnerMode.LOCAL,
+    record_handler = m.create_record_handler_obj(
         data_source="path/to/datasource.csv",
-        _default_manual=True,
+    )
+    record_handler.submit(
+        runner_mode=RunnerMode.LOCAL,
     )
     assert (
         record_handler.status.value
@@ -360,6 +354,9 @@ def test_does_write_artifacts_to_disk(tmpdir: Path, m: Model):
     )
     files = ["account-balances.csv", "report_json.json.gz", "model.tar.gz"]
     keys = ["data_preview", "report_json", "model"]
+    m.project.default_artifacts_handler = CloudArtifactsHandler(
+        MagicMock(), m.project.project_id, m.project.project_name
+    )
     m.get_artifacts = MagicMock(
         return_value=iter(zip(keys, [base_endpoint + f for f in files]))
     )

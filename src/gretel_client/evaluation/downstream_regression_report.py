@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional, Union
 
-from gretel_client.config import RunnerMode
+from gretel_client.config import get_session_config, RunnerMode
 from gretel_client.evaluation.reports import BaseReport, ReportDictType
 from gretel_client.projects.common import DataSourceTypes, RefDataTypes
 from gretel_client.projects.models import Model
@@ -48,6 +48,10 @@ class DownstreamRegressionReport(BaseReport):
     def model_config(self) -> dict:
         return self._model_dict
 
+    @property
+    def base_artifact_name(self) -> str:
+        return "regression_report"
+
     # TODO alternative with config file??
     def __init__(
         self,
@@ -61,13 +65,16 @@ class DownstreamRegressionReport(BaseReport):
         data_source: DataSourceTypes,
         ref_data: RefDataTypes,
         output_dir: Optional[Union[str, Path]] = None,
-        runner_mode: Optional[RunnerMode] = RunnerMode.CLOUD,
+        runner_mode: Optional[RunnerMode] = None,
     ):
+        runner_mode = runner_mode or get_session_config().default_runner
         if not isinstance(runner_mode, RunnerMode):
             raise ValueError("Invalid runner_mode type, must be RunnerMode enum.")
 
         if runner_mode == RunnerMode.MANUAL:
-            raise ValueError("Cannot use manual mode. Please use CLOUD or LOCAL.")
+            raise ValueError(
+                "Cannot use manual mode. Please use CLOUD, LOCAL, or HYBRID."
+            )
 
         if not target:
             raise ValueError("A nonempty target is required.")
@@ -87,12 +94,6 @@ class DownstreamRegressionReport(BaseReport):
         params["metric"] = metric
 
         super().__init__(project, data_source, ref_data, output_dir, runner_mode)
-
-    def _run_cloud(self, model: Model):
-        super()._run_cloud(model, base_artifact_name="regression_report")
-
-    def _run_local(self, model: Model):
-        super()._run_local(model, base_artifact_name="regression_report")
 
     def peek(self) -> Optional[ReportDictType]:
         super()._check_model_run()

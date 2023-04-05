@@ -43,7 +43,9 @@ def test_manual_runner_mode_raises_an_exception(
             output_dir=tmpdir,
             runner_mode=runner_mode,
         )
-    assert str(err.value) == "Cannot use manual mode. Please use CLOUD or LOCAL."
+    assert (
+        str(err.value) == "Cannot use manual mode. Please use CLOUD, LOCAL, or HYBRID."
+    )
 
 
 @pytest.mark.parametrize(

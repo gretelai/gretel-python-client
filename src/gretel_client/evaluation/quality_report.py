@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Union
 
-from gretel_client.config import RunnerMode
+from gretel_client.config import get_session_config, RunnerMode
 from gretel_client.evaluation.reports import BaseReport, ReportDictType
 from gretel_client.projects.common import DataSourceTypes, RefDataTypes
 from gretel_client.projects.projects import Project
@@ -33,6 +33,10 @@ class QualityReport(BaseReport):
     def model_config(self) -> dict:
         return self._model_dict
 
+    @property
+    def base_artifact_name(self) -> str:
+        return "report"
+
     def __init__(
         self,
         *,
@@ -41,13 +45,16 @@ class QualityReport(BaseReport):
         data_source: DataSourceTypes,
         ref_data: RefDataTypes,
         output_dir: Optional[Union[str, Path]] = None,
-        runner_mode: Optional[RunnerMode] = RunnerMode.CLOUD,
+        runner_mode: Optional[RunnerMode] = None,
     ):
+        runner_mode = runner_mode or get_session_config().default_runner
         if not isinstance(runner_mode, RunnerMode):
             raise ValueError("Invalid runner_mode type, must be RunnerMode enum.")
 
         if runner_mode == RunnerMode.MANUAL:
-            raise ValueError("Cannot use manual mode. Please use CLOUD or LOCAL.")
+            raise ValueError(
+                "Cannot use manual mode. Please use CLOUD, LOCAL, or HYBRID."
+            )
 
         # Update the model name if one was provided
         if name is not None:

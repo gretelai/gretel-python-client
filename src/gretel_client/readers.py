@@ -19,18 +19,12 @@ from tenacity import (
     wait_exponential,
 )
 
+from gretel_client.dataframe import _DataFrameT
+
 try:
     import pandas as pd
 except ImportError:  # pragma: no cover
     pd = None
-
-
-if TYPE_CHECKING:  # pragma: no cover
-    from pandas import DataFrame as _DataFrameT
-else:
-
-    class _DataFrameT:
-        ...  # noqa
 
 
 class ReaderError(Exception):

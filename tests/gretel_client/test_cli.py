@@ -81,7 +81,7 @@ def get_project() -> MagicMock:
         get_project_mock._data = {}
 
         model = get_project.return_value.create_model_obj.return_value
-        model._submit.return_value = model
+        model.submit.return_value = model
 
         yield get_project
 
@@ -230,7 +230,6 @@ def test_does_pass_through_manual_artifacts(
         ANY,
         params=None,
         data_source="s3://test/object.csv",
-        action="transform",
         runner="manual",
         output=None,
         in_data="s3://test/object.csv",
@@ -265,13 +264,9 @@ def test_does_run_manual_artifacts(
     create_record_handler.assert_called_once_with(
         ANY,
         params=None,
-        action=None,
         in_data="s3://test/object.csv",
         data_source="s3://test/object.csv",
         ref_data=RefData(
-            ref_dict={0: "gcs://test/test-data.csv", 1: "azure://test.csv"}
-        ),
-        config_ref_data=RefData(
             ref_dict={0: "gcs://test/test-data.csv", 1: "azure://test.csv"}
         ),
         runner="manual",

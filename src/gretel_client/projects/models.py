@@ -20,10 +20,10 @@ from gretel_client.cli.utils.parser_utils import (
     RefData,
     RefDataTypes,
 )
-from gretel_client.config import get_logger, RunnerMode
+from gretel_client.config import get_logger, get_session_config, RunnerMode
+from gretel_client.dataframe import _DataFrameT
 from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.common import (
-    _DataFrameT,
     f,
     ModelArtifact,
     NO,
@@ -178,9 +178,6 @@ class Model(Job):
         self,
         runner_mode: RunnerMode,
         dry_run: bool = False,
-        upload_data_source: bool = False,
-        _validate_data_source: bool = True,
-        _default_manual: bool = False,
     ) -> Model:
         """Submits a model to be run.
 
@@ -189,11 +186,6 @@ class Model(Job):
                 for a list of valid modes. Local mode is not explicitly supported.
             dry_run: If set to True the model config will be submitted for
                 validation, but won't be run.
-            upload_data_source: If set to True the model's data source will
-                be resolved and downloaded to the host machine and then uploaded
-                as a Gretel Cloud artifact. This is enabled by default to
-                ease UX for SDK users. This flag will be ignored if the
-                runner mode is not "cloud."
 
         Raises:
             - ``ModelConfigError`` if the specified model config is invalid.
@@ -207,29 +199,11 @@ class Model(Job):
         if self.model_id:
             raise RuntimeError("This model was already submitted.")
 
-        if not isinstance(runner_mode, RunnerMode):
-            raise ValueError(
-                "Invalid runner_mode type, must be str or RunnerMode enum."
-            )
-
-        if runner_mode == RunnerMode.LOCAL and not _default_manual:
-            raise ValueError("Cannot use local mode.")
-
-        if upload_data_source and runner_mode == RunnerMode.CLOUD:
-            self.upload_data_source(_validate=_validate_data_source)
-            self.upload_ref_data(_validate=_validate_data_source)
-
-        # If the runner mode is NOT set to cloud mode, check if we should
-        # fall back to manual mode, this is useful when running local
-        # mode from the CLI.
-        if runner_mode != RunnerMode.CLOUD and _default_manual:
-            runner_mode = RunnerMode.MANUAL
-
         resp = self._projects_api.create_model(
             project_id=self.project.name,
             body=self._local_model_config,
             dry_run=YES if dry_run else NO,
-            runner_mode=runner_mode.value,
+            runner_mode=runner_mode.api_value,
         )
 
         self._data: dict = resp[f.DATA]
@@ -238,10 +212,10 @@ class Model(Job):
         return self
 
     def _do_get_artifact(self, artifact_type: str) -> str:
-        art_resp = self._projects_api.get_model_artifact(
-            project_id=self.project.name, model_id=self.model_id, type=artifact_type
+        return self.project.default_artifacts_handler.get_model_artifact_link(
+            model_id=self.model_id,
+            artifact_type=artifact_type,
         )
-        return art_resp["data"]["url"]
 
     @property
     def container_image(self) -> str:

@@ -31,6 +31,11 @@ GRETEL_ENDPOINT = "GRETEL_ENDPOINT"
 to DEFAULT_GRETEL_ENDPOINT.
 """
 
+GRETEL_ARTIFACT_ENDPOINT = "GRETEL_ARTIFACT_ENDPOINT"
+"""Env variable name to configure artifact endpoint. Defaults
+to DEFAULT_GRETEL_ARTIFACT_ENDPOINT.
+"""
+
 GRETEL_CONFIG_FILE = "GRETEL_CONFIG_FILE"
 """Env variable name to override default configuration file location"""
 
@@ -39,6 +44,9 @@ GRETEL_PROJECT = "GRETEL_PROJECT"
 
 DEFAULT_GRETEL_ENDPOINT = "https://api.gretel.cloud"
 """Default gretel endpoint"""
+
+DEFAULT_GRETEL_ARTIFACT_ENDPOINT = "cloud"
+"""Default artifact endpoint"""
 
 GRETEL_PREVIEW_FEATURES = "GRETEL_PREVIEW_FEATURES"
 """Env variable to manage preview features"""
@@ -75,10 +83,27 @@ class GretelClientConfigurationError(Exception):
 T = TypeVar("T", bound=Type)
 
 
-class RunnerMode(Enum):
+class RunnerMode(str, Enum):
     LOCAL = "local"
     CLOUD = "cloud"
     MANUAL = "manual"
+    HYBRID = "hybrid"
+
+    @classmethod
+    def parse(cls, runner_mode: Union[str, RunnerMode]) -> RunnerMode:
+        if not isinstance(runner_mode, RunnerMode):
+            try:
+                runner_mode = RunnerMode(runner_mode)
+            except ValueError:
+                raise ValueError(f"Invalid runner_mode: {runner_mode}")
+        return runner_mode
+
+    @property
+    def api_value(self) -> str:
+        if self == RunnerMode.CLOUD:
+            return "cloud"
+        else:
+            return "manual"
 
 
 DEFAULT_RUNNER = RunnerMode.CLOUD
@@ -91,6 +116,9 @@ class ClientConfig:
 
     endpoint: str
     """Gretel API endpoint."""
+
+    artifact_endpoint: str
+    """Artifact endpoint."""
 
     api_key: Optional[str] = None
     """Gretel API key."""
@@ -107,20 +135,27 @@ class ClientConfig:
     def __init__(
         self,
         endpoint: Optional[str] = None,
+        artifact_endpoint: Optional[str] = None,
         api_key: Optional[str] = None,
         default_project_name: Optional[str] = None,
-        default_runner: str = DEFAULT_RUNNER.value,
+        default_runner: Union[str, RunnerMode] = DEFAULT_RUNNER.value,
         preview_features: str = PreviewFeatures.DISABLED.value,
     ):
         self.endpoint = (
             endpoint or os.getenv(GRETEL_ENDPOINT) or DEFAULT_GRETEL_ENDPOINT
         )
+        self.artifact_endpoint = (
+            artifact_endpoint
+            or os.getenv(GRETEL_ARTIFACT_ENDPOINT)
+            or DEFAULT_GRETEL_ARTIFACT_ENDPOINT
+        )
         self.api_key = api_key or os.getenv(GRETEL_API_KEY)
-        self.default_runner = default_runner
+        self.default_runner = RunnerMode.parse(default_runner)
         self.default_project_name = (
             default_project_name or os.getenv(GRETEL_PROJECT) or default_project_name
         )
         self.preview_features = os.getenv(GRETEL_PREVIEW_FEATURES) or preview_features
+        self._validate()
 
     @classmethod
     def from_file(cls, file_path: Path) -> ClientConfig:
@@ -137,6 +172,23 @@ class ClientConfig:
         return cls(
             **{k: v for k, v in source.items() if k in cls.__annotations__.keys()}
         )
+
+    def _validate(self) -> None:
+        if (
+            self.artifact_endpoint != DEFAULT_GRETEL_ARTIFACT_ENDPOINT
+            and self.default_runner == RunnerMode.CLOUD
+        ):
+            raise GretelClientConfigurationError(
+                "Cannot use a custom artifact endpoint with cloud runner mode as default. Please reconfigure your session."
+            )
+
+        if (
+            self.artifact_endpoint == DEFAULT_GRETEL_ARTIFACT_ENDPOINT
+            and self.default_runner == RunnerMode.HYBRID
+        ):
+            raise GretelClientConfigurationError(
+                "Hybrid runner requires a custom artifact endpoint. Please reconfigure your session."
+            )
 
     def _cert_file(self) -> str:
         ssl_cert_file = os.getenv("SSL_CERT_FILE")
@@ -315,10 +367,10 @@ def _load_config(config_path: Path = None) -> ClientConfig:
         config_path: Path to a local Gretel config. This defaults to
             ``$HOME/.gretel/config.json``.
     """
-    if not config_path:
-        config_path = _get_config_path()
+    config_path = config_path or _get_config_path()
     if not config_path.exists():
         return ClientConfig.from_env()
+
     try:
         return ClientConfig.from_file(config_path)
     except Exception as ex:
@@ -383,7 +435,9 @@ def configure_session(
     config: Optional[Union[str, ClientConfig]] = None,
     *,
     api_key: Optional[str] = None,
+    default_runner: Optional[Union[str, RunnerMode]] = None,
     endpoint: Optional[str] = None,
+    artifact_endpoint: Optional[str] = None,
     cache: str = "no",
     validate: bool = False,
     clear: bool = False,
@@ -396,8 +450,11 @@ def configure_session(
         api_key: Configures your Gretel API key. If ``api_key`` is set to
             "prompt" and no Api Key is found on the system, ``getpass``
             will be used to prompt for the key.
+        default_runner: Specifies the runner mode. Must be one of "cloud", "local",
+            "manual", or "hybrid".
         endpoint: Specifies the Gretel API endpoint. This must be a fully
             qualified URL.
+        artifact_endpoint: Specifies the endpoint for project and model artifacts.
         cache: Valid options include "yes" and "no". If cache is "no"
             the session configuration will not be written to disk. If cache is
             "yes", session configuration will be written to disk only if a
@@ -420,14 +477,28 @@ def configure_session(
     if isinstance(config, str):
         raise NotImplementedError("Gretel URIs are not supported yet.")
 
+    default_runner = default_runner or config.default_runner
+    default_runner = RunnerMode.parse(default_runner)
+
+    artifact_endpoint = artifact_endpoint or config.artifact_endpoint
+
+    api_key = api_key or config.api_key
     if api_key == "prompt":
         if config.api_key:
+            api_key = config.api_key
             print("Found cached Gretel credentials")
         else:
             api_key = getpass("Gretel Api Key")
 
     if api_key and api_key.startswith("grt") or endpoint:
-        config = ClientConfig(endpoint=endpoint, api_key=api_key)
+        endpoint = endpoint or config.endpoint
+        config = ClientConfig(
+            endpoint=endpoint,
+            artifact_endpoint=artifact_endpoint,
+            api_key=api_key,
+            default_runner=default_runner,
+            default_project_name=config.default_project_name,
+        )
 
     if cache == "yes":
         try:

@@ -4,17 +4,9 @@ from typing import Iterable, Iterator, Optional, Union
 
 from smart_open import open
 
+from gretel_client.dataframe import _DataFrameT
 from gretel_client.projects.exceptions import DataSourceError, DataValidationError
 from gretel_client.readers import CsvReader, JsonReader
-
-try:
-    from pandas import DataFrame as _DataFrameT
-except ImportError:
-    pd = None
-
-    class _DataFrameT:
-        ...  # noqa
-
 
 Pathlike = Union[str, Path]
 DataSourceTypes = Union[str, Path, _DataFrameT]
@@ -123,6 +115,8 @@ class ModelRunArtifact(str, Enum):
 class f:
     """Rest api field constants."""
 
+    ARTIFACTS = "artifacts"
+    KEY = "key"
     DATA = "data"
     URL = "url"
     STATUS = "status"

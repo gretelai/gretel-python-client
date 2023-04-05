@@ -21,11 +21,6 @@ def get_status_description(
 
 class ModelTypeConfig(ABC):
     @property
-    @abstractmethod
-    def action_name(self) -> Optional[str]:
-        ...
-
-    @property
     def train_instance_type(self) -> str:
         return CPU
 
@@ -68,10 +63,6 @@ class ModelTypeConfig(ABC):
 
 class GenericModelTypeConfig(ModelTypeConfig):
     @property
-    def action_name(self) -> Optional[str]:
-        return None
-
-    @property
     def run_status_descriptions(self) -> StatusDescriptions:
         return {
             "created": {
@@ -92,10 +83,6 @@ class GenericModelTypeConfig(ModelTypeConfig):
 
 
 class TransformModelTypeConfig(ModelTypeConfig):
-    @property
-    def action_name(self) -> Optional[str]:
-        return "transform"
-
     @property
     def run_status_descriptions(self) -> StatusDescriptions:
         return {
@@ -125,10 +112,6 @@ class TransformModelTypeConfig(ModelTypeConfig):
 
 class ClassifyModelTypeConfig(ModelTypeConfig):
     @property
-    def action_name(self) -> Optional[str]:
-        return "classify"
-
-    @property
     def run_status_descriptions(self) -> StatusDescriptions:
         return {
             "created": {
@@ -150,10 +133,6 @@ class ClassifyModelTypeConfig(ModelTypeConfig):
 
 
 class SyntheticsModelTypeConfig(ModelTypeConfig):
-    @property
-    def action_name(self) -> Optional[str]:
-        return "generate"
-
     @property
     def train_instance_type(self) -> str:
         return GPU

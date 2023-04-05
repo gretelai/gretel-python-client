@@ -7,13 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple, Union
 
-try:
-    from pandas import DataFrame as _DataFrameT
-except ImportError:
-    pd = None
-
-    class _DataFrameT:
-        ...  # noqa
+from gretel_client.dataframe import _DataFrameT
 
 
 class RefDataError(Exception):
@@ -123,9 +117,13 @@ class RefData:
         return parts
 
 
-def ref_data_factory(ref_data: Optional[RefDataTypes] = None) -> RefData:
+def ref_data_factory(
+    ref_data: Optional[Union[RefDataTypes, RefData]] = None
+) -> RefData:
     if ref_data is None:
         ref_data_obj = RefData()
+    elif isinstance(ref_data, RefData):
+        ref_data_obj = ref_data
     elif isinstance(ref_data, dict):
         ref_data_obj = RefData(ref_data)
     elif isinstance(ref_data, _DataFrameT):

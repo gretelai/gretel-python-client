@@ -137,19 +137,10 @@ def _configure_data_source(
     return data_source
 
 
-def _configure_ref_data(sc: SessionContext, ref_data: RefData, runner: str) -> RefData:
-    if not ref_data.is_empty and runner == RunnerMode.MANUAL.value:
-        return ref_data
-    if not ref_data.is_empty and runner == RunnerMode.CLOUD.value:
-        sc.log.info("Uploading ref data...")
-        ref_dict = {}
-        for key, data_source in ref_data.ref_dict.items():
-            data_source = sc.project.upload_artifact(data_source)
-            ref_dict[key] = data_source
-        ref_data = ref_data_factory(ref_dict)
-    else:
-        # If the job is being run locally, we swap the data sources to __local__
-        # so we don't expose anything in the stored cloud config
+def _configure_ref_data(ref_data: RefData, runner: str) -> RefData:
+    # If the job is being run locally, we swap the data sources to __local__
+    # so we don't expose anything in the stored cloud config
+    if runner == RunnerMode.LOCAL.value:
         for key, data_source in ref_data.ref_dict.items():
             ref_data.ref_dict[key] = LOCAL
     return ref_data
@@ -159,7 +150,6 @@ def create_and_run_record_handler(
     sc: SessionContext,
     *,
     params: Optional[dict],
-    action: Optional[str],
     runner: str,
     output: str,
     in_data: Optional[str],
@@ -167,7 +157,6 @@ def create_and_run_record_handler(
     data_source: Optional[str],
     status_strings: StatusDescriptions,
     ref_data: Optional[RefData] = None,
-    config_ref_data: Optional[RefData] = None,
 ):
 
     # NOTE: ``in_data`` is only evaluated to determine if we should set a --data-source
@@ -175,19 +164,13 @@ def create_and_run_record_handler(
     # is what will be sent to the Cloud API.
 
     sc.log.info(f"Creating record handler for model {sc.model.model_id}.")
-    record_handler = sc.model.create_record_handler_obj()
-
-    if config_ref_data is None:
-        config_ref_data = ref_data_factory()
-
-    data = record_handler._submit(
+    record_handler = sc.model.create_record_handler_obj(
         params=params,
-        action=action,
-        runner_mode=RunnerMode(runner),
         data_source=data_source,
-        ref_data=config_ref_data,
-        _default_manual=True,
+        ref_data=ref_data,
     )
+
+    data = record_handler.submit(runner_mode=RunnerMode.parse(runner))
     sc.register_cleanup(lambda: record_handler.cancel())
     sc.log.info(f"Record handler created {record_handler.record_id}.")
 
@@ -301,7 +284,6 @@ def generate(
         sc,
         params=params,
         data_source=data_source,
-        action="generate",
         runner=runner,
         output=output,
         in_data=in_data,
@@ -336,7 +318,6 @@ def transform(
         sc,
         params=None,
         data_source=data_source,
-        action="transform",
         runner=runner,
         output=output,
         in_data=in_data,
@@ -371,17 +352,12 @@ def classify(
         sc,
         params=None,
         data_source=data_source,
-        action="classify",
         runner=runner,
         output=output,
         in_data=in_data,
         status_strings=get_model_type_config("classify").run_status_descriptions,
         model_path=model_path,
     )
-
-
-def action_option(fn):
-    return click.option("--action", help="Specify action to run.", type=str)(fn)
 
 
 @models.command(help="Run an existing model.")
@@ -393,7 +369,6 @@ def action_option(fn):
 @output_data_option
 @model_option
 @pass_session
-@action_option
 @click.option(
     "--param",
     type=(str, str),
@@ -414,7 +389,6 @@ def run(
     output: str,
     runner: str,
     model_path: str,
-    action: Optional[str],
     param: List[Tuple[str, str]],
     params_file: Optional[Path],
 ):
@@ -444,20 +418,15 @@ def run(
     if in_data:
         data_source = _configure_data_source(sc, in_data, runner)
 
-    # The idea here:
-    # - ref_data is what the CLI arguments were
-    # - config_ref_data is what is going to be sent to the API in the model config
     ref_data = ref_data_factory(ref_data)
-    config_ref_data = _configure_ref_data(sc, deepcopy(ref_data), runner)
+    ref_data = _configure_ref_data(ref_data, runner)
 
     create_and_run_record_handler(
         sc,
         params=extra_params,
-        action=action,
         in_data=in_data,
         data_source=data_source,
         ref_data=ref_data,
-        config_ref_data=config_ref_data,
         runner=runner,
         output=output,
         status_strings=get_model_type_config().run_status_descriptions,

@@ -35,6 +35,10 @@ class BaseReport(ABC):
     def model_config(self) -> dict:
         ...
 
+    @abstractproperty
+    def base_artifact_name(self) -> str:
+        ...
+
     """Specifies a model config. For more information
     about model configs, please refer to our doc site,
     https://docs.gretel.ai/reference/model-configurations."""
@@ -83,6 +87,8 @@ class BaseReport(ABC):
             self._run_cloud(model=model)
         elif self.runner_mode == RunnerMode.LOCAL:
             self._run_local(model=model)
+        elif self.runner_mode == RunnerMode.HYBRID:
+            self._run_hybrid(model=model)
 
     def _await_completion(self, job: Job):
         refresh_attempts = 0
@@ -114,25 +120,36 @@ class BaseReport(ABC):
             else:
                 continue
 
-    def _run_cloud(self, model: Model, base_artifact_name: str = "report"):
+    def _run_cloud(self, model: Model):
         job = model.submit_cloud()
+        self._run_remote(job)
+
+    def _run_hybrid(self, model: Model):
+        job = model.submit_hybrid()
+        self._run_remote(job)
+
+    def _run_remote(self, job: Job):
         self._await_completion(job)
 
-        with smart_open.open(job.get_artifact_link(f"{base_artifact_name}_json")) as f:
+        with smart_open.open(
+            job.get_artifact_link(f"{self.base_artifact_name}_json")
+        ) as f:
             self._report_dict = json.load(f)
         with smart_open.open(
-            job.get_artifact_link(f"{base_artifact_name}"), encoding="utf8"
+            job.get_artifact_link(f"{self.base_artifact_name}"), encoding="utf8"
         ) as f:
             self._report_html = f.read()
 
-    def _run_local(self, model: Model, base_artifact_name: str = "report"):
+    def _run_local(self, model: Model):
         submit_docker_local(model, output_dir=self.output_dir)
         with gzip.open(
-            f"{self.output_dir}/{base_artifact_name}_json.json.gz", "rt"
+            f"{self.output_dir}/{self.base_artifact_name}_json.json.gz", "rt"
         ) as f:
             lines = [json.loads(line) for line in f.readlines()]
         self._report_dict = lines[0]
-        with gzip.open(f"{self.output_dir}/{base_artifact_name}.html.gz", "rt") as f:
+        with gzip.open(
+            f"{self.output_dir}/{self.base_artifact_name}.html.gz", "rt"
+        ) as f:
             self._report_html = f.read()
 
     def _run_in_project(self, project: Project):

@@ -54,11 +54,19 @@ def _check_endpoint(endpoint: str) -> str:
     help="Gretel API endpoint.",
 )
 @click.option(
+    "--artifact-endpoint",
+    prompt="Artifact Endpoint",
+    default=lambda: get_session_config().artifact_endpoint,
+    metavar="URL",
+    help="Specify the endpoint for project and model artifacts.",
+)
+@click.option(
     "--default-runner",
     prompt="Default Runner",
     default=lambda: get_session_config().default_runner,
     type=click.Choice(
-        [RunnerMode.CLOUD.value, RunnerMode.LOCAL.value], case_sensitive=False
+        [RunnerMode.CLOUD.value, RunnerMode.LOCAL.value, RunnerMode.HYBRID.value],
+        case_sensitive=False,
     ),
     metavar="RUNNER",
     help="Specify the default runner.",
@@ -80,7 +88,12 @@ def _check_endpoint(endpoint: str) -> str:
 )
 @pass_session
 def configure(
-    sc: SessionContext, endpoint: str, api_key: str, project: str, default_runner: str
+    sc: SessionContext,
+    endpoint: str,
+    artifact_endpoint: str,
+    api_key: str,
+    project: str,
+    default_runner: str,
 ):
     project_name = None if project == "none" else project
     endpoint = _check_endpoint(endpoint)
@@ -89,7 +102,10 @@ def configure(
     if api_key.endswith("****"):
         api_key = get_session_config().api_key
     config = ClientConfig(
-        endpoint=endpoint, api_key=api_key, default_runner=default_runner
+        endpoint=endpoint,
+        artifact_endpoint=artifact_endpoint,
+        api_key=api_key,
+        default_runner=default_runner,
     )
     config.update_default_project(project_id=project_name)
     configure_session(config)

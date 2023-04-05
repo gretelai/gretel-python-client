@@ -13,6 +13,7 @@ from gretel_client.config import (
     _load_config,
     ClientConfig,
     configure_session,
+    DEFAULT_GRETEL_ARTIFACT_ENDPOINT,
     DEFAULT_GRETEL_ENDPOINT,
     DEFAULT_RUNNER,
     GRETEL_API_KEY,
@@ -42,7 +43,7 @@ def test_cli(runner):
 
 @patch("gretel_client.cli.cli.write_config")
 def test_cli_does_configure(write_config: MagicMock, runner: CliRunner):
-    cmd = runner.invoke(cli, ["configure"], input="\n\ngrtu...\n\n")
+    cmd = runner.invoke(cli, ["configure"], input="\n\n\ngrtu...\n\n")
     assert not cmd.exception
     write_config.assert_called_once_with(
         ClientConfig(
@@ -50,6 +51,7 @@ def test_cli_does_configure(write_config: MagicMock, runner: CliRunner):
             api_key="grtu...",
             default_project_name=None,
             default_runner=DEFAULT_RUNNER.value,
+            artifact_endpoint=None,
         )
     )
 
@@ -62,7 +64,7 @@ def test_cli_does_configure_with_project(
         cmd = runner.invoke(
             cli,
             ["configure"],
-            input=f"https://api-dev.gretel.cloud\n\n{os.getenv(GRETEL_API_KEY)}\n{project.name}\n",
+            input=f"https://api-dev.gretel.cloud\n\n\n{os.getenv(GRETEL_API_KEY)}\n{project.name}\n",
             catch_exceptions=True,
         )
     assert not cmd.exception
@@ -72,8 +74,48 @@ def test_cli_does_configure_with_project(
             endpoint="https://api-dev.gretel.cloud",
             api_key=os.getenv(GRETEL_API_KEY),
             default_project_name=project.name,
+            artifact_endpoint=None,
         )
     )
+
+
+@patch("gretel_client.cli.cli.write_config")
+def test_cli_does_configure_with_custom_artifact_endpoint_and_hybrid_runner(
+    write_config: MagicMock, runner: CliRunner, project: Project
+):
+    with clear_session_config():
+        cmd = runner.invoke(
+            cli,
+            ["configure"],
+            input=f"https://api-dev.gretel.cloud\ns3://my-bucket\nhybrid\n{os.getenv(GRETEL_API_KEY)}\n\n",
+            catch_exceptions=True,
+        )
+    assert not cmd.exception
+    assert cmd.exit_code == 0
+    write_config.assert_called_once_with(
+        ClientConfig(
+            endpoint="https://api-dev.gretel.cloud",
+            api_key=os.getenv(GRETEL_API_KEY),
+            default_project_name=None,
+            default_runner="hybrid",
+            artifact_endpoint="s3://my-bucket",
+        )
+    )
+
+
+@patch("gretel_client.cli.cli.write_config")
+def test_cli_fails_configure_with_custom_artifact_endpoint_and_default_cloud_runner(
+    write_config: MagicMock, runner: CliRunner, project: Project
+):
+    with clear_session_config():
+        cmd = runner.invoke(
+            cli,
+            ["configure"],
+            input=f"https://api-dev.gretel.cloud\ns3://my-bucket\n\n{os.getenv(GRETEL_API_KEY)}\n\n",
+            catch_exceptions=True,
+        )
+    assert cmd.exit_code == 1
+    assert "custom artifact endpoint with cloud runner" in cmd.stderr
 
 
 @patch("gretel_client.cli.cli.write_config")

@@ -17,9 +17,15 @@ import smart_open
 import gretel_client.rest.exceptions
 
 from gretel_client.cli.utils.parser_utils import RefData
-from gretel_client.config import DEFAULT_RUNNER, get_logger, RunnerMode
+from gretel_client.config import (
+    DEFAULT_RUNNER,
+    get_logger,
+    get_session_config,
+    RunnerMode,
+)
+from gretel_client.dataframe import _DataFrameT
 from gretel_client.models.config import get_model_type_config
-from gretel_client.projects.common import _DataFrameT, f, ModelArtifact, WAIT_UNTIL_DONE
+from gretel_client.projects.common import f, ModelArtifact, WAIT_UNTIL_DONE
 from gretel_client.projects.exceptions import GretelJobNotFound, WaitTimeExceeded
 from gretel_client.rest.api.projects_api import ProjectsApi
 
@@ -84,20 +90,32 @@ class Job(ABC):
         self._logs_iter_index = 0
 
     def submit(
-        self, runner_mode: Union[str, RunnerMode] = DEFAULT_RUNNER, **kwargs
-    ) -> dict:
-        # todo: deprecate in favor of submit_manual and submit_cloud
-        # Support `runner_mode` input as a str to provide
-        # parity with the CLI semantics
-        if isinstance(runner_mode, str):
-            try:
-                runner_mode = RunnerMode(runner_mode)
-            except ValueError:
-                raise ValueError(f"Invalid runner_mode: {runner_mode}")
+        self,
+        runner_mode: Optional[Union[str, RunnerMode]] = None,
+        dry_run: bool = False,
+    ) -> Job:
+        """Submit this Job to the Gretel Cloud API.
 
-        return self._submit(runner_mode, **kwargs).print_obj
+        Args:
+            runner_mode: Determines where to run the model. If not specified, the default
+                runner configured on the session is used.
+            dry_run: If set to True the model config will be submitted for
+                validation, but won't be run. Ignored for record handlers.
+        """
+        if runner_mode is None:
+            runner_mode = get_session_config().default_runner
+        runner_mode = RunnerMode.parse(runner_mode)
 
-    def submit_manual(self) -> Job:
+        if runner_mode == RunnerMode.CLOUD:
+            return self.submit_cloud(dry_run)
+        elif runner_mode == RunnerMode.HYBRID:
+            return self.submit_hybrid(dry_run)
+        elif runner_mode == RunnerMode.MANUAL:
+            return self.submit_manual(dry_run)
+        elif runner_mode == RunnerMode.LOCAL:
+            return self.submit_local(dry_run)
+
+    def submit_manual(self, dry_run: bool = False) -> Job:
         """Submit this Job to the Gretel Cloud API, which will create
         the job metadata but no runner will be started. The ``Model`` instance
         can now be passed into a dedicated runner.
@@ -105,25 +123,57 @@ class Job(ABC):
         Returns:
             The response from the Gretel API.
         """
-        return self._submit(runner_mode=RunnerMode.MANUAL)
+        return self._submit(runner_mode=RunnerMode.MANUAL, dry_run=dry_run)
 
-    def submit_cloud(self) -> Job:
-        """Submit this model to be scheduled for runing in Gretel Cloud.
+    def submit_local(self, dry_run: bool = False) -> Job:
+        """Submit this Job to the Gretel Cloud API to be scheduled for running in a local container.
 
         Returns:
             The response from the Gretel API.
         """
+        return self._submit(runner_mode=RunnerMode.LOCAL, dry_run=dry_run)
+
+    def submit_cloud(self, dry_run: bool = False) -> Job:
+        """Submit this Job to the Gretel Cloud API be scheduled for running in Gretel Cloud.
+
+        Returns:
+            The response from the Gretel API.
+        """
+        return self._submit_remote(
+            runner_mode=RunnerMode.CLOUD,
+            artifacts_handler=self.project.cloud_artifacts_handler,
+            dry_run=dry_run,
+        )
+
+    def submit_hybrid(self, dry_run: bool = False) -> Job:
+        """Submit this Job to the Gretel Cloud API to be scheduled for running in a hybrid deployment.
+
+        Returns:
+            The response from the Gretel API.
+        """
+        return self._submit_remote(
+            runner_mode=RunnerMode.HYBRID,
+            artifacts_handler=self.project.hybrid_artifacts_handler,
+            dry_run=dry_run,
+        )
+
+    def _submit_remote(
+        self,
+        runner_mode: RunnerMode,
+        artifacts_handler: Union[CloudArtifactsHandler, HybridArtifactsHandler],
+        dry_run: bool,
+    ) -> Job:
         if (
             isinstance(self.data_source, _DataFrameT)
             and not self.data_source.empty
             or self.data_source
         ):
-            self.upload_data_source()
+            self.upload_data_source(_artifacts_handler=artifacts_handler)
 
         if not self.ref_data.is_empty:
-            self.upload_ref_data()
+            self.upload_ref_data(_artifacts_handler=artifacts_handler)
 
-        return self._submit(runner_mode=RunnerMode.CLOUD)
+        return self._submit(runner_mode=runner_mode, dry_run=dry_run)
 
     @abstractmethod
     def _submit(self, runner_mode: RunnerMode, **kwargs) -> Job:
@@ -221,7 +271,11 @@ class Job(ABC):
 
     # Base Job Methods
 
-    def upload_data_source(self, _validate: bool = True) -> Optional[str]:
+    def upload_data_source(
+        self,
+        _validate: bool = True,
+        _artifacts_handler: Union[CloudArtifactsHandler, HybridArtifactsHandler] = None,
+    ) -> Optional[str]:
         """Resolves and uploads the data source specified in the
         model config.
 
@@ -236,10 +290,18 @@ class Job(ABC):
             or self.data_source
         ):
             # NOTE: This assignment re-writes the gretel artifact onto the config
-            self.data_source = self.project.upload_artifact(self.data_source, _validate)
+            self.data_source = self.project.upload_artifact(
+                artifact_path=self.data_source,
+                _validate=_validate,
+                _artifacts_handler=_artifacts_handler,
+            )
             return self.data_source
 
-    def upload_ref_data(self, _validate: bool = True) -> RefData:
+    def upload_ref_data(
+        self,
+        _validate: bool = True,
+        _artifacts_handler: Optional[ArtifactsHandler] = None,
+    ) -> RefData:
         """
         Resolves and uploads ref data sources specificed in the model config.
 
@@ -256,7 +318,11 @@ class Job(ABC):
         # Loop over each data source and try and upload to Gretel
         ref_data_dict = curr_ref_data.ref_dict
         for key, data_source in ref_data_dict.items():
-            gretel_key = self.project.upload_artifact(data_source, _validate)
+            gretel_key = self.project.upload_artifact(
+                artifact_path=data_source,
+                _validate=_validate,
+                _artifacts_handler=_artifacts_handler,
+            )
             ref_data_dict[key] = gretel_key
 
         new_ref_data = RefData(ref_data_dict)
@@ -300,20 +366,9 @@ class Job(ABC):
             # we don't need to download cloud model artifacts
             if artifact_type == ModelArtifact.MODEL.value:
                 continue
-            try:
-                art = requests.get(download_link)
-                if art.status_code == 200:
-                    art_output_path = (
-                        output_path / Path(urlparse(download_link).path).name
-                    )
-                    with open(art_output_path, "wb+") as out:
-                        log.info(f"\tWriting {artifact_type} to {art_output_path}")
-                        out.write(art.content)
-            except requests.exceptions.HTTPError as ex:
-                log.error(
-                    f"\tCould not download {artifact_type}. You might retry this request.",
-                    ex=ex,
-                )
+            self.project.default_artifacts_handler.download(
+                download_link, output_path, artifact_type, log
+            )
 
     def _peek_report(self, report_contents: dict) -> Optional[dict]:
         return get_model_type_config(self.model_type).peek_report(report_contents)

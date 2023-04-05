@@ -8,26 +8,29 @@ from functools import wraps
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Type, TypeVar, Union
-from urllib.parse import urlparse
 
-import requests
-import smart_open
-
-from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
+from backports.cached_property import cached_property
 
 from gretel_client.cli.utils.parser_utils import (
     DataSourceTypes,
     ref_data_factory,
     RefDataTypes,
 )
-from gretel_client.config import get_logger, get_session_config
-from gretel_client.projects.common import _DataFrameT, f, validate_data_source
+from gretel_client.config import get_logger, get_session_config, RunnerMode
+from gretel_client.dataframe import _DataFrameT
+from gretel_client.projects.artifact_handlers import (
+    ArtifactsHandler,
+    cloud_handler,
+    CloudArtifactsHandler,
+    hybrid_handler,
+    HybridArtifactsHandler,
+)
+from gretel_client.projects.common import f, validate_data_source
 from gretel_client.projects.exceptions import GretelProjectError
 from gretel_client.projects.models import Model
 from gretel_client.rest import models
 from gretel_client.rest.api.projects_api import ProjectsApi
 from gretel_client.rest.exceptions import NotFoundException, UnauthorizedException
-from gretel_client.rest.model.artifact import Artifact
 from gretel_client.users.users import get_me
 
 DATA = "data"
@@ -52,19 +55,6 @@ def check_not_deleted(func):
 
 
 MT = TypeVar("MT", dict, Model)
-
-
-# These exceptions are used for control flow with retries in get_artifact_manifest.
-# They are NOT intended to bubble up out of this module.
-class ManifestNotFoundException(Exception):
-    pass
-
-
-class ManifestPendingException(Exception):
-    def __init__(self, msg: Optional[str] = None, manifest: dict = {}):
-        # Piggyback the pending manifest onto the exception.  If we give up, we still want to pass it back as a normal return value.
-        self.manifest = manifest
-        super().__init__(msg)
 
 
 class Project:
@@ -98,6 +88,28 @@ class Project:
         self.description = desc
         self.display_name = display_name
         self._deleted = False
+
+    @cached_property
+    def default_artifacts_handler(self) -> ArtifactsHandler:
+        default_runner = self.client_config.default_runner
+
+        if default_runner == RunnerMode.HYBRID:
+            return self.hybrid_artifacts_handler
+        elif default_runner == RunnerMode.CLOUD:
+            return self.cloud_artifacts_handler
+        else:
+            raise GretelProjectError(
+                f"Artifact handling is not supported under {default_runner} runner mode. "
+                "Please update the default runner in your configuration to `cloud` or `hybrid` to work with artifacts."
+            )
+
+    @cached_property
+    def cloud_artifacts_handler(self) -> CloudArtifactsHandler:
+        return cloud_handler(self)
+
+    @cached_property
+    def hybrid_artifacts_handler(self) -> HybridArtifactsHandler:
+        return hybrid_handler(self)
 
     @check_not_deleted
     def delete(self, *args, **kwargs):
@@ -211,14 +223,13 @@ class Project:
     @check_not_deleted
     def artifacts(self) -> List[dict]:
         """Returns a list of project artifacts."""
-        return (
-            self.projects_api.get_artifacts(project_id=self.name)
-            .get(DATA)
-            .get("artifacts")
-        )
+        return self.default_artifacts_handler.list_project_artifacts()
 
     def upload_artifact(
-        self, artifact_path: Union[Path, str, _DataFrameT], _validate: bool = True
+        self,
+        artifact_path: Union[Path, str, _DataFrameT],
+        _validate: bool = True,
+        _artifacts_handler: Optional[ArtifactsHandler] = None,
     ) -> str:
         """Resolves and uploads the data source specified in the
         model config.
@@ -226,31 +237,10 @@ class Project:
         Returns:
             A Gretel artifact key.
         """
-        if isinstance(artifact_path, str) and artifact_path.startswith("gretel_"):
-            return artifact_path
-        if isinstance(artifact_path, _DataFrameT):
-            artifact_path = BytesIO(artifact_path.to_csv(index=False).encode("utf-8"))
-            file_name = f"dataframe-{uuid.uuid4()}.csv"
-        else:
-            if _validate:
-                validate_data_source(artifact_path)
-            if isinstance(artifact_path, Path):
-                artifact_path = str(artifact_path)
-            file_name = Path(urlparse(artifact_path).path).name
-        with smart_open.open(
-            artifact_path, "rb", ignore_ext=True
-        ) as src:  # type:ignore
-            art_resp = self.projects_api.create_artifact(
-                project_id=self.name, artifact=Artifact(filename=file_name)
-            )
-            artifact_key = art_resp["data"]["key"]
-            upload_resp = requests.put(
-                art_resp["data"]["url"],
-                data=src,
-            )
-            if upload_resp.status_code != 200:
-                upload_resp.raise_for_status()
-            return artifact_key
+        if _validate and not isinstance(artifact_path, _DataFrameT):
+            validate_data_source(artifact_path)
+        artifacts_handler = _artifacts_handler or self.default_artifacts_handler
+        return artifacts_handler.upload_project_artifact(artifact_path)
 
     def delete_artifact(self, key: str):
         """Deletes a project artifact.
@@ -258,7 +248,7 @@ class Project:
         Args:
             key: Artifact key to delete.
         """
-        return self.projects_api.delete_artifact(project_id=self.name, key=key)
+        return self.default_artifacts_handler.delete_project_artifact(key)
 
     def get_artifact_link(self, key: str) -> str:
         """Returns a link to download a project artifact.
@@ -270,44 +260,14 @@ class Project:
             A signed URL that may be used to download the given
             project artifact.
         """
-        resp = self.projects_api.download_artifact(project_id=self.name, key=key)
-        return resp[f.DATA][f.DATA][f.URL]
+        return self.default_artifacts_handler.get_project_artifact_link(key)
 
-    # The server side API will return manifests with PENDING status if artifact processing has not completed
-    # or it will return a 404 (not found) if you immediately request the artifact before processing has even started.
-    # This is correct but not convenient.  To keep every end user from writing their own retry logic, we add some here.
-    @retry(
-        wait=wait_fixed(2),
-        stop=stop_after_attempt(15),
-        retry=retry_if_exception_type(ManifestPendingException),
-        # Instead of throwing an exception, return the pending manifest.
-        retry_error_callback=lambda retry_state: retry_state.outcome.exception().manifest,
-    )
-    @retry(
-        wait=wait_fixed(3),
-        stop=stop_after_attempt(5),
-        retry=retry_if_exception_type(ManifestNotFoundException),
-        # Instead of throwing an exception, return None.  Given that we waited for a short grace period to let the artifact become PENDING,
-        # if we are still getting 404's the key probably does not actually exist.
-        retry_error_callback=lambda retry_state: None,
-    )
     def get_artifact_manifest(
         self, key: str, retry_on_not_found: bool = True, retry_on_pending: bool = True
     ) -> dict:
-        _path = f"/projects/{self.name}/artifacts/manifest"
-        _query_params = {"key": key}
-        resp = None
-        try:
-            resp = self.projects_api.get_artifact_manifest(
-                project_id=self.name, key=key
-            )
-        except NotFoundException:
-            raise ManifestNotFoundException()
-        if retry_on_not_found and resp is None:
-            raise ManifestNotFoundException()
-        if retry_on_pending and resp is not None and resp.get("status") == "pending":
-            raise ManifestPendingException(manifest=resp)
-        return resp
+        return self.default_artifacts_handler.get_project_artifact_manifest(
+            key, retry_on_not_found, retry_on_pending
+        )
 
 
 def search_projects(limit: int = 200, query: Optional[str] = None) -> List[Project]:

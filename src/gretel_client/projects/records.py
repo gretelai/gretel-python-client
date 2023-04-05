@@ -48,45 +48,13 @@ class RecordHandler(Job):
         self._ref_data = ref_data
         super().__init__(model.project, JOB_TYPE, self.record_id)
 
-    def _submit(
-        self, runner_mode: RunnerMode = DEFAULT_RUNNER, **kwargs
-    ) -> RecordHandler:
+    # kwargs are ignored; only present to support polymorphism in jobs.py
+    def _submit(self, runner_mode: RunnerMode, **kwargs) -> RecordHandler:
         """Submits the record handler to be run."""
-
-        # todo: we can drop the kwarg accessors after the Job.submit
-        # method is deprecated.
-        action = kwargs.get("action", self.action)
-        data_source = kwargs.get("data_source", self.data_source)
-        ref_data = kwargs.get("ref_data", self.ref_data)
-        if not isinstance(ref_data, RefData):
-            ref_data = ref_data_factory(ref_data)
-        params = kwargs.get("params", self.params)
-        upload_data_source = kwargs.get("upload_data_source", False)
-        _default_manual = kwargs.get("_default_manual", False)
-
-        if runner_mode == RunnerMode.LOCAL and not _default_manual:
-            raise ValueError("Cannot use local mode")
-
-        if upload_data_source and data_source:
-            data_source = self._upload_data_source(data_source)
-
-        if upload_data_source and not ref_data.is_empty:
-            ref_data = self._upload_ref_data(ref_data)
-
-        # If the runner mode is NOT set to cloud mode, check if we should
-        # fall back to manual mode, this is useful for when running local
-        # mode from the CLI.
-        if runner_mode != RunnerMode.CLOUD and _default_manual:
-            runner_mode = RunnerMode.MANUAL
-
-        optional_kwargs = {}
-        if action:
-            optional_kwargs["action"] = action
-
         body = {
-            "params": params,
-            "data_source": data_source,
-            "ref_data": ref_data.ref_dict,
+            "params": self.params,
+            "data_source": self.data_source,
+            "ref_data": self.ref_data.ref_dict,
         }
         body = {key: value for key, value in body.items() if value is not None}
 
@@ -94,8 +62,7 @@ class RecordHandler(Job):
             project_id=self.model.project.project_id,
             model_id=self.model.model_id,
             body=body,
-            runner_mode=runner_mode.value,
-            **optional_kwargs,
+            runner_mode=runner_mode.api_value,
         )
 
         self._data: dict = handler[f.DATA]
@@ -121,10 +88,6 @@ class RecordHandler(Job):
     def model_type(self) -> str:
         """Returns the parent model type of the record handler."""
         return self.model.model_type
-
-    @property
-    def action(self) -> Optional[str]:
-        return get_model_type_config(self.model_type).action_name
 
     @property
     def instance_type(self) -> str:
@@ -199,13 +162,11 @@ class RecordHandler(Job):
         )
 
     def _do_get_artifact(self, artifact_key: str) -> str:
-        resp = self._projects_api.get_record_handler_artifact(
-            project_id=self.project.name,
+        return self.project.default_artifacts_handler.get_record_handler_artifact_link(
             model_id=self.model.model_id,
             record_handler_id=self.record_id,
-            type=artifact_key,
+            artifact_type=artifact_key,
         )
-        return resp[f.DATA][f.URL]
 
     def delete(self):
         """Deletes the record handler."""
