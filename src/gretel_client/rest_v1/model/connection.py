@@ -84,6 +84,8 @@ class Connection(ModelNormal):
                 {str: (bool, date, datetime, dict, float, int, list, str, none_type)},
             ),  # noqa: E501
             "created_at": (datetime,),  # noqa: E501
+            "project_id": (str,),  # noqa: E501
+            "created_by": (str,),  # noqa: E501
         }
 
     @cached_property
@@ -97,6 +99,8 @@ class Connection(ModelNormal):
         "validation_status": "validation_status",  # noqa: E501
         "credentials": "credentials",  # noqa: E501
         "created_at": "created_at",  # noqa: E501
+        "project_id": "project_id",  # noqa: E501
+        "created_by": "created_by",  # noqa: E501
     }
 
     _composed_schemas = {}
@@ -155,6 +159,8 @@ class Connection(ModelNormal):
             validation_status (str): [optional]  # noqa: E501
             credentials ({str: (bool, date, datetime, dict, float, int, list, str, none_type)}): [optional]  # noqa: E501
             created_at (datetime): [optional]  # noqa: E501
+            project_id (str): [optional]  # noqa: E501
+            created_by (str): [optional]  # noqa: E501
         """
 
         _check_type = kwargs.pop("_check_type", True)

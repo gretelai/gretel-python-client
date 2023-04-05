@@ -23,9 +23,6 @@ from gretel_client.rest_v1.model.status import Status
 from gretel_client.rest_v1.model.update_workflow_run_status_request import (
     UpdateWorkflowRunStatusRequest,
 )
-from gretel_client.rest_v1.model.update_workflow_task_status_request import (
-    UpdateWorkflowTaskStatusRequest,
-)
 from gretel_client.rest_v1.model.workflow import Workflow
 from gretel_client.rest_v1.model.workflow_run import WorkflowRun
 from gretel_client.rest_v1.model.workflow_task import WorkflowTask
@@ -1080,20 +1077,18 @@ class WorkflowsApi(object):
             callable=__update_workflow_run_status,
         )
 
-        def __update_workflow_task_status(
-            self, workflow_task_id, update_workflow_task_status_request, **kwargs
-        ):
-            """update_workflow_task_status  # noqa: E501
+        def __update_workflow_task(self, workflow_task_id, workflow_task, **kwargs):
+            """update_workflow_task  # noqa: E501
 
             This method makes a synchronous HTTP request by default. To make an
             asynchronous HTTP request, please pass async_req=True
 
-            >>> thread = api.update_workflow_task_status(workflow_task_id, update_workflow_task_status_request, async_req=True)
+            >>> thread = api.update_workflow_task(workflow_task_id, workflow_task, async_req=True)
             >>> result = thread.get()
 
             Args:
                 workflow_task_id (str):
-                update_workflow_task_status_request (UpdateWorkflowTaskStatusRequest):
+                workflow_task (WorkflowTask):
 
             Keyword Args:
                 _return_http_data_only (bool): response data without head status
@@ -1131,28 +1126,26 @@ class WorkflowsApi(object):
             kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
             kwargs["_host_index"] = kwargs.get("_host_index")
             kwargs["workflow_task_id"] = workflow_task_id
-            kwargs[
-                "update_workflow_task_status_request"
-            ] = update_workflow_task_status_request
+            kwargs["workflow_task"] = workflow_task
             return self.call_with_http_info(**kwargs)
 
-        self.update_workflow_task_status = _Endpoint(
+        self.update_workflow_task = _Endpoint(
             settings={
                 "response_type": (WorkflowTask,),
                 "auth": [],
-                "endpoint_path": "/v1/workflows/runs/tasks/{workflow_task_id}/status",
-                "operation_id": "update_workflow_task_status",
+                "endpoint_path": "/v1/workflows/runs/tasks/{workflow_task_id}",
+                "operation_id": "update_workflow_task",
                 "http_method": "PUT",
                 "servers": None,
             },
             params_map={
                 "all": [
                     "workflow_task_id",
-                    "update_workflow_task_status_request",
+                    "workflow_task",
                 ],
                 "required": [
                     "workflow_task_id",
-                    "update_workflow_task_status_request",
+                    "workflow_task",
                 ],
                 "nullable": [],
                 "enum": [],
@@ -1163,16 +1156,14 @@ class WorkflowsApi(object):
                 "allowed_values": {},
                 "openapi_types": {
                     "workflow_task_id": (str,),
-                    "update_workflow_task_status_request": (
-                        UpdateWorkflowTaskStatusRequest,
-                    ),
+                    "workflow_task": (WorkflowTask,),
                 },
                 "attribute_map": {
                     "workflow_task_id": "workflow_task_id",
                 },
                 "location_map": {
                     "workflow_task_id": "path",
-                    "update_workflow_task_status_request": "body",
+                    "workflow_task": "body",
                 },
                 "collection_format_map": {},
             },
@@ -1181,5 +1172,5 @@ class WorkflowsApi(object):
                 "content_type": ["application/json"],
             },
             api_client=api_client,
-            callable=__update_workflow_task_status,
+            callable=__update_workflow_task,
         )

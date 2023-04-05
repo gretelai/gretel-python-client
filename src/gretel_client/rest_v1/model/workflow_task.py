@@ -81,14 +81,13 @@ class WorkflowTask(ModelNormal):
         return {
             "workflow_run_id": (str,),  # noqa: E501
             "log_location": (str,),  # noqa: E501
+            "action_name": (str,),  # noqa: E501
+            "action_type": (str,),  # noqa: E501
             "id": (str,),  # noqa: E501
             "status": (str,),  # noqa: E501
-            "action": (
-                {str: (bool, date, datetime, dict, float, int, list, str, none_type)},
-            ),  # noqa: E501
-            "logs": (
-                {str: (bool, date, datetime, dict, float, int, list, str, none_type)},
-            ),  # noqa: E501
+            "error_msg": (str,),  # noqa: E501
+            "error_code": (int,),  # noqa: E501
+            "stack_trace": (str,),  # noqa: E501
             "created_by": (str,),  # noqa: E501
             "created_at": (datetime,),  # noqa: E501
             "updated_at": (datetime,),  # noqa: E501
@@ -105,10 +104,13 @@ class WorkflowTask(ModelNormal):
     attribute_map = {
         "workflow_run_id": "workflow_run_id",  # noqa: E501
         "log_location": "log_location",  # noqa: E501
+        "action_name": "action_name",  # noqa: E501
+        "action_type": "action_type",  # noqa: E501
         "id": "id",  # noqa: E501
         "status": "status",  # noqa: E501
-        "action": "action",  # noqa: E501
-        "logs": "logs",  # noqa: E501
+        "error_msg": "error_msg",  # noqa: E501
+        "error_code": "error_code",  # noqa: E501
+        "stack_trace": "stack_trace",  # noqa: E501
         "created_by": "created_by",  # noqa: E501
         "created_at": "created_at",  # noqa: E501
         "updated_at": "updated_at",  # noqa: E501
@@ -132,12 +134,16 @@ class WorkflowTask(ModelNormal):
     )
 
     @convert_js_args_to_python_args
-    def __init__(self, workflow_run_id, log_location, *args, **kwargs):  # noqa: E501
+    def __init__(
+        self, workflow_run_id, log_location, action_name, action_type, *args, **kwargs
+    ):  # noqa: E501
         """WorkflowTask - a model defined in OpenAPI
 
         Args:
             workflow_run_id (str):
             log_location (str):
+            action_name (str):
+            action_type (str):
 
         Keyword Args:
             _check_type (bool): if True, values for parameters in openapi_types
@@ -172,8 +178,9 @@ class WorkflowTask(ModelNormal):
                                 _visited_composed_classes = (Animal,)
             id (str): [optional]  # noqa: E501
             status (str): [optional]  # noqa: E501
-            action ({str: (bool, date, datetime, dict, float, int, list, str, none_type)}): [optional]  # noqa: E501
-            logs ({str: (bool, date, datetime, dict, float, int, list, str, none_type)}): [optional]  # noqa: E501
+            error_msg (str): [optional]  # noqa: E501
+            error_code (int): [optional]  # noqa: E501
+            stack_trace (str): [optional]  # noqa: E501
             created_by (str): [optional]  # noqa: E501
             created_at (datetime): [optional]  # noqa: E501
             updated_at (datetime): [optional]  # noqa: E501
@@ -209,6 +216,8 @@ class WorkflowTask(ModelNormal):
 
         self.workflow_run_id = workflow_run_id
         self.log_location = log_location
+        self.action_name = action_name
+        self.action_type = action_type
         for var_name, var_value in kwargs.items():
             if (
                 var_name not in self.attribute_map

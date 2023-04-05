@@ -48,9 +48,6 @@ from gretel_client.rest_v1.model.update_model_run_status_request import (
 from gretel_client.rest_v1.model.update_workflow_run_status_request import (
     UpdateWorkflowRunStatusRequest,
 )
-from gretel_client.rest_v1.model.update_workflow_task_status_request import (
-    UpdateWorkflowTaskStatusRequest,
-)
 from gretel_client.rest_v1.model.workflow import Workflow
 from gretel_client.rest_v1.model.workflow_run import WorkflowRun
 from gretel_client.rest_v1.model.workflow_task import WorkflowTask
