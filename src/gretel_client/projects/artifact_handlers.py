@@ -20,6 +20,7 @@ from gretel_client.config import ClientConfig, DEFAULT_GRETEL_ARTIFACT_ENDPOINT
 from gretel_client.dataframe import _DataFrameT
 from gretel_client.projects.common import f
 from gretel_client.rest.api.projects_api import ProjectsApi
+from gretel_client.rest.exceptions import NotFoundException
 from gretel_client.rest.model.artifact import Artifact
 
 

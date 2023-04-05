@@ -30,7 +30,7 @@ from gretel_client.projects.exceptions import GretelProjectError
 from gretel_client.projects.models import Model
 from gretel_client.rest import models
 from gretel_client.rest.api.projects_api import ProjectsApi
-from gretel_client.rest.exceptions import NotFoundException, UnauthorizedException
+from gretel_client.rest.exceptions import UnauthorizedException
 from gretel_client.users.users import get_me
 
 DATA = "data"

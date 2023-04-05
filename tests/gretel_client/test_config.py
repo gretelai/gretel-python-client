@@ -148,7 +148,7 @@ def test_configure_session_cached_values_plus_overrides(
         "artifact_endpoint": "s3://bucket-abc",
         "endpoint": dev_ep,
     }
-    with tempfile.NamedTemporaryFile() as tmp:
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
         with open(tmp.name, "w") as f:
             json.dump(cached_config, f)
 
@@ -162,6 +162,9 @@ def test_configure_session_cached_values_plus_overrides(
         config = get_session_config()
 
         cached_config_after = json.load(tmp)
+
+        tmp.close()
+        os.unlink(tmp.name)
 
     if api_key == "prompt" or api_key is None:
         # We pick up the cached api key
@@ -191,7 +194,7 @@ def test_configure_session_cached_values_plus_invalid_overrides(
         "artifact_endpoint": "cloud",
         "endpoint": dev_ep,
     }
-    with tempfile.NamedTemporaryFile() as tmp:
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
         with open(tmp.name, "w") as f:
             json.dump(cached_config, f)
 
@@ -202,6 +205,9 @@ def test_configure_session_cached_values_plus_invalid_overrides(
                 api_key="grtu...",
                 artifact_endpoint="s3://bucket-xyz",
             )
+
+        tmp.close()
+        os.unlink(tmp.name)
 
 
 @patch("urllib3.PoolManager")

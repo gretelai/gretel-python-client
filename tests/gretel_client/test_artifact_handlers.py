@@ -81,7 +81,7 @@ def test_hybrid_upload_local_file_as_project_artifact(uuid4, endpoint):
     mock_uuid = Mock(hex="uuid")
     uuid4.return_value = mock_uuid
 
-    with tempfile.NamedTemporaryFile() as source:
+    with tempfile.NamedTemporaryFile(delete=False) as source:
         handler = HybridArtifactsHandler(endpoint, "project_id")
         artifact_key = handler.upload_project_artifact(source.name)
 
@@ -103,6 +103,9 @@ def test_hybrid_upload_local_file_as_project_artifact(uuid4, endpoint):
         ):
             handler.upload_project_artifact(artifact_key)
         assert len(os.listdir(sources_dir)) == 1
+
+        source.close()
+        os.unlink(source.name)
 
 
 @patch("uuid.uuid4")

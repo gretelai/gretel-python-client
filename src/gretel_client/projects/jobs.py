@@ -25,6 +25,11 @@ from gretel_client.config import (
 )
 from gretel_client.dataframe import _DataFrameT
 from gretel_client.models.config import get_model_type_config
+from gretel_client.projects.artifact_handlers import (
+    ArtifactsHandler,
+    CloudArtifactsHandler,
+    HybridArtifactsHandler,
+)
 from gretel_client.projects.common import f, ModelArtifact, WAIT_UNTIL_DONE
 from gretel_client.projects.exceptions import GretelJobNotFound, WaitTimeExceeded
 from gretel_client.rest.api.projects_api import ProjectsApi
