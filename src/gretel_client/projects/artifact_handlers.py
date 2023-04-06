@@ -317,7 +317,7 @@ class HybridArtifactsHandler:
         if filename is None:
             raise ArtifactsException(f"Unrecognized artifact type: `{artifact_type}`")
 
-        return f"{self.endpoint}/{self.project_id}/model/{model_id}/run/{record_handler_id}/{filename}"
+        return f"{self.endpoint}/{self.project_id}/run/{record_handler_id}/{filename}"
 
     def download(
         self,

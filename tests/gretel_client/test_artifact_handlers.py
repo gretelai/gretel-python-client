@@ -32,8 +32,8 @@ def endpoint():
         os.mkdir(f"{endpoint}/project_id/model/model_id")
 
         # Record handler artifacts
-        os.mkdir(f"{endpoint}/project_id/model/model_id/run")
-        os.mkdir(f"{endpoint}/project_id/model/model_id/run/record_id")
+        os.mkdir(f"{endpoint}/project_id/run")
+        os.mkdir(f"{endpoint}/project_id/run/record_id")
 
         yield endpoint
 
@@ -172,7 +172,7 @@ def test_hybrid_get_model_artifact_link(endpoint):
 
 def test_hybrid_get_record_handler_artifact_link(endpoint):
     report_artifact_path = (
-        f"{endpoint}/project_id/model/model_id/run/record_id/run_report_json.json.gz"
+        f"{endpoint}/project_id/run/record_id/run_report_json.json.gz"
     )
     with open(report_artifact_path, "w") as f:
         f.write("gzipped json")
