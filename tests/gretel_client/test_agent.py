@@ -92,24 +92,32 @@ def test_agent_server_does_start(
 
     server = Agent(agent_config)
     assert server._rate_limiter._max_active_jobs == 2
-    request.addfinalizer(server.interrupt)
 
     get_driver.assert_called_once_with(agent_config)
 
-    def start():
-        server.start()
-
-    t = threading.Thread(target=start)
-    t.start()
-
     get_driver.return_value.active.return_value = False
 
-    cur_wait = 0
-    while mock_driver.schedule.call_count < 2 and cur_wait < 20:
-        sleep(0.05)  # loop will wait a max of 0.1 seconds
-        cur_wait += 1
+    class FinitePoller(Poller):
+        test_count = 0
 
-    server.interrupt()
+        def __next__(self):
+            if self.test_count >= 2:
+                raise StopIteration
+            self.test_count += 1
+            return super().__next__()
+
+        @classmethod
+        def wrap(cls, poller):
+            return FinitePoller(
+                jobs_api=poller._jobs_api,
+                rate_limiter=poller._rate_limiter,
+                agent_config=poller._agent_config,
+            )
+
+    server._jobs = FinitePoller.wrap(server._jobs)
+
+    server.start()
+
     assert mock_driver.schedule.call_count == 2
     assert requests_patch.call_count == 2
     assert server._jobs_manager.active_jobs == 0

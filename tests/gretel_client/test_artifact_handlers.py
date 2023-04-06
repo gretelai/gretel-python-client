@@ -86,7 +86,7 @@ def test_hybrid_upload_local_file_as_project_artifact(uuid4, endpoint):
         artifact_key = handler.upload_project_artifact(source.name)
 
         uploaded_artifact = Path(artifact_key)
-        filename = source.name.split("/")[-1]
+        filename = Path(source.name).name
         sources_dir = Path(endpoint) / "sources" / "project_id"
         expected_uploaded_artifact_path = sources_dir / f"gretel_uuid_{filename}"
 
