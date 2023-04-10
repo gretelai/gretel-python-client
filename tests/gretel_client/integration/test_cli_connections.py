@@ -5,11 +5,10 @@ from typing import Callable
 from click.testing import CliRunner
 
 from gretel_client.cli.cli import cli
+from gretel_client.projects.projects import Project
 
 
-def test_connection_crud_from_cli(
-    get_fixture: Callable,
-):
+def test_connection_crud_from_cli(get_fixture: Callable, project: Project):
     runner = CliRunner()
 
     # Create a connection
@@ -18,11 +17,14 @@ def test_connection_crud_from_cli(
         [
             "connections",
             "create",
+            "--project",
+            project.project_guid,  # type: ignore
             "--from-file",
             get_fixture("connections/azure_connection.json"),
         ],
     )
     assert "Created connection:" in cmd.output
+    assert project.project_guid in cmd.output  # type: ignore
     assert cmd.exit_code == 0
     connection_result = json.loads(cmd.output.rsplit("Created connection:\n")[1])
     print(cmd.output)

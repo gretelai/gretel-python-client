@@ -1,6 +1,11 @@
 import click
 
-from gretel_client.cli.common import parse_file, pass_session, SessionContext
+from gretel_client.cli.common import (
+    parse_file,
+    pass_session,
+    project_option,
+    SessionContext,
+)
 from gretel_client.config import get_session_config
 from gretel_client.rest_v1.api.connections_api import ConnectionsApi
 from gretel_client.rest_v1.model.connection import Connection
@@ -25,10 +30,31 @@ def get_connections_api() -> ConnectionsApi:
     help="Path to the file containing Gretel connection.",
     required=True,
 )
+@project_option
 @pass_session
-def create(sc: SessionContext, from_file: str):
+def create(sc: SessionContext, from_file: str, project: str):
     connection_api = get_connections_api()
     conn = parse_file(from_file)
+
+    # we try and configure a project in the following order
+    #
+    #  1. the project passed via `--project`.
+    #  2. the project configured from the connection file.
+    #  3. the default configured project from the system environment.
+    #
+    project_id = conn.get("project_id")
+
+    # `project` is set if `--project` is passed.
+    if project is not None:
+        project_id = project
+
+    # `project_id` is unset at this point if no project flag is passed, and no
+    # project id is configured on the connection file.
+    if project_id is None:
+        project_id = sc.project.project_guid
+
+    conn["project_id"] = sc.project.project_guid
+
     connection = connection_api.create_connection(connection=conn)
 
     sc.log.info("Created connection:")
