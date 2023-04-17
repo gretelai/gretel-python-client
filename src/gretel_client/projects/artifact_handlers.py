@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import logging
-import os
+import shutil
+import tempfile
 import uuid
 
-from io import BytesIO
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 from urllib.parse import urlparse
@@ -136,16 +137,17 @@ class CloudArtifactsHandler:
         if self._does_not_require_upload(artifact_path):
             return artifact_path
 
-        artifact_path, file_name = _get_artifact_path_and_file_name(artifact_path)
-        with smart_open.open(artifact_path, "rb", ignore_ext=True) as src:
-            art_resp = self.projects_api.create_artifact(
-                project_id=self.project_name, artifact=Artifact(filename=file_name)
-            )
-            artifact_key = art_resp[f.DATA][f.KEY]
-            url = art_resp[f.DATA][f.URL]
-            upload_resp = requests.put(url, data=src)
-            upload_resp.raise_for_status()
-            return artifact_key
+        with _get_artifact_path_and_file_name(artifact_path) as art_path_and_file:
+            artifact_path, file_name = art_path_and_file
+            with smart_open.open(artifact_path, "rb", ignore_ext=True) as src:
+                art_resp = self.projects_api.create_artifact(
+                    project_id=self.project_name, artifact=Artifact(filename=file_name)
+                )
+                artifact_key = art_resp[f.DATA][f.KEY]
+                url = art_resp[f.DATA][f.URL]
+                upload_resp = requests.put(url, data=src)
+                upload_resp.raise_for_status()
+                return artifact_key
 
     def _does_not_require_upload(
         self, artifact_path: Union[Path, str, _DataFrameT]
@@ -261,19 +263,23 @@ class HybridArtifactsHandler:
         self,
         artifact_path: Union[Path, str, _DataFrameT],
     ) -> str:
+        """
+        Upload an artifact
+        """
         if self._does_not_require_upload(artifact_path):
             return artifact_path
 
-        artifact_path, file_name = _get_artifact_path_and_file_name(artifact_path)
-        data_source_file_name = f"gretel_{uuid.uuid4().hex}_{file_name}"
-        target_out = f"{self.data_sources_dir}/{data_source_file_name}"
+        with _get_artifact_path_and_file_name(artifact_path) as art_path_and_file:
+            artifact_path, file_name = art_path_and_file
+            data_source_file_name = f"gretel_{uuid.uuid4().hex}_{file_name}"
+            target_out = f"{self.data_sources_dir}/{data_source_file_name}"
 
-        with smart_open.open(
-            artifact_path, "rb", ignore_ext=True
-        ) as in_stream, smart_open.open(target_out, "wb") as out_stream:
-            out_stream.write(in_stream.read())
+            with smart_open.open(
+                artifact_path, "rb", ignore_ext=True
+            ) as in_stream, smart_open.open(target_out, "wb") as out_stream:
+                shutil.copyfileobj(in_stream, out_stream)
 
-        return target_out
+            return target_out
 
     def _does_not_require_upload(
         self, artifact_path: Union[Path, str, _DataFrameT]
@@ -290,7 +296,14 @@ class HybridArtifactsHandler:
         raise ArtifactsException("Cannot list hybrid artifacts")
 
     def get_project_artifact_link(self, key: str) -> str:
-        return f"{self.endpoint}/{self.project_id}/{key}"
+        # NOTE: If the key already starts with the user provided
+        # artifact endpoint, we assume it's a fully qualified path
+        # to a project artifact already. This way we don't create
+        # extra nesting of a fully qualified path on another fully
+        # qualified path.
+        if key.startswith(self.data_sources_dir):
+            return key
+        return f"{self.data_sources_dir}/{key}"
 
     def get_project_artifact_manifest(
         self,
@@ -339,18 +352,20 @@ class HybridArtifactsHandler:
             return None
 
 
+@contextmanager
 def _get_artifact_path_and_file_name(
     artifact_path: Union[Path, str, _DataFrameT]
 ) -> Tuple[str, str]:
     if isinstance(artifact_path, _DataFrameT):
-        artifact_path = BytesIO(artifact_path.to_csv(index=False).encode("utf-8"))
-        file_name = f"dataframe-{uuid.uuid4()}.csv"
+        with tempfile.NamedTemporaryFile() as tmp_file:
+            artifact_path.to_csv(tmp_file.name, index=False)
+            file_name = f"dataframe-{uuid.uuid4()}.csv"
+            yield tmp_file.name, file_name
     else:
         if isinstance(artifact_path, Path):
             artifact_path = str(artifact_path)
         file_name = Path(urlparse(artifact_path).path).name
-
-    return artifact_path, file_name
+        yield artifact_path, file_name
 
 
 ARTIFACT_FILENAMES = {

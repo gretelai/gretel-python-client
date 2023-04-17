@@ -1,20 +1,19 @@
 import os
 import tempfile
 
-from dataclasses import dataclass
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pandas as pd
 import pytest
 
-from gretel_client.config import ClientConfig, DEFAULT_GRETEL_ARTIFACT_ENDPOINT
+from gretel_client.config import DEFAULT_GRETEL_ARTIFACT_ENDPOINT
 from gretel_client.projects.artifact_handlers import (
+    _get_artifact_path_and_file_name,
     ArtifactsException,
     hybrid_handler,
     HybridArtifactsHandler,
 )
-from gretel_client.rest.api.projects_api import ProjectsApi
 
 
 @pytest.fixture()
@@ -63,6 +62,23 @@ def test_hybrid_created_with_custom_artifact_endpoint():
     assert isinstance(hybrid_handler(project), HybridArtifactsHandler)
 
 
+def test_get_artifact_path_and_file_name():
+    # Test a DataFrame first
+    dataframe = pd.DataFrame(data={"foo": [1, 2, 3], "bar": [4, 5, 6]})
+    with _get_artifact_path_and_file_name(dataframe) as data:
+        artifact_path, file_name = data
+        assert Path(artifact_path).is_file()
+        assert file_name.startswith("dataframe")
+        assert file_name.endswith(".csv")
+
+    # Test a local file
+    with tempfile.NamedTemporaryFile() as tmp_file:
+        with _get_artifact_path_and_file_name(tmp_file.name) as data:
+            artifact_path, file_name = data
+            assert artifact_path == tmp_file.name  # absolute path
+            assert file_name == Path(tmp_file.name).name  # just file name
+
+
 def test_hybrid_handler_limited_functionality():
     handler = HybridArtifactsHandler("endpoint", "project_id")
 
@@ -83,15 +99,19 @@ def test_hybrid_upload_local_file_as_project_artifact(uuid4, endpoint):
 
     with tempfile.NamedTemporaryFile(delete=False) as source:
         handler = HybridArtifactsHandler(endpoint, "project_id")
-        artifact_key = handler.upload_project_artifact(source.name)
+        artifact_path = handler.upload_project_artifact(source.name)
 
-        uploaded_artifact = Path(artifact_key)
+        uploaded_artifact = Path(artifact_path)
         filename = Path(source.name).name
+        artifact_key = f"gretel_uuid_{filename}"
         sources_dir = Path(endpoint) / "sources" / "project_id"
-        expected_uploaded_artifact_path = sources_dir / f"gretel_uuid_{filename}"
+        expected_uploaded_artifact_path = sources_dir / artifact_key
 
         assert uploaded_artifact.exists()
         assert uploaded_artifact == expected_uploaded_artifact_path
+        assert handler.get_project_artifact_link(artifact_key) == str(
+            expected_uploaded_artifact_path
+        )
         assert len(os.listdir(sources_dir)) == 1
 
         # ensure we do not re-upload existing artifacts
@@ -156,7 +176,7 @@ def test_hybrid_passes_along_potentially_junk_data_source_value(endpoint):
 
 def test_hybrid_artifact_link():
     handler = HybridArtifactsHandler("endpoint", "project_id")
-    assert handler.get_project_artifact_link("key") == "endpoint/project_id/key"
+    assert handler.get_project_artifact_link("key") == "endpoint/sources/project_id/key"
 
 
 def test_hybrid_get_model_artifact_link(endpoint):
