@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import shutil
 import tempfile
 import uuid
@@ -352,10 +353,14 @@ def _get_artifact_path_and_file_name(
     artifact_path: Union[Path, str, _DataFrameT]
 ) -> Tuple[str, str]:
     if isinstance(artifact_path, _DataFrameT):
-        with tempfile.NamedTemporaryFile() as tmp_file:
+        with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
             artifact_path.to_csv(tmp_file.name, index=False)
             file_name = f"dataframe-{uuid.uuid4()}.csv"
-            yield tmp_file.name, file_name
+            try:
+                yield tmp_file.name, file_name
+            finally:
+                tmp_file.close()
+                os.unlink(tmp_file.name)
     else:
         if isinstance(artifact_path, Path):
             artifact_path = str(artifact_path)
