@@ -234,20 +234,7 @@ class CloudArtifactsHandler:
         artifact_type: str,
         log: logging.Logger,
     ) -> None:
-        artifact_response = requests.get(download_link)
-        try:
-            artifact_response.raise_for_status()
-        except requests.exceptions.HTTPError as ex:
-            log.error(
-                f"\tCould not download {artifact_type}. You might retry this request.",
-                ex=ex,
-            )
-            return None
-
-        artifact_output_path = output_path / Path(urlparse(download_link).path).name
-        with open(artifact_output_path, "wb+") as out:
-            log.info(f"\tWriting {artifact_type} to {artifact_output_path}")
-            out.write(artifact_response.content)
+        _download(download_link, output_path, artifact_type, log)
 
 
 class HybridArtifactsHandler:
@@ -339,17 +326,25 @@ class HybridArtifactsHandler:
         artifact_type: str,
         log: logging.Logger,
     ) -> None:
-        target_out = output_path / Path(urlparse(download_link).path).name
-        try:
-            with smart_open.open(
-                download_link, "rb", ignore_ext=True
-            ) as in_stream, smart_open.open(target_out, "wb") as out_stream:
-                out_stream.write(in_stream.read())
-        except OSError:
-            log.warning(
-                f"Could not download {artifact_type} from `{download_link}`. The file may not exist, or you may not have access to it."
-            )
-            return None
+        _download(download_link, output_path, artifact_type, log)
+
+
+def _download(
+    download_link: str,
+    output_path: Path,
+    artifact_type: str,
+    log: logging.Logger,
+) -> None:
+    target_out = output_path / Path(urlparse(download_link).path).name
+    try:
+        with smart_open.open(
+            download_link, "rb", ignore_ext=True
+        ) as src, smart_open.open(target_out, "wb", ignore_ext=True) as dest:
+            shutil.copyfileobj(src, dest)
+    except:
+        log.error(
+            f"Could not download {artifact_type}. The file may not exist, or you may not have access to it. You might retry this request."
+        )
 
 
 @contextmanager
