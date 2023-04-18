@@ -103,7 +103,8 @@ def test_hybrid_upload_local_file_as_project_artifact(uuid4, endpoint):
 
         filename = Path(source.name).name
         artifact_key = f"gretel_uuid_{filename}"
-        expected_artifact_path = f"{endpoint}/sources/project_id/{artifact_key}"
+        sources_dir = f"{endpoint}/sources/project_id"
+        expected_artifact_path = f"{sources_dir}/{artifact_key}"
 
         assert artifact_path == expected_artifact_path
         assert Path(expected_artifact_path).exists()
