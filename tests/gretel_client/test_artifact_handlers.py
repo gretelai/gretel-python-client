@@ -101,18 +101,14 @@ def test_hybrid_upload_local_file_as_project_artifact(uuid4, endpoint):
         handler = HybridArtifactsHandler(endpoint, "project_id")
         artifact_path = handler.upload_project_artifact(source.name)
 
-        uploaded_artifact = Path(artifact_path)
         filename = Path(source.name).name
         artifact_key = f"gretel_uuid_{filename}"
-        sources_dir = Path(endpoint) / "sources" / "project_id"
-        expected_uploaded_artifact_path = sources_dir / artifact_key
+        expected_artifact_path = f"{endpoint}/sources/project_id/{artifact_key}"
 
-        assert uploaded_artifact.exists()
-        assert uploaded_artifact == expected_uploaded_artifact_path
-        assert handler.get_project_artifact_link(artifact_key) == str(
-            expected_uploaded_artifact_path
-        )
+        assert artifact_path == expected_artifact_path
+        assert Path(expected_artifact_path).exists()
         assert len(os.listdir(sources_dir)) == 1
+        assert handler.get_project_artifact_link(artifact_key) == expected_artifact_path
 
         # ensure we do not re-upload existing artifacts
         # for testing we uploaded to a local temp directory (`endpoint`);
