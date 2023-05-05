@@ -20,7 +20,7 @@ from typing_extensions import Protocol
 
 from gretel_client.config import ClientConfig, DEFAULT_GRETEL_ARTIFACT_ENDPOINT
 from gretel_client.dataframe import _DataFrameT
-from gretel_client.projects.common import f
+from gretel_client.projects.common import f, ModelArtifact, ModelRunArtifact
 from gretel_client.rest.api.projects_api import ProjectsApi
 from gretel_client.rest.exceptions import NotFoundException
 from gretel_client.rest.model.artifact import Artifact
@@ -370,18 +370,20 @@ def _get_artifact_path_and_file_name(
 
 ARTIFACT_FILENAMES = {
     # Model artifacts
-    "model": "model.tar.gz",
-    "report": "report.html.gz",
-    "report_json": "report_json.json.gz",
-    "model_logs": "logs.json.gz",
-    "data_preview": "data_preview.gz",
-    "classification_report": "classification_report.html.gz",
-    "classification_report_json": "classification_report_json.json.gz",
-    "regression_report": "regression_report.html.gz",
-    "regression_report_json": "regression_report_json.json.gz",
+    ModelArtifact.MODEL: "model.tar.gz",
+    ModelArtifact.REPORT: "report.html.gz",
+    ModelArtifact.REPORT_JSON: "report_json.json.gz",
+    ModelArtifact.MODEL_LOGS: "logs.json.gz",
+    ModelArtifact.DATA_PREVIEW: "data_preview.gz",
+    ModelArtifact.CLASSIFICATION_REPORT: "classification_report.html.gz",
+    ModelArtifact.CLASSIFICATION_REPORT_JSON: "classification_report_json.json.gz",
+    ModelArtifact.REGRESSION_REPORT: "regression_report.html.gz",
+    ModelArtifact.REGRESSION_REPORT_JSON: "regression_report_json.json.gz",
+    ModelArtifact.TEXT_METRICS_REPORT: "text_metrics_report.html.gz",
+    ModelArtifact.TEXT_METRICS_REPORT_JSON: "text_metrics_report_json.json.gz",
     # Record handler artifacts
-    "run_report_json": "run_report_json.json.gz",
-    "data": "data.gz",
-    "run_logs": "logs.json.gz",
-    "output_files": "output_files.tar.gz",
+    ModelRunArtifact.RUN_REPORT_JSON: "run_report_json.json.gz",
+    ModelRunArtifact.DATA: "data.gz",
+    ModelRunArtifact.RUN_LOGS: "logs.json.gz",
+    ModelRunArtifact.OUTPUT_FILES: "output_files.tar.gz",
 }

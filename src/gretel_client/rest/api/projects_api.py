@@ -1552,6 +1552,8 @@ class ProjectsApi(object):
                         "CLASSIFICATION_REPORT_JSON": "classification_report_json",
                         "REGRESSION_REPORT": "regression_report",
                         "REGRESSION_REPORT_JSON": "regression_report_json",
+                        "TEXT_METRICS_REPORT": "text_metrics_report",
+                        "TEXT_METRICS_REPORT_JSON": "text_metrics_report_json",
                         "DATA_PREVIEW": "data_preview",
                         "DATA": "data",
                         "MODEL_LOGS": "model_logs",
