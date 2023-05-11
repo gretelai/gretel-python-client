@@ -39,7 +39,7 @@ PROJECT = "project"
 MODELS = "models"
 
 
-log = get_logger(__name__)
+logger = get_logger(__name__)
 
 
 def check_not_deleted(func):
@@ -121,7 +121,7 @@ class Project:
         """
         # todo(dn): remove in 0.9 release
         if kwargs.get("include_models") or len(args) > 0:
-            log.warning(
+            logger.warning(
                 "``include_models`` is deprecated and will be removed in the 0.9 release."
             )
         self.projects_api.delete_project(project_id=self.project_id)

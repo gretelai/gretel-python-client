@@ -20,7 +20,7 @@ from gretel_client.cli.utils.parser_utils import (
     RefData,
     RefDataTypes,
 )
-from gretel_client.config import get_logger, get_session_config, RunnerMode
+from gretel_client.config import get_logger, RunnerMode
 from gretel_client.dataframe import _DataFrameT
 from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.common import (
