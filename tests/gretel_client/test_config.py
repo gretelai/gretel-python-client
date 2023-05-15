@@ -15,6 +15,7 @@ from gretel_client.config import (
     configure_session,
     get_session_config,
     GRETEL_PREVIEW_FEATURES,
+    GRETEL_RUNNER_MODE,
     GretelClientConfigurationError,
     PreviewFeatures,
     RunnerMode,
@@ -44,7 +45,14 @@ def test_does_read_and_write_config(dev_ep, tmpdir):
     tmp_config_path = Path(tmpdir / "config.json")
     config_path = write_config(config, config_path=tmp_config_path)
     assert config_path == tmp_config_path
+    assert config.default_runner == RunnerMode.CLOUD
     assert _load_config(config_path)
+
+
+def test_env_runner_mode(monkeypatch):
+    monkeypatch.setenv(GRETEL_RUNNER_MODE, "local")
+    config = ClientConfig()
+    assert config.default_runner == RunnerMode.LOCAL
 
 
 def test_does_set_session_factory(dev_ep):

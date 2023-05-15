@@ -42,6 +42,9 @@ GRETEL_CONFIG_FILE = "GRETEL_CONFIG_FILE"
 GRETEL_PROJECT = "GRETEL_PROJECT"
 """Env variable name to select default project"""
 
+GRETEL_RUNNER_MODE = "GRETEL_RUNNER_MODE"
+"""Env variable name to set the default runner mode"""
+
 DEFAULT_GRETEL_ENDPOINT = "https://api.gretel.cloud"
 """Default gretel endpoint"""
 
@@ -150,7 +153,9 @@ class ClientConfig:
             or DEFAULT_GRETEL_ARTIFACT_ENDPOINT
         )
         self.api_key = api_key or os.getenv(GRETEL_API_KEY)
-        self.default_runner = RunnerMode.parse(default_runner)
+        self.default_runner = RunnerMode.parse(
+            os.getenv(GRETEL_RUNNER_MODE) or default_runner
+        )
         self.default_project_name = (
             default_project_name or os.getenv(GRETEL_PROJECT) or default_project_name
         )
