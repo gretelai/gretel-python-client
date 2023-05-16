@@ -59,6 +59,8 @@ class WorkflowRun(ModelNormal):
             "ERROR": "RUN_STATUS_ERROR",
             "LOST": "RUN_STATUS_LOST",
             "COMPLETED": "RUN_STATUS_COMPLETED",
+            "CANCELLING": "RUN_STATUS_CANCELLING",
+            "CANCELLED": "RUN_STATUS_CANCELLED",
         },
     }
 
@@ -92,6 +94,8 @@ class WorkflowRun(ModelNormal):
             "active_at": (datetime,),  # noqa: E501
             "error_at": (datetime,),  # noqa: E501
             "lost_at": (datetime,),  # noqa: E501
+            "cancelled_at": (datetime,),  # noqa: E501
+            "cancellation_request": (object,),  # noqa: E501
         }
 
     @cached_property
@@ -110,6 +114,8 @@ class WorkflowRun(ModelNormal):
         "active_at": "active_at",  # noqa: E501
         "error_at": "error_at",  # noqa: E501
         "lost_at": "lost_at",  # noqa: E501
+        "cancelled_at": "cancelled_at",  # noqa: E501
+        "cancellation_request": "cancellation_request",  # noqa: E501
     }
 
     _composed_schemas = {}
@@ -173,6 +179,8 @@ class WorkflowRun(ModelNormal):
             active_at (datetime): [optional]  # noqa: E501
             error_at (datetime): [optional]  # noqa: E501
             lost_at (datetime): [optional]  # noqa: E501
+            cancelled_at (datetime): [optional]  # noqa: E501
+            cancellation_request (object): [optional]  # noqa: E501
         """
 
         _check_type = kwargs.pop("_check_type", True)

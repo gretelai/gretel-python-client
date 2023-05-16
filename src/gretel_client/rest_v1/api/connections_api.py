@@ -17,6 +17,9 @@ from gretel_client.rest_v1.model.list_connections_response import (
     ListConnectionsResponse,
 )
 from gretel_client.rest_v1.model.status import Status
+from gretel_client.rest_v1.model.validate_connection_credentials_response import (
+    ValidateConnectionCredentialsResponse,
+)
 from gretel_client.rest_v1.model_utils import (  # noqa: F401
     check_allowed_values,
     check_validations,
@@ -705,7 +708,7 @@ class ConnectionsApi(object):
                 async_req (bool): execute request asynchronously
 
             Returns:
-                Connection
+                ValidateConnectionCredentialsResponse
                     If the method is called asynchronously, returns the request
                     thread.
             """
@@ -723,7 +726,7 @@ class ConnectionsApi(object):
 
         self.validate_connection_credentials = _Endpoint(
             settings={
-                "response_type": (Connection,),
+                "response_type": (ValidateConnectionCredentialsResponse,),
                 "auth": [],
                 "endpoint_path": "/v1/connections/{connection_id}/validate-credentials",
                 "operation_id": "validate_connection_credentials",

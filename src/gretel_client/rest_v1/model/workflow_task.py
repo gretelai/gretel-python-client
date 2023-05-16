@@ -59,6 +59,8 @@ class WorkflowTask(ModelNormal):
             "ERROR": "RUN_STATUS_ERROR",
             "LOST": "RUN_STATUS_LOST",
             "COMPLETED": "RUN_STATUS_COMPLETED",
+            "CANCELLING": "RUN_STATUS_CANCELLING",
+            "CANCELLED": "RUN_STATUS_CANCELLED",
         },
     }
 
