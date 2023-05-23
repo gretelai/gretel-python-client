@@ -1,5 +1,8 @@
 import json
+import os
 
+from signal import SIGINT
+from threading import Timer
 from typing import Callable
 
 from click.testing import CliRunner
@@ -72,4 +75,24 @@ def test_workflow_crud_from_cli(get_fixture: Callable, project: Callable):
     assert workflow_result["id"] in cmd.output
     assert "Workflow status is:" in cmd.output
     assert "Workflow run hasn't completed after waiting for 10 seconds." in cmd.output
+    assert cmd.exit_code == 0
+
+    # Trigger a workflow by id, then cancel it
+    # Send an interrupt signal after 10 seconds
+    Timer(10, lambda: os.kill(os.getpid(), SIGINT)).start()
+    cmd = runner.invoke(
+        cli,
+        [
+            "workflows",
+            "trigger",
+            "--workflow-id",
+            workflow_result["id"],
+            "--wait",
+            "-1",
+        ],
+    )
+    assert "Workflow run:" in cmd.output
+    assert workflow_result["id"] in cmd.output
+    assert "Cancellation request sent" in cmd.output
+    assert "Workflow run complete: RUN_STATUS_CANCELLED" in cmd.output
     assert cmd.exit_code == 0
