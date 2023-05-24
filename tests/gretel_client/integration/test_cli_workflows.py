@@ -9,7 +9,10 @@ from click.testing import CliRunner
 
 from gretel_client.cli.cli import cli
 
+from .conftest import pytest_skip_on_windows
 
+
+@pytest_skip_on_windows
 def test_workflow_crud_from_cli(get_fixture: Callable, project: Callable):
     runner = CliRunner()
 
