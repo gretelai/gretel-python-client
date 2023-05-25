@@ -69,7 +69,8 @@ class LogEnvelope(ModelNormal):
                 and the value is attribute type.
         """
         return {
-            "message": (str,),  # noqa: E501
+            "msg": (str,),  # noqa: E501
+            "ts": (datetime,),  # noqa: E501
         }
 
     @cached_property
@@ -77,7 +78,8 @@ class LogEnvelope(ModelNormal):
         return None
 
     attribute_map = {
-        "message": "message",  # noqa: E501
+        "msg": "msg",  # noqa: E501
+        "ts": "ts",  # noqa: E501
     }
 
     _composed_schemas = {}
@@ -128,7 +130,8 @@ class LogEnvelope(ModelNormal):
                                 Animal class but this time we won't travel
                                 through its discriminator because we passed in
                                 _visited_composed_classes = (Animal,)
-            message (str): [optional]  # noqa: E501
+            msg (str): [optional]  # noqa: E501
+            ts (datetime): [optional]  # noqa: E501
         """
 
         _check_type = kwargs.pop("_check_type", True)

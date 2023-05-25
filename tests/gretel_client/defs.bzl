@@ -20,6 +20,7 @@ client_deps = [
     "//python/src/gretel_client:helpers",
     "//python/src/gretel_client:agents",
     "//python/src/gretel_client:evaluation",
+    "//python/src/gretel_client:workflows",
 ]
 
 all_deps = test_deps + client_deps
