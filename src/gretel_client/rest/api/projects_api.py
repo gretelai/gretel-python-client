@@ -1598,6 +1598,7 @@ class ProjectsApi(object):
 
             Keyword Args:
                 limit (int): Limit number of models to return. [optional]
+                model_name (str): Model name to match on. [optional]
                 _return_http_data_only (bool): response data without head status
                     code and headers. Default is True.
                 _preload_content (bool): if False, the urllib3.HTTPResponse object
@@ -1662,6 +1663,7 @@ class ProjectsApi(object):
                 "all": [
                     "project_id",
                     "limit",
+                    "model_name",
                 ],
                 "required": [
                     "project_id",
@@ -1676,14 +1678,17 @@ class ProjectsApi(object):
                 "openapi_types": {
                     "project_id": (str,),
                     "limit": (int,),
+                    "model_name": (str,),
                 },
                 "attribute_map": {
                     "project_id": "project_id",
                     "limit": "limit",
+                    "model_name": "model_name",
                 },
                 "location_map": {
                     "project_id": "path",
                     "limit": "query",
+                    "model_name": "query",
                 },
                 "collection_format_map": {},
             },

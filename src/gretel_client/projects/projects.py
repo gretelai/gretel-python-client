@@ -153,25 +153,32 @@ class Project:
 
     @check_not_deleted
     def search_models(
-        self, factory: Type[MT] = Model, limit: int = 100
+        self,
+        factory: Type[MT] = Model,
+        limit: int = 100,
+        model_name: str = "",
     ) -> Iterator[MT]:
         """Search for project models.
 
         Args:
-            limit: Limits the number of project models to return
             factory: Determines what type of Model representation is returned.
                 If ``Model`` is passed, a ``Model`` will be returned. If ``dict``
                 is passed, a dictionary representation of the search results
                 will be returned.
+            limit: Limits the number of project models to return
+            model_name: Name of the model to try and match on (partial match)
         """
         if factory not in (dict, Model):
-            raise ValueError("factory must be one of ``str`` or ``Model``.")
-        models = (
-            self.projects_api.get_models(project_id=self.name, limit=limit)
-            .get(DATA)
-            .get(MODELS)
-        )
-        for model in models:
+            raise ValueError("factory must be one of ``dict`` or ``Model``.")
+
+        api_args = {"project_id": self.name, "limit": limit}
+        if model_name:
+            api_args["model_name"] = model_name
+
+        result = self.projects_api.get_models(**api_args)
+        searched_models = result.get(DATA).get(MODELS)
+
+        for model in searched_models:
             if factory == Model:
                 model = self.get_model(model_id=model[f.UID])
             yield model

@@ -83,7 +83,6 @@ def create(
     dry_run: bool,
     name: str,
 ):
-
     if wait >= 0 and output:
         raise click.BadOptionUsage(
             "--output",
@@ -304,9 +303,14 @@ def get(sc: SessionContext, project: str, model_id: str, output: str):
 @models.command(help="Search for models of the project.")
 @project_option
 @click.option("--limit", help="Limit the number of projects.", default=100)
+@click.option("--model-name", help="Model name to match on", default="")
 @pass_session
-def search(sc: SessionContext, project: str, limit: int):
-    sc.print(data=list(sc.project.search_models(factory=dict, limit=limit)))
+def search(sc: SessionContext, project: str, limit: int, model_name: str):
+    sc.print(
+        data=list(
+            sc.project.search_models(factory=dict, limit=limit, model_name=model_name)
+        )
+    )
 
 
 @models.command(help="Delete model.")

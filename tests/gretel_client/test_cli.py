@@ -274,3 +274,14 @@ def test_does_run_manual_artifacts(
         status_strings=ANY,
         model_path=None,
     )
+
+
+def test_search_models_with_model_name(
+    get_project: MagicMock,
+    runner: CliRunner,
+):
+    cmd = runner.invoke(
+        cli,
+        ["models", "search", "--model-name", "model-boi"],
+    )
+    assert cmd.exit_code == 0
