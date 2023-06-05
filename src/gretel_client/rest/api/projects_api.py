@@ -1599,6 +1599,8 @@ class ProjectsApi(object):
             Keyword Args:
                 limit (int): Limit number of models to return. [optional]
                 model_name (str): Model name to match on. [optional]
+                sort_by (str): Direction to sort by. Defaults to \"asc\". [optional]
+                sort_field (str): field to sort on. Defaults to \"last_modified\". [optional]
                 _return_http_data_only (bool): response data without head status
                     code and headers. Default is True.
                 _preload_content (bool): if False, the urllib3.HTTPResponse object
@@ -1664,31 +1666,49 @@ class ProjectsApi(object):
                     "project_id",
                     "limit",
                     "model_name",
+                    "sort_by",
+                    "sort_field",
                 ],
                 "required": [
                     "project_id",
                 ],
                 "nullable": [],
-                "enum": [],
+                "enum": [
+                    "sort_by",
+                    "sort_field",
+                ],
                 "validation": [],
             },
             root_map={
                 "validations": {},
-                "allowed_values": {},
+                "allowed_values": {
+                    ("sort_by",): {"ASC": "asc", "DESC": "desc"},
+                    ("sort_field",): {
+                        "LAST_MODIFIED": "last_modified",
+                        "STATUS_HISTORY.CREATED": "status_history.created",
+                        "MODEL_NAME": "model_name",
+                    },
+                },
                 "openapi_types": {
                     "project_id": (str,),
                     "limit": (int,),
                     "model_name": (str,),
+                    "sort_by": (str,),
+                    "sort_field": (str,),
                 },
                 "attribute_map": {
                     "project_id": "project_id",
                     "limit": "limit",
                     "model_name": "model_name",
+                    "sort_by": "sort_by",
+                    "sort_field": "sort_field",
                 },
                 "location_map": {
                     "project_id": "path",
                     "limit": "query",
                     "model_name": "query",
+                    "sort_by": "query",
+                    "sort_field": "query",
                 },
                 "collection_format_map": {},
             },

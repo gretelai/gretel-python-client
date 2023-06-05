@@ -1108,6 +1108,9 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
     api_instance = projects_api.ProjectsApi(api_client)
     project_id = "project_id_example" # str | Project id
     limit = 1 # int | Limit number of models to return (optional)
+    model_name = "model_name_example" # str | Model name to match on (optional)
+    sort_by = "asc" # str | Direction to sort by. Defaults to \"asc\" (optional)
+    sort_field = "last_modified" # str | field to sort on. Defaults to \"last_modified\" (optional)
 
     # example passing only required values which don't have defaults set
     try:
@@ -1121,7 +1124,7 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
     # and optional values
     try:
         # List all project models
-        api_response = api_instance.get_models(project_id, limit=limit)
+        api_response = api_instance.get_models(project_id, limit=limit, model_name=model_name, sort_by=sort_by, sort_field=sort_field)
         pprint(api_response)
     except gretel_client.rest.ApiException as e:
         print("Exception when calling ProjectsApi->get_models: %s\n" % e)
@@ -1134,6 +1137,9 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **project_id** | **str**| Project id |
  **limit** | **int**| Limit number of models to return | [optional]
+ **model_name** | **str**| Model name to match on | [optional]
+ **sort_by** | **str**| Direction to sort by. Defaults to \&quot;asc\&quot; | [optional]
+ **sort_field** | **str**| field to sort on. Defaults to \&quot;last_modified\&quot; | [optional]
 
 ### Return type
 
