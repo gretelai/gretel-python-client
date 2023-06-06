@@ -1,7 +1,7 @@
 backports.cached-property==1.0.0.post2
 certifi>=2021.10.8
 click==8.1.3
-docker==4.4.1
+docker==6.1.2
 kubernetes==12.0.1
 opentelemetry-distro==0.36b0
 opentelemetry-exporter-prometheus==1.12.0rc1
