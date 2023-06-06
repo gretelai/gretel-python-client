@@ -307,7 +307,6 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
     api_instance = projects_api.ProjectsApi(api_client)
     project_id = "project_id_example" # str | Project id
     model_id = "model_id_example" # str | Model id
-    action = "action_example" # str, none_type |  (optional)
     runner_mode = "cloud" # str |  (optional)
     body = {} # {str: (bool, date, datetime, dict, float, int, list, str, none_type)} |  (optional)
 
@@ -323,7 +322,7 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
     # and optional values
     try:
         # Create a record handler for a model
-        api_response = api_instance.create_record_handler(project_id, model_id, action=action, runner_mode=runner_mode, body=body)
+        api_response = api_instance.create_record_handler(project_id, model_id, runner_mode=runner_mode, body=body)
         pprint(api_response)
     except gretel_client.rest.ApiException as e:
         print("Exception when calling ProjectsApi->create_record_handler: %s\n" % e)
@@ -336,7 +335,6 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **project_id** | **str**| Project id |
  **model_id** | **str**| Model id |
- **action** | **str, none_type**|  | [optional]
  **runner_mode** | **str**|  | [optional]
  **body** | **{str: (bool, date, datetime, dict, float, int, list, str, none_type)}**|  | [optional]
 

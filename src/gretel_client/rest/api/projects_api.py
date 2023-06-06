@@ -400,7 +400,6 @@ class ProjectsApi(object):
                 model_id (str): Model id
 
             Keyword Args:
-                action (str, none_type): [optional]
                 runner_mode (str): [optional]
                 body ({str: (bool, date, datetime, dict, float, int, list, str, none_type)}): [optional]
                 _return_http_data_only (bool): response data without head status
@@ -468,7 +467,6 @@ class ProjectsApi(object):
                 "all": [
                     "project_id",
                     "model_id",
-                    "action",
                     "runner_mode",
                     "body",
                 ],
@@ -476,9 +474,7 @@ class ProjectsApi(object):
                     "project_id",
                     "model_id",
                 ],
-                "nullable": [
-                    "action",
-                ],
+                "nullable": [],
                 "enum": [
                     "runner_mode",
                 ],
@@ -492,10 +488,6 @@ class ProjectsApi(object):
                 "openapi_types": {
                     "project_id": (str,),
                     "model_id": (str,),
-                    "action": (
-                        str,
-                        none_type,
-                    ),
                     "runner_mode": (str,),
                     "body": (
                         {
@@ -516,13 +508,11 @@ class ProjectsApi(object):
                 "attribute_map": {
                     "project_id": "project_id",
                     "model_id": "model_id",
-                    "action": "action",
                     "runner_mode": "runner_mode",
                 },
                 "location_map": {
                     "project_id": "path",
                     "model_id": "path",
-                    "action": "query",
                     "runner_mode": "query",
                     "body": "body",
                 },
