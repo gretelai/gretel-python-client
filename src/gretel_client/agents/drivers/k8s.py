@@ -216,6 +216,7 @@ class Kubernetes(Driver):
             metadata=client.V1ObjectMeta(
                 labels={"app": "gretel-jobs-worker"},
                 namespace=self._gretel_worker_namespace,
+                annotations={"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"},
             ),
             spec=client.V1PodSpec(
                 restart_policy="Never",
