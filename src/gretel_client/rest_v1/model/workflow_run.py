@@ -26,6 +26,7 @@ from gretel_client.rest_v1.model_utils import (  # noqa: F401
 )
 
 
+# Added manually in order to fix ApiValueError("Unsupported type: <class 'object'>")
 def lazy_import():
     from gretel_client.rest_v1.model.workflow_run_cancellation_request import (
         WorkflowRunCancellationRequest,

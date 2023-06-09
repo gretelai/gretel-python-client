@@ -69,14 +69,14 @@ class Workflow(ModelNormal):
                 and the value is attribute type.
         """
         return {
-            "project_id": (str,),  # noqa: E501
             "id": (str,),  # noqa: E501
+            "project_id": (str,),  # noqa: E501
+            "created_by": (str,),  # noqa: E501
+            "created_at": (datetime,),  # noqa: E501
             "name": (str,),  # noqa: E501
             "config": (
                 {str: (bool, date, datetime, dict, float, int, list, str, none_type)},
             ),  # noqa: E501
-            "created_by": (str,),  # noqa: E501
-            "created_at": (datetime,),  # noqa: E501
             "updated_at": (datetime,),  # noqa: E501
         }
 
@@ -85,12 +85,12 @@ class Workflow(ModelNormal):
         return None
 
     attribute_map = {
-        "project_id": "project_id",  # noqa: E501
         "id": "id",  # noqa: E501
-        "name": "name",  # noqa: E501
-        "config": "config",  # noqa: E501
+        "project_id": "project_id",  # noqa: E501
         "created_by": "created_by",  # noqa: E501
         "created_at": "created_at",  # noqa: E501
+        "name": "name",  # noqa: E501
+        "config": "config",  # noqa: E501
         "updated_at": "updated_at",  # noqa: E501
     }
 

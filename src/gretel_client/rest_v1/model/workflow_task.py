@@ -81,17 +81,17 @@ class WorkflowTask(ModelNormal):
                 and the value is attribute type.
         """
         return {
+            "id": (str,),  # noqa: E501
             "workflow_run_id": (str,),  # noqa: E501
             "log_location": (str,),  # noqa: E501
             "action_name": (str,),  # noqa: E501
             "action_type": (str,),  # noqa: E501
-            "id": (str,),  # noqa: E501
+            "created_by": (str,),  # noqa: E501
+            "created_at": (datetime,),  # noqa: E501
             "status": (str,),  # noqa: E501
             "error_msg": (str,),  # noqa: E501
             "error_code": (int,),  # noqa: E501
             "stack_trace": (str,),  # noqa: E501
-            "created_by": (str,),  # noqa: E501
-            "created_at": (datetime,),  # noqa: E501
             "updated_at": (datetime,),  # noqa: E501
             "pending_at": (datetime,),  # noqa: E501
             "active_at": (datetime,),  # noqa: E501
@@ -104,17 +104,17 @@ class WorkflowTask(ModelNormal):
         return None
 
     attribute_map = {
+        "id": "id",  # noqa: E501
         "workflow_run_id": "workflow_run_id",  # noqa: E501
         "log_location": "log_location",  # noqa: E501
         "action_name": "action_name",  # noqa: E501
         "action_type": "action_type",  # noqa: E501
-        "id": "id",  # noqa: E501
+        "created_by": "created_by",  # noqa: E501
+        "created_at": "created_at",  # noqa: E501
         "status": "status",  # noqa: E501
         "error_msg": "error_msg",  # noqa: E501
         "error_code": "error_code",  # noqa: E501
         "stack_trace": "stack_trace",  # noqa: E501
-        "created_by": "created_by",  # noqa: E501
-        "created_at": "created_at",  # noqa: E501
         "updated_at": "updated_at",  # noqa: E501
         "pending_at": "pending_at",  # noqa: E501
         "active_at": "active_at",  # noqa: E501

@@ -12,9 +12,6 @@ import sys  # noqa: F401
 
 from gretel_client.rest_v1.api_client import ApiClient
 from gretel_client.rest_v1.api_client import Endpoint as _Endpoint
-from gretel_client.rest_v1.model.cancel_workflow_run_request import (
-    CancelWorkflowRunRequest,
-)
 from gretel_client.rest_v1.model.get_workflows_response import GetWorkflowsResponse
 from gretel_client.rest_v1.model.search_workflow_runs_response import (
     SearchWorkflowRunsResponse,
@@ -55,20 +52,17 @@ class WorkflowsApi(object):
             api_client = ApiClient()
         self.api_client = api_client
 
-        def __cancel_workflow_run(
-            self, workflow_run_id, cancel_workflow_run_request, **kwargs
-        ):
+        def __cancel_workflow_run(self, workflow_run_id, **kwargs):
             """cancel_workflow_run  # noqa: E501
 
             This method makes a synchronous HTTP request by default. To make an
             asynchronous HTTP request, please pass async_req=True
 
-            >>> thread = api.cancel_workflow_run(workflow_run_id, cancel_workflow_run_request, async_req=True)
+            >>> thread = api.cancel_workflow_run(workflow_run_id, async_req=True)
             >>> result = thread.get()
 
             Args:
                 workflow_run_id (str):
-                cancel_workflow_run_request (CancelWorkflowRunRequest):
 
             Keyword Args:
                 _return_http_data_only (bool): response data without head status
@@ -106,7 +100,6 @@ class WorkflowsApi(object):
             kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
             kwargs["_host_index"] = kwargs.get("_host_index")
             kwargs["workflow_run_id"] = workflow_run_id
-            kwargs["cancel_workflow_run_request"] = cancel_workflow_run_request
             return self.call_with_http_info(**kwargs)
 
         self.cancel_workflow_run = _Endpoint(
@@ -115,17 +108,15 @@ class WorkflowsApi(object):
                 "auth": [],
                 "endpoint_path": "/v1/workflows/runs/{workflow_run_id}/cancel",
                 "operation_id": "cancel_workflow_run",
-                "http_method": "POST",
+                "http_method": "PATCH",
                 "servers": None,
             },
             params_map={
                 "all": [
                     "workflow_run_id",
-                    "cancel_workflow_run_request",
                 ],
                 "required": [
                     "workflow_run_id",
-                    "cancel_workflow_run_request",
                 ],
                 "nullable": [],
                 "enum": [],
@@ -136,20 +127,18 @@ class WorkflowsApi(object):
                 "allowed_values": {},
                 "openapi_types": {
                     "workflow_run_id": (str,),
-                    "cancel_workflow_run_request": (CancelWorkflowRunRequest,),
                 },
                 "attribute_map": {
                     "workflow_run_id": "workflow_run_id",
                 },
                 "location_map": {
                     "workflow_run_id": "path",
-                    "cancel_workflow_run_request": "body",
                 },
                 "collection_format_map": {},
             },
             headers_map={
                 "accept": ["application/json"],
-                "content_type": ["application/json"],
+                "content_type": [],
             },
             api_client=api_client,
             callable=__cancel_workflow_run,

@@ -11,9 +11,6 @@
 
 from gretel_client.rest_v1.model.activity_event import ActivityEvent
 from gretel_client.rest_v1.model.artifact import Artifact
-from gretel_client.rest_v1.model.cancel_workflow_run_request import (
-    CancelWorkflowRunRequest,
-)
 from gretel_client.rest_v1.model.connection import Connection
 from gretel_client.rest_v1.model.create_artifact_response import CreateArtifactResponse
 from gretel_client.rest_v1.model.event_component import EventComponent

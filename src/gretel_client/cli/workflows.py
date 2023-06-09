@@ -9,10 +9,7 @@ import yaml
 from gretel_client.cli.common import pass_session, project_option, SessionContext
 from gretel_client.config import get_session_config
 from gretel_client.projects.common import WAIT_UNTIL_DONE
-from gretel_client.rest_v1.api.workflows_api import (
-    CancelWorkflowRunRequest,
-    WorkflowsApi,
-)
+from gretel_client.rest_v1.api.workflows_api import WorkflowsApi
 from gretel_client.rest_v1.model.workflow import Workflow
 from gretel_client.rest_v1.model.workflow_run import WorkflowRun
 
@@ -120,10 +117,7 @@ def trigger(sc: SessionContext, workflow_id: str, wait: int):
             "Interrupted, cancelling workflow run ...",
             prefix_nl=True,
         )
-        workflow_api.cancel_workflow_run(
-            workflow_run_id=workflow_run.id,
-            cancel_workflow_run_request=CancelWorkflowRunRequest(workflow_run.id),
-        )
+        workflow_api.cancel_workflow_run(workflow_run_id=workflow_run.id)
 
         sc.log.warning(
             "Cancellation request sent, waiting for workflow to reach CANCELLED state. Send another interrupt to exit immediately.",
