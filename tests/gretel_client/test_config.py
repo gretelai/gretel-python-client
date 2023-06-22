@@ -78,6 +78,44 @@ def test_can_get_api_bindings():
     assert isinstance(client.get_api(ProjectsApi), ProjectsApi)
 
 
+@patch.dict(
+    os.environ, {"GRETEL_API_KEY": "grtutest", "http_proxy": "http://localhost:8080"}
+)
+def test_proxy_set_http():
+    configure_session(ClientConfig.from_env())
+
+    config = get_session_config()
+    client = config.get_api(ProjectsApi)
+    assert client.api_client.configuration.proxy == "http://localhost:8080"
+
+
+@patch.dict(
+    os.environ, {"GRETEL_API_KEY": "grtutest", "https_proxy": "https://localhost:8080"}
+)
+def test_proxy_set_https():
+    configure_session(ClientConfig.from_env())
+
+    config = get_session_config()
+    client = config.get_api(ProjectsApi)
+    assert client.api_client.configuration.proxy == "https://localhost:8080"
+
+
+@patch.dict(
+    os.environ,
+    {
+        "GRETEL_API_KEY": "grtutest",
+        "all_proxy": "http://localhost:9999",
+        "https_proxy": "https://localhost:8080",
+    },
+)
+def test_proxy_set_all_proxy():
+    configure_session(ClientConfig.from_env())
+
+    config = get_session_config()
+    client = config.get_api(ProjectsApi)
+    assert client.api_client.configuration.proxy == "http://localhost:9999"
+
+
 def test_configure_preview_features():
     with patch.dict(
         os.environ,
@@ -149,7 +187,6 @@ def test_configure_hybrid_session(_get_config_path, dev_ep):
 def test_configure_session_cached_values_plus_overrides(
     _get_config_path, api_key, cache, dev_ep
 ):
-
     cached_config = {
         "api_key": "grtu...CACHED",
         "default_runner": "hybrid",

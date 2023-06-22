@@ -213,6 +213,17 @@ class ClientConfig:
         else:
             return default
 
+    def _determine_proxy(self) -> Optional[str]:
+        if "all_proxy" in os.environ:
+            return os.environ.get("all_proxy")
+        if (
+            self.endpoint
+            and self.endpoint.startswith("https")
+            and "https_proxy" in os.environ
+        ):
+            return os.environ.get("https_proxy")
+        return os.environ.get("http_proxy")
+
     def _get_api_client(
         self, max_retry_attempts: int = 3, backoff_factor: float = 1
     ) -> ApiClient:
@@ -232,6 +243,7 @@ class ClientConfig:
             api_key={"ApiKey": self.api_key},
             ssl_ca_cert=self._cert_file(),
         )
+        configuration.proxy = self._determine_proxy()
         configuration.retries = Retry(  # type:ignore
             total=max_retry_attempts,
             connect=max_retry_attempts,
