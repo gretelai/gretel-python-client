@@ -11,6 +11,8 @@ from typing import Optional, Type, TypeVar, Union
 
 import certifi
 
+from urllib3 import HTTPResponse
+from urllib3.exceptions import MaxRetryError
 from urllib3.util import Retry
 
 from gretel_client.rest.api.projects_api import ProjectsApi
@@ -110,6 +112,62 @@ class RunnerMode(str, Enum):
 
 
 DEFAULT_RUNNER = RunnerMode.CLOUD
+
+
+class GretelApiRetry(Retry):
+    """
+    Custom retry logic for calling Gretel Cloud APIs.
+    """
+
+    # Message, which is returned in the response body for throttled requests.
+    _THROTLE_403_TEXT = "User is not authorized to access this resource"
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+    @classmethod
+    def create_default(
+        cls, *, max_retry_attempts: int, backoff_factor: float
+    ) -> GretelApiRetry:
+        return cls(
+            total=max_retry_attempts,
+            connect=max_retry_attempts,
+            read=max_retry_attempts,
+            redirect=max_retry_attempts,
+            backoff_factor=backoff_factor,
+            status=max_retry_attempts,
+            allowed_methods=frozenset(
+                {"DELETE", "GET", "HEAD", "OPTIONS", "PUT", "TRACE", "POST"}
+            ),
+            status_forcelist=frozenset({413, 429, 503, 403}),
+            raise_on_status=False,
+        )
+
+    def increment(
+        self,
+        method=None,
+        url=None,
+        response=None,
+        error=None,
+        _pool=None,
+        _stacktrace=None,
+    ):
+        if self._was_forbidden(response):
+            # no need to retry
+            raise MaxRetryError(_pool, url, error)
+
+        return super().increment(method, url, response, error, _pool, _stacktrace)
+
+    def _was_forbidden(self, response: HTTPResponse) -> bool:
+        if response.status != 403:
+            return False
+
+        # With how our APIs are configured, 403 may mean that:
+        #  - call is not authorized (no need to retry)
+        #  - call is rate limited (retry)
+        # To differentiate between these 2 we check for a specific text in the body.
+        was_rate_limited = GretelApiRetry._THROTLE_403_TEXT in str(response.data)
+        return not was_rate_limited
 
 
 class ClientConfig:
@@ -244,18 +302,9 @@ class ClientConfig:
             ssl_ca_cert=self._cert_file(),
         )
         configuration.proxy = self._determine_proxy()
-        configuration.retries = Retry(  # type:ignore
-            total=max_retry_attempts,
-            connect=max_retry_attempts,
-            read=max_retry_attempts,
-            redirect=max_retry_attempts,
+        configuration.retries = GretelApiRetry.create_default(  # type:ignore
+            max_retry_attempts=max_retry_attempts,
             backoff_factor=backoff_factor,
-            status=max_retry_attempts,
-            method_whitelist=frozenset(
-                {"DELETE", "GET", "HEAD", "OPTIONS", "PUT", "TRACE", "POST"}
-            ),
-            status_forcelist=frozenset({413, 429, 503, 403}),
-            raise_on_status=False,
         )
         return ApiClient(configuration)
 

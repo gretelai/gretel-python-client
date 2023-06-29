@@ -9,6 +9,9 @@ from unittest.mock import MagicMock, patch
 import certifi
 import pytest
 
+from urllib3 import HTTPResponse
+from urllib3.exceptions import MaxRetryError
+
 from gretel_client.config import (
     _load_config,
     ClientConfig,
@@ -16,12 +19,14 @@ from gretel_client.config import (
     get_session_config,
     GRETEL_PREVIEW_FEATURES,
     GRETEL_RUNNER_MODE,
+    GretelApiRetry,
     GretelClientConfigurationError,
     PreviewFeatures,
     RunnerMode,
     write_config,
 )
 from gretel_client.rest.api.projects_api import ProjectsApi
+from gretel_client.rest.exceptions import ForbiddenException
 
 
 def test_custom_artifact_endpoint_requires_hybrid_runner():
@@ -287,3 +292,35 @@ def test_override_certs_via_environment_variables(pool_manager: MagicMock):
 
         _, kwargs = pool_manager.call_args
         assert kwargs.get("ca_certs") == "/requests/ca/bundle"
+
+
+def test_dont_retry_non_throttling_403s():
+    retry = GretelApiRetry.create_default(max_retry_attempts=3, backoff_factor=0.1)
+
+    result = retry.increment(
+        "GET",
+        "/url",
+        HTTPResponse(
+            body=b'{"message":"User is not authorized to access this resource"}',
+            status=403,
+        ),
+        error=ForbiddenException(),
+    )
+
+    # that call should use up one retry
+    assert result.total == 2
+
+
+def test_retry_throttling_403s():
+    retry = GretelApiRetry.create_default(max_retry_attempts=3, backoff_factor=0.1)
+
+    error = ForbiddenException()
+    with pytest.raises(MaxRetryError) as e:
+        retry.increment(
+            "GET",
+            "/url",
+            HTTPResponse(body=b'{"message":"Access denied"}', status=403),
+            error=error,
+        )
+
+    assert e.value.reason == error
