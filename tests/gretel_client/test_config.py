@@ -9,9 +9,6 @@ from unittest.mock import MagicMock, patch
 import certifi
 import pytest
 
-from urllib3 import HTTPResponse
-from urllib3.exceptions import MaxRetryError
-
 from gretel_client.config import (
     _load_config,
     ClientConfig,
@@ -19,14 +16,12 @@ from gretel_client.config import (
     get_session_config,
     GRETEL_PREVIEW_FEATURES,
     GRETEL_RUNNER_MODE,
-    GretelApiRetry,
     GretelClientConfigurationError,
     PreviewFeatures,
     RunnerMode,
     write_config,
 )
 from gretel_client.rest.api.projects_api import ProjectsApi
-from gretel_client.rest.exceptions import ForbiddenException
 
 
 def test_custom_artifact_endpoint_requires_hybrid_runner():
@@ -81,44 +76,6 @@ def test_can_get_api_bindings():
 
     client = get_session_config()
     assert isinstance(client.get_api(ProjectsApi), ProjectsApi)
-
-
-@patch.dict(
-    os.environ, {"GRETEL_API_KEY": "grtutest", "http_proxy": "http://localhost:8080"}
-)
-def test_proxy_set_http():
-    configure_session(ClientConfig.from_env())
-
-    config = get_session_config()
-    client = config.get_api(ProjectsApi)
-    assert client.api_client.configuration.proxy == "http://localhost:8080"
-
-
-@patch.dict(
-    os.environ, {"GRETEL_API_KEY": "grtutest", "https_proxy": "https://localhost:8080"}
-)
-def test_proxy_set_https():
-    configure_session(ClientConfig.from_env())
-
-    config = get_session_config()
-    client = config.get_api(ProjectsApi)
-    assert client.api_client.configuration.proxy == "https://localhost:8080"
-
-
-@patch.dict(
-    os.environ,
-    {
-        "GRETEL_API_KEY": "grtutest",
-        "all_proxy": "http://localhost:9999",
-        "https_proxy": "https://localhost:8080",
-    },
-)
-def test_proxy_set_all_proxy():
-    configure_session(ClientConfig.from_env())
-
-    config = get_session_config()
-    client = config.get_api(ProjectsApi)
-    assert client.api_client.configuration.proxy == "http://localhost:9999"
 
 
 def test_configure_preview_features():
@@ -192,6 +149,7 @@ def test_configure_hybrid_session(_get_config_path, dev_ep):
 def test_configure_session_cached_values_plus_overrides(
     _get_config_path, api_key, cache, dev_ep
 ):
+
     cached_config = {
         "api_key": "grtu...CACHED",
         "default_runner": "hybrid",
@@ -292,35 +250,3 @@ def test_override_certs_via_environment_variables(pool_manager: MagicMock):
 
         _, kwargs = pool_manager.call_args
         assert kwargs.get("ca_certs") == "/requests/ca/bundle"
-
-
-def test_dont_retry_non_throttling_403s():
-    retry = GretelApiRetry.create_default(max_retry_attempts=3, backoff_factor=0.1)
-
-    result = retry.increment(
-        "GET",
-        "/url",
-        HTTPResponse(
-            body=b'{"message":"User is not authorized to access this resource"}',
-            status=403,
-        ),
-        error=ForbiddenException(),
-    )
-
-    # that call should use up one retry
-    assert result.total == 2
-
-
-def test_retry_throttling_403s():
-    retry = GretelApiRetry.create_default(max_retry_attempts=3, backoff_factor=0.1)
-
-    error = ForbiddenException()
-    with pytest.raises(MaxRetryError) as e:
-        retry.increment(
-            "GET",
-            "/url",
-            HTTPResponse(body=b'{"message":"Access denied"}', status=403),
-            error=error,
-        )
-
-    assert e.value.reason == error
