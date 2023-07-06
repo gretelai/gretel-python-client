@@ -77,7 +77,7 @@ def test_report_initialization_with_defaults(
     assert report.output_dir
     assert report.model_config == {
         "schema_version": "1.0",
-        "name": "evaluate downstream regression model",
+        "name": "evaluate-downstream-regression-model",
         "models": [
             {
                 "evaluate": {

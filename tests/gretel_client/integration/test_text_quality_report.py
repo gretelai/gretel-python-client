@@ -8,23 +8,21 @@ import pandas as pd
 import pytest
 
 from gretel_client.config import RunnerMode
-from gretel_client.evaluation.downstream_classification_report import (
-    DownstreamClassificationReport,
-)
 from gretel_client.evaluation.reports import _model_run_exc_message, ModelRunException
+from gretel_client.evaluation.text_quality_report import TextQualityReport
 from gretel_client.projects.projects import Project
 
-INPUT_DF = pd.DataFrame([{"test_key": "test_value"}])
+from .conftest import pytest_skip_on_windows
 
 
 @pytest.fixture
 def data_source(get_fixture: Callable) -> Path:
-    return get_fixture("account-balances.csv")
+    return get_fixture("amazon.csv")
 
 
 @pytest.fixture
 def ref_data(get_fixture: Callable) -> Path:
-    return get_fixture("account-balances.csv")
+    return get_fixture("amazon.csv")
 
 
 def test_manual_runner_mode_raises_an_exception(
@@ -35,8 +33,7 @@ def test_manual_runner_mode_raises_an_exception(
     runner_mode: RunnerMode = RunnerMode.MANUAL,
 ):
     with pytest.raises(ValueError) as err:
-        DownstreamClassificationReport(
-            target="foo",
+        TextQualityReport(
             project=project,
             data_source=data_source,
             ref_data=ref_data,
@@ -62,8 +59,7 @@ def test_report_initialization_with_defaults(
     tmpdir: Path,
     runner_mode: RunnerMode,
 ):
-    report = DownstreamClassificationReport(
-        target="foo",
+    report = TextQualityReport(
         project=project,
         data_source=data_source,
         ref_data=ref_data,
@@ -77,18 +73,13 @@ def test_report_initialization_with_defaults(
     assert report.output_dir
     assert report.model_config == {
         "schema_version": "1.0",
-        "name": "evaluate-downstream-classification-model",
+        "name": "evaluate-text-quality",
         "models": [
             {
                 "evaluate": {
-                    "task": {"type": "classification"},
+                    "task": {"type": "text"},
                     "data_source": "__tmp__",
-                    "params": {
-                        "target": "foo",
-                        "holdout": 0.2,
-                        "models": [],
-                        "metric": "acc",
-                    },
+                    "params": {"target": None},
                 }
             }
         ],
@@ -101,17 +92,14 @@ def test_report_initialization_with_custom_params(
     ref_data: Path,
     tmpdir: Path,
 ):
-    report = DownstreamClassificationReport(
-        target="foo",
-        holdout=0.3,
-        models=["lr"],
-        metric="auc",
+    report = TextQualityReport(
         project=project,
         name="my-preferred-name",
         data_source=data_source,
         ref_data=ref_data,
         output_dir=tmpdir,
         runner_mode=RunnerMode.CLOUD,
+        target="text",
     )
     assert report.project
     assert report.data_source
@@ -124,14 +112,9 @@ def test_report_initialization_with_custom_params(
         "models": [
             {
                 "evaluate": {
-                    "task": {"type": "classification"},
+                    "task": {"type": "text"},
                     "data_source": "__tmp__",
-                    "params": {
-                        "target": "foo",
-                        "holdout": 0.3,
-                        "models": ["lr"],
-                        "metric": "auc",
-                    },
+                    "params": {"target": "text"},
                 }
             }
         ],
@@ -144,8 +127,7 @@ def test_no_report_raises_exception(
     ref_data: Path,
     tmpdir: Path,
 ):
-    report = DownstreamClassificationReport(
-        target="foo",
+    report = TextQualityReport(
         project=project,
         data_source=data_source,
         ref_data=ref_data,
@@ -162,28 +144,64 @@ def test_no_report_raises_exception(
     assert str(err.value) == _model_run_exc_message
 
 
-def test_sane_target_and_holdout(
+def test_no_project_provided_is_handled(
+    data_source: Path,
+    ref_data: Path,
+):
+    report = TextQualityReport(
+        data_source=data_source,
+        ref_data=ref_data,
+    )
+    assert report.project == None
+    assert report.data_source
+    assert report.ref_data
+    assert report.output_dir == os.getcwd()
+    assert report.runner_mode
+    report.run()
+    results = report.peek()
+    assert set(results.keys()) == {"grade", "raw_score", "score"}
+    assert results["grade"] == "Excellent"
+    assert results["raw_score"] > 90
+    assert results["score"] > 90
+
+
+def test_quality_report_with_dataframes(data_source):
+    df = pd.read_csv(data_source)
+    report = TextQualityReport(
+        data_source=df,
+        ref_data=df,
+    )
+    report.run()
+    results = report.peek()
+    assert set(results.keys()) == {"grade", "raw_score", "score"}
+    assert results["grade"] == "Excellent"
+    assert results["raw_score"] > 90
+    assert results["score"] > 90
+
+
+@pytest_skip_on_windows
+@pytest.mark.parametrize(
+    "runner_mode",
+    [
+        (RunnerMode.CLOUD),
+        (RunnerMode.LOCAL),
+    ],
+)
+def test_hydrated_properties(
     project: Project,
     data_source: Path,
     ref_data: Path,
     tmpdir: Path,
+    runner_mode: RunnerMode,
 ):
-    with pytest.raises(ValueError) as err:
-        report = DownstreamClassificationReport(
-            target=None,
-            project=project,
-            data_source=data_source,
-            ref_data=ref_data,
-            output_dir=tmpdir,
-        )
-    assert str(err.value) == "A nonempty target is required."
-    with pytest.raises(ValueError) as err:
-        report = DownstreamClassificationReport(
-            target="foo",
-            holdout=1.1,
-            project=project,
-            data_source=data_source,
-            ref_data=ref_data,
-            output_dir=tmpdir,
-        )
-    assert str(err.value) == "Holdout must be between 0.0 and 1.0."
+    report = TextQualityReport(
+        project=project,
+        data_source=data_source,
+        ref_data=ref_data,
+        output_dir=tmpdir,
+        runner_mode=runner_mode,
+    )
+    report.run()
+    assert report.peek()
+    assert report.as_dict
+    assert report.as_html

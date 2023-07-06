@@ -12,6 +12,8 @@ from gretel_client.evaluation.quality_report import QualityReport
 from gretel_client.evaluation.reports import _model_run_exc_message, ModelRunException
 from gretel_client.projects.projects import Project
 
+from .conftest import pytest_skip_on_windows
+
 INPUT_DF = pd.DataFrame([{"test_key": "test_value"}])
 
 
@@ -167,6 +169,7 @@ def test_quality_report_with_dataframes(
     assert report.peek() == {"grade": "Excellent", "raw_score": 100.0, "score": 100}
 
 
+@pytest_skip_on_windows
 @pytest.mark.parametrize(
     "runner_mode",
     [
@@ -181,8 +184,6 @@ def test_hydrated_properties(
     tmpdir: Path,
     runner_mode: RunnerMode,
 ):
-    if platform.system() == "Windows" and runner_mode == RunnerMode.LOCAL:
-        pytest.skip("Skip local runner test for Windows")
     report = QualityReport(
         project=project,
         data_source=data_source,

@@ -27,7 +27,7 @@ class DownstreamRegressionReport(BaseReport):
 
     _model_dict: dict = {
         "schema_version": "1.0",
-        "name": "evaluate downstream regression model",
+        "name": "evaluate-downstream-regression-model",
         "models": [
             {
                 "evaluate": {
@@ -68,8 +68,6 @@ class DownstreamRegressionReport(BaseReport):
         runner_mode: Optional[RunnerMode] = None,
     ):
         runner_mode = runner_mode or get_session_config().default_runner
-        if not isinstance(runner_mode, RunnerMode):
-            raise ValueError("Invalid runner_mode type, must be RunnerMode enum.")
 
         if runner_mode == RunnerMode.MANUAL:
             raise ValueError(
