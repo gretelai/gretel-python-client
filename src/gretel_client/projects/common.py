@@ -1,6 +1,6 @@
 from enum import Enum
 from pathlib import Path
-from typing import Iterable, Iterator, Optional, Union
+from typing import Iterable, Iterator, Union
 
 from smart_open import open
 

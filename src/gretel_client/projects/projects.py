@@ -25,7 +25,7 @@ from gretel_client.projects.artifact_handlers import (
     hybrid_handler,
     HybridArtifactsHandler,
 )
-from gretel_client.projects.common import f, validate_data_source
+from gretel_client.projects.common import f
 from gretel_client.projects.exceptions import GretelProjectError
 from gretel_client.projects.models import Model
 from gretel_client.rest import models
