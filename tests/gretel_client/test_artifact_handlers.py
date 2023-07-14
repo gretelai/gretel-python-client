@@ -14,6 +14,7 @@ from gretel_client.projects.artifact_handlers import (
     hybrid_handler,
     HybridArtifactsHandler,
 )
+from gretel_client.projects.exceptions import DataSourceError
 
 
 @pytest.fixture()
@@ -169,6 +170,22 @@ def test_hybrid_passes_along_potentially_junk_data_source_value(endpoint):
 
     sources_dir = Path(endpoint) / "sources" / "project_id"
     assert len(os.listdir(sources_dir)) == 0
+
+
+# Like above, hybrid artifact validation only applies to local resources;
+# remote resources are assumed to be valid by the client.
+def test_hybrid_validation(endpoint, tmp_path):
+    nonsense_data_source = "s3://not-a-real-bucket/or-if-it-is-we-cant-access-it.csv"
+    nonexistent_local_file = "/this/file/does/not/exist.csv"
+    valid_local_file = tmp_path / "data.csv"
+    valid_local_file.write_text("h1,h2\n1,2")
+
+    handler = HybridArtifactsHandler(endpoint, "project_id")
+
+    assert handler.validate_data_source(nonsense_data_source)
+    assert handler.validate_data_source(valid_local_file)
+    with pytest.raises(DataSourceError):
+        handler.validate_data_source(nonexistent_local_file)
 
 
 def test_hybrid_artifact_link():

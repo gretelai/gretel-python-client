@@ -244,9 +244,9 @@ class Project:
         Returns:
             A Gretel artifact key.
         """
-        if _validate and not isinstance(artifact_path, _DataFrameT):
-            validate_data_source(artifact_path)
         artifacts_handler = _artifacts_handler or self.default_artifacts_handler
+        if _validate and not isinstance(artifact_path, _DataFrameT):
+            artifacts_handler.validate_data_source(artifact_path)
         return artifacts_handler.upload_project_artifact(artifact_path)
 
     def delete_artifact(self, key: str):

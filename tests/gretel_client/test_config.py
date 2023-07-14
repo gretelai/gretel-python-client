@@ -187,6 +187,21 @@ def test_configure_hybrid_session(_get_config_path, dev_ep):
 
 
 @patch("gretel_client.config._get_config_path")
+def test_custom_artifact_endpoint_strips_trailing_slash(_get_config_path, dev_ep):
+    _get_config_path.return_value = Path("/path/that/does/not/exist")
+    with patch.dict(os.environ, {}, clear=True):
+        configure_session(
+            api_key="grtu...",
+            endpoint=dev_ep,
+            default_runner="hybrid",
+            artifact_endpoint="s3://my-bucket/",
+        )
+    config = get_session_config()
+
+    assert config.artifact_endpoint == "s3://my-bucket"
+
+
+@patch("gretel_client.config._get_config_path")
 @pytest.mark.parametrize("cache", ["yes", "no"])
 @pytest.mark.parametrize("api_key", ["prompt", "grtu...NEW", None])
 def test_configure_session_cached_values_plus_overrides(

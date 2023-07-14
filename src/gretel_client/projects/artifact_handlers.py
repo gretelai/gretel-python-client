@@ -18,12 +18,16 @@ from backports.cached_property import cached_property
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 from typing_extensions import Protocol
 
+import gretel_client.projects.common as common
+
 from gretel_client.config import ClientConfig, DEFAULT_GRETEL_ARTIFACT_ENDPOINT
 from gretel_client.dataframe import _DataFrameT
-from gretel_client.projects.common import f, ModelArtifact, ModelRunArtifact
+from gretel_client.projects.common import f, ModelArtifact, ModelRunArtifact, Pathlike
 from gretel_client.rest.api.projects_api import ProjectsApi
 from gretel_client.rest.exceptions import NotFoundException
 from gretel_client.rest.model.artifact import Artifact
+
+HYBRID_ARTIFACT_ENDPOINT_PREFIXES = ["azure://", "gs://", "s3://"]
 
 
 class ArtifactsException(Exception):
@@ -130,6 +134,12 @@ class CloudArtifactsHandler:
         self.projects_api = projects_api
         self.project_id = project_id
         self.project_name = project_name
+
+    def validate_data_source(
+        self,
+        artifact_path: Pathlike,
+    ) -> bool:
+        return common.validate_data_source(artifact_path)
 
     def upload_project_artifact(
         self,
@@ -246,6 +256,16 @@ class HybridArtifactsHandler:
     @cached_property
     def data_sources_dir(self) -> str:
         return f"{self.endpoint}/sources/{self.project_id}"
+
+    def validate_data_source(
+        self,
+        artifact_path: Pathlike,
+    ) -> bool:
+        for supported_remote in HYBRID_ARTIFACT_ENDPOINT_PREFIXES:
+            if str(artifact_path).startswith(supported_remote):
+                return True
+
+        return common.validate_data_source(artifact_path)
 
     def upload_project_artifact(
         self,

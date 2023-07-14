@@ -209,7 +209,7 @@ class ClientConfig:
             artifact_endpoint
             or os.getenv(GRETEL_ARTIFACT_ENDPOINT)
             or DEFAULT_GRETEL_ARTIFACT_ENDPOINT
-        )
+        ).removesuffix("/")
         self.api_key = api_key or os.getenv(GRETEL_API_KEY)
         self.default_runner = RunnerMode.parse(
             os.getenv(GRETEL_RUNNER_MODE) or default_runner
