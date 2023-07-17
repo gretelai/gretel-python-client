@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 from gretel_client.config import get_session_config, RunnerMode
 from gretel_client.evaluation.reports import (
