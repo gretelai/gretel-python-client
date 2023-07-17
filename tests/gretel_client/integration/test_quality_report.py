@@ -79,6 +79,12 @@ def test_report_initialization_with_defaults(
             {
                 "evaluate": {
                     "data_source": "__tmp__",
+                    "params": {
+                        "correlation_columns": 75,
+                        "mandatory_columns": [],
+                        "sqs_report_columns": 250,
+                        "sqs_report_rows": 5000,
+                    },
                 }
             }
         ],
@@ -98,6 +104,7 @@ def test_report_initialization_with_custom_params(
         ref_data=ref_data,
         output_dir=tmpdir,
         runner_mode=RunnerMode.CLOUD,
+        mandatory_columns=["foo", "bar", "baz"],
     )
     assert report.project
     assert report.data_source
@@ -111,6 +118,12 @@ def test_report_initialization_with_custom_params(
             {
                 "evaluate": {
                     "data_source": "__tmp__",
+                    "params": {
+                        "correlation_columns": 75,
+                        "mandatory_columns": ["foo", "bar", "baz"],
+                        "sqs_report_columns": 250,
+                        "sqs_report_rows": 5000,
+                    },
                 }
             }
         ],

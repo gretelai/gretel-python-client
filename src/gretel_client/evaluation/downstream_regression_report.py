@@ -4,7 +4,11 @@ from pathlib import Path
 from typing import List, Optional, Union
 
 from gretel_client.config import get_session_config, RunnerMode
-from gretel_client.evaluation.reports import BaseReport, ReportDictType
+from gretel_client.evaluation.reports import (
+    BaseReport,
+    DEFAULT_RECORD_COUNT,
+    ReportDictType,
+)
 from gretel_client.projects.common import DataSourceTypes, RefDataTypes
 from gretel_client.projects.models import Model
 from gretel_client.projects.projects import Project
@@ -23,6 +27,9 @@ class DownstreamRegressionReport(BaseReport):
         holdout: The ratio of data to hold out from ref_data (i.e., your real data) as a test set.  Must be between 0.0 and 1.0.
         models: The list of regression models to train.  If absent or an empty list, use all supported models.
         metric: The metric used to sort regression results.  "R2" by default.
+        record_count: Number of rows to use from the data sets, 5000 by default.  A value of 0 means "use as many rows/columns
+            as possible."  We still attempt to maintain parity between the data sets for "fair" comparisons,
+            i.e. we will use min(len(train), len(synth)), e.g.
     """
 
     _model_dict: dict = {
@@ -66,6 +73,7 @@ class DownstreamRegressionReport(BaseReport):
         ref_data: RefDataTypes,
         output_dir: Optional[Union[str, Path]] = None,
         runner_mode: Optional[RunnerMode] = None,
+        record_count: Optional[int] = DEFAULT_RECORD_COUNT,
     ):
         runner_mode = runner_mode or get_session_config().default_runner
 
@@ -90,6 +98,9 @@ class DownstreamRegressionReport(BaseReport):
         params["holdout"] = holdout
         params["models"] = models
         params["metric"] = metric
+
+        # Update row count
+        params["sqs_report_rows"] = record_count
 
         super().__init__(project, data_source, ref_data, output_dir, runner_mode)
 

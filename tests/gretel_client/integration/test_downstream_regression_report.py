@@ -88,6 +88,7 @@ def test_report_initialization_with_defaults(
                         "holdout": 0.2,
                         "models": [],
                         "metric": "r2",
+                        "sqs_report_rows": 5000,
                     },
                 }
             }
@@ -112,6 +113,7 @@ def test_report_initialization_with_custom_params(
         ref_data=ref_data,
         output_dir=tmpdir,
         runner_mode=RunnerMode.CLOUD,
+        record_count=6543,
     )
     assert report.model_config == {
         "schema_version": "1.0",
@@ -126,6 +128,7 @@ def test_report_initialization_with_custom_params(
                         "holdout": 0.3,
                         "models": ["lr"],
                         "metric": "auc",
+                        "sqs_report_rows": 6543,
                     },
                 }
             }

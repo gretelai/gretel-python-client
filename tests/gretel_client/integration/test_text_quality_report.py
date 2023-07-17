@@ -79,7 +79,10 @@ def test_report_initialization_with_defaults(
                 "evaluate": {
                     "task": {"type": "text"},
                     "data_source": "__tmp__",
-                    "params": {"target": None},
+                    "params": {
+                        "target": None,
+                        "sqs_report_rows": 80,
+                    },
                 }
             }
         ],
@@ -100,6 +103,7 @@ def test_report_initialization_with_custom_params(
         output_dir=tmpdir,
         runner_mode=RunnerMode.CLOUD,
         target="text",
+        record_count=1234,
     )
     assert report.project
     assert report.data_source
@@ -114,7 +118,10 @@ def test_report_initialization_with_custom_params(
                 "evaluate": {
                     "task": {"type": "text"},
                     "data_source": "__tmp__",
-                    "params": {"target": "text"},
+                    "params": {
+                        "target": "text",
+                        "sqs_report_rows": 1234,
+                    },
                 }
             }
         ],

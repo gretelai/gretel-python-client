@@ -23,6 +23,11 @@ from gretel_client.projects.projects import Project, tmp_project
 ReportDictType = Dict[str, Any]
 _model_run_exc_message = "Please run the model to generate the report."
 
+DEFAULT_CORRELATION_COLUMNS = 75
+DEFAULT_SQS_REPORT_COLUMNS = 250
+DEFAULT_RECORD_COUNT = 5000
+DEFAULT_TEXT_RECORD_COUNT = 80
+
 
 class ModelRunException(Exception):
     ...
