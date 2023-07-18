@@ -40,6 +40,7 @@ from gretel_client.agents.drivers.k8s import (
     KubernetesDriverDaemon,
     KubernetesError,
     OVERRIDE_CERT_NAME,
+    PREVENT_AUTOSCALER_EVICTION_ENV_NAME,
 )
 
 
@@ -128,6 +129,17 @@ def patch_image_registry(override_url: str):
         os.environ,
         {
             IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME: override_url,
+        },
+    ):
+        yield
+
+
+@contextmanager
+def patch_autoscaler_env_var(annotation_val: str):
+    with patch.dict(
+        os.environ,
+        {
+            PREVENT_AUTOSCALER_EVICTION_ENV_NAME: annotation_val,
         },
     ):
         yield
@@ -522,3 +534,23 @@ class TestKubernetesDriver(TestCase):
         dockerconfig_json = json.loads(decoded_str)
         assert "auths" in dockerconfig_json
         assert list(dockerconfig_json["auths"].keys())[0] == "shiny-new-reg.example.ai"
+
+    @patch_autoscaler_env_var("true")
+    def test_annotation_set_true(self):
+        job = Job.from_dict(get_mock_job(), self.config)
+        k8s_job = self.reload_env_and_build_job(job)
+        job_spec: V1JobSpec = k8s_job.spec
+        pod_template: V1PodTemplateSpec = job_spec.template
+        metadata: V1ObjectMeta = pod_template.metadata
+        assert {
+            "cluster-autoscaler.kubernetes.io/safe-to-evict": "false"
+        } == metadata.annotations
+
+    @patch_autoscaler_env_var("false")
+    def test_annotation_set_false(self):
+        job = Job.from_dict(get_mock_job(), self.config)
+        k8s_job = self.reload_env_and_build_job(job)
+        job_spec: V1JobSpec = k8s_job.spec
+        pod_template: V1PodTemplateSpec = job_spec.template
+        metadata: V1ObjectMeta = pod_template.metadata
+        assert {} == metadata.annotations

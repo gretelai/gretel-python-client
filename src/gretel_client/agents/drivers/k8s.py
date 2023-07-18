@@ -36,6 +36,7 @@ CPU_TOLERATIONS_ENV_NAME = "CPU_TOLERATIONS"
 CPU_COUNT_ENV_NAME = "GRETEL_CPU_COUNT"
 CA_CERT_CONFIGMAP_ENV_NAME = "GRETEL_CA_CERT_CONFIGMAP_NAME"
 IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME = "IMAGE_REGISTRY_OVERRIDE_HOST"
+PREVENT_AUTOSCALER_EVICTION_ENV_NAME = "PREVENT_AUTOSCALER_EVICTION"
 
 
 if TYPE_CHECKING:
@@ -92,6 +93,9 @@ class Kubernetes(Driver):
             os.getenv(PULL_SECRET_ENV_NAME) or "gretel-pull-secret"
         )
         self._override_host = os.environ.get(IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME)
+        self._prevent_autoscaler_eviction = (
+            os.environ.get(PREVENT_AUTOSCALER_EVICTION_ENV_NAME) == "true"
+        )
 
     def _parse_kube_env_var(
         self, env_var_name: str, expected_type: Type[T]
@@ -211,12 +215,14 @@ class Kubernetes(Driver):
                 ),
             ],
         )
-
+        annotations = {}
+        if self._prevent_autoscaler_eviction:
+            annotations["cluster-autoscaler.kubernetes.io/safe-to-evict"] = "false"
         template = client.V1PodTemplateSpec(
             metadata=client.V1ObjectMeta(
                 labels={"app": "gretel-jobs-worker"},
                 namespace=self._gretel_worker_namespace,
-                annotations={"cluster-autoscaler.kubernetes.io/safe-to-evict": "false"},
+                annotations=annotations,
             ),
             spec=client.V1PodSpec(
                 restart_policy="Never",
