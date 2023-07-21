@@ -375,21 +375,15 @@ class Job(ABC):
                 download_link, output_path, artifact_type, log
             )
 
-    def _peek_report(self, report_contents: dict) -> Optional[dict]:
-        return get_model_type_config(self.model_type).peek_report(report_contents)
-
-    def peek_report(self, report_path: Optional[str] = None) -> Optional[dict]:
-        """Return a summary of the job results.
-
-        Args:
-            report_path: If a report_path is passed, that report
-                will be used for the summary. If no report path
-                is passed, the function will check for a cloud
-                based artifact.
+    def _get_report_contents(
+        self, report_path: Optional[str] = None, artifact_type: Optional[str] = None
+    ) -> Optional[dict]:
         """
-        if report_path is None:
+        Helper to encapsulate try/except boilerplate for peek_report and get_report_summary.
+        """
+        if report_path is None and artifact_type is not None:
             try:
-                report_path = self.get_artifact_link("report_json")
+                report_path = self.get_artifact_link(artifact_type)
             except Exception:
                 pass
 
@@ -403,7 +397,58 @@ class Job(ABC):
 
         if report_contents:
             try:
-                report_contents = json.loads(report_contents)
+                return json.loads(report_contents)
+            except Exception:
+                pass
+
+    def _get_report_contents_wrapper(
+        self, report_path: Optional[str] = None
+    ) -> Optional[dict]:
+        report_contents = None
+        if report_path:
+            report_contents = self._get_report_contents(report_path=report_path)
+        else:
+            try:
+                if self.model_type == "gpt_x":
+                    report_contents = self._get_report_contents(
+                        artifact_type="text_metrics_report_json"
+                    )
+                elif self.model_type == "evaluate":
+                    for artifact_type in [
+                        "report_json",
+                        "classification_report_json",
+                        "regression_report_json",
+                        "text_metrics_report_json",
+                    ]:
+                        report_contents = self._get_report_contents(
+                            artifact_type=artifact_type
+                        )
+                        if report_contents:
+                            break
+                else:
+                    report_contents = self._get_report_contents(
+                        artifact_type="report_json"
+                    )
+            except Exception:
+                pass
+        return report_contents
+
+    def _peek_report(self, report_contents: dict) -> Optional[dict]:
+        return get_model_type_config(self.model_type).peek_report(report_contents)
+
+    def peek_report(self, report_path: Optional[str] = None) -> Optional[dict]:
+        """Return a summary of the job results.
+
+        Args:
+            report_path: If a report_path is passed, that report
+                will be used for the summary. If no report path
+                is passed, the function will check for a cloud
+                based artifact.
+        """
+        report_contents = self._get_report_contents_wrapper(report_path=report_path)
+
+        if report_contents:
+            try:
                 return self._peek_report(report_contents)
             except Exception:
                 pass
@@ -421,21 +466,10 @@ class Job(ABC):
                 is passed, the function will check for a cloud
                 report artifact.
         """
-        if not report_path:
-            try:
-                report_path = self.get_artifact_link("report_json")
-            except Exception:
-                pass
-        report_contents = None
-        if report_path:
-            try:
-                with smart_open.open(report_path, "rb") as rh:  # type:ignore
-                    report_contents = rh.read()
-            except Exception:
-                pass
+        report_contents = self._get_report_contents_wrapper(report_path=report_path)
+
         if report_contents:
             try:
-                report_contents = json.loads(report_contents)
                 return self._get_report_summary(report_contents)
             except Exception:
                 pass

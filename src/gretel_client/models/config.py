@@ -158,7 +158,7 @@ class SyntheticsModelTypeConfig(ModelTypeConfig):
         }
 
     def peek_report(self, report_contents: dict) -> Optional[dict]:
-        return _peek_sqs_report(report_contents)
+        return _peek_any_report(report_contents)
 
 
 class CtganModelTypeConfig(GenericModelTypeConfig):
@@ -171,7 +171,7 @@ class CtganModelTypeConfig(GenericModelTypeConfig):
         return GPU
 
     def peek_report(self, report_contents: dict) -> Optional[dict]:
-        return _peek_sqs_report(report_contents)
+        return _peek_any_report(report_contents)
 
 
 class ActganModelTypeConfig(GenericModelTypeConfig):
@@ -184,7 +184,7 @@ class ActganModelTypeConfig(GenericModelTypeConfig):
         return GPU
 
     def peek_report(self, report_contents: dict) -> Optional[dict]:
-        return _peek_sqs_report(report_contents)
+        return _peek_any_report(report_contents)
 
 
 class GptXModelTypeConfig(GenericModelTypeConfig):
@@ -192,16 +192,19 @@ class GptXModelTypeConfig(GenericModelTypeConfig):
     def train_instance_type(self) -> str:
         return GPU
 
+    def peek_report(self, report_contents: dict) -> Optional[dict]:
+        return _peek_any_report(report_contents)
+
 
 class AmplifyModelTypeConfig(GenericModelTypeConfig):
     @property
     def peek_report(self, report_contents: dict) -> str:
-        return _peek_sqs_report(report_contents)
+        return _peek_any_report(report_contents)
 
 
 class EvaluateModelTypeConfig(GenericModelTypeConfig):
     def peek_report(self, report_contents: dict) -> Optional[dict]:
-        return _peek_sqs_report(report_contents)
+        return _peek_any_report(report_contents)
 
 
 class TimeseriesDganModelTypeConfig(GenericModelTypeConfig):
@@ -216,13 +219,19 @@ class TimeseriesDganModelTypeConfig(GenericModelTypeConfig):
 
 
 
-def _peek_sqs_report(report_contents) -> dict:
+def _peek_any_report(report_contents) -> dict:
+    """
+    Extract the fields from any synthetic report (SQS, MQS, Text SQS).
+    """
     fields = [
         "synthetic_data_quality_score",
         "field_correlation_stability",
         "principal_component_stability",
         "field_distribution_stability",
         "privacy_protection_level",
+        "average_metric_difference",
+        "semantic_similarity",
+        "structure_similarity",
     ]
     return {f: report_contents[f] for f in fields if f in report_contents}
 
