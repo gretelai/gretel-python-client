@@ -9,6 +9,10 @@ test_deps = [
     requirement("faker"),
     requirement("pandas"),
     requirement("smart_open"),
+    requirement("azure-storage-blob"),
+    requirement("azure-common"),
+    requirement("azure-core"),
+    requirement("azure-identity"),
     "//python/tests/gretel_client:conf",
 ]
 

@@ -27,6 +27,13 @@ from gretel_client.rest.api.projects_api import ProjectsApi
 from gretel_client.rest.exceptions import NotFoundException
 from gretel_client.rest.model.artifact import Artifact
 
+try:
+    from azure.identity import DefaultAzureCredential
+    from azure.storage.blob import BlobServiceClient
+except ImportError:  # pragma: no cover
+    DefaultAzureCredential = None
+    BlobServiceClient = None
+
 HYBRID_ARTIFACT_ENDPOINT_PREFIXES = ["azure://", "gs://", "s3://"]
 
 
@@ -267,6 +274,25 @@ class HybridArtifactsHandler:
 
         return common.validate_data_source(artifact_path)
 
+    def _get_azure_blob_srv_client(self) -> Optional[BlobServiceClient]:
+        if (storage_account := os.getenv("OAUTH_STORAGE_ACCOUNT_NAME")) is not None:
+            oauth_url = "https://{}.blob.core.windows.net".format(storage_account)
+            return BlobServiceClient(
+                account_url=oauth_url, credential=DefaultAzureCredential()
+            )
+
+        if (connect_str := os.getenv("AZURE_STORAGE_CONNECTION_STRING")) is not None:
+            return BlobServiceClient.from_connection_string(connect_str)
+
+    def _get_transport_params(self) -> dict:
+        """Returns a set of transport params that are suitable for passing
+        into calls to ``smart_open.open``.
+        """
+        client = None
+        if self.endpoint.startswith("azure"):
+            client = self._get_azure_blob_srv_client()
+        return {"client": client} if client else {}
+
     def upload_project_artifact(
         self,
         artifact_path: Union[Path, str, _DataFrameT],
@@ -283,8 +309,13 @@ class HybridArtifactsHandler:
             target_out = f"{self.data_sources_dir}/{data_source_file_name}"
 
             with smart_open.open(
-                artifact_path, "rb", ignore_ext=True
-            ) as in_stream, smart_open.open(target_out, "wb") as out_stream:
+                artifact_path,
+                "rb",
+                ignore_ext=True,
+                transport_params=self._get_transport_params(),
+            ) as in_stream, smart_open.open(
+                target_out, "wb", transport_params=self._get_transport_params()
+            ) as out_stream:
                 shutil.copyfileobj(in_stream, out_stream)
 
             return target_out
@@ -347,7 +378,9 @@ class HybridArtifactsHandler:
         artifact_type: str,
         log: logging.Logger,
     ) -> None:
-        _download(download_link, output_path, artifact_type, log)
+        _download(
+            download_link, output_path, artifact_type, log, self._get_transport_params()
+        )
 
 
 def _download(
@@ -355,16 +388,20 @@ def _download(
     output_path: Path,
     artifact_type: str,
     log: logging.Logger,
+    transport_params: Optional[dict] = None,
 ) -> None:
     target_out = output_path / Path(urlparse(download_link).path).name
     try:
         with smart_open.open(
-            download_link, "rb", ignore_ext=True
-        ) as src, smart_open.open(target_out, "wb", ignore_ext=True) as dest:
+            download_link, "rb", ignore_ext=True, transport_params=transport_params
+        ) as src, smart_open.open(
+            target_out, "wb", ignore_ext=True, transport_params=transport_params
+        ) as dest:
             shutil.copyfileobj(src, dest)
     except:
         log.error(
-            f"Could not download {artifact_type}. The file may not exist, or you may not have access to it. You might retry this request."
+            f"Could not download {artifact_type}. The file may not exist, or you may not have access to it. You might "
+            f"retry this request."
         )
 
 
