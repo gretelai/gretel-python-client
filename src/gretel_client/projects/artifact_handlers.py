@@ -8,7 +8,7 @@ import uuid
 
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Protocol, Tuple, Union
 from urllib.parse import urlparse
 
 import requests
@@ -16,7 +16,6 @@ import smart_open
 
 from backports.cached_property import cached_property
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
-from typing_extensions import Protocol
 
 import gretel_client.projects.common as common
 
