@@ -20,7 +20,7 @@ def test_connection_crud_from_cli(get_fixture: Callable, project: Project):
             "--project",
             project.project_guid,  # type: ignore
             "--from-file",
-            get_fixture("connections/azure_connection.json"),
+            get_fixture("connections/test_connection.json"),
         ],
     )
     assert "Created connection:" in cmd.output

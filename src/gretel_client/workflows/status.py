@@ -1,10 +1,22 @@
-from gretel_client.rest_v1.model.workflow_run import WorkflowRun
+from __future__ import annotations
 
-statuses = WorkflowRun.allowed_values[("status",)]
+from enum import Enum
+
+
+class Status(Enum):
+    RUN_STATUS_CREATED = "RUN_STATUS_CREATED"
+    RUN_STATUS_PENDING = "RUN_STATUS_PENDING"
+    RUN_STATUS_ACTIVE = "RUN_STATUS_ACTIVE"
+    RUN_STATUS_ERROR = "RUN_STATUS_ERROR"
+    RUN_STATUS_LOST = "RUN_STATUS_LOST"
+    RUN_STATUS_COMPLETED = "RUN_STATUS_COMPLETED"
+    RUN_STATUS_CANCELLING = "RUN_STATUS_CANCELLING"
+    RUN_STATUS_CANCELLED = "RUN_STATUS_CANCELLED"
+
 
 TERMINAL_STATES = {
-    statuses["ERROR"],
-    statuses["LOST"],
-    statuses["COMPLETED"],
-    statuses["CANCELLED"],
+    Status.RUN_STATUS_ERROR.value,
+    Status.RUN_STATUS_COMPLETED.value,
+    Status.RUN_STATUS_CANCELLED.value,
+    Status.RUN_STATUS_LOST.value,
 }

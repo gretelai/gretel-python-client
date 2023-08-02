@@ -7,19 +7,20 @@ import pytest
 
 from dateutil.tz import tzutc
 
-from gretel_client.rest_v1.model.get_log_response import GetLogResponse
-from gretel_client.rest_v1.model.log_envelope import LogEnvelope
-from gretel_client.rest_v1.model.search_workflow_tasks_response import (
+from gretel_client.rest_v1.models import (
+    GetLogResponse,
+    LogEnvelope,
     SearchWorkflowTasksResponse,
+    WorkflowRun,
+    WorkflowTask,
 )
-from gretel_client.rest_v1.model.workflow_run import WorkflowRun
-from gretel_client.rest_v1.model.workflow_task import WorkflowTask
 from gretel_client.workflows.logs import (
     LogWorker,
     TaskManager,
     WaitTimeExceeded,
     WORKFLOW_TASK_SEARCH_KEY,
 )
+from gretel_client.workflows.status import Status
 
 
 @pytest.fixture
@@ -34,9 +35,7 @@ def logs_api() -> MagicMock:
 
 def transition(task: WorkflowTask, status: str) -> WorkflowTask:
     """Creates a copy of the workflow task with the new status applied"""
-    updated_task = WorkflowTask(
-        **{k: task[v] for k, v in task.attribute_map.items() if v in task}
-    )
+    updated_task = task.copy(deep=True)
     updated_task.status = status
     return updated_task
 
@@ -54,17 +53,37 @@ def test_task_manager(
         log_location="",
         action_name="helloworld_producer",
         action_type="helloworld_producer",
-        status="RUN_STATUS_CREATED",
+        status=Status.RUN_STATUS_CREATED.value,
         error_msg="",
+        created_by="u_1",
+        created_at=datetime.datetime.now(),
     )
     workflows_api.search_workflow_tasks.return_value = SearchWorkflowTasksResponse(
         tasks=[wt_1]
     )
 
     workflows_api.get_workflow_run.side_effect = [
-        WorkflowRun(workflow_id="w_1", id="wr_1", status="RUN_STATUS_CREATED"),
-        WorkflowRun(workflow_id="w_1", id="wr_1", status="RUN_STATUS_ACTIVE"),
-        WorkflowRun(workflow_id="w_1", id="wr_1", status="RUN_STATUS_COMPLETED"),
+        WorkflowRun(
+            workflow_id="w_1",
+            id="wr_1",
+            created_by="u_1",
+            created_at=datetime.datetime.now(),
+            status=Status.RUN_STATUS_CREATED.value,
+        ),
+        WorkflowRun(
+            workflow_id="w_1",
+            id="wr_1",
+            created_by="u_1",
+            created_at=datetime.datetime.now(),
+            status=Status.RUN_STATUS_ACTIVE.value,
+        ),
+        WorkflowRun(
+            workflow_id="w_1",
+            id="wr_1",
+            created_by="u_1",
+            created_at=datetime.datetime.now(),
+            status=Status.RUN_STATUS_COMPLETED.value,
+        ),
     ]
 
     task_manager = TaskManager.for_workflow_run(
@@ -114,8 +133,10 @@ def test_log_worker(workflows_api: MagicMock, logs_api: MagicMock):
         log_location="",
         action_name="helloworld_producer",
         action_type="helloworld_producer",
-        status="RUN_STATUS_CREATED",
+        status=Status.RUN_STATUS_CREATED.value,
         error_msg="",
+        created_by="u_1",
+        created_at=datetime.datetime.now(),
     )
 
     logs_api.get_logs.side_effect = [
@@ -151,12 +172,12 @@ def test_log_worker(workflows_api: MagicMock, logs_api: MagicMock):
 
     workflows_api.get_workflow_task.side_effect = [
         wt_1,
-        transition(wt_1, "RUN_STATUS_PENDING"),
-        transition(wt_1, "RUN_STATUS_PENDING"),
-        transition(wt_1, "RUN_STATUS_ACTIVE"),
-        transition(wt_1, "RUN_STATUS_ACTIVE"),
-        transition(wt_1, "RUN_STATUS_COMPLETED"),
-        transition(wt_1, "RUN_STATUS_COMPLETED"),
+        transition(wt_1, Status.RUN_STATUS_PENDING.value),
+        transition(wt_1, Status.RUN_STATUS_PENDING.value),
+        transition(wt_1, Status.RUN_STATUS_ACTIVE.value),
+        transition(wt_1, Status.RUN_STATUS_ACTIVE.value),
+        transition(wt_1, Status.RUN_STATUS_COMPLETED.value),
+        transition(wt_1, Status.RUN_STATUS_COMPLETED.value),
     ]
 
     worker = LogWorker.for_workflow_task(wt_1, workflows_api, logs_api, logger)

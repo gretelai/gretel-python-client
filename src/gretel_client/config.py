@@ -341,9 +341,7 @@ class ClientConfig:
         api_client = V1ApiClient(
             header_name="Authorization",
             header_value=self.api_key,
-            configuration=V1Configuration(
-                host=self.endpoint, discard_unknown_keys=True
-            ),
+            configuration=V1Configuration(host=self.endpoint),
         )
 
         return api_interface(api_client)

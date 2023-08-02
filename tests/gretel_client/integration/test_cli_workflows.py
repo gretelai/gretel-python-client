@@ -62,12 +62,12 @@ def test_workflow_crud_from_cli(get_fixture: Callable, project: Callable):
     assert workflow_result["id"] in cmd.output
     assert cmd.exit_code == 0
 
-    # Trigger a workflow by id
+    # Run a workflow by id
     cmd = runner.invoke(
         cli,
         [
             "workflows",
-            "trigger",
+            "run",
             "--workflow-id",
             workflow_result["id"],
             "--wait",
@@ -80,14 +80,14 @@ def test_workflow_crud_from_cli(get_fixture: Callable, project: Callable):
     assert "Workflow run hasn't completed after waiting for 10 seconds." in cmd.output
     assert cmd.exit_code == 0
 
-    # Trigger a workflow by id, then cancel it
+    # run a workflow by id, then cancel it
     # Send an interrupt signal after 10 seconds
     Timer(10, lambda: os.kill(os.getpid(), SIGINT)).start()
     cmd = runner.invoke(
         cli,
         [
             "workflows",
-            "trigger",
+            "run",
             "--workflow-id",
             workflow_result["id"],
             "--wait",

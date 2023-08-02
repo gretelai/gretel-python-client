@@ -8,7 +8,7 @@ from gretel_client.cli.common import (
 )
 from gretel_client.config import get_session_config
 from gretel_client.rest_v1.api.connections_api import ConnectionsApi
-from gretel_client.rest_v1.model.connection import Connection
+from gretel_client.rest_v1.models import CreateConnectionRequest
 
 
 @click.group(
@@ -55,7 +55,7 @@ def create(sc: SessionContext, from_file: str, project: str):
 
     conn["project_id"] = sc.project.project_guid
 
-    connection = connection_api.create_connection(connection=conn)
+    connection = connection_api.create_connection(CreateConnectionRequest(**conn))
 
     sc.log.info("Created connection:")
     sc.print(data=connection.to_dict())
@@ -109,6 +109,6 @@ def list(sc: SessionContext):
 @pass_session
 def get(sc: SessionContext, id: str):
     connection_api = get_connections_api()
-    connection: Connection = connection_api.get_connection(connection_id=id)
+    connection = connection_api.get_connection(connection_id=id)
     sc.log.info("Connection:")
     sc.print(data=connection.to_dict())

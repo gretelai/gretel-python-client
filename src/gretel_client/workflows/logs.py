@@ -15,13 +15,13 @@ from typing import Callable, Iterator, List, Optional, Protocol, TextIO
 from gretel_client.config import ClientConfig
 from gretel_client.rest_v1.api.logs_api import LogsApi
 from gretel_client.rest_v1.api.workflows_api import WorkflowsApi
-from gretel_client.rest_v1.model.get_log_response import GetLogResponse
-from gretel_client.rest_v1.model.log_envelope import LogEnvelope
-from gretel_client.rest_v1.model.search_workflow_tasks_response import (
+from gretel_client.rest_v1.models import (
+    GetLogResponse,
+    LogEnvelope,
     SearchWorkflowTasksResponse,
+    WorkflowTask,
 )
-from gretel_client.rest_v1.model.workflow_task import WorkflowTask
-from gretel_client.workflows.status import TERMINAL_STATES
+from gretel_client.workflows.status import Status, TERMINAL_STATES
 
 WORKFLOW_RUN_ID = "workflow_run_id"
 """Search key to lookup workflow runs"""
