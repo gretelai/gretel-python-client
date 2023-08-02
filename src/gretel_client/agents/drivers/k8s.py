@@ -47,6 +47,23 @@ def _base64_str(my_str: str) -> str:
     return base64.b64encode(my_str.encode("ascii")).decode("ascii")
 
 
+def _create_secret_json_b64(server: str, username: str, password: str):
+    config_json = json.dumps(
+        {
+            "auths": {
+                server: {
+                    "username": username,
+                    "password": password,
+                    "email": "unused",
+                    "auth": _base64_str(f"{username}:{password}"),
+                }
+            }
+        }
+    )
+    data = {".dockerconfigjson": _base64_str(config_json)}
+    return data
+
+
 class Kubernetes(Driver):
     """Run a worker using a Kubernetes daemon.
 
@@ -441,19 +458,7 @@ class KubernetesDriverDaemon:
             server = self._override_host
         username = auth.get("username")
         password = auth.get("password")
-        config_json = json.dumps(
-            {
-                "auths": {
-                    server: {
-                        "username": username,
-                        "password": password,
-                        "email": "unused",
-                        "auth": _base64_str(f"{username}:{password}"),
-                    }
-                }
-            }
-        )
-        data = {".dockerconfigjson": _base64_str(config_json)}
+        data = _create_secret_json_b64(server, username, password)
         secret = client.V1Secret(
             metadata=client.V1ObjectMeta(name=self._gretel_pull_secret),
             data=data,
