@@ -17,6 +17,10 @@ def reqs(file_path):
         ]
 
 
+aws_deps = ["smart_open[s3]"]
+gcp_deps = ["smart_open[gcs]"]
+azure_deps = ["smart_open[azure]", "azure-identity"]
+
 setup(
     name="gretel-client",
     author="Gretel Labs, Inc.",
@@ -33,6 +37,11 @@ setup(
     entry_points={"console_scripts": ["gretel=gretel_client.cli.cli:cli"]},
     install_requires=reqs("requirements.txt"),
     tests_require=reqs("test-requirements.txt"),
+    extras_require={
+        "aws": aws_deps,
+        "gcp": gcp_deps,
+        "azure": azure_deps,
+    },
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: Apache Software License",
