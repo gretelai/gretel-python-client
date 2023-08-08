@@ -1,3 +1,5 @@
+import os
+
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -8,6 +10,7 @@ from gretel_client.projects.artifact_handlers import (
     CloudArtifactsHandler,
     HybridArtifactsHandler,
 )
+from gretel_client.projects.models import Model
 from gretel_client.projects.projects import GretelProjectError, Project
 
 
@@ -64,3 +67,55 @@ def test_default_aritfacts_handler_raises_under_unsupported_runner_modes(
 
     with pytest.raises(GretelProjectError):
         project.default_artifacts_handler
+
+
+@patch("gretel_client.projects.projects.get_session_config")
+@patch("smart_open.open")
+@patch("gretel_client.projects.artifact_handlers.BlobServiceClient")
+@patch.dict(
+    os.environ,
+    {
+        "AZURE_STORAGE_CONNECTION_STRING": "BlobEndpoint=https://test.blob.core.windows.net/"
+    },
+)
+def test_get_artifact_handle_azure(
+    blob_client_mock: MagicMock,
+    smart_open_mock: MagicMock,
+    get_session_config: MagicMock,
+):
+    config = MagicMock(
+        artifact_endpoint="azure://my-bucket",
+        default_runner=RunnerMode.HYBRID,
+    )
+    get_session_config.return_value = config
+    blob_client_mock_from_conn = MagicMock()
+    blob_client_mock.from_connection_string.return_value = blob_client_mock_from_conn
+
+    run = Model(Project(name="proj", project_id="123"), model_id="my_model_id")
+    with run.get_artifact_handle("report_json"):
+        smart_open_mock.assert_called_once_with(
+            "azure://my-bucket/123/model/my_model_id/report_json.json.gz",
+            "rb",
+            transport_params={"client": blob_client_mock_from_conn},
+        )
+
+
+@patch("gretel_client.projects.projects.get_session_config")
+@patch("smart_open.open")
+def test_get_artifact_handle_gs(
+    smart_open_mock: MagicMock,
+    get_session_config: MagicMock,
+):
+    config = MagicMock(
+        artifact_endpoint="gs://my-bucket",
+        default_runner=RunnerMode.HYBRID,
+    )
+    get_session_config.return_value = config
+
+    run = Model(Project(name="proj", project_id="123"), model_id="my_model_id")
+    with run.get_artifact_handle("report_json"):
+        smart_open_mock.assert_called_once_with(
+            "gs://my-bucket/123/model/my_model_id/report_json.json.gz",
+            "rb",
+            transport_params={},
+        )

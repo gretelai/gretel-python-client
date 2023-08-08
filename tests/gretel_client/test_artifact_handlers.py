@@ -7,12 +7,12 @@ from unittest.mock import Mock, patch
 import pandas as pd
 import pytest
 
-from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
 
 from gretel_client.config import DEFAULT_GRETEL_ARTIFACT_ENDPOINT
 from gretel_client.projects.artifact_handlers import (
     _get_artifact_path_and_file_name,
+    _get_transport_params,
     ArtifactsException,
     hybrid_handler,
     HybridArtifactsHandler,
@@ -78,7 +78,8 @@ def test_hybrid_created_with_custom_artifact_endpoint():
 )
 def test_hybrid_created_with_azure_artifact_endpoint(key: str, value: str):
     with patch.dict(os.environ, {key: value}):
-        config = Mock(artifact_endpoint="azure://my-bucket")
+        artifact_endpoint = "azure://my-bucket"
+        config = Mock(artifact_endpoint=artifact_endpoint)
         project = Mock(
             project_id="123",
             name="proj",
@@ -87,7 +88,7 @@ def test_hybrid_created_with_azure_artifact_endpoint(key: str, value: str):
         )
 
         assert isinstance(hybrid_handler(project), HybridArtifactsHandler)
-        transport_params = hybrid_handler(project)._get_transport_params()
+        transport_params = _get_transport_params(artifact_endpoint)
 
         assert transport_params is not None
         assert isinstance(transport_params.get("client"), BlobServiceClient)

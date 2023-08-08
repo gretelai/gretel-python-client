@@ -1,13 +1,11 @@
 """
 High level API for interacting with a Gretel Project
 """
-import uuid
 
 from contextlib import contextmanager
 from functools import wraps
-from io import BytesIO
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Type, TypeVar, Union
+from typing import Any, BinaryIO, Dict, Iterator, List, Optional, Type, TypeVar, Union
 
 from backports.cached_property import cached_property
 
@@ -268,6 +266,22 @@ class Project:
             project artifact.
         """
         return self.default_artifacts_handler.get_project_artifact_link(key)
+
+    @contextmanager
+    def get_artifact_handle(self, key: str) -> BinaryIO:
+        """Returns a reference to a remote artifact that can be used to
+        read binary data within a context manager
+
+        >>> with job.get_artifact_handle("report_json") as file:
+        ...   print(file.read())
+
+        Args:
+            key: Artifact key to download.
+
+        Returns:
+            a file like object
+        """
+        return self.default_artifacts_handler.get_project_artifact_handle(key)
 
     def get_artifact_manifest(
         self, key: str, retry_on_not_found: bool = True, retry_on_pending: bool = True

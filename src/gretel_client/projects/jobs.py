@@ -5,27 +5,32 @@ import json
 import time
 
 from abc import ABC, abstractmethod, abstractproperty
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Callable, Iterator, List, Optional, Tuple, Type, TYPE_CHECKING, Union
-from urllib.parse import urlparse
+from typing import (
+    BinaryIO,
+    Callable,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Type,
+    TYPE_CHECKING,
+    Union,
+)
 
-import requests
 import smart_open
 
 import gretel_client.rest.exceptions
 
 from gretel_client.cli.utils.parser_utils import RefData
-from gretel_client.config import (
-    DEFAULT_RUNNER,
-    get_logger,
-    get_session_config,
-    RunnerMode,
-)
+from gretel_client.config import get_logger, get_session_config, RunnerMode
 from gretel_client.dataframe import _DataFrameT
 from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.artifact_handlers import (
+    _get_transport_params,
     ArtifactsHandler,
     CloudArtifactsHandler,
     HybridArtifactsHandler,
@@ -347,13 +352,32 @@ class Job(ABC):
         artifact type.
 
         Args:
-            artifact_type: Artifact type to download.
+            artifact_key: Artifact type to download.
         """
         if artifact_key not in self.artifact_types:
             raise Exception(
                 f"artifact_key {artifact_key} not a valid key. Valid keys are {self.artifact_types}"
             )
         return self._do_get_artifact(artifact_key)
+
+    @contextmanager
+    def get_artifact_handle(self, artifact_key: str) -> BinaryIO:
+        """Returns a reference to a remote artifact that can be used to
+        read binary data within a context manager
+
+        >>> with job.get_artifact_handle("report_json") as file:
+        ...   print(file.read())
+
+        Args:
+            artifact_key: Artifact type to download.
+
+        Returns:
+            a file like object
+        """
+        link = self.get_artifact_link(artifact_key)
+        transport_params = _get_transport_params(link)
+        with smart_open.open(link, "rb", transport_params=transport_params) as handle:
+            yield handle
 
     def download_artifacts(self, target_dir: Union[str, Path]):
         """Given a target directory, either as a string or a Path object, attempt to enumerate
@@ -390,7 +414,10 @@ class Job(ABC):
         report_contents = None
         if report_path:
             try:
-                with smart_open.open(report_path, "rb") as rh:  # type:ignore
+                transport_params = _get_transport_params(report_path)
+                with smart_open.open(
+                    report_path, "rb", transport_params=transport_params
+                ) as rh:  # type:ignore
                     report_contents = rh.read()
             except Exception:
                 pass

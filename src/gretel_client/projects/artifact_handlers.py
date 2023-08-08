@@ -8,7 +8,7 @@ import uuid
 
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Protocol, Tuple, Union
+from typing import Any, BinaryIO, Dict, List, Optional, Protocol, Tuple, Union
 from urllib.parse import urlparse
 
 import requests
@@ -28,12 +28,35 @@ from gretel_client.rest.model.artifact import Artifact
 
 try:
     from azure.identity import DefaultAzureCredential
-    from azure.storage.blob import BlobServiceClient
 except ImportError:  # pragma: no cover
     DefaultAzureCredential = None
+try:
+    from azure.storage.blob import BlobServiceClient
+except ImportError:  # pragma: no cover
     BlobServiceClient = None
 
 HYBRID_ARTIFACT_ENDPOINT_PREFIXES = ["azure://", "gs://", "s3://"]
+
+
+def _get_azure_blob_srv_client() -> Optional[BlobServiceClient]:
+    if (storage_account := os.getenv("OAUTH_STORAGE_ACCOUNT_NAME")) is not None:
+        oauth_url = "https://{}.blob.core.windows.net".format(storage_account)
+        return BlobServiceClient(
+            account_url=oauth_url, credential=DefaultAzureCredential()
+        )
+
+    if (connect_str := os.getenv("AZURE_STORAGE_CONNECTION_STRING")) is not None:
+        return BlobServiceClient.from_connection_string(connect_str)
+
+
+def _get_transport_params(endpoint: str) -> dict:
+    """Returns a set of transport params that are suitable for passing
+    into calls to ``smart_open.open``.
+    """
+    client = None
+    if endpoint and endpoint.startswith("azure"):
+        client = _get_azure_blob_srv_client()
+    return {"client": client} if client else {}
 
 
 class ArtifactsException(Exception):
@@ -48,7 +71,8 @@ class ManifestNotFoundException(Exception):
 
 class ManifestPendingException(Exception):
     def __init__(self, msg: Optional[str] = None, manifest: dict = {}):
-        # Piggyback the pending manifest onto the exception.  If we give up, we still want to pass it back as a normal return value.
+        # Piggyback the pending manifest onto the exception.
+        # If we give up, we still want to pass it back as a normal return value.
         self.manifest = manifest
         super().__init__(msg)
 
@@ -104,6 +128,9 @@ class ArtifactsHandler(Protocol):
         ...
 
     def get_project_artifact_link(self, key: str) -> str:
+        ...
+
+    def get_project_artifact_handle(self, key: str) -> BinaryIO:
         ...
 
     def get_project_artifact_manifest(
@@ -187,6 +214,13 @@ class CloudArtifactsHandler:
         )
         return resp[f.DATA][f.DATA][f.URL]
 
+    @contextmanager
+    def get_project_artifact_handle(self, key: str) -> BinaryIO:
+        link = self.get_project_artifact_link(key)
+        transport_params = _get_transport_params(link)
+        with smart_open.open(link, "rb", transport_params=transport_params) as handle:
+            yield handle
+
     # The server side API will return manifests with PENDING status if artifact processing has not completed
     # or it will return a 404 (not found) if you immediately request the artifact before processing has even started.
     # This is correct but not convenient.  To keep every end user from writing their own retry logic, we add some here.
@@ -201,7 +235,8 @@ class CloudArtifactsHandler:
         wait=wait_fixed(3),
         stop=stop_after_attempt(5),
         retry=retry_if_exception_type(ManifestNotFoundException),
-        # Instead of throwing an exception, return None.  Given that we waited for a short grace period to let the artifact become PENDING,
+        # Instead of throwing an exception, return None.
+        # Given that we waited for a short grace period to let the artifact become PENDING,
         # if we are still getting 404's the key probably does not actually exist.
         retry_error_callback=lambda retry_state: None,
     )
@@ -273,25 +308,6 @@ class HybridArtifactsHandler:
 
         return common.validate_data_source(artifact_path)
 
-    def _get_azure_blob_srv_client(self) -> Optional[BlobServiceClient]:
-        if (storage_account := os.getenv("OAUTH_STORAGE_ACCOUNT_NAME")) is not None:
-            oauth_url = "https://{}.blob.core.windows.net".format(storage_account)
-            return BlobServiceClient(
-                account_url=oauth_url, credential=DefaultAzureCredential()
-            )
-
-        if (connect_str := os.getenv("AZURE_STORAGE_CONNECTION_STRING")) is not None:
-            return BlobServiceClient.from_connection_string(connect_str)
-
-    def _get_transport_params(self) -> dict:
-        """Returns a set of transport params that are suitable for passing
-        into calls to ``smart_open.open``.
-        """
-        client = None
-        if self.endpoint.startswith("azure"):
-            client = self._get_azure_blob_srv_client()
-        return {"client": client} if client else {}
-
     def upload_project_artifact(
         self,
         artifact_path: Union[Path, str, _DataFrameT],
@@ -311,9 +327,9 @@ class HybridArtifactsHandler:
                 artifact_path,
                 "rb",
                 ignore_ext=True,
-                transport_params=self._get_transport_params(),
+                transport_params=_get_transport_params(self.endpoint),
             ) as in_stream, smart_open.open(
-                target_out, "wb", transport_params=self._get_transport_params()
+                target_out, "wb", transport_params=_get_transport_params(self.endpoint)
             ) as out_stream:
                 shutil.copyfileobj(in_stream, out_stream)
 
@@ -342,6 +358,13 @@ class HybridArtifactsHandler:
         if key.startswith(self.data_sources_dir):
             return key
         return f"{self.data_sources_dir}/{key}"
+
+    @contextmanager
+    def get_project_artifact_handle(self, key: str) -> BinaryIO:
+        link = self.get_project_artifact_link(key)
+        transport_params = _get_transport_params(link)
+        with smart_open.open(link, "rb", transport_params=transport_params) as handle:
+            yield handle
 
     def get_project_artifact_manifest(
         self,
@@ -378,7 +401,11 @@ class HybridArtifactsHandler:
         log: logging.Logger,
     ) -> None:
         _download(
-            download_link, output_path, artifact_type, log, self._get_transport_params()
+            download_link,
+            output_path,
+            artifact_type,
+            log,
+            _get_transport_params(self.endpoint),
         )
 
 

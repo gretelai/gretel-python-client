@@ -358,6 +358,8 @@ def test_create_records_from_model_obj(
             str(tmpdir),
             "--model-id",
             str(model_obj),
+            "--project",
+            project.project_id,
             "--model-path",
             str(tmpdir / "model.tar.gz"),
             "--in-data",
