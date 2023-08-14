@@ -14,8 +14,6 @@ from typing import Callable, Dict, Generic, Iterator, List, Optional
 
 import requests
 
-from backports.cached_property import cached_property
-
 import gretel_client.agents.agent_telemetry as telemetry
 
 from gretel_client.agents.drivers.driver import ComputeUnit, Driver
@@ -79,6 +77,9 @@ class AgentConfig:
     _max_runtime_seconds: Optional[int] = None
     """TODO: implement"""
 
+    _project_id: Optional[str] = None
+    """Cached project ID."""
+
     def __post_init__(self):
         if not self._max_runtime_seconds:
             self._max_runtime_seconds = self._lookup_max_runtime()
@@ -133,13 +134,19 @@ class AgentConfig:
     def as_dict(self) -> dict:
         return asdict(self)
 
-    @cached_property
+    @property
     def project_id(self) -> Optional[str]:
         if self.project is None:
             return None
 
-        project = get_project(name=self.project)
-        return project.project_id
+        if self._project_id is None:
+            project = get_project(name=self.project)
+            self._project_id = project.project_id
+
+        return self._project_id
+
+    def invalidate_project_id(self) -> None:
+        self._project_id = None
 
 
 @dataclass
@@ -325,6 +332,7 @@ class Poller(Iterator):
                     self._logger.warning(
                         f"There was a problem calling the jobs endpoint {ex}"
                     )
+                    self._agent_config.invalidate_project_id()
                 if job:
                     return job
             self._interrupt.wait(wait_secs)
