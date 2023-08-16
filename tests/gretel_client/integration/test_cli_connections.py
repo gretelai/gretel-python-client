@@ -65,12 +65,12 @@ def test_connection_crud_from_cli(get_fixture: Callable, project: Project):
     #         "--id",
     #         connection_result["id"],
     #         "--from-file",
-    #         get_fixture("connections/aws_connection.json"),
+    #         get_fixture("connections/s3_connection.json"),
     #     ],
     # )
     # assert "Updated connection:" in cmd.output
     # assert "unit_test_name_edited" in cmd.output
-    # assert "AWS" in cmd.output
+    # assert "s3" in cmd.output
     # assert cmd.exit_code == 0
 
     # Delete a connection by id

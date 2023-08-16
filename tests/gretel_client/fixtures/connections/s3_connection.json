@@ -1,5 +1,5 @@
 {
-    "type": "AWS",
+    "type": "s3",
     "name": "unit_test_name_edited",
     "credentials": {
         "access_key_id": "aa",
