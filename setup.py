@@ -1,6 +1,7 @@
-from pathlib import Path
-from setuptools import setup, find_packages
 from os import path
+from pathlib import Path
+
+from setuptools import find_packages, setup
 
 this_dir = path.abspath(path.dirname(__file__))
 
