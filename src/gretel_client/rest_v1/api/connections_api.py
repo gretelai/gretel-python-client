@@ -639,7 +639,7 @@ class ConnectionsApi(object):
 
     @validate_arguments
     def get_gretel_connection_with_credentials(
-        self, user_id: Optional[StrictStr] = None, **kwargs
+        self, workflow_run_id: Optional[StrictStr] = None, **kwargs
     ) -> Connection:  # noqa: E501
         """get_gretel_connection_with_credentials  # noqa: E501
 
@@ -647,11 +647,11 @@ class ConnectionsApi(object):
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
-        >>> thread = api.get_gretel_connection_with_credentials(user_id, async_req=True)
+        >>> thread = api.get_gretel_connection_with_credentials(workflow_run_id, async_req=True)
         >>> result = thread.get()
 
-        :param user_id:
-        :type user_id: str
+        :param workflow_run_id:
+        :type workflow_run_id: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
         :param _preload_content: if False, the urllib3.HTTPResponse object will
@@ -669,12 +669,12 @@ class ConnectionsApi(object):
         """
         kwargs["_return_http_data_only"] = True
         return self.get_gretel_connection_with_credentials_with_http_info(
-            user_id, **kwargs
+            workflow_run_id, **kwargs
         )  # noqa: E501
 
     @validate_arguments
     def get_gretel_connection_with_credentials_with_http_info(
-        self, user_id: Optional[StrictStr] = None, **kwargs
+        self, workflow_run_id: Optional[StrictStr] = None, **kwargs
     ):  # noqa: E501
         """get_gretel_connection_with_credentials  # noqa: E501
 
@@ -682,11 +682,11 @@ class ConnectionsApi(object):
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
-        >>> thread = api.get_gretel_connection_with_credentials_with_http_info(user_id, async_req=True)
+        >>> thread = api.get_gretel_connection_with_credentials_with_http_info(workflow_run_id, async_req=True)
         >>> result = thread.get()
 
-        :param user_id:
-        :type user_id: str
+        :param workflow_run_id:
+        :type workflow_run_id: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
         :param _return_http_data_only: response data without head status code
@@ -713,7 +713,7 @@ class ConnectionsApi(object):
 
         _params = locals()
 
-        _all_params = ["user_id"]
+        _all_params = ["workflow_run_id"]
         _all_params.extend(
             [
                 "async_req",
@@ -743,8 +743,8 @@ class ConnectionsApi(object):
 
         # process the query parameters
         _query_params = []
-        if _params.get("user_id") is not None:  # noqa: E501
-            _query_params.append(("user_id", _params["user_id"]))
+        if _params.get("workflow_run_id") is not None:  # noqa: E501
+            _query_params.append(("workflow_run_id", _params["workflow_run_id"]))
 
         # process the header parameters
         _header_params = dict(_params.get("_headers", {}))
