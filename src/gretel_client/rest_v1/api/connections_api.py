@@ -54,6 +54,7 @@ class ConnectionsApi(object):
     ) -> Connection:  # noqa: E501
         """create_connection  # noqa: E501
 
+        Creates a new connection.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -88,6 +89,7 @@ class ConnectionsApi(object):
     ):  # noqa: E501
         """create_connection  # noqa: E501
 
+        Creates a new connection.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -207,6 +209,7 @@ class ConnectionsApi(object):
     ) -> None:  # noqa: E501
         """delete_connection  # noqa: E501
 
+        Delete a connection by it's connection id.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -241,6 +244,7 @@ class ConnectionsApi(object):
     ):  # noqa: E501
         """delete_connection  # noqa: E501
 
+        Delete a connection by it's connection id.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -349,6 +353,7 @@ class ConnectionsApi(object):
     ) -> Connection:  # noqa: E501
         """get_connection  # noqa: E501
 
+        Get a single connection by it's connection id.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -381,6 +386,7 @@ class ConnectionsApi(object):
     ):  # noqa: E501
         """get_connection  # noqa: E501
 
+        Get a single connection by it's connection id.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -491,6 +497,7 @@ class ConnectionsApi(object):
     ) -> Connection:  # noqa: E501
         """get_connection_with_credentials  # noqa: E501
 
+        Get connection details along with credentials.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -525,6 +532,7 @@ class ConnectionsApi(object):
     ):  # noqa: E501
         """get_connection_with_credentials  # noqa: E501
 
+        Get connection details along with credentials.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -635,6 +643,7 @@ class ConnectionsApi(object):
     ) -> Connection:  # noqa: E501
         """get_gretel_connection_with_credentials  # noqa: E501
 
+        Get connection details along with credentials.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -669,6 +678,7 @@ class ConnectionsApi(object):
     ):  # noqa: E501
         """get_gretel_connection_with_credentials  # noqa: E501
 
+        Get connection details along with credentials.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -778,6 +788,7 @@ class ConnectionsApi(object):
     def list_connections(self, **kwargs) -> ListConnectionsResponse:  # noqa: E501
         """list_connections  # noqa: E501
 
+        List connections  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -806,6 +817,7 @@ class ConnectionsApi(object):
     def list_connections_with_http_info(self, **kwargs):  # noqa: E501
         """list_connections  # noqa: E501
 
+        List connections  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -915,6 +927,7 @@ class ConnectionsApi(object):
     ) -> Connection:  # noqa: E501
         """update_connection  # noqa: E501
 
+        Updates a connection. Connections can be modified with updated connection.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -954,6 +967,7 @@ class ConnectionsApi(object):
     ):  # noqa: E501
         """update_connection  # noqa: E501
 
+        Updates a connection. Connections can be modified with updated connection.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -1077,6 +1091,7 @@ class ConnectionsApi(object):
     ) -> ValidateConnectionCredentialsResponse:  # noqa: E501
         """validate_connection_credentials  # noqa: E501
 
+        Validate a connection's credentials by it's connection id.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -1111,6 +1126,7 @@ class ConnectionsApi(object):
     ):  # noqa: E501
         """validate_connection_credentials  # noqa: E501
 
+        Validate a connection's credentials by it's connection id.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 

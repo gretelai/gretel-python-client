@@ -26,7 +26,7 @@ from pydantic import BaseModel, StrictStr
 
 class ModelRunArtifact(BaseModel):
     """
-    ModelRunArtifact
+    Input artifacts for the model run.
     """
 
     id: Optional[StrictStr] = None

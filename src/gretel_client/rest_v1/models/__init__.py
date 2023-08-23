@@ -40,6 +40,8 @@ from gretel_client.rest_v1.models.log_envelope import LogEnvelope
 from gretel_client.rest_v1.models.model import Model
 from gretel_client.rest_v1.models.model_run import ModelRun
 from gretel_client.rest_v1.models.model_run_artifact import ModelRunArtifact
+from gretel_client.rest_v1.models.model_run_config import ModelRunConfig
+from gretel_client.rest_v1.models.project import Project
 from gretel_client.rest_v1.models.search_activity_response import SearchActivityResponse
 from gretel_client.rest_v1.models.search_artifacts_response import (
     SearchArtifactsResponse,
@@ -81,5 +83,8 @@ from gretel_client.rest_v1.models.workflow import Workflow
 from gretel_client.rest_v1.models.workflow_run import WorkflowRun
 from gretel_client.rest_v1.models.workflow_run_cancellation_request import (
     WorkflowRunCancellationRequest,
+)
+from gretel_client.rest_v1.models.workflow_run_created_by_profile import (
+    WorkflowRunCreatedByProfile,
 )
 from gretel_client.rest_v1.models.workflow_task import WorkflowTask

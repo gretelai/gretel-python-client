@@ -28,7 +28,7 @@ from gretel_client.rest_v1.models.model import Model
 
 class ListModelsResponse(BaseModel):
     """
-    ListModelsResponse
+    Response message for `ListModels` method.
     """
 
     data: Optional[conlist(Model)] = None

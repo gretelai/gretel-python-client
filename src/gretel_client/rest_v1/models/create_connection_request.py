@@ -26,7 +26,7 @@ from pydantic import BaseModel, StrictStr
 
 class CreateConnectionRequest(BaseModel):
     """
-    CreateConnectionRequest
+    Request message for `CreateConnection` method.
     """
 
     project_id: StrictStr = ...

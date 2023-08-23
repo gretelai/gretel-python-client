@@ -26,9 +26,9 @@ from pydantic import BaseModel, StrictStr
 from gretel_client.rest_v1.models.user_profile_image import UserProfileImage
 
 
-class UserProfile(BaseModel):
+class WorkflowRunCreatedByProfile(BaseModel):
     """
-    Next Tag: 6
+    Populated only when the query `expand=created_by` is present
     """
 
     id: Optional[StrictStr] = None
@@ -51,8 +51,8 @@ class UserProfile(BaseModel):
         return json.dumps(self.to_dict())
 
     @classmethod
-    def from_json(cls, json_str: str) -> UserProfile:
-        """Create an instance of UserProfile from a JSON string"""
+    def from_json(cls, json_str: str) -> WorkflowRunCreatedByProfile:
+        """Create an instance of WorkflowRunCreatedByProfile from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self):
@@ -64,15 +64,15 @@ class UserProfile(BaseModel):
         return _dict
 
     @classmethod
-    def from_dict(cls, obj: dict) -> UserProfile:
-        """Create an instance of UserProfile from a dict"""
+    def from_dict(cls, obj: dict) -> WorkflowRunCreatedByProfile:
+        """Create an instance of WorkflowRunCreatedByProfile from a dict"""
         if obj is None:
             return None
 
         if type(obj) is not dict:
-            return UserProfile.parse_obj(obj)
+            return WorkflowRunCreatedByProfile.parse_obj(obj)
 
-        _obj = UserProfile.parse_obj(
+        _obj = WorkflowRunCreatedByProfile.parse_obj(
             {
                 "id": obj.get("id"),
                 "firstname": obj.get("firstname"),

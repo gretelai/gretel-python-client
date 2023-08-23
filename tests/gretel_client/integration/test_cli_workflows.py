@@ -26,6 +26,8 @@ def test_workflow_crud_from_cli(get_fixture: Callable, project: Callable):
             "test-workflow",
             "--project",
             project.name,
+            "--runner_mode",
+            "cloud",
             "--config",
             get_fixture("workflows/workflow.yaml"),
         ],

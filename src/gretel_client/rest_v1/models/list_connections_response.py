@@ -28,7 +28,7 @@ from gretel_client.rest_v1.models.connection import Connection
 
 class ListConnectionsResponse(BaseModel):
     """
-    ListConnectionsResponse
+    Response message for `ListConnections` method.
     """
 
     data: Optional[conlist(Connection)] = None

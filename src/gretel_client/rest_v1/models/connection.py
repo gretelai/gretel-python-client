@@ -22,23 +22,38 @@ from datetime import datetime
 from inspect import getfullargspec
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, StrictStr, validator
+from pydantic import BaseModel, Field, StrictStr, validator
 
 
 class Connection(BaseModel):
     """
-    Connection
+    Next available tag: 10
     """
 
-    id: StrictStr = ...
-    type: StrictStr = ...
-    name: StrictStr = ...
-    validation_status: StrictStr = ...
-    credentials: Optional[Dict[str, Any]] = None
-    encrypted_credentials: Optional[Dict[str, Any]] = None
+    id: StrictStr = Field(
+        ...,
+        description="The id of the connection. Connection id's are prefixed with `c_`.",
+    )
+    type: StrictStr = Field(
+        ..., description="Type of the connection: aws, gcs, azure etc."
+    )
+    name: StrictStr = Field(..., description="Name of the connection.")
+    validation_status: StrictStr = Field(
+        ..., description="Validation status: COMPLETED, ERROR, NONE."
+    )
+    credentials: Optional[Dict[str, Any]] = Field(
+        None, description="Connection credentials."
+    )
+    encrypted_credentials: Optional[Dict[str, Any]] = Field(
+        None, description="Connection credentials in encrypted form."
+    )
     created_at: datetime = ...
-    project_id: StrictStr = ...
-    created_by: StrictStr = ...
+    project_id: StrictStr = Field(
+        ..., description="ID of the Project that owns this connection"
+    )
+    created_by: StrictStr = Field(
+        ..., description="ID of the User who created this connection"
+    )
     __properties = [
         "id",
         "type",

@@ -22,36 +22,56 @@ from datetime import datetime
 from inspect import getfullargspec
 from typing import Optional
 
-from pydantic import BaseModel, StrictInt, StrictStr, validator
+from pydantic import BaseModel, Field, StrictInt, StrictStr, validator
 
+from gretel_client.rest_v1.models.project import Project
 from gretel_client.rest_v1.models.user_profile import UserProfile
 
 
 class WorkflowTask(BaseModel):
     """
-    WorkflowTask
+    Next Tag: 22
     """
 
     id: StrictStr = ...
     workflow_run_id: StrictStr = ...
+    project_id: StrictStr = ...
+    project: Optional[Project] = None
     log_location: StrictStr = ...
     status: StrictStr = ...
-    action_name: StrictStr = ...
-    action_type: StrictStr = ...
-    error_msg: Optional[StrictStr] = None
-    error_code: Optional[StrictInt] = None
-    stack_trace: Optional[StrictStr] = None
+    action_name: StrictStr = Field(
+        ...,
+        description="The user supplied name of the workflow action that produced this task. The name can be mapped back to the original workflow config.",
+    )
+    action_type: StrictStr = Field(
+        ...,
+        description="The type of workflow action running the task. Eg `s3_source` or `gretel_model`.",
+    )
+    error_msg: Optional[StrictStr] = Field(
+        None,
+        description="If the task is in an error state, this field will get populated with an error message suitable for displaying in the console. These error messages are meant to span a single line, and will be human readable.",
+    )
+    error_code: Optional[StrictInt] = Field(
+        None,
+        description="The code associated with an error message. These codes can be used to group like errors together.",
+    )
+    stack_trace: Optional[StrictStr] = Field(
+        None,
+        description="A more detailed stack trace that can be used for root cause analysis. This stack trace generally shouldn't be shown in the UI and will span many lines.",
+    )
     created_by: StrictStr = ...
+    created_by_profile: Optional[UserProfile] = None
     created_at: datetime = ...
     updated_at: Optional[datetime] = None
     pending_at: Optional[datetime] = None
     active_at: Optional[datetime] = None
     error_at: Optional[datetime] = None
     lost_at: Optional[datetime] = None
-    created_by_profile: Optional[UserProfile] = None
     __properties = [
         "id",
         "workflow_run_id",
+        "project_id",
+        "project",
         "log_location",
         "status",
         "action_name",
@@ -60,13 +80,13 @@ class WorkflowTask(BaseModel):
         "error_code",
         "stack_trace",
         "created_by",
+        "created_by_profile",
         "created_at",
         "updated_at",
         "pending_at",
         "active_at",
         "error_at",
         "lost_at",
-        "created_by_profile",
     ]
 
     @validator("status")
@@ -107,6 +127,9 @@ class WorkflowTask(BaseModel):
     def to_dict(self):
         """Returns the dictionary representation of the model using alias"""
         _dict = self.dict(by_alias=True, exclude={}, exclude_none=True)
+        # override the default output from pydantic by calling `to_dict()` of project
+        if self.project:
+            _dict["project"] = self.project.to_dict()
         # override the default output from pydantic by calling `to_dict()` of created_by_profile
         if self.created_by_profile:
             _dict["created_by_profile"] = self.created_by_profile.to_dict()
@@ -125,6 +148,10 @@ class WorkflowTask(BaseModel):
             {
                 "id": obj.get("id"),
                 "workflow_run_id": obj.get("workflow_run_id"),
+                "project_id": obj.get("project_id"),
+                "project": Project.from_dict(obj.get("project"))
+                if obj.get("project") is not None
+                else None,
                 "log_location": obj.get("log_location"),
                 "status": obj.get("status"),
                 "action_name": obj.get("action_name"),
@@ -133,17 +160,17 @@ class WorkflowTask(BaseModel):
                 "error_code": obj.get("error_code"),
                 "stack_trace": obj.get("stack_trace"),
                 "created_by": obj.get("created_by"),
+                "created_by_profile": UserProfile.from_dict(
+                    obj.get("created_by_profile")
+                )
+                if obj.get("created_by_profile") is not None
+                else None,
                 "created_at": obj.get("created_at"),
                 "updated_at": obj.get("updated_at"),
                 "pending_at": obj.get("pending_at"),
                 "active_at": obj.get("active_at"),
                 "error_at": obj.get("error_at"),
                 "lost_at": obj.get("lost_at"),
-                "created_by_profile": UserProfile.from_dict(
-                    obj.get("created_by_profile")
-                )
-                if obj.get("created_by_profile") is not None
-                else None,
             }
         )
         return _obj

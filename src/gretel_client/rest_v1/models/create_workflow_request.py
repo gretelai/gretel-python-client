@@ -21,7 +21,7 @@ import re  # noqa: F401
 from inspect import getfullargspec
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, StrictStr
+from pydantic import BaseModel, StrictStr, validator
 
 
 class CreateWorkflowRequest(BaseModel):
@@ -32,7 +32,18 @@ class CreateWorkflowRequest(BaseModel):
     name: StrictStr = ...
     project_id: StrictStr = ...
     config: Optional[Dict[str, Any]] = None
-    __properties = ["name", "project_id", "config"]
+    runner_mode: Optional[StrictStr] = None
+    __properties = ["name", "project_id", "config", "runner_mode"]
+
+    @validator("runner_mode")
+    def runner_mode_validate_enum(cls, v):
+        if v is None:
+            return v
+        if v not in ("RUNNER_MODE_UNSET", "RUNNER_MODE_CLOUD", "RUNNER_MODE_HYBRID"):
+            raise ValueError(
+                "must be one of enum values ('RUNNER_MODE_UNSET', 'RUNNER_MODE_CLOUD', 'RUNNER_MODE_HYBRID')"
+            )
+        return v
 
     class Config:
         allow_population_by_field_name = True
@@ -70,6 +81,7 @@ class CreateWorkflowRequest(BaseModel):
                 "name": obj.get("name"),
                 "project_id": obj.get("project_id"),
                 "config": obj.get("config"),
+                "runner_mode": obj.get("runner_mode"),
             }
         )
         return _obj

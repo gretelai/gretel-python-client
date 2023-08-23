@@ -22,23 +22,30 @@ from datetime import datetime
 from inspect import getfullargspec
 from typing import List, Optional
 
-from pydantic import BaseModel, conlist, StrictStr, validator
+from pydantic import BaseModel, conlist, Field, StrictStr, validator
 
-from gretel_client.rest_v1.models.google_protobuf_any import GoogleProtobufAny
 from gretel_client.rest_v1.models.model_run_artifact import ModelRunArtifact
+from gretel_client.rest_v1.models.model_run_config import ModelRunConfig
 
 
 class ModelRun(BaseModel):
     """
-    ModelRun
+    Container message for a model config
     """
 
-    id: Optional[StrictStr] = None
-    model_id: StrictStr = ...
+    id: Optional[StrictStr] = Field(
+        None, description="ModelRun Id. These Ids are prefixed with an `mr` identifier."
+    )
+    model_id: StrictStr = Field(..., description="Parent model id.")
     project_id: StrictStr = ...
-    config: Optional[GoogleProtobufAny] = None
-    artifacts: Optional[conlist(ModelRunArtifact)] = None
-    status: Optional[StrictStr] = None
+    config: Optional[ModelRunConfig] = None
+    artifacts: Optional[conlist(ModelRunArtifact)] = Field(
+        None, description="Inputs artifacts."
+    )
+    status: Optional[StrictStr] = Field(
+        None,
+        description="Status of the ModelRun. When the ModelRun is first created, the status is set to CREATED",
+    )
     created_by: Optional[StrictStr] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
@@ -143,7 +150,7 @@ class ModelRun(BaseModel):
                 "id": obj.get("id"),
                 "model_id": obj.get("model_id"),
                 "project_id": obj.get("project_id"),
-                "config": GoogleProtobufAny.from_dict(obj.get("config"))
+                "config": ModelRunConfig.from_dict(obj.get("config"))
                 if obj.get("config") is not None
                 else None,
                 "artifacts": [

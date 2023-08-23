@@ -19,29 +19,20 @@ import pprint
 import re  # noqa: F401
 
 from inspect import getfullargspec
-from typing import Any, Dict, Optional
+from typing import Optional
 
 from pydantic import BaseModel, Field, StrictStr
 
 
-class EventComponent(BaseModel):
+class ModelRunConfig(BaseModel):
     """
-    Represents one of a subject or object in a tuple-like data structure.
+    Gretel Config for the ModelRun.
     """
 
-    name: StrictStr = Field(
-        ...,
-        description='Human readable name of the tuple component. Eg a "model" or user "alan".',
+    type: Optional[StrictStr] = Field(
+        None, alias="@type", description="The type of the serialized message."
     )
-    id: StrictStr = Field(
-        ...,
-        description="Unique id of the component used for display or reference. Eg      model_2LJWrMW3xoDy2eY4DYZXFMOpQvd",
-    )
-    meta: Optional[Dict[str, Any]] = Field(
-        None,
-        description="Any additional (untyped) metadata associated with the event. E.g. a user's avatar data",
-    )
-    __properties = ["name", "id", "meta"]
+    __properties = ["@type"]
 
     class Config:
         allow_population_by_field_name = True
@@ -56,8 +47,8 @@ class EventComponent(BaseModel):
         return json.dumps(self.to_dict())
 
     @classmethod
-    def from_json(cls, json_str: str) -> EventComponent:
-        """Create an instance of EventComponent from a JSON string"""
+    def from_json(cls, json_str: str) -> ModelRunConfig:
+        """Create an instance of ModelRunConfig from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self):
@@ -66,15 +57,13 @@ class EventComponent(BaseModel):
         return _dict
 
     @classmethod
-    def from_dict(cls, obj: dict) -> EventComponent:
-        """Create an instance of EventComponent from a dict"""
+    def from_dict(cls, obj: dict) -> ModelRunConfig:
+        """Create an instance of ModelRunConfig from a dict"""
         if obj is None:
             return None
 
         if type(obj) is not dict:
-            return EventComponent.parse_obj(obj)
+            return ModelRunConfig.parse_obj(obj)
 
-        _obj = EventComponent.parse_obj(
-            {"name": obj.get("name"), "id": obj.get("id"), "meta": obj.get("meta")}
-        )
+        _obj = ModelRunConfig.parse_obj({"type": obj.get("@type")})
         return _obj

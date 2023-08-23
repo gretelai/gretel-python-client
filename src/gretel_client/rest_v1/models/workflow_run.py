@@ -24,20 +24,26 @@ from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, StrictStr, validator
 
-from gretel_client.rest_v1.models.user_profile import UserProfile
+from gretel_client.rest_v1.models.project import Project
 from gretel_client.rest_v1.models.workflow_run_cancellation_request import (
     WorkflowRunCancellationRequest,
+)
+from gretel_client.rest_v1.models.workflow_run_created_by_profile import (
+    WorkflowRunCreatedByProfile,
 )
 
 
 class WorkflowRun(BaseModel):
     """
-    WorkflowRun
+    Next tag: 18
     """
 
     id: StrictStr = ...
     workflow_id: StrictStr = ...
+    project_id: StrictStr = ...
+    project: Optional[Project] = None
     config: Optional[Dict[str, Any]] = None
+    runner_mode: StrictStr = ...
     status: StrictStr = ...
     created_by: StrictStr = ...
     created_at: datetime = ...
@@ -48,11 +54,14 @@ class WorkflowRun(BaseModel):
     lost_at: Optional[datetime] = None
     cancelled_at: Optional[datetime] = None
     cancellation_request: Optional[WorkflowRunCancellationRequest] = None
-    created_by_profile: Optional[UserProfile] = None
+    created_by_profile: Optional[WorkflowRunCreatedByProfile] = None
     __properties = [
         "id",
         "workflow_id",
+        "project_id",
+        "project",
         "config",
+        "runner_mode",
         "status",
         "created_by",
         "created_at",
@@ -65,6 +74,14 @@ class WorkflowRun(BaseModel):
         "cancellation_request",
         "created_by_profile",
     ]
+
+    @validator("runner_mode")
+    def runner_mode_validate_enum(cls, v):
+        if v not in ("RUNNER_MODE_UNSET", "RUNNER_MODE_CLOUD", "RUNNER_MODE_HYBRID"):
+            raise ValueError(
+                "must be one of enum values ('RUNNER_MODE_UNSET', 'RUNNER_MODE_CLOUD', 'RUNNER_MODE_HYBRID')"
+            )
+        return v
 
     @validator("status")
     def status_validate_enum(cls, v):
@@ -104,6 +121,9 @@ class WorkflowRun(BaseModel):
     def to_dict(self):
         """Returns the dictionary representation of the model using alias"""
         _dict = self.dict(by_alias=True, exclude={}, exclude_none=True)
+        # override the default output from pydantic by calling `to_dict()` of project
+        if self.project:
+            _dict["project"] = self.project.to_dict()
         # override the default output from pydantic by calling `to_dict()` of cancellation_request
         if self.cancellation_request:
             _dict["cancellation_request"] = self.cancellation_request.to_dict()
@@ -125,7 +145,12 @@ class WorkflowRun(BaseModel):
             {
                 "id": obj.get("id"),
                 "workflow_id": obj.get("workflow_id"),
+                "project_id": obj.get("project_id"),
+                "project": Project.from_dict(obj.get("project"))
+                if obj.get("project") is not None
+                else None,
                 "config": obj.get("config"),
+                "runner_mode": obj.get("runner_mode"),
                 "status": obj.get("status"),
                 "created_by": obj.get("created_by"),
                 "created_at": obj.get("created_at"),
@@ -140,7 +165,7 @@ class WorkflowRun(BaseModel):
                 )
                 if obj.get("cancellation_request") is not None
                 else None,
-                "created_by_profile": UserProfile.from_dict(
+                "created_by_profile": WorkflowRunCreatedByProfile.from_dict(
                     obj.get("created_by_profile")
                 )
                 if obj.get("created_by_profile") is not None

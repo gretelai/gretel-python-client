@@ -22,16 +22,21 @@ from datetime import datetime
 from inspect import getfullargspec
 from typing import Optional
 
-from pydantic import BaseModel, StrictStr
+from pydantic import BaseModel, Field, StrictStr
 
 
 class LogEnvelope(BaseModel):
     """
-    LogEnvelope
+    A LogEnvelope represents a log line suitable for displaying job specific information. These logs are currently used to display workflow and (v2) model related logs across our product.
     """
 
-    msg: Optional[StrictStr] = None
-    ts: Optional[datetime] = None
+    msg: Optional[StrictStr] = Field(
+        None,
+        description="The string message for the log line. This message will get displayed across various Gretel products views.",
+    )
+    ts: Optional[datetime] = Field(
+        None, description="The timestamp for the associated log message."
+    )
     __properties = ["msg", "ts"]
 
     class Config:

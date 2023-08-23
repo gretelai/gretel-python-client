@@ -20,6 +20,7 @@ from gretel_client.workflows.logs import (
     WaitTimeExceeded,
     WORKFLOW_TASK_SEARCH_KEY,
 )
+from gretel_client.workflows.runner_mode import RunnerMode
 from gretel_client.workflows.status import Status
 
 
@@ -50,6 +51,7 @@ def test_task_manager(
     wt_1 = WorkflowTask(
         workflow_run_id="wr_1",
         id="wt_1",
+        project_id="pid",
         log_location="",
         action_name="helloworld_producer",
         action_type="helloworld_producer",
@@ -66,6 +68,8 @@ def test_task_manager(
         WorkflowRun(
             workflow_id="w_1",
             id="wr_1",
+            project_id="pid",
+            runner_mode=RunnerMode.RUNNER_MODE_CLOUD.value,
             created_by="u_1",
             created_at=datetime.datetime.now(),
             status=Status.RUN_STATUS_CREATED.value,
@@ -73,6 +77,8 @@ def test_task_manager(
         WorkflowRun(
             workflow_id="w_1",
             id="wr_1",
+            project_id="pid",
+            runner_mode=RunnerMode.RUNNER_MODE_CLOUD.value,
             created_by="u_1",
             created_at=datetime.datetime.now(),
             status=Status.RUN_STATUS_ACTIVE.value,
@@ -80,6 +86,8 @@ def test_task_manager(
         WorkflowRun(
             workflow_id="w_1",
             id="wr_1",
+            project_id="pid",
+            runner_mode=RunnerMode.RUNNER_MODE_CLOUD.value,
             created_by="u_1",
             created_at=datetime.datetime.now(),
             status=Status.RUN_STATUS_COMPLETED.value,
@@ -130,6 +138,7 @@ def test_log_worker(workflows_api: MagicMock, logs_api: MagicMock):
     wt_1 = WorkflowTask(
         workflow_run_id="wr_1",
         id="wt_1",
+        project_id="pid",
         log_location="",
         action_name="helloworld_producer",
         action_type="helloworld_producer",

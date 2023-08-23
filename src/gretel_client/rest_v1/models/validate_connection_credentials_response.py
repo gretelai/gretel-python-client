@@ -26,7 +26,7 @@ from pydantic import BaseModel, StrictStr, validator
 
 class ValidateConnectionCredentialsResponse(BaseModel):
     """
-    ValidateConnectionCredentialsResponse
+    Response message for `ValidateConnectionCredentials` method.
     """
 
     status: Optional[StrictStr] = None

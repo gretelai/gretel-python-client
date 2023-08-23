@@ -22,20 +22,23 @@ from datetime import datetime
 from inspect import getfullargspec
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, StrictStr
+from pydantic import BaseModel, StrictStr, validator
 
+from gretel_client.rest_v1.models.project import Project
 from gretel_client.rest_v1.models.user_profile import UserProfile
 
 
 class Workflow(BaseModel):
     """
-    Workflow
+    Next Tag: 12
     """
 
     id: StrictStr = ...
     name: StrictStr = ...
     project_id: StrictStr = ...
+    project: Optional[Project] = None
     config: Optional[Dict[str, Any]] = None
+    runner_mode: Optional[StrictStr] = None
     next_scheduled_run: Optional[datetime] = None
     created_by: StrictStr = ...
     created_at: datetime = ...
@@ -45,13 +48,25 @@ class Workflow(BaseModel):
         "id",
         "name",
         "project_id",
+        "project",
         "config",
+        "runner_mode",
         "next_scheduled_run",
         "created_by",
         "created_at",
         "updated_at",
         "created_by_profile",
     ]
+
+    @validator("runner_mode")
+    def runner_mode_validate_enum(cls, v):
+        if v is None:
+            return v
+        if v not in ("RUNNER_MODE_UNSET", "RUNNER_MODE_CLOUD", "RUNNER_MODE_HYBRID"):
+            raise ValueError(
+                "must be one of enum values ('RUNNER_MODE_UNSET', 'RUNNER_MODE_CLOUD', 'RUNNER_MODE_HYBRID')"
+            )
+        return v
 
     class Config:
         allow_population_by_field_name = True
@@ -73,6 +88,9 @@ class Workflow(BaseModel):
     def to_dict(self):
         """Returns the dictionary representation of the model using alias"""
         _dict = self.dict(by_alias=True, exclude={}, exclude_none=True)
+        # override the default output from pydantic by calling `to_dict()` of project
+        if self.project:
+            _dict["project"] = self.project.to_dict()
         # override the default output from pydantic by calling `to_dict()` of created_by_profile
         if self.created_by_profile:
             _dict["created_by_profile"] = self.created_by_profile.to_dict()
@@ -92,7 +110,11 @@ class Workflow(BaseModel):
                 "id": obj.get("id"),
                 "name": obj.get("name"),
                 "project_id": obj.get("project_id"),
+                "project": Project.from_dict(obj.get("project"))
+                if obj.get("project") is not None
+                else None,
                 "config": obj.get("config"),
+                "runner_mode": obj.get("runner_mode"),
                 "next_scheduled_run": obj.get("next_scheduled_run"),
                 "created_by": obj.get("created_by"),
                 "created_at": obj.get("created_at"),

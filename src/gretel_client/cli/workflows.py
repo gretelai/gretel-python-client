@@ -16,6 +16,7 @@ from gretel_client.rest_v1.models import (
     Workflow,
     WorkflowRun,
 )
+from gretel_client.workflows.runner_mode import RunnerMode
 from gretel_client.workflows.status import Status, TERMINAL_STATES
 
 
@@ -39,8 +40,20 @@ def get_workflows_api() -> WorkflowsApi:
     help="Path to the file containing Gretel workflow config.",
     required=True,
 )
+@click.option(
+    "--runner_mode",
+    metavar="NAME",
+    help="The RunnerMode to use by default when running this workflow.",
+    default=RunnerMode.RUNNER_MODE_CLOUD.value,
+)
 @pass_session
-def create(sc: SessionContext, config: str, name: str, project: str):
+def create(
+    sc: SessionContext,
+    config: str,
+    name: str,
+    project: str,
+    runner_mode: str = RunnerMode.RUNNER_MODE_CLOUD.value,
+):
 
     with open(config, encoding="utf-8") as file:
         workflow_config = yaml.safe_load(file)
@@ -49,9 +62,13 @@ def create(sc: SessionContext, config: str, name: str, project: str):
         workflow_config["name"] = name
 
     project_id = sc.project.project_guid
+    runner_mode = RunnerMode.from_str(runner_mode)
 
     wfl = CreateWorkflowRequest(
-        config=workflow_config, name=workflow_config["name"], project_id=project_id
+        config=workflow_config,
+        name=workflow_config["name"],
+        project_id=project_id,
+        runner_mode=runner_mode,
     )
 
     workflow_api = get_workflows_api()

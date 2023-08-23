@@ -55,6 +55,7 @@ class ModelsApi(object):
     def create_model(self, model: Model, **kwargs) -> Model:  # noqa: E501
         """create_model  # noqa: E501
 
+        Creates a new model. Models are used as container objects for ModelRuns.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -85,6 +86,7 @@ class ModelsApi(object):
     def create_model_with_http_info(self, model: Model, **kwargs):  # noqa: E501
         """create_model  # noqa: E501
 
+        Creates a new model. Models are used as container objects for ModelRuns.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -202,6 +204,7 @@ class ModelsApi(object):
     def create_model_run(self, model_run: ModelRun, **kwargs) -> ModelRun:  # noqa: E501
         """create_model_run  # noqa: E501
 
+        Create a new ModelRun.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -234,6 +237,7 @@ class ModelsApi(object):
     ):  # noqa: E501
         """create_model_run  # noqa: E501
 
+        Create a new ModelRun.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -351,6 +355,7 @@ class ModelsApi(object):
     def delete_model(self, model_id: StrictStr, **kwargs) -> None:  # noqa: E501
         """delete_model  # noqa: E501
 
+        Delete a model by it's model id.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -381,6 +386,7 @@ class ModelsApi(object):
     def delete_model_with_http_info(self, model_id: StrictStr, **kwargs):  # noqa: E501
         """delete_model  # noqa: E501
 
+        Delete a model by it's model id.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -487,6 +493,7 @@ class ModelsApi(object):
     def get_model(self, model_id: StrictStr, **kwargs) -> Model:  # noqa: E501
         """get_model  # noqa: E501
 
+        Get a single model by it's model id.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -517,6 +524,7 @@ class ModelsApi(object):
     def get_model_with_http_info(self, model_id: StrictStr, **kwargs):  # noqa: E501
         """get_model  # noqa: E501
 
+        Get a single model by it's model id.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -769,6 +777,7 @@ class ModelsApi(object):
     ) -> ListModelsResponse:  # noqa: E501
         """list_models  # noqa: E501
 
+        List models by project  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -801,6 +810,7 @@ class ModelsApi(object):
     ):  # noqa: E501
         """list_models  # noqa: E501
 
+        List models by project  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -1089,6 +1099,7 @@ class ModelsApi(object):
     ) -> Model:  # noqa: E501
         """update_model  # noqa: E501
 
+        Updates a model. Models can be renamed and descriptions updated.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -1123,6 +1134,7 @@ class ModelsApi(object):
     ):  # noqa: E501
         """update_model  # noqa: E501
 
+        Updates a model. Models can be renamed and descriptions updated.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 

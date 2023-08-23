@@ -22,7 +22,7 @@ from datetime import datetime
 from inspect import getfullargspec
 from typing import Dict, Optional
 
-from pydantic import BaseModel, StrictStr
+from pydantic import BaseModel, Field, StrictStr
 
 
 class Model(BaseModel):
@@ -30,11 +30,17 @@ class Model(BaseModel):
     Model
     """
 
-    id: StrictStr = ...
-    name: StrictStr = ...
-    project_id: StrictStr = ...
-    description: Optional[StrictStr] = None
-    tags: Optional[Dict[str, StrictStr]] = None
+    id: StrictStr = Field(
+        ..., description="The id of the model. Model id's are prefixed with `m_`."
+    )
+    name: StrictStr = Field(..., description="The name of the model.")
+    project_id: StrictStr = Field(
+        ..., description="Parent project id. Permissions are scoped by project access."
+    )
+    description: Optional[StrictStr] = Field(None, description="Model description.")
+    tags: Optional[Dict[str, StrictStr]] = Field(
+        None, description="Tags by name by ModelRun id."
+    )
     created_by: Optional[StrictStr] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
