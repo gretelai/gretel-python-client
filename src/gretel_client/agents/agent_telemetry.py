@@ -18,8 +18,7 @@ JOB_COUNTER = meter.create_counter(
     name="jobs_scheduled", unit="count", description="Count of jobs scheduled"
 )
 JOB_COUNTER.add(0, {"error": False})
-MAX_WORKER_COUNTER = meter.create_up_down_counter(name="max_workers", unit="count")
-MAX_RUNTIME_COUNTER = meter.create_up_down_counter(name="max_runtime", unit="seconds")
+MAX_WORKER_GAUGE = meter.create_up_down_counter(name="max_workers", unit="count")
 ACTIVE_JOBS_COUNTER = meter.create_up_down_counter(name="active_jobs", unit="count")
 
 
@@ -32,9 +31,15 @@ def increment_job_count(error: bool = False):
     JOB_COUNTER.add(1, attributes={"error": error})
 
 
-def set_config_metrics(max_workers: int, max_runtime_seconds: int):
-    MAX_WORKER_COUNTER.add(max_workers)
-    MAX_RUNTIME_COUNTER.add(max_runtime_seconds)
+def set_max_workers(
+    max_workers: int,
+    previous_max_workers: int = 0,
+):
+    """There is only an observable version of the gauge, so we simply use an up down counter
+    and subtract the previous value if it's greater than zero"""
+    if previous_max_workers > 0:
+        MAX_WORKER_GAUGE.add(-previous_max_workers)
+    MAX_WORKER_GAUGE.add(max_workers)
 
 
 def increase_active_jobs():

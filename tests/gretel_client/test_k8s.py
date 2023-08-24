@@ -58,8 +58,8 @@ def patch_auth(func: Callable):
     @wraps(func)
     def inner_func(*args, **kwargs):
         with patch("kubernetes.config.load_incluster_config", lambda: None), patch(
-            "gretel_client.agents.agent.get_session_config"
-        ) as agent_get_session_mock, patch(
+            "gretel_client.agents.agent.AgentConfig._lookup_max_jobs_active"
+        ) as lookup_max_jobs_active_mock, patch(
             "gretel_client.docker.get_session_config"
         ) as driver_get_session_mock:
             driver_get_session_mock.return_value.get_api.return_value.get_container_login.return_value = {
@@ -68,9 +68,7 @@ def patch_auth(func: Callable):
                     "registry": "123",
                 }
             }
-            agent_get_session_mock.return_value.get_api.return_value.users_me.return_value = {
-                "data": {"me": {"service_limits": {"max_job_runtime": 1}}}
-            }
+            lookup_max_jobs_active_mock.return_value = 1
             return func(*args, **kwargs)
 
     return inner_func

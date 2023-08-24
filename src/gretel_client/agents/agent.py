@@ -10,6 +10,8 @@ import os
 import threading
 
 from dataclasses import asdict, dataclass
+from threading import Thread
+from time import sleep
 from typing import Callable, Dict, Generic, Iterator, List, Optional
 
 import requests
@@ -23,7 +25,7 @@ from gretel_client.config import configure_custom_logger, get_session_config
 from gretel_client.docker import CloudCreds, DataVolumeDef
 from gretel_client.helpers import do_api_call
 from gretel_client.projects import get_project
-from gretel_client.rest.apis import JobsApi, ProjectsApi, UsersApi
+from gretel_client.rest.apis import JobsApi, ProjectsApi
 
 configure_logging()
 
@@ -41,6 +43,9 @@ class AgentConfig:
 
     max_workers: int = 1
     """The max number of workers the agent instance will launch."""
+
+    _max_workers_from_config: int = 0
+    """The max workers that were passed in via the config"""
 
     log_factory: Callable = lambda _: None
     """A factory function to ship worker logs to. If none is provided
@@ -74,43 +79,45 @@ class AgentConfig:
     enable_prometheus: bool = False
     """Sets up the prometheus endpoint for the running agent"""
 
-    _max_runtime_seconds: Optional[int] = None
-    """TODO: implement"""
-
     _project_id: Optional[str] = None
     """Cached project ID."""
 
     def __post_init__(self):
-        if not self._max_runtime_seconds:
-            self._max_runtime_seconds = self._lookup_max_runtime()
-        if self.max_workers > 1:
-            max_jobs_active = self._lookup_max_jobs_active()
-            if max_jobs_active < self.max_workers:
-                logger = logging.getLogger(__name__)
-                logger.warning(
-                    "Max workers value supplied via CLI: '%d' "
-                    "is greater than the max allowed by your account: '%d'",
-                    self.max_workers,
-                    max_jobs_active,
-                )
-                logger.warning("Setting max workers to be %d", max_jobs_active)
-                self.max_workers = max_jobs_active
+        self._logger = logging.getLogger(__name__)
+        self._max_workers_from_config = self.max_workers
+        self._update_max_workers()
 
-    @property
-    def max_runtime_seconds(self) -> int:
-        if not self._max_runtime_seconds:
-            raise AgentError("Could not fetch user config. Please restart the agent.")
-        return self._max_runtime_seconds
+    def _update_max_workers(self) -> int:
+        initial_value = self.max_workers
 
-    def _lookup_max_runtime(self) -> int:
-        user_api = get_session_config().get_api(UsersApi)
-        return (
-            user_api.users_me()
-            .get("data")
-            .get("me")
-            .get("service_limits")
-            .get("max_job_runtime")
+        max_jobs_active = self._lookup_max_jobs_active()
+
+        self.max_workers = (
+            max_jobs_active
+            if self._max_workers_from_config <= 0
+            else min(max_jobs_active, self._max_workers_from_config)
         )
+
+        if (
+            self._max_workers_from_config > 0
+            and max_jobs_active < self._max_workers_from_config
+        ):
+            self._logger.warning(
+                "Max workers set by config (%d) higher than the value from the API (%d)",
+                self._max_workers_from_config,
+                max_jobs_active,
+            )
+
+        if initial_value != self.max_workers:
+            self._logger.info(
+                "Max workers set to %d",
+                self.max_workers,
+            )
+
+        telemetry.set_max_workers(
+            max_workers=self.max_workers, previous_max_workers=initial_value
+        )
+        return self.max_workers
 
     def _lookup_max_jobs_active(self) -> int:
         try:
@@ -162,7 +169,6 @@ class Job:
     job_type: str
     container_image: str
     worker_token: str
-    max_runtime_seconds: int
     instance_type: str
     log: Optional[Callable] = None
     cloud_creds: Optional[List[CloudCreds]] = None
@@ -181,7 +187,6 @@ class Job:
             log=agent_config.log_factory(
                 source.get("run_id") or source.get("model_id")
             ),
-            max_runtime_seconds=agent_config.max_runtime_seconds,
             cloud_creds=agent_config.creds,
             artifact_endpoint=agent_config.artifact_endpoint,
             disable_cloud_logging=agent_config.disable_cloud_logging,
@@ -231,12 +236,33 @@ class Job:
 class RateLimiter:
     """Limits the amount of jobs the agent can place."""
 
-    def __init__(self, max_active_jobs: int, job_manager: JobManager):
+    def __init__(
+        self, max_active_jobs: int, job_manager: JobManager, agent_config: AgentConfig
+    ):
         self._job_manger = job_manager
         self._max_active_jobs = max_active_jobs
+        self._agent_config = agent_config
+        self._logger = logging.getLogger(__name__)
+        self._poll_interval_secs = 300
 
     def has_capacity(self) -> bool:
         return self._job_manger.active_jobs < self._max_active_jobs
+
+    def update_max_active_jobs(self):
+        previous = self._max_active_jobs
+        new_value = self._agent_config._update_max_workers()
+        if previous != new_value:
+            self._max_active_jobs = new_value
+
+    def update_max_active_jobs_loop(self):
+        while True:
+            try:
+                self.update_max_active_jobs()
+                sleep(self._poll_interval_secs)
+            except Exception:
+                self._logger.warning(
+                    "Error checking max active jobs endpoints", exc_info=True
+                )
 
 
 class JobManager(Generic[ComputeUnit]):
@@ -260,7 +286,7 @@ class JobManager(Generic[ComputeUnit]):
     def _update_active_jobs(self) -> None:
         for job in list(self._active_jobs):
             if not self._driver.active(self._active_jobs[job]):
-                self._logger.info(f"Job {job} completed")
+                self._logger.info("Job %s completed/ended", job)
                 self._driver.clean(self._active_jobs[job])
                 self._active_jobs.pop(job)
                 telemetry.decrease_active_jobs()
@@ -328,9 +354,10 @@ class Poller(Iterator):
                 job = None
                 try:
                     job = self.poll_endpoint()
-                except Exception as ex:
+                except Exception:
                     self._logger.warning(
-                        f"There was a problem calling the jobs endpoint {ex}"
+                        "There was a problem calling the jobs endpoint.",
+                        exc_info=True,
                     )
                     self._agent_config.invalidate_project_id()
                 if job:
@@ -353,22 +380,27 @@ class Agent:
         self._client_config = get_session_config()
         self._driver = get_driver(config)
         self._jobs_manager = JobManager(self._driver)
-        self._rate_limiter = RateLimiter(config.max_workers, self._jobs_manager)
+        self._rate_limiter = RateLimiter(config.max_workers, self._jobs_manager, config)
         self._jobs_api = self._client_config.get_api(JobsApi)
         self._projects_api = self._client_config.get_api(ProjectsApi)
         self._jobs = Poller(self._jobs_api, self._rate_limiter, self._config)
         self._interrupt = threading.Event()
 
     def start(self):
+        """Start the agent"""
         if self._config.enable_prometheus:
             self._logger.info("Enabling prometheus client")
             telemetry.setup_prometheus()
-            telemetry.set_config_metrics(
+            telemetry.set_max_workers(
                 max_workers=self._config.max_workers,
-                max_runtime_seconds=self._config.max_runtime_seconds,
             )
-        """Start the agent"""
         self._logger.info("Agent started, waiting for work to arrive")
+
+        thread = Thread(
+            target=self._rate_limiter.update_max_active_jobs_loop, daemon=True
+        )
+        thread.start()
+
         for job in self._jobs:
             if not job:
                 if self._interrupt.is_set():
@@ -392,7 +424,7 @@ class Agent:
 
     def _update_job_status(self, job: Job) -> None:
         try:
-            self._logger.info(f"Updating status to Pending for job {job.uid}")
+            self._logger.info("Updating status to Pending for job %s", job.uid)
             worker_json = base64.standard_b64decode(job.worker_token).decode("ascii")
             worker_key = json.loads(worker_json)["model_key"]
             headers = {"Authorization": worker_key}
@@ -405,6 +437,7 @@ class Agent:
                 headers=headers,
                 json=data,
                 params=params,
+                timeout=15,
             )
             self._logger.debug(resp.text)
             resp.raise_for_status()
