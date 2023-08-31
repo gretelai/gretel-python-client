@@ -16,6 +16,7 @@ from kubernetes.client import (
     V1ConfigMapVolumeSource,
     V1Container,
     V1Job,
+    V1JobCondition,
     V1JobSpec,
     V1JobStatus,
     V1LocalObjectReference,
@@ -394,8 +395,22 @@ class TestKubernetesDriver(TestCase):
 
     def test_is_job_active_true_then_false(self):
         self.batch_api.read_namespaced_job.side_effect = [
-            V1Job(status=V1JobStatus(active=1)),
-            V1Job(status=V1JobStatus(active=0)),
+            V1Job(
+                status=V1JobStatus(
+                    active=1,
+                    conditions=[
+                        V1JobCondition(type="Complete", status=False),
+                    ],
+                )
+            ),
+            V1Job(
+                status=V1JobStatus(
+                    active=0,
+                    conditions=[
+                        V1JobCondition(type="Complete", status=True),
+                    ],
+                )
+            ),
         ]
         self.assertTrue(self.driver.active(self.k8s_job))
         self.assertFalse(self.driver.active(self.k8s_job))
@@ -412,6 +427,28 @@ class TestKubernetesDriver(TestCase):
         self.batch_api.read_namespaced_job.side_effect = [
             V1Job(status=V1JobStatus(active=1)),
             V1Job(status=V1JobStatus()),
+        ]
+        self.assertTrue(self.driver.active(self.k8s_job))
+        self.assertTrue(self.driver.active(self.k8s_job))
+
+    def test_is_job_active_true_then_failed(self):
+        self.batch_api.read_namespaced_job.side_effect = [
+            V1Job(
+                status=V1JobStatus(
+                    conditions=[
+                        V1JobCondition(type="Complete", status=False),
+                        V1JobCondition(type="Failed", status=False),
+                    ],
+                )
+            ),
+            V1Job(
+                status=V1JobStatus(
+                    conditions=[
+                        V1JobCondition(type="Complete", status=False),
+                        V1JobCondition(type="Failed", status=True),
+                    ],
+                )
+            ),
         ]
         self.assertTrue(self.driver.active(self.k8s_job))
         self.assertFalse(self.driver.active(self.k8s_job))

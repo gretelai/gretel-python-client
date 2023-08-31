@@ -404,15 +404,24 @@ class Kubernetes(Driver):
                 ) from ex
 
     def _is_job_active(self, job: client.V1Job) -> bool:
-        job_resp: client.V1Job = self._batch_api.read_namespaced_job(
+        job_resp: Optional[client.V1Job] = self._batch_api.read_namespaced_job(
             job.metadata.name, namespace=self._gretel_worker_namespace
         )
         if not job_resp:
             return False
-        status: client.V1JobStatus = job_resp.status
-        if status and status and status.active is not None:
-            return status.active > 0
-        return False
+        status: Optional[client.V1JobStatus] = job_resp.status
+        # If a job doesn't have a status, this can only happen because it doesn't have
+        # a status *yet*, and a job about to launch should be treated as active.
+        if not status:
+            return True
+        # Only the job conditions provide an authoritative answer whether or not the job
+        # has terminated. A job otherwise can have some failed attempts and no active
+        # attempts in spite of still being active, e.g., in between retries.
+        return all(
+            not cond.status
+            for cond in (status.conditions or [])
+            if cond.type in ("Complete", "Failed")
+        )
 
 
 class KubernetesDriverDaemon:
