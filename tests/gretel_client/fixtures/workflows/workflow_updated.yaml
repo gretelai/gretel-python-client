@@ -1,0 +1,16 @@
+name: my-helloworld-workflow
+
+actions:
+  - name: run-helloworld
+    type: helloworld_producer
+    config:
+      names:
+        - ada lovelace
+        - alan turing
+        - charles babbage
+
+  - name: run-helloworld-again
+    input: run-helloworld
+    type: helloworld_consumer
+    config:
+      echo: "{run-helloworld.outputs.name}"

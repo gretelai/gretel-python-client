@@ -64,6 +64,22 @@ def test_workflow_crud_from_cli(get_fixture: Callable, project: Callable):
     assert workflow_result["id"] in cmd.output
     assert cmd.exit_code == 0
 
+    # Update a workflow
+    cmd = runner.invoke(
+        cli,
+        [
+            "workflows",
+            "update",
+            "--workflow-id",
+            workflow_result["id"],
+            "--config",
+            get_fixture("workflows/workflow_updated.yaml"),
+        ],
+    )
+    assert "Updated workflow:" in cmd.output
+    assert "charles" in cmd.output
+    assert cmd.exit_code == 0
+
     # Run a workflow by id
     cmd = runner.invoke(
         cli,

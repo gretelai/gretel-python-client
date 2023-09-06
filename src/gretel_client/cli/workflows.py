@@ -106,6 +106,31 @@ def get(sc: SessionContext, id: str):
     sc.print(data=workflow.to_dict())
 
 
+@workflows.command(help="Update a workflow with a config.")
+@click.option(
+    "--workflow-id",
+    metavar="WORKFLOW-ID",
+    help="Gretel workflow id.",
+    required=True,
+)
+@click.option(
+    "--config",
+    metavar="PATH",
+    help="Path to the file containing Gretel workflow config.",
+    required=True,
+)
+@pass_session
+def update(sc: SessionContext, workflow_id: str, config: str):
+    with open(config, encoding="utf-8") as file:
+        workflow_config = yaml.safe_load(file)
+    workflow_api = get_workflows_api()
+    updated_workflow = workflow_api.update_workflow_config(
+        workflow_id=workflow_id, body=workflow_config
+    )
+    sc.log.info("Updated workflow:")
+    sc.print(data=updated_workflow.to_dict())
+
+
 @workflows.command(help="Run a workflow.")
 @click.option(
     "--wait",
