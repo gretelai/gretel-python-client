@@ -47,7 +47,8 @@ class JobsApi(object):
 
 
             Keyword Args:
-                project_id (str): [optional]
+                project_id (str): Deprecated, use project_ids instead.. [optional]
+                project_ids ([str]): [optional]
                 _return_http_data_only (bool): response data without head status
                     code and headers. Default is True.
                 _preload_content (bool): if False, the urllib3.HTTPResponse object
@@ -110,6 +111,7 @@ class JobsApi(object):
             params_map={
                 "all": [
                     "project_id",
+                    "project_ids",
                 ],
                 "required": [],
                 "nullable": [],
@@ -121,14 +123,19 @@ class JobsApi(object):
                 "allowed_values": {},
                 "openapi_types": {
                     "project_id": (str,),
+                    "project_ids": ([str],),
                 },
                 "attribute_map": {
                     "project_id": "project_id",
+                    "project_ids": "project_ids",
                 },
                 "location_map": {
                     "project_id": "query",
+                    "project_ids": "query",
                 },
-                "collection_format_map": {},
+                "collection_format_map": {
+                    "project_ids": "csv",
+                },
             },
             headers_map={
                 "accept": ["application/json"],
