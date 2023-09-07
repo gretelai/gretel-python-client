@@ -211,7 +211,7 @@ class WorkflowsApi(object):
     ) -> Workflow:  # noqa: E501
         """create_workflow  # noqa: E501
 
-        Create a new workflow in the provided project.  Providing a config is optional, but workflow runs created from this workflow will require a config be provided.  Example payload: ```json { \"project_id\": \"proj_123abc\", \"config\": {} } ```  # noqa: E501
+        Create a new workflow in the provided project.  Providing a config is optional, but workflow runs created from this workflow will require a config be provided.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -246,7 +246,7 @@ class WorkflowsApi(object):
     ):  # noqa: E501
         """create_workflow  # noqa: E501
 
-        Create a new workflow in the provided project.  Providing a config is optional, but workflow runs created from this workflow will require a config be provided.  Example payload: ```json { \"project_id\": \"proj_123abc\", \"config\": {} } ```  # noqa: E501
+        Create a new workflow in the provided project.  Providing a config is optional, but workflow runs created from this workflow will require a config be provided.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -1620,7 +1620,7 @@ class WorkflowsApi(object):
     ) -> SearchWorkflowsResponse:  # noqa: E501
         """search_workflows  # noqa: E501
 
-        Search for workflows you or other project members have created.  This endpoint supports pagination, querying, and expansion.  Example query: project_id:proj_123abc  Expandable fields: project, created_by  # noqa: E501
+        Search for workflows you or other project members have created.  This endpoint supports pagination, querying, and expansion.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -1669,7 +1669,7 @@ class WorkflowsApi(object):
     ):  # noqa: E501
         """search_workflows  # noqa: E501
 
-        Search for workflows you or other project members have created.  This endpoint supports pagination, querying, and expansion.  Example query: project_id:proj_123abc  Expandable fields: project, created_by  # noqa: E501
+        Search for workflows you or other project members have created.  This endpoint supports pagination, querying, and expansion.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 

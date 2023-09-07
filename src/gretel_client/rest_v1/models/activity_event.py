@@ -31,12 +31,24 @@ class ActivityEvent(BaseModel):
     ActivityEvent
     """
 
+    occurred_at: datetime = ...
     occured_at: datetime = ...
     subject: EventComponent = ...
+    subject_corrected: EventComponent = ...
     predicate: StrictStr = ...
     object: EventComponent = ...
+    object_corrected: EventComponent = ...
     status: StrictStr = ...
-    __properties = ["occured_at", "subject", "predicate", "object", "status"]
+    __properties = [
+        "occurred_at",
+        "occured_at",
+        "subject",
+        "subject_corrected",
+        "predicate",
+        "object",
+        "object_corrected",
+        "status",
+    ]
 
     @validator("predicate")
     def predicate_validate_enum(cls, v):
@@ -67,9 +79,15 @@ class ActivityEvent(BaseModel):
         # override the default output from pydantic by calling `to_dict()` of subject
         if self.subject:
             _dict["subject"] = self.subject.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of subject_corrected
+        if self.subject_corrected:
+            _dict["subject_corrected"] = self.subject_corrected.to_dict()
         # override the default output from pydantic by calling `to_dict()` of object
         if self.object:
             _dict["object"] = self.object.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of object_corrected
+        if self.object_corrected:
+            _dict["object_corrected"] = self.object_corrected.to_dict()
         return _dict
 
     @classmethod
@@ -83,13 +101,24 @@ class ActivityEvent(BaseModel):
 
         _obj = ActivityEvent.parse_obj(
             {
+                "occurred_at": obj.get("occurred_at"),
                 "occured_at": obj.get("occured_at"),
                 "subject": EventComponent.from_dict(obj.get("subject"))
                 if obj.get("subject") is not None
                 else None,
+                "subject_corrected": EventComponent.from_dict(
+                    obj.get("subject_corrected")
+                )
+                if obj.get("subject_corrected") is not None
+                else None,
                 "predicate": obj.get("predicate"),
                 "object": EventComponent.from_dict(obj.get("object"))
                 if obj.get("object") is not None
+                else None,
+                "object_corrected": EventComponent.from_dict(
+                    obj.get("object_corrected")
+                )
+                if obj.get("object_corrected") is not None
                 else None,
                 "status": obj.get("status"),
             }

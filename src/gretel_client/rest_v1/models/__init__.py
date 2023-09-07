@@ -15,9 +15,7 @@
 
 # import models into model package
 from gretel_client.rest_v1.models.activity_event import ActivityEvent
-from gretel_client.rest_v1.models.artifact import Artifact
 from gretel_client.rest_v1.models.connection import Connection
-from gretel_client.rest_v1.models.create_artifact_response import CreateArtifactResponse
 from gretel_client.rest_v1.models.create_connection_request import (
     CreateConnectionRequest,
 )
@@ -26,29 +24,15 @@ from gretel_client.rest_v1.models.create_workflow_run_request import (
     CreateWorkflowRunRequest,
 )
 from gretel_client.rest_v1.models.event_component import EventComponent
-from gretel_client.rest_v1.models.get_artifact_download_response import (
-    GetArtifactDownloadResponse,
-)
 from gretel_client.rest_v1.models.get_log_response import GetLogResponse
 from gretel_client.rest_v1.models.get_workflows_response import GetWorkflowsResponse
 from gretel_client.rest_v1.models.google_protobuf_any import GoogleProtobufAny
 from gretel_client.rest_v1.models.list_connections_response import (
     ListConnectionsResponse,
 )
-from gretel_client.rest_v1.models.list_models_response import ListModelsResponse
 from gretel_client.rest_v1.models.log_envelope import LogEnvelope
-from gretel_client.rest_v1.models.model import Model
-from gretel_client.rest_v1.models.model_run import ModelRun
-from gretel_client.rest_v1.models.model_run_artifact import ModelRunArtifact
-from gretel_client.rest_v1.models.model_run_config import ModelRunConfig
 from gretel_client.rest_v1.models.project import Project
 from gretel_client.rest_v1.models.search_activity_response import SearchActivityResponse
-from gretel_client.rest_v1.models.search_artifacts_response import (
-    SearchArtifactsResponse,
-)
-from gretel_client.rest_v1.models.search_model_runs_response import (
-    SearchModelRunsResponse,
-)
 from gretel_client.rest_v1.models.search_workflow_runs_response import (
     SearchWorkflowRunsResponse,
 )
@@ -61,9 +45,6 @@ from gretel_client.rest_v1.models.search_workflows_response import (
 from gretel_client.rest_v1.models.status import Status
 from gretel_client.rest_v1.models.update_connection_request import (
     UpdateConnectionRequest,
-)
-from gretel_client.rest_v1.models.update_model_run_status_request import (
-    UpdateModelRunStatusRequest,
 )
 from gretel_client.rest_v1.models.update_workflow_run_status_request import (
     UpdateWorkflowRunStatusRequest,

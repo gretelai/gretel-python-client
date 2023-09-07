@@ -33,6 +33,7 @@ class Project(BaseModel):
     id: Optional[StrictStr] = None
     uid: Optional[StrictStr] = None
     name: Optional[StrictStr] = None
+    display_name: Optional[StrictStr] = None
     description: Optional[StrictStr] = None
     long_description: Optional[StrictStr] = None
     owner: Optional[StrictStr] = None
@@ -44,6 +45,7 @@ class Project(BaseModel):
         "id",
         "uid",
         "name",
+        "display_name",
         "description",
         "long_description",
         "owner",
@@ -89,6 +91,7 @@ class Project(BaseModel):
                 "id": obj.get("id"),
                 "uid": obj.get("uid"),
                 "name": obj.get("name"),
+                "display_name": obj.get("display_name"),
                 "description": obj.get("description"),
                 "long_description": obj.get("long_description"),
                 "owner": obj.get("owner"),

@@ -30,7 +30,7 @@ from gretel_client.rest_v1.models.user_profile import UserProfile
 
 class Workflow(BaseModel):
     """
-    Next Tag: 12
+    Workflow
     """
 
     id: StrictStr = ...
@@ -41,9 +41,11 @@ class Workflow(BaseModel):
     runner_mode: Optional[StrictStr] = None
     next_scheduled_run: Optional[datetime] = None
     created_by: StrictStr = ...
+    created_by_profile: Optional[UserProfile] = None
+    updated_by: Optional[StrictStr] = None
+    updated_by_profile: Optional[UserProfile] = None
     created_at: datetime = ...
     updated_at: Optional[datetime] = None
-    created_by_profile: Optional[UserProfile] = None
     __properties = [
         "id",
         "name",
@@ -53,9 +55,11 @@ class Workflow(BaseModel):
         "runner_mode",
         "next_scheduled_run",
         "created_by",
+        "created_by_profile",
+        "updated_by",
+        "updated_by_profile",
         "created_at",
         "updated_at",
-        "created_by_profile",
     ]
 
     @validator("runner_mode")
@@ -94,6 +98,9 @@ class Workflow(BaseModel):
         # override the default output from pydantic by calling `to_dict()` of created_by_profile
         if self.created_by_profile:
             _dict["created_by_profile"] = self.created_by_profile.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of updated_by_profile
+        if self.updated_by_profile:
+            _dict["updated_by_profile"] = self.updated_by_profile.to_dict()
         return _dict
 
     @classmethod
@@ -117,13 +124,19 @@ class Workflow(BaseModel):
                 "runner_mode": obj.get("runner_mode"),
                 "next_scheduled_run": obj.get("next_scheduled_run"),
                 "created_by": obj.get("created_by"),
-                "created_at": obj.get("created_at"),
-                "updated_at": obj.get("updated_at"),
                 "created_by_profile": UserProfile.from_dict(
                     obj.get("created_by_profile")
                 )
                 if obj.get("created_by_profile") is not None
                 else None,
+                "updated_by": obj.get("updated_by"),
+                "updated_by_profile": UserProfile.from_dict(
+                    obj.get("updated_by_profile")
+                )
+                if obj.get("updated_by_profile") is not None
+                else None,
+                "created_at": obj.get("created_at"),
+                "updated_at": obj.get("updated_at"),
             }
         )
         return _obj
