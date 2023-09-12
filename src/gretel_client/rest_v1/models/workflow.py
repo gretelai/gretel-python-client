@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field, StrictStr, validator
 
 from gretel_client.rest_v1.models.project import Project
 from gretel_client.rest_v1.models.user_profile import UserProfile
+from gretel_client.rest_v1.models.workflow_run import WorkflowRun
 
 
 class Workflow(BaseModel):
@@ -45,6 +46,7 @@ class Workflow(BaseModel):
     updated_by_profile: Optional[UserProfile] = None
     created_at: datetime = Field(...)
     updated_at: Optional[datetime] = None
+    latest_run: Optional[WorkflowRun] = None
     __properties = [
         "id",
         "name",
@@ -59,6 +61,7 @@ class Workflow(BaseModel):
         "updated_by_profile",
         "created_at",
         "updated_at",
+        "latest_run",
     ]
 
     @validator("runner_mode")
@@ -108,6 +111,9 @@ class Workflow(BaseModel):
         # override the default output from pydantic by calling `to_dict()` of updated_by_profile
         if self.updated_by_profile:
             _dict["updated_by_profile"] = self.updated_by_profile.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of latest_run
+        if self.latest_run:
+            _dict["latest_run"] = self.latest_run.to_dict()
         return _dict
 
     @classmethod
@@ -144,6 +150,9 @@ class Workflow(BaseModel):
                 else None,
                 "created_at": obj.get("created_at"),
                 "updated_at": obj.get("updated_at"),
+                "latest_run": WorkflowRun.from_dict(obj.get("latest_run"))
+                if obj.get("latest_run") is not None
+                else None,
             }
         )
         return _obj
