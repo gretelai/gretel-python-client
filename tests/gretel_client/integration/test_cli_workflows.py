@@ -99,8 +99,8 @@ def test_workflow_crud_from_cli(get_fixture: Callable, project: Callable):
     assert cmd.exit_code == 0
 
     # run a workflow by id, then cancel it
-    # Send an interrupt signal after 10 seconds
-    Timer(10, lambda: os.kill(os.getpid(), SIGINT)).start()
+    # Send an interrupt signal after 3 seconds
+    Timer(3, lambda: os.kill(os.getpid(), SIGINT)).start()
     cmd = runner.invoke(
         cli,
         [
