@@ -146,7 +146,9 @@ def test_agent_job_poller(agent_config: AgentConfig):
 
     job = next(poller)
 
-    jobs_api.receive_one.assert_called_once_with(project_id=agent_config.project_id)
+    jobs_api.receive_one.assert_called_once_with(
+        project_id=agent_config.project_id, runner_modes=["manual"]
+    )
 
     assert job
     assert job.uid == job_data["run_id"]
@@ -170,7 +172,7 @@ def test_agent_job_poller_without_project_specified():
 
     job = next(poller)
 
-    jobs_api.receive_one.assert_called_once_with()
+    jobs_api.receive_one.assert_called_once_with(runner_modes=["manual"])
 
     assert job
     assert job.uid == job_data["run_id"]

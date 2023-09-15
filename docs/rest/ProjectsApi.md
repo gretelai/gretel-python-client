@@ -142,7 +142,7 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
     project_id = "project_id_example" # str | Project id
     body = {} # {str: (bool, date, datetime, dict, float, int, list, str, none_type)} | 
     dry_run = "dry_run_example" # str | yes or no (optional)
-    runner_mode = "runner_mode_example" # str | cloud or manual (optional)
+    runner_mode = "cloud" # str |  (optional)
 
     # example passing only required values which don't have defaults set
     try:
@@ -170,7 +170,7 @@ Name | Type | Description  | Notes
  **project_id** | **str**| Project id |
  **body** | **{str: (bool, date, datetime, dict, float, int, list, str, none_type)}**|  |
  **dry_run** | **str**| yes or no | [optional]
- **runner_mode** | **str**| cloud or manual | [optional]
+ **runner_mode** | **str**|  | [optional]
 
 ### Return type
 

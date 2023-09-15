@@ -8,7 +8,7 @@ import click
 from gretel_client.agents.agent import AgentConfig, get_agent
 from gretel_client.agents.drivers.driver import GPU
 from gretel_client.cli.common import pass_session, SessionContext
-from gretel_client.config import get_session_config
+from gretel_client.config import get_session_config, RunnerMode
 from gretel_client.docker import AwsCredFile, CaCertFile, check_gpu, DataVolumeDef
 
 
@@ -55,6 +55,14 @@ def build_logger(job_id: str) -> Callable:
     envvar="GRETEL_ARTIFACT_ENDPOINT",
 )
 @click.option(
+    "--runner-modes",
+    metavar="RUNNER_MODES",
+    help="Runner modes used to poll the jobs endpoint",
+    default=None,
+    envvar="RUNNER_MODES",
+    multiple=True,
+)
+@click.option(
     "--env",
     metavar="KEY=VALUE",
     help="Pass environment variables into the worker container.",
@@ -94,6 +102,7 @@ def start(
     ca_bundle: Optional[str] = None,
     disable_cloud_logging: bool = False,
     enable_prometheus: bool = False,
+    runner_modes: List[str] = None,
 ):
     sc.log.info(f"Starting Gretel agent using driver {driver}.")
     creds = []
@@ -123,6 +132,11 @@ def start(
             sc.log.info("GPU found.")
         else:
             sc.log.info("No GPU found. Continuing without one.")
+    runner_modes_as_enum = None
+    if runner_modes:
+        runner_modes_as_enum = [
+            RunnerMode.parse(runner_mode_str) for runner_mode_str in runner_modes
+        ]
 
     config = AgentConfig(
         project=project,
@@ -136,6 +150,7 @@ def start(
         volumes=volumes,
         capabilities=capabilities,
         enable_prometheus=enable_prometheus,
+        runner_modes=runner_modes_as_enum,
     )
     agent = get_agent(config)
     sc.register_cleanup(lambda: agent.interrupt())

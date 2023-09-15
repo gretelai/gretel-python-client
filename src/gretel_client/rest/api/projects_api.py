@@ -165,7 +165,7 @@ class ProjectsApi(object):
 
             Keyword Args:
                 dry_run (str): yes or no. [optional]
-                runner_mode (str): cloud or manual. [optional]
+                runner_mode (str): [optional]
                 _return_http_data_only (bool): response data without head status
                     code and headers. Default is True.
                 _preload_content (bool): if False, the urllib3.HTTPResponse object
@@ -239,12 +239,20 @@ class ProjectsApi(object):
                     "body",
                 ],
                 "nullable": [],
-                "enum": [],
+                "enum": [
+                    "runner_mode",
+                ],
                 "validation": [],
             },
             root_map={
                 "validations": {},
-                "allowed_values": {},
+                "allowed_values": {
+                    ("runner_mode",): {
+                        "CLOUD": "cloud",
+                        "MANUAL": "manual",
+                        "HYBRID": "hybrid",
+                    },
+                },
                 "openapi_types": {
                     "project_id": (str,),
                     "body": (
@@ -483,7 +491,11 @@ class ProjectsApi(object):
             root_map={
                 "validations": {},
                 "allowed_values": {
-                    ("runner_mode",): {"CLOUD": "cloud", "MANUAL": "manual"},
+                    ("runner_mode",): {
+                        "CLOUD": "cloud",
+                        "MANUAL": "manual",
+                        "HYBRID": "hybrid",
+                    },
                 },
                 "openapi_types": {
                     "project_id": (str,),

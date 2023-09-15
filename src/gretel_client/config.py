@@ -107,8 +107,9 @@ class RunnerMode(str, Enum):
     def api_value(self) -> str:
         if self == RunnerMode.CLOUD:
             return "cloud"
-        else:
-            return "manual"
+        elif self == RunnerMode.HYBRID:
+            return "hybrid"
+        return "manual"
 
 
 DEFAULT_RUNNER = RunnerMode.CLOUD

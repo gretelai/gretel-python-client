@@ -21,7 +21,7 @@ import gretel_client.agents.agent_telemetry as telemetry
 from gretel_client.agents.drivers.driver import ComputeUnit, Driver
 from gretel_client.agents.drivers.registry import get_driver
 from gretel_client.agents.logger import configure_logging
-from gretel_client.config import configure_custom_logger, get_session_config
+from gretel_client.config import configure_custom_logger, get_session_config, RunnerMode
 from gretel_client.docker import CloudCreds, DataVolumeDef
 from gretel_client.helpers import do_api_call
 from gretel_client.projects import get_project
@@ -78,6 +78,8 @@ class AgentConfig:
 
     enable_prometheus: bool = False
     """Sets up the prometheus endpoint for the running agent"""
+
+    runner_modes: Optional[List[RunnerMode]] = None
 
     _project_id: Optional[str] = None
     """Cached project ID."""
@@ -324,13 +326,17 @@ class Poller(Iterator):
     max_wait_secs = 16
 
     def __init__(
-        self, jobs_api: JobsApi, rate_limiter: RateLimiter, agent_config: AgentConfig
+        self,
+        jobs_api: JobsApi,
+        rate_limiter: RateLimiter,
+        agent_config: AgentConfig,
     ):
         self._agent_config = agent_config
         self._jobs_api = jobs_api
         self._rate_limiter = rate_limiter
         self._logger = logging.getLogger(__name__)
         self._interrupt = threading.Event()
+        self._runner_modes = agent_config.runner_modes or [RunnerMode.MANUAL]
 
     def __iter__(self):
         return self
@@ -343,6 +349,11 @@ class Poller(Iterator):
         project_id = self._agent_config.project_id
         if project_id is not None:
             api_kwargs["project_id"] = project_id
+        if self._runner_modes:
+            api_kwargs["runner_modes"] = [
+                runner_mode.value for runner_mode in self._runner_modes
+            ]
+
         next_job = self._jobs_api.receive_one(**api_kwargs)
         if next_job["data"]["job"] is not None:
             return Job.from_dict(next_job["data"]["job"], self._agent_config)
@@ -383,7 +394,11 @@ class Agent:
         self._rate_limiter = RateLimiter(config.max_workers, self._jobs_manager, config)
         self._jobs_api = self._client_config.get_api(JobsApi)
         self._projects_api = self._client_config.get_api(ProjectsApi)
-        self._jobs = Poller(self._jobs_api, self._rate_limiter, self._config)
+        self._jobs = Poller(
+            self._jobs_api,
+            self._rate_limiter,
+            self._config,
+        )
         self._interrupt = threading.Event()
 
     def start(self):

@@ -45,12 +45,15 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
     project_ids = [
         "project_ids_example",
     ] # [str] |  (optional)
+    runner_modes = [
+        "cloud",
+    ] # [str] |  (optional)
 
     # example passing only required values which don't have defaults set
     # and optional values
     try:
         # Get Gretel job for scheduling
-        api_response = api_instance.receive_one(project_id=project_id, project_ids=project_ids)
+        api_response = api_instance.receive_one(project_id=project_id, project_ids=project_ids, runner_modes=runner_modes)
         pprint(api_response)
     except gretel_client.rest.ApiException as e:
         print("Exception when calling JobsApi->receive_one: %s\n" % e)
@@ -63,6 +66,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **project_id** | **str**| Deprecated, use project_ids instead. | [optional]
  **project_ids** | **[str]**|  | [optional]
+ **runner_modes** | **[str]**|  | [optional]
 
 ### Return type
 

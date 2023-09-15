@@ -18,6 +18,7 @@ from gretel_client.config import (
     GRETEL_CONFIG_FILE,
     GRETEL_ENDPOINT,
     GRETEL_PROJECT,
+    RunnerMode,
 )
 from gretel_client.projects.exceptions import DockerEnvironmentError
 from gretel_client.projects.jobs import Status
@@ -285,3 +286,53 @@ def test_search_models_with_model_name(
         ["models", "search", "--model-name", "model-boi"],
     )
     assert cmd.exit_code == 0
+
+
+@patch.dict(os.environ, {"RUNNER_MODES": "hybrid manual"})
+@patch("gretel_client.cli.agent.get_agent")
+@patch("gretel_client.agents.agent.AgentConfig._update_max_workers")
+def test_get_agent_env_var_passing(
+    max_worker_mock: MagicMock,
+    get_agent_mock: MagicMock,
+    runner: CliRunner,
+):
+    cmd = runner.invoke(
+        cli,
+        [
+            "agent",
+            "start",
+            "--driver",
+            "k8s",
+            "--max-workers",
+            "0",
+        ],
+    )
+    print(cmd.output)
+    get_agent_mock.assert_called_once()
+    args, _ = get_agent_mock.call_args
+    assert [RunnerMode.HYBRID, RunnerMode.MANUAL] == args[0].runner_modes
+    assert cmd.exit_code == 0
+
+
+@patch.dict(os.environ, {"RUNNER_MODES": "hybrid manualy"})
+@patch("gretel_client.cli.agent.get_agent")
+@patch("gretel_client.agents.agent.AgentConfig._update_max_workers")
+def test_get_agent_env_var_passing_fails(
+    max_worker_mock: MagicMock,
+    get_agent_mock: MagicMock,
+    runner: CliRunner,
+):
+    cmd = runner.invoke(
+        cli,
+        [
+            "agent",
+            "start",
+            "--driver",
+            "k8s",
+            "--max-workers",
+            "0",
+        ],
+    )
+    print(cmd.output)
+    get_agent_mock.assert_not_called()
+    assert cmd.exit_code == 1
