@@ -39,7 +39,7 @@ def build_logger(job_id: str) -> Callable:
     "--project",
     allow_from_autoenv=True,
     envvar="GRETEL_DEFAULT_PROJECT",
-    help="Gretel project to execute command from.",
+    help="CSV of Gretel projects to execute command from.",
     metavar="NAME",
 )
 @click.option(
@@ -138,8 +138,12 @@ def start(
             RunnerMode.parse(runner_mode_str) for runner_mode_str in runner_modes
         ]
 
+    projects = []
+    if project is not None and project != "":
+        projects = [p.strip() for p in project.split(",")]
+
     config = AgentConfig(
-        project=project,
+        projects=projects,
         max_workers=max_workers,
         driver=driver,
         creds=creds,

@@ -2,8 +2,9 @@ import base64
 import json
 
 from contextlib import contextmanager
+from dataclasses import dataclass
 from typing import Iterator
-from unittest.mock import MagicMock, patch
+from unittest.mock import call, MagicMock, patch
 
 import pytest
 
@@ -11,6 +12,7 @@ from gretel_client.agents.agent import Agent, AgentConfig, AgentError, Job, Poll
 from gretel_client.agents.drivers.docker import Docker
 from gretel_client.agents.drivers.driver import GPU
 from gretel_client.docker import CaCertFile, DEFAULT_GPU_CONFIG
+from gretel_client.projects.exceptions import GretelProjectError
 from gretel_client.rest.apis import JobsApi, ProjectsApi
 
 worker_token_json = json.dumps({"model_key": "grtu123456abc"})
@@ -54,7 +56,7 @@ def default_agent_config() -> AgentConfig:
     return AgentConfig(
         driver="docker",
         max_workers=2,
-        project="my-project-name",
+        projects=["my-project-name"],
         log_factory=MagicMock(),
         creds=None,
     )
@@ -67,7 +69,7 @@ def agent_config() -> Iterator[AgentConfig]:
 
 
 def test_agent_config_fixture(agent_config: AgentConfig):
-    assert agent_config.project_id == "project1234"
+    assert agent_config.project_ids[0] == "project1234"
 
 
 @patch_auth_api_calls
@@ -96,7 +98,7 @@ def test_agent_server_does_start(
     agent_config = AgentConfig(
         driver="docker",
         max_workers=0,
-        project="my-project-name",
+        projects=["my-project-name"],
         log_factory=MagicMock(),
         creds=None,
     )
@@ -147,7 +149,7 @@ def test_agent_job_poller(agent_config: AgentConfig):
     job = next(poller)
 
     jobs_api.receive_one.assert_called_once_with(
-        project_id=agent_config.project_id, runner_modes=["manual"]
+        project_ids=[agent_config.project_ids[0]], runner_modes=["manual"]
     )
 
     assert job
@@ -160,7 +162,7 @@ def test_agent_job_poller(agent_config: AgentConfig):
 @patch_auth_api_calls
 def test_agent_job_poller_without_project_specified():
     agent_config = default_agent_config()
-    agent_config.project = None
+    agent_config.projects = []
 
     jobs_api = MagicMock()
     rate_limiter = MagicMock()
@@ -214,6 +216,78 @@ def test_job_needs_gpu(build_container: MagicMock):
     assert build_container.call_args_list[0][1]["device_requests"] == [
         DEFAULT_GPU_CONFIG
     ]
+
+
+@patch_auth_api_calls
+@patch("gretel_client.agents.agent.get_project")
+def test_get_project_ids(get_project: MagicMock):
+    @dataclass
+    class lilproj:
+        project_id: str
+
+    config = AgentConfig(
+        driver="docker",
+        capabilities=[GPU],
+        projects=["p1", "p2", "p3"],
+        project_retry_limit=1,
+    )
+
+    get_project.side_effect = [
+        lilproj(project_id="p1id"),
+        GretelProjectError(),
+        lilproj(project_id="p3id"),
+    ]
+    assert config.project_ids == ["p1id", "p3id"]
+    get_project.assert_has_calls(
+        [
+            call(name="p1"),
+            call(name="p2"),
+            call(name="p3"),
+        ]
+    )
+
+    get_project.reset_mock()
+    get_project.side_effect = [
+        lilproj(project_id="p2id"),
+    ]
+    assert config.project_ids == ["p1id", "p3id", "p2id"]
+    get_project.assert_has_calls(
+        [
+            call(name="p2"),
+        ]
+    )
+
+    get_project.reset_mock()
+    assert config.project_ids == ["p1id", "p3id", "p2id"]
+    get_project.assert_not_called()
+
+    config.invalidate_project_ids()
+    get_project.reset_mock()
+    get_project.side_effect = [
+        lilproj(project_id="p1id"),
+        GretelProjectError(),
+        lilproj(project_id="p3id"),
+    ]
+    assert config.project_ids == ["p1id", "p3id"]
+    get_project.assert_has_calls(
+        [
+            call(name="p1"),
+            call(name="p2"),
+            call(name="p3"),
+        ]
+    )
+
+    get_project.reset_mock()
+    get_project.side_effect = [
+        GretelProjectError(),
+    ]
+    with pytest.raises(GretelProjectError):
+        assert config.project_ids == ["p1id", "p3id"]
+    get_project.assert_has_calls(
+        [
+            call(name="p2"),
+        ]
+    )
 
 
 @patch_auth_api_calls

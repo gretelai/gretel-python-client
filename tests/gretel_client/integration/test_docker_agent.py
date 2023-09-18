@@ -19,7 +19,7 @@ fake_pii = (
 @pytest.fixture
 def agent_config() -> Iterator[AgentConfig]:
     with tmp_project() as project:
-        yield AgentConfig(driver="docker", project=project.project_id)
+        yield AgentConfig(driver="docker", projects=[project.project_id])
 
 
 @pytest_skip_on_windows
@@ -27,7 +27,7 @@ def test_docker_agent(agent_config: AgentConfig, request):
     agent = Agent(config=agent_config)
     request.addfinalizer(agent.interrupt)
 
-    project = get_project(name=agent_config.project_id)
+    project = get_project(name=agent_config.project_ids[0])
     model = project.create_model_obj("transform/default", fake_pii)
 
     model.submit_manual()

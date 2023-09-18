@@ -9,10 +9,11 @@ import logging
 import os
 import threading
 
-from dataclasses import asdict, dataclass
+from collections import Counter
+from dataclasses import asdict, dataclass, field
 from threading import Thread
 from time import sleep
-from typing import Callable, Dict, Generic, Iterator, List, Optional
+from typing import Callable, Dict, Generic, Iterator, List, Optional, Tuple
 
 import requests
 
@@ -25,6 +26,7 @@ from gretel_client.config import configure_custom_logger, get_session_config, Ru
 from gretel_client.docker import CloudCreds, DataVolumeDef
 from gretel_client.helpers import do_api_call
 from gretel_client.projects import get_project
+from gretel_client.projects.exceptions import GretelProjectError
 from gretel_client.rest.apis import JobsApi, ProjectsApi
 
 configure_logging()
@@ -44,6 +46,9 @@ class AgentConfig:
     max_workers: int = 1
     """The max number of workers the agent instance will launch."""
 
+    project_retry_limit: int = 10
+    """The max number of times to retry resolving a project."""
+
     _max_workers_from_config: int = 0
     """The max workers that were passed in via the config"""
 
@@ -53,8 +58,8 @@ class AgentConfig:
     be logged to their respective artifact endpoint.
     """
 
-    project: Optional[str] = None
-    """Determines the project to pull jobs for. If none if provided, than
+    projects: List[str] = field(default_factory=list)
+    """Determines the projects to pull jobs for. If none is provided, then
     jobs from all projects will be fetched.
     """
 
@@ -81,8 +86,11 @@ class AgentConfig:
 
     runner_modes: Optional[List[RunnerMode]] = None
 
-    _project_id: Optional[str] = None
+    _project_ids: Optional[List[str]] = None
     """Cached project ID."""
+
+    _failed_projects: Counter = field(default_factory=Counter)
+    """Projects that we have failed to resolve."""
 
     def __post_init__(self):
         self._logger = logging.getLogger(__name__)
@@ -144,18 +152,61 @@ class AgentConfig:
         return asdict(self)
 
     @property
-    def project_id(self) -> Optional[str]:
-        if self.project is None:
-            return None
+    def project_ids(self) -> List[str]:
+        if not self.projects:
+            return []
+        self._check_cache()
+        if not self._project_ids:
+            # Need to throw in this scenario to avoid not filtering by at least one project.
+            raise GretelProjectError("unable to resolve any supplied projects")
+        return self._project_ids
 
-        if self._project_id is None:
-            project = get_project(name=self.project)
-            self._project_id = project.project_id
+    def invalidate_project_ids(self) -> None:
+        self._project_ids = None
 
-        return self._project_id
+    def _check_cache(self):
+        if self._project_ids and len(self._failed_projects) == 0:
+            # Cache has all needed values.
+            return
 
-    def invalidate_project_id(self) -> None:
-        self._project_id = None
+        # If cache is empty, resolve everything. Otherwise, just resolve previously failed projects.
+        if not self._project_ids:
+            self._project_ids = []
+            name_id_pairs = self._resolve_project_ids(self.projects)
+        else:
+            name_id_pairs = self._resolve_project_ids(
+                list(self._failed_projects.keys())
+            )
+        for project_name, project_id in name_id_pairs:
+            if project_id:
+                self._project_ids.append(project_id)
+                self._failed_projects.pop(project_name, 0)
+            else:
+                self._failed_projects[project_name] += 1
+
+        # Throw if values overrun the retry limit.
+        failures_over_limit = [
+            x
+            for x, count in self._failed_projects.items()
+            if count > self.project_retry_limit
+        ]
+        if len(failures_over_limit) > 0:
+            raise GretelProjectError(
+                "projects (%s) have exceeded the resolution retry limit",
+                ", ".join(failures_over_limit),
+            )
+
+    def _resolve_project_ids(
+        self, projects_to_resolve: List[str]
+    ) -> List[Tuple[str, Optional[str]]]:
+        resolved = []
+        for project_name in projects_to_resolve:
+            try:
+                project = get_project(name=project_name)
+                resolved.append((project_name, project.project_id))
+            except GretelProjectError:
+                resolved.append((project_name, None))
+        return resolved
 
 
 @dataclass
@@ -346,14 +397,13 @@ class Poller(Iterator):
 
     def poll_endpoint(self) -> Optional[Job]:
         api_kwargs = {}
-        project_id = self._agent_config.project_id
-        if project_id is not None:
-            api_kwargs["project_id"] = project_id
+        project_ids = self._agent_config.project_ids
+        if len(project_ids) > 0:
+            api_kwargs["project_ids"] = project_ids
         if self._runner_modes:
             api_kwargs["runner_modes"] = [
                 runner_mode.value for runner_mode in self._runner_modes
             ]
-
         next_job = self._jobs_api.receive_one(**api_kwargs)
         if next_job["data"]["job"] is not None:
             return Job.from_dict(next_job["data"]["job"], self._agent_config)
@@ -370,7 +420,7 @@ class Poller(Iterator):
                         "There was a problem calling the jobs endpoint.",
                         exc_info=True,
                     )
-                    self._agent_config.invalidate_project_id()
+                    self._agent_config.invalidate_project_ids()
                 if job:
                     return job
             self._interrupt.wait(wait_secs)
