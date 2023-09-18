@@ -1,11 +1,12 @@
-import click
+import json
 
-from gretel_client.cli.common import (
-    parse_file,
-    pass_session,
-    project_option,
-    SessionContext,
-)
+from json import JSONDecodeError
+from pathlib import Path
+
+import click
+import yaml
+
+from gretel_client.cli.common import pass_session, SessionContext
 from gretel_client.config import get_session_config
 from gretel_client.rest_v1.api.connections_api import ConnectionsApi
 from gretel_client.rest_v1.models import CreateConnectionRequest
@@ -23,6 +24,16 @@ def get_connections_api() -> ConnectionsApi:
     return get_session_config().get_v1_api(ConnectionsApi)
 
 
+def _read_connection_file(file: str) -> dict:
+    fp = Path(file).resolve()
+    try:
+        with open(fp) as fd:
+            return json.load(fd)
+    except JSONDecodeError:
+        with open(fp) as fd:
+            return yaml.safe_load(fd)
+
+
 @connections.command(help="Create a new connection.")
 @click.option(
     "--from-file",
@@ -30,11 +41,17 @@ def get_connections_api() -> ConnectionsApi:
     help="Path to the file containing Gretel connection.",
     required=True,
 )
-@project_option
+@click.option(
+    "--project",
+    metavar="PROJECT-ID",
+    help="Specify the project to create the connection in.",
+    required=False,
+)
 @pass_session
 def create(sc: SessionContext, from_file: str, project: str):
     connection_api = get_connections_api()
-    conn = parse_file(from_file)
+
+    conn = _read_connection_file(from_file)
 
     # we try and configure a project in the following order
     #
@@ -53,7 +70,7 @@ def create(sc: SessionContext, from_file: str, project: str):
     if project_id is None:
         project_id = sc.project.project_guid
 
-    conn["project_id"] = sc.project.project_guid
+    conn["project_id"] = project_id
 
     connection = connection_api.create_connection(CreateConnectionRequest(**conn))
 
@@ -71,7 +88,7 @@ def create(sc: SessionContext, from_file: str, project: str):
 @pass_session
 def update(sc: SessionContext, id: str, from_file: str):
     connection_api = get_connections_api()
-    conn = parse_file(from_file)
+    conn = _read_connection_file(from_file)
     connection = connection_api.update_connection(connection_id=id, connection=conn)
 
     sc.log.info("Updated connection:")

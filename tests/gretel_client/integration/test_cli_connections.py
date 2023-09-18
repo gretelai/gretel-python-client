@@ -2,9 +2,12 @@ import json
 
 from typing import Callable
 
+import pytest
+
 from click.testing import CliRunner
 
 from gretel_client.cli.cli import cli
+from gretel_client.cli.connections import _read_connection_file
 from gretel_client.projects.projects import Project
 
 
@@ -85,3 +88,14 @@ def test_connection_crud_from_cli(get_fixture: Callable, project: Project):
     )
     assert "Deleted connection " + connection_result["id"] in cmd.output
     assert cmd.exit_code == 0
+
+
+def test_read_yaml(get_fixture: Callable):
+    json_conn = _read_connection_file(get_fixture("connections/test_connection.json"))
+    yaml_conn = _read_connection_file(get_fixture("connections/test_connection.yaml"))
+    assert json_conn == yaml_conn
+
+
+def test_file_not_found():
+    with pytest.raises(OSError):
+        _read_connection_file("bad/path")

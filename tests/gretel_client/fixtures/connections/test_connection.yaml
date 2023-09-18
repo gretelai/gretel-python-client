@@ -1,0 +1,5 @@
+type: test
+name: integration_test
+credentials:
+    name: test
+    secret: secret
