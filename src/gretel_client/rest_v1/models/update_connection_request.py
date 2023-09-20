@@ -30,7 +30,8 @@ class UpdateConnectionRequest(BaseModel):
 
     name: Optional[StrictStr] = None
     credentials: Optional[Dict[str, Any]] = None
-    __properties = ["name", "credentials"]
+    config: Optional[Dict[str, Any]] = None
+    __properties = ["name", "credentials", "config"]
 
     class Config:
         """Pydantic configuration"""
@@ -66,6 +67,10 @@ class UpdateConnectionRequest(BaseModel):
             return UpdateConnectionRequest.parse_obj(obj)
 
         _obj = UpdateConnectionRequest.parse_obj(
-            {"name": obj.get("name"), "credentials": obj.get("credentials")}
+            {
+                "name": obj.get("name"),
+                "credentials": obj.get("credentials"),
+                "config": obj.get("config"),
+            }
         )
         return _obj

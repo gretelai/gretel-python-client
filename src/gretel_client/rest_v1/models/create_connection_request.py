@@ -32,7 +32,8 @@ class CreateConnectionRequest(BaseModel):
     name: Optional[StrictStr] = None
     type: StrictStr = Field(...)
     credentials: Dict[str, Any] = Field(...)
-    __properties = ["project_id", "name", "type", "credentials"]
+    config: Optional[Dict[str, Any]] = None
+    __properties = ["project_id", "name", "type", "credentials", "config"]
 
     class Config:
         """Pydantic configuration"""
@@ -73,6 +74,7 @@ class CreateConnectionRequest(BaseModel):
                 "name": obj.get("name"),
                 "type": obj.get("type"),
                 "credentials": obj.get("credentials"),
+                "config": obj.get("config"),
             }
         )
         return _obj

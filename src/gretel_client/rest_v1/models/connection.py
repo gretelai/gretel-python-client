@@ -26,7 +26,7 @@ from pydantic import BaseModel, Field, StrictStr, validator
 
 class Connection(BaseModel):
     """
-    Next available tag: 10
+    Next available tag: 11
     """
 
     id: StrictStr = Field(
@@ -41,7 +41,11 @@ class Connection(BaseModel):
         ..., description="Validation status: COMPLETED, ERROR, NONE."
     )
     credentials: Optional[Dict[str, Any]] = Field(
-        None, description="Connection credentials."
+        None,
+        description="Connection credentials. These values are encrypted and can only be decrypted from the data plane.",
+    )
+    config: Optional[Dict[str, Any]] = Field(
+        None, description="Connection config. These values are returned by the API."
     )
     encrypted_credentials: Optional[Dict[str, Any]] = Field(
         None, description="Connection credentials in encrypted form."
@@ -59,6 +63,7 @@ class Connection(BaseModel):
         "name",
         "validation_status",
         "credentials",
+        "config",
         "encrypted_credentials",
         "created_at",
         "project_id",
@@ -119,6 +124,7 @@ class Connection(BaseModel):
                 "name": obj.get("name"),
                 "validation_status": obj.get("validation_status"),
                 "credentials": obj.get("credentials"),
+                "config": obj.get("config"),
                 "encrypted_credentials": obj.get("encrypted_credentials"),
                 "created_at": obj.get("created_at"),
                 "project_id": obj.get("project_id"),
