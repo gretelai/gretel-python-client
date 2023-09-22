@@ -112,6 +112,8 @@ def _quiet_poll(
                         " records.",
                     )
                     pr_bar = True
+                elif "Using updated model configuration" in log["msg"]:
+                    continue
                 else:
                     if pr_bar:
                         print()
@@ -273,7 +275,7 @@ def do_api_call(
         headers: Any custom headers that need to bet set.
 
     NOTE:
-        This function will automatically inject the appropiate API hostname and
+        This function will automatically inject the appropriate API hostname and
         authentication from the Gretel configuration.
     """
     if headers is None:
