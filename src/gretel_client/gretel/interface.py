@@ -56,26 +56,44 @@ class Gretel:
     first job submission. You can change projects using the `set_project` method.
 
     Args:
-        api_key: Gretel API key. If not provided, you will be prompted to enter it.
-        endpoint: Gretel API endpoint. Defaults to the Gretel Cloud.
         project_name: Name of new or existing project. If a new project name is given,
             it will be created at instantiation. If no name is given, a new project
             with a randomized name will be created with the first job submission.
         project_display_name: Project display name. If None, will use project name.
             This argument is only used when creating a new project.
-        **session_kwargs: kwargs for `gretel_client.config.configure_session`.
+        **session_kwargs: kwargs for your Gretel session. See options below.
+
+    Keyword Args:
+        config: The config to update. This config takes precedence over
+            other parameters such as ``api_key`` or ``endpoint``.
+        api_key: Configures your Gretel API key. If ``api_key`` is set to
+            "prompt" and no Api Key is found on the system, ``getpass``
+            will be used to prompt for the key.
+        default_runner: Specifies the runner mode. Must be one of "cloud", "local",
+            "manual", or "hybrid". The default is "cloud".
+        endpoint: Specifies the Gretel API endpoint. This must be a fully
+            qualified URL. The default is "https://api.gretel.cloud".
+        artifact_endpoint: Specifies the endpoint for project and model artifacts.
+            Defaults to "cloud" for running in Gretel Cloud. If working in
+            hybrid mode, set to the URL of your artifact storage bucket.
+        cache: Valid options include "yes" and "no". If cache is "no"
+            the session configuration will not be written to disk. If cache is
+            "yes", session configuration will be written to disk only if a
+            configuration doesn't exist.
+        validate: If set to ``True`` this will check that login credentials
+            are valid.
+        clear: If set to ``True`` any existing Gretel credentials will be
+            removed from the host.
     """
 
     def __init__(
         self,
         *,
-        api_key: str = "prompt",
-        endpoint: str = "https://api.gretel.cloud",
         project_name: Optional[str] = None,
         project_display_name: Optional[str] = None,
         **session_kwargs,
     ):
-        configure_session(api_key=api_key, endpoint=endpoint, **session_kwargs)
+        configure_session(**session_kwargs)
 
         self._project: Optional[Project] = None
         self._user_id: str = get_me()["_id"][9:]
