@@ -4,12 +4,7 @@ from typing import Callable
 import pytest
 
 from gretel_client.gretel.config_setup import create_model_config_from_base
-from gretel_client.gretel.exceptions import (
-    BaseConfigError,
-    ConfigSettingError,
-    GretelProjectNotSetError,
-)
-from gretel_client.gretel.interface import Gretel
+from gretel_client.gretel.exceptions import BaseConfigError, ConfigSettingError
 
 
 @pytest.fixture
@@ -67,18 +62,3 @@ def test_create_config_settings_error():
             base_config="tabular-actgan",
             params="must be a dict",
         )
-
-
-def test_gretel_no_project_set_exceptions():
-    gretel = Gretel(endpoint="https://api-dev.gretel.cloud")
-
-    assert gretel._project is None
-
-    with pytest.raises(GretelProjectNotSetError):
-        gretel.fetch_model(model_id="1234")
-
-    with pytest.raises(GretelProjectNotSetError):
-        gretel.fetch_train_job_results(model_id="1234")
-
-    with pytest.raises(GretelProjectNotSetError):
-        gretel.fetch_generate_job_results(model_id="1234", record_id="1234")

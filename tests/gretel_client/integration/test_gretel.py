@@ -4,7 +4,10 @@ from typing import Callable
 import pandas as pd
 import pytest
 
-from gretel_client.gretel.exceptions import GretelJobSubmissionError
+from gretel_client.gretel.exceptions import (
+    GretelJobSubmissionError,
+    GretelProjectNotSetError,
+)
 from gretel_client.gretel.interface import Gretel
 
 NUM_RECORDS = 100
@@ -129,3 +132,18 @@ def test_gretel_submit_generate_invalid_arguments(gretel: Gretel):
         gretel.submit_generate(
             model.model_id, num_records=10, seed_data=seed_data_file_path
         )
+
+
+def test_gretel_no_project_set_exceptions():
+    gretel = Gretel(endpoint="https://api-dev.gretel.cloud")
+
+    assert gretel._project is None
+
+    with pytest.raises(GretelProjectNotSetError):
+        gretel.fetch_model(model_id="1234")
+
+    with pytest.raises(GretelProjectNotSetError):
+        gretel.fetch_train_job_results(model_id="1234")
+
+    with pytest.raises(GretelProjectNotSetError):
+        gretel.fetch_generate_job_results(model_id="1234", record_id="1234")
