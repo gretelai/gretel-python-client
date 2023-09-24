@@ -56,34 +56,31 @@ class Gretel:
     first job submission. You can change projects using the `set_project` method.
 
     Args:
-        project_name: Name of new or existing project. If a new project name is given,
-            it will be created at instantiation. If no name is given, a new project
-            with a randomized name will be created with the first job submission.
-        project_display_name: Project display name. If None, will use project name.
-            This argument is only used when creating a new project.
+        project_name (str): Name of new or existing project. If a new project name
+            is given, it will be created at instantiation. If no name given, a new
+            randomly-named project will be created with the first job submission.
+        project_display_name (str): Project display name. If `None`, will use the
+            project name. This argument is only used when creating a new project.
         **session_kwargs: kwargs for your Gretel session. See options below.
 
     Keyword Args:
-        config: The config to update. This config takes precedence over
-            other parameters such as ``api_key`` or ``endpoint``.
-        api_key: Configures your Gretel API key. If ``api_key`` is set to
-            "prompt" and no Api Key is found on the system, ``getpass``
-            will be used to prompt for the key.
-        default_runner: Specifies the runner mode. Must be one of "cloud", "local",
-            "manual", or "hybrid". The default is "cloud".
-        endpoint: Specifies the Gretel API endpoint. This must be a fully
+        api_key (str): Your Gretel API key. If set to "prompt" and no API key
+            is found on the system, you will be prompted for the key.
+        endpoint (str): Specifies the Gretel API endpoint. This must be a fully
             qualified URL. The default is "https://api.gretel.cloud".
-        artifact_endpoint: Specifies the endpoint for project and model artifacts.
-            Defaults to "cloud" for running in Gretel Cloud. If working in
-            hybrid mode, set to the URL of your artifact storage bucket.
-        cache: Valid options include "yes" and "no". If cache is "no"
-            the session configuration will not be written to disk. If cache is
-            "yes", session configuration will be written to disk only if a
-            configuration doesn't exist.
-        validate: If set to ``True`` this will check that login credentials
-            are valid.
-        clear: If set to ``True`` any existing Gretel credentials will be
-            removed from the host.
+        default_runner (str): Specifies the runner mode. Must be one of "cloud",
+            "local", "manual", or "hybrid". The default is "cloud".
+        artifact_endpoint (str): Specifies the endpoint for project and model
+            artifacts. Defaults to "cloud" for running in Gretel Cloud. If
+            working in hybrid mode, set to the URL of your artifact storage bucket.
+        cache (str): Valid options are "yes" or "no". If set to "no", the session
+            configuration will not be written to disk. If set to "yes", the
+            session configuration will be written to disk only if one doesn't
+            already exist. The default is "no".
+        validate (bool): If `True`, will validate the login credentials at
+            instantiation. The default is `False`.
+        clear (bool): If `True`, existing Gretel credentials will be removed.
+            The default is `False.`
     """
 
     def __init__(
