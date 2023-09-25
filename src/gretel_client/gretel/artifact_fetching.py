@@ -23,6 +23,7 @@ from gretel_client.projects.models import Model
 from gretel_client.projects.records import RecordHandler
 
 logger = logging.getLogger(__name__)
+logger.propagate = False
 logger.addHandler(logging.StreamHandler(sys.stdout))
 logger.setLevel(logging.INFO)
 

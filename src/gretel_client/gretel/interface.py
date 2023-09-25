@@ -37,6 +37,7 @@ from gretel_client.rest.exceptions import ApiException
 from gretel_client.users.users import get_me
 
 logger = logging.getLogger(__name__)
+logger.propagate = False
 logger.addHandler(logging.StreamHandler(sys.stdout))
 logger.setLevel(logging.INFO)
 
