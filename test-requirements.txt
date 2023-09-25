@@ -1,9 +1,0 @@
-azure-common==1.1.28
-azure-core==1.24.0
-azure-identity==1.8.0
-azure-storage-blob==12.13.0
-certifi>=2021.10.8
-faker==15.3.3
-pandas>=1.1.0,<2
-pytest==6.1.2
-smart_open>=2.1.0,<6.0
