@@ -21,6 +21,7 @@ class DownstreamClassificationReport(BaseReport):
         project: Optional project associated with the report. If no project is passed, a temp project (:obj:`gretel_client.projects.projects.tmp_project`) will be used.
         data_source: Data source used for the report (generally your synthetic data).
         ref_data: Reference data used for the report (generally your real data, i.e. the training data for your gretel model).
+        test_data: Optional data set used as a test set for training models used in report.
         output_dir: Optional directory path to write the report to. If the directory does not exist, the path will be created for you.
         runner_mode: Determines where to run the model. See :obj:`gretel_client.config.RunnerMode` for a list of valid modes. Manual mode is not explicitly supported.
         target: The field which the downstream classifiers are trained to predict.  Must be present in both data_source and ref_data.
@@ -71,6 +72,7 @@ class DownstreamClassificationReport(BaseReport):
         name: Optional[str] = None,
         data_source: DataSourceTypes,
         ref_data: RefDataTypes,
+        test_data: Optional[RefDataTypes] = None,
         output_dir: Optional[Union[str, Path]] = None,
         runner_mode: Optional[RunnerMode] = None,
         record_count: Optional[int] = DEFAULT_RECORD_COUNT,
@@ -102,7 +104,14 @@ class DownstreamClassificationReport(BaseReport):
         # Update row count
         params["sqs_report_rows"] = record_count
 
-        super().__init__(project, data_source, ref_data, output_dir, runner_mode)
+        super().__init__(
+            project=project,
+            data_source=data_source,
+            ref_data=ref_data,
+            test_data=test_data,
+            output_dir=output_dir,
+            runner_mode=runner_mode,
+        )
 
     def peek(self) -> Optional[ReportDictType]:
         super()._check_model_run()

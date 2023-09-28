@@ -1,6 +1,3 @@
-import os
-import platform
-
 from pathlib import Path
 from typing import Callable
 
@@ -111,6 +108,7 @@ def test_report_initialization_with_custom_params(
         name="my-preferred-name",
         data_source=data_source,
         ref_data=ref_data,
+        test_data="test/data/path",
         output_dir=tmpdir,
         runner_mode=RunnerMode.CLOUD,
         record_count=6543,

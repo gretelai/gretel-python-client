@@ -57,6 +57,9 @@ class BaseReport(ABC):
     ref_data: RefDataTypes
     """Reference data used for the report."""
 
+    test_data: RefDataTypes
+    """Additional optional test data used for MQS reports."""
+
     output_dir: Optional[Path]
     """Optional directory path to write the report to. If the directory does not exist, the path will be created for you."""
 
@@ -78,12 +81,14 @@ class BaseReport(ABC):
         ref_data: RefDataTypes,
         output_dir: Optional[Union[str, Path]],
         runner_mode: RunnerMode,
+        test_data: Optional[RefDataTypes] = None,
     ):
         self.project = project
         self.data_source = (
             str(data_source) if isinstance(data_source, Path) else data_source
         )
         self.ref_data = str(ref_data) if isinstance(ref_data, Path) else ref_data
+        self.test_data = str(test_data) if isinstance(test_data, Path) else test_data
         self.output_dir = Path(output_dir) if output_dir else os.getcwd()
         self.runner_mode = runner_mode
 
@@ -158,10 +163,14 @@ class BaseReport(ABC):
             self._report_html = f.read()
 
     def _run_in_project(self, project: Project):
+        if self.test_data is not None:
+            _ref_data = [self.ref_data, self.test_data]
+        else:
+            _ref_data = self.ref_data
         model = project.create_model_obj(
             self.model_config,
             data_source=self.data_source,
-            ref_data=self.ref_data,
+            ref_data=_ref_data,
         )
         self._run_model(model=model)
 
