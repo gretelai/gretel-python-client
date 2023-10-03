@@ -121,7 +121,7 @@ class GretelApiRetry(Retry):
     """
 
     # Message, which is returned in the response body for throttled requests.
-    _THROTLE_403_TEXT = "User is not authorized to access this resource"
+    _THROTTLE_403_TEXT = "User is not authorized to access this resource"
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -160,14 +160,14 @@ class GretelApiRetry(Retry):
         return super().increment(method, url, response, error, _pool, _stacktrace)
 
     def _was_forbidden(self, response: HTTPResponse) -> bool:
-        if response.status != 403:
+        if not response or response.status != 403:
             return False
 
         # With how our APIs are configured, 403 may mean that:
         #  - call is not authorized (no need to retry)
         #  - call is rate limited (retry)
         # To differentiate between these 2 we check for a specific text in the body.
-        was_rate_limited = GretelApiRetry._THROTLE_403_TEXT in str(response.data)
+        was_rate_limited = GretelApiRetry._THROTTLE_403_TEXT in str(response.data)
         return not was_rate_limited
 
 

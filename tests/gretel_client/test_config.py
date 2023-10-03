@@ -326,6 +326,20 @@ def test_dont_retry_non_throttling_403s():
     assert result.total == 2
 
 
+def test_dont_retry_no_response():
+    retry = GretelApiRetry.create_default(max_retry_attempts=3, backoff_factor=0.1)
+
+    result = retry.increment(
+        "GET",
+        "/url",
+        response=None,
+        error=ForbiddenException(),
+    )
+
+    # that call should use up one retry and not fail
+    assert result.total == 2
+
+
 def test_retry_throttling_403s():
     retry = GretelApiRetry.create_default(max_retry_attempts=3, backoff_factor=0.1)
 
