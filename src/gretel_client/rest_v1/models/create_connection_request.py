@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field, StrictStr
 
 class CreateConnectionRequest(BaseModel):
     """
-    Request message for `CreateConnection` method.
+    Request message for `CreateConnection` method. Next Tag: 6
     """
 
     project_id: StrictStr = Field(...)

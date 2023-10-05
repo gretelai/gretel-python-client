@@ -25,7 +25,7 @@ from pydantic import BaseModel, StrictStr
 
 class UpdateConnectionRequest(BaseModel):
     """
-    Request message for `UpdateConnection`
+    Request message for `UpdateConnection` Next Tag: 6
     """
 
     name: Optional[StrictStr] = None
