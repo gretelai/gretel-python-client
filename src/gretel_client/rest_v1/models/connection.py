@@ -21,12 +21,12 @@ import re  # noqa: F401
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, Field, StrictStr, validator
+from pydantic import BaseModel, Field, StrictBool, StrictStr, validator
 
 
 class Connection(BaseModel):
     """
-    Next available tag: 11
+    Next available tag: 12
     """
 
     id: StrictStr = Field(
@@ -42,13 +42,17 @@ class Connection(BaseModel):
     )
     credentials: Optional[Dict[str, Any]] = Field(
         None,
-        description="Connection credentials. These values are encrypted and can only be decrypted from the data plane.",
+        description="Connection credentials in plain text. This can only be set when creating a connection for letting the control plane encrypt credentials. It is never set in API responses.",
     )
     config: Optional[Dict[str, Any]] = Field(
         None, description="Connection config. These values are returned by the API."
     )
     encrypted_credentials: Optional[Dict[str, Any]] = Field(
         None, description="Connection credentials in encrypted form."
+    )
+    customer_managed_credentials_encryption: Optional[StrictBool] = Field(
+        None,
+        description="Indicates whether the encrypted credentials are encrypted using a customer-managed key, as opposed to a Gretel-managed one. TODO: This should be [(google.api.field_behavior) = REQUIRED] but we can only set this once the change has been rolled out to Pilot.",
     )
     created_at: datetime = Field(...)
     project_id: StrictStr = Field(
@@ -65,6 +69,7 @@ class Connection(BaseModel):
         "credentials",
         "config",
         "encrypted_credentials",
+        "customer_managed_credentials_encryption",
         "created_at",
         "project_id",
         "created_by",
@@ -126,6 +131,9 @@ class Connection(BaseModel):
                 "credentials": obj.get("credentials"),
                 "config": obj.get("config"),
                 "encrypted_credentials": obj.get("encrypted_credentials"),
+                "customer_managed_credentials_encryption": obj.get(
+                    "customer_managed_credentials_encryption"
+                ),
                 "created_at": obj.get("created_at"),
                 "project_id": obj.get("project_id"),
                 "created_by": obj.get("created_by"),

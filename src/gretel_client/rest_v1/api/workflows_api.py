@@ -18,7 +18,14 @@ import warnings
 
 from typing import Any, Dict, Optional
 
-from pydantic import conlist, StrictInt, StrictStr, validate_arguments, ValidationError
+from pydantic import (
+    conlist,
+    Field,
+    StrictInt,
+    StrictStr,
+    validate_arguments,
+    ValidationError,
+)
 from typing_extensions import Annotated
 
 from gretel_client.rest_v1.api_client import ApiClient
@@ -2306,18 +2313,28 @@ class WorkflowsApi(object):
 
     @validate_arguments
     def validate_workflow_action(
-        self, body: Dict[str, Any], **kwargs
+        self,
+        body: Dict[str, Any],
+        runner_mode: Annotated[
+            Optional[StrictStr],
+            Field(
+                description="If this field is not UNSET, take the runner mode (cloud or hybrid) into account. This primarily affects which connections can be used in an action; those with Gretel-managed credentials encryption can't be used in a Hybrid workflow, and vice versa."
+            ),
+        ] = None,
+        **kwargs,
     ) -> ValidateWorkflowActionResponse:  # noqa: E501
         """validate_workflow_action  # noqa: E501
 
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
-        >>> thread = api.validate_workflow_action(body, async_req=True)
+        >>> thread = api.validate_workflow_action(body, runner_mode, async_req=True)
         >>> result = thread.get()
 
         :param body: (required)
         :type body: object
+        :param runner_mode: If this field is not UNSET, take the runner mode (cloud or hybrid) into account. This primarily affects which connections can be used in an action; those with Gretel-managed credentials encryption can't be used in a Hybrid workflow, and vice versa.
+        :type runner_mode: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
         :param _request_timeout: timeout setting for this request. If one
@@ -2335,23 +2352,33 @@ class WorkflowsApi(object):
                 "Error! Please call the validate_workflow_action_with_http_info method with `_preload_content` instead and obtain raw data from ApiResponse.raw_data"
             )
         return self.validate_workflow_action_with_http_info(
-            body, **kwargs
+            body, runner_mode, **kwargs
         )  # noqa: E501
 
     @validate_arguments
     def validate_workflow_action_with_http_info(
-        self, body: Dict[str, Any], **kwargs
+        self,
+        body: Dict[str, Any],
+        runner_mode: Annotated[
+            Optional[StrictStr],
+            Field(
+                description="If this field is not UNSET, take the runner mode (cloud or hybrid) into account. This primarily affects which connections can be used in an action; those with Gretel-managed credentials encryption can't be used in a Hybrid workflow, and vice versa."
+            ),
+        ] = None,
+        **kwargs,
     ) -> ApiResponse:  # noqa: E501
         """validate_workflow_action  # noqa: E501
 
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
-        >>> thread = api.validate_workflow_action_with_http_info(body, async_req=True)
+        >>> thread = api.validate_workflow_action_with_http_info(body, runner_mode, async_req=True)
         >>> result = thread.get()
 
         :param body: (required)
         :type body: object
+        :param runner_mode: If this field is not UNSET, take the runner mode (cloud or hybrid) into account. This primarily affects which connections can be used in an action; those with Gretel-managed credentials encryption can't be used in a Hybrid workflow, and vice versa.
+        :type runner_mode: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
         :param _preload_content: if False, the ApiResponse.data will
@@ -2379,7 +2406,7 @@ class WorkflowsApi(object):
 
         _params = locals()
 
-        _all_params = ["body"]
+        _all_params = ["body", "runner_mode"]
         _all_params.extend(
             [
                 "async_req",
@@ -2409,6 +2436,9 @@ class WorkflowsApi(object):
 
         # process the query parameters
         _query_params = []
+        if _params.get("runner_mode") is not None:  # noqa: E501
+            _query_params.append(("runner_mode", _params["runner_mode"]))
+
         # process the header parameters
         _header_params = dict(_params.get("_headers", {}))
         # process the form parameters

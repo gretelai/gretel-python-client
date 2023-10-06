@@ -25,15 +25,29 @@ from pydantic import BaseModel, Field, StrictStr
 
 class CreateConnectionRequest(BaseModel):
     """
-    Request message for `CreateConnection` method. Next Tag: 6
+    Request message for `CreateConnection` method. Next Tag: 7
     """
 
     project_id: StrictStr = Field(...)
     name: Optional[StrictStr] = None
     type: StrictStr = Field(...)
-    credentials: Dict[str, Any] = Field(...)
+    credentials: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Plaintext credentials for the connection, to be encrypted in our cloud. If this field is set, encrypted_credentials must be unset. At least one of those fields must be set.",
+    )
+    encrypted_credentials: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Pre-encrypted credentials for the connection, encrypted by a customer-managed key. If this field is set, credentials must be unset. At least one of those fields must be set.",
+    )
     config: Optional[Dict[str, Any]] = None
-    __properties = ["project_id", "name", "type", "credentials", "config"]
+    __properties = [
+        "project_id",
+        "name",
+        "type",
+        "credentials",
+        "encrypted_credentials",
+        "config",
+    ]
 
     class Config:
         """Pydantic configuration"""
@@ -74,6 +88,7 @@ class CreateConnectionRequest(BaseModel):
                 "name": obj.get("name"),
                 "type": obj.get("type"),
                 "credentials": obj.get("credentials"),
+                "encrypted_credentials": obj.get("encrypted_credentials"),
                 "config": obj.get("config"),
             }
         )

@@ -20,18 +20,25 @@ import re  # noqa: F401
 
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, StrictStr
+from pydantic import BaseModel, Field, StrictStr
 
 
 class UpdateConnectionRequest(BaseModel):
     """
-    Request message for `UpdateConnection` Next Tag: 6
+    Request message for `UpdateConnection` Next Tag: 7
     """
 
     name: Optional[StrictStr] = None
-    credentials: Optional[Dict[str, Any]] = None
+    credentials: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Plaintext credentials for the connection, to be encrypted in our cloud. This field may only be set if the existing connection's credentials are encrypted with a Gretel-managed key.",
+    )
+    encrypted_credentials: Optional[Dict[str, Any]] = Field(
+        None,
+        description="Pre-encrypted credentials for the connection, encrypted by a customer-managed key. This field may only be set if the existing connection's credentials are encrypted with a user-managed key.",
+    )
     config: Optional[Dict[str, Any]] = None
-    __properties = ["name", "credentials", "config"]
+    __properties = ["name", "credentials", "encrypted_credentials", "config"]
 
     class Config:
         """Pydantic configuration"""
@@ -70,6 +77,7 @@ class UpdateConnectionRequest(BaseModel):
             {
                 "name": obj.get("name"),
                 "credentials": obj.get("credentials"),
+                "encrypted_credentials": obj.get("encrypted_credentials"),
                 "config": obj.get("config"),
             }
         )
