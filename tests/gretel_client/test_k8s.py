@@ -162,8 +162,8 @@ class TestKubernetesDriver(TestCase):
             self.config, batch_api=self.batch_api, core_api=self.core_api
         )
 
-    def reload_env_and_build_job(self, job: Job) -> V1Job:
-        self.driver._load_env_and_set_vars()
+    def reload_env_and_build_job(self, job: Job, restart_worker: bool = False) -> V1Job:
+        self.driver._load_env_and_set_vars(restart_worker=restart_worker)
         return self.driver._build_job(job)
 
     def test_job_active_none(self):
@@ -507,7 +507,10 @@ class TestKubernetesDriver(TestCase):
             KeyboardInterrupt(),
         ]
         with self.assertRaises(KeyboardInterrupt):
-            daemon._run_pull_secret_thread()
+            try:
+                daemon._run_pull_secret_thread()
+            finally:
+                daemon.stop()
         assert 4 == core_api.patch_namespaced_secret.call_count
         assert 1 == core_api.create_namespaced_secret.call_count
 
@@ -536,9 +539,10 @@ class TestKubernetesDriver(TestCase):
         assert config_map.default_mode == 0o0644
 
     @patch_image_registry("shiny-new-reg.example.ai")
+    @patch_auth
     def test_build_job_image_url_override(self):
         job = Job.from_dict(get_mock_job(), self.config)
-        k8s_job = self.reload_env_and_build_job(job)
+        k8s_job = self.reload_env_and_build_job(job, restart_worker=True)
 
         job_spec: V1JobSpec = k8s_job.spec
         pod_template: V1PodTemplateSpec = job_spec.template

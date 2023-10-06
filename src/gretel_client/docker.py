@@ -290,6 +290,14 @@ def pull_image(
         auth, registry = get_container_auth()
         if auth_strategy == AuthStrategy.AUTH_AND_RESOLVE:
             image = f"{registry}/{image}"
+        elif auth_strategy == AuthStrategy.AUTH:
+            parts = image.split("/", 1)
+            # Override the registry from the authentication credentials
+            # if the target registry is an AWS ECR registry.
+            # TODO: is it safe to always override? We should only ever
+            # be pulling Gretel images here.
+            if len(parts) > 1 and parts[0].endswith(".amazonaws.com"):
+                image = "/".join((registry, parts[1]))
 
     logger.info(f"Pulling container image {image}")
     try:

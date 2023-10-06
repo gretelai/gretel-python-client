@@ -8,9 +8,10 @@ import base64
 import itertools
 import json
 import os
+import sys
 import traceback
 
-from threading import Thread
+from threading import Condition, Thread
 from time import sleep
 from typing import List, Optional, Tuple, Type, TYPE_CHECKING, TypeVar
 
@@ -37,6 +38,10 @@ CPU_COUNT_ENV_NAME = "GRETEL_CPU_COUNT"
 CA_CERT_CONFIGMAP_ENV_NAME = "GRETEL_CA_CERT_CONFIGMAP_NAME"
 IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME = "IMAGE_REGISTRY_OVERRIDE_HOST"
 PREVENT_AUTOSCALER_EVICTION_ENV_NAME = "PREVENT_AUTOSCALER_EVICTION"
+
+
+# Crash agent if pull secret update failed three times in a row
+_MAX_PULL_SECRET_UPDATE_FAILURE_COUNT = 3
 
 
 if TYPE_CHECKING:
@@ -79,13 +84,11 @@ class Kubernetes(Driver):
         self._agent_config = agent_config
         self._batch_api = batch_api
         self._core_api = core_api
+        self._agent_config = agent_config
+        self._worker = None
         self._load_env_and_set_vars()
-        worker = KubernetesDriverDaemon(
-            agent_config=agent_config, core_api=self._core_api
-        )
-        worker.start_update_pull_secret_thread()
 
-    def _load_env_and_set_vars(self):
+    def _load_env_and_set_vars(self, restart_worker: bool = False):
         self._memory_limit_in_gb = os.getenv("MEMORY_LIMIT_IN_GB") or "14"
         self._gretel_cpu_count = os.getenv(CPU_COUNT_ENV_NAME) or "1"
         self._cert_override = os.getenv(CA_CERT_CONFIGMAP_ENV_NAME)
@@ -109,10 +112,18 @@ class Kubernetes(Driver):
         self._gretel_pull_secret = (
             os.getenv(PULL_SECRET_ENV_NAME) or "gretel-pull-secret"
         )
-        self._override_host = os.environ.get(IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME)
         self._prevent_autoscaler_eviction = (
             os.environ.get(PREVENT_AUTOSCALER_EVICTION_ENV_NAME) == "true"
         )
+
+        if restart_worker or self._worker is None:
+            if self._worker is not None:
+                self._worker.stop()
+
+            self._worker = KubernetesDriverDaemon(
+                agent_config=self._agent_config, core_api=self._core_api
+            )
+            self._worker.start_update_pull_secret_thread()
 
     def _parse_kube_env_var(
         self, env_var_name: str, expected_type: Type[T]
@@ -337,10 +348,10 @@ class Kubernetes(Driver):
 
     def _resolve_image(self, job_config: Job) -> str:
         image = job_config.container_image
-        if self._override_host:
+        if registry_host := self._worker.get_registry_host():
             image_parts = image.split("/")
             if len(image_parts) > 1:
-                image_parts[0] = self._override_host
+                image_parts[0] = registry_host
                 image = "/".join(image_parts)
         return image
 
@@ -430,12 +441,17 @@ class KubernetesDriverDaemon:
     """
 
     def __init__(
-        self, agent_config: AgentConfig, core_api: CoreV1Api, sleep_length: int = 300
+        self,
+        agent_config: AgentConfig,
+        core_api: CoreV1Api,
+        sleep_length: int = 300,
+        sleep_length_retry: int = 30,
     ):
         self._agent_config = agent_config
         config.load_incluster_config()
         self._core_api = core_api
         self.sleep_length = sleep_length
+        self.sleep_length_retry = sleep_length_retry
         self._gretel_worker_namespace = (
             os.getenv(WORKER_NAMESPACE_ENV_NAME) or "gretel-workers"
         )
@@ -444,14 +460,52 @@ class KubernetesDriverDaemon:
         )
         self._override_host = os.getenv(IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME)
 
+        self._registry_host = ""
+        self._registry_host_available = Condition()
+
+        self._stop = False
+        self._stop_cond = Condition()
+
+    def stop(self):
+        with self._stop_cond:
+            self._stop = True
+            self._stop_cond.notify_all()
+
+    def _should_stop(self) -> bool:
+        with self._stop_cond:
+            return self._stop
+
+    def _sleep(self, secs):
+        with self._stop_cond:
+            if self._stop:
+                return
+            self._stop_cond.wait(timeout=secs)
+
+    def get_registry_host(self) -> str:
+        if self._override_host:
+            return self._override_host
+
+        with self._registry_host_available:
+            while not self._registry_host:
+                logger.info(
+                    "Waiting for image pull credentials to be updated for the first time ..."
+                )
+                self._registry_host_available.wait()
+            return self._registry_host
+
     def start_update_pull_secret_thread(self) -> None:
         thread = Thread(target=self._run_pull_secret_thread, daemon=True)
         thread.start()
+        with self._stop_cond:
+            self._stop = False
 
     def _run_pull_secret_thread(self) -> None:
-        while True:
+        failure_count = 0
+        while not self._should_stop():
+            sleep_length = self.sleep_length
             try:
                 self._update_pull_secrets()
+                failure_count = 0
             # We don't want the thread to die unless a
             # keyboard interrupt occurs
             except KeyboardInterrupt as ex:
@@ -459,12 +513,22 @@ class KubernetesDriverDaemon:
                 raise ex
             except Exception:
                 logger.exception("Error updating pull secret")
-            sleep(self.sleep_length)
+                failure_count += 1
+                if failure_count > _MAX_PULL_SECRET_UPDATE_FAILURE_COUNT:
+                    logger.error("pull secret update failed too often, crashing ...")
+                    sys.exit(1)
+                sleep_length = self.sleep_length_retry
+
+            self._sleep(sleep_length)
 
     def _create_secret_body(self) -> client.V1Secret:
         auth, server = get_container_auth()
         if self._override_host:  # We need to authenticate to the appropriate registry
             server = self._override_host
+        with self._registry_host_available:
+            self._registry_host = server
+            self._registry_host_available.notify_all()
+
         username = auth.get("username")
         password = auth.get("password")
         data = _create_secret_json_b64(server, username, password)
