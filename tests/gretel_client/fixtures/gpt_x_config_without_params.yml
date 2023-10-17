@@ -1,0 +1,19 @@
+# Default configuration GPT-2 XL
+
+# The parameter settings below match the default settings 
+# in Gretel's open source GPT-2 XL model
+
+schema_version: 1.0
+
+models:
+  - gpt_x:
+      data_source: my-file.csv
+      pretrained_model: "gpt2"
+      steps: 1000
+      batch_size: 64
+      weight_decay: 0.1
+      warmup_steps: 100
+      lr_scheduler: "cosine"
+      learning_rate: 5e-4
+      column_name: "sample_column"
+

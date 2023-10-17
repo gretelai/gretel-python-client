@@ -6,6 +6,7 @@ import time
 import webbrowser
 
 from dataclasses import dataclass
+from enum import Enum
 from pathlib import Path
 from typing import List, Union
 
@@ -26,6 +27,20 @@ logger = logging.getLogger(__name__)
 logger.propagate = False
 logger.addHandler(logging.StreamHandler(sys.stdout))
 logger.setLevel(logging.INFO)
+
+
+class ReportType(str, Enum):
+    """The kind of report to fetch."""
+
+    SQS = "sqs"
+    TEXT = "text"
+
+    @property
+    def artifact_name(self) -> str:
+        if self == ReportType.SQS:
+            return "report"
+        elif self == ReportType.TEXT:
+            return "text_metrics_report"
 
 
 @dataclass
@@ -79,20 +94,25 @@ def fetch_model_logs(model: Model) -> List[dict]:
     return model_logs
 
 
-def fetch_model_report(model: Model) -> GretelReport:
+def fetch_model_report(
+    model: Model, report_type: ReportType = ReportType.SQS
+) -> GretelReport:
     """Fetch the quality report from a model training job.
 
     Args:
         model: The Gretel model object.
+        report_type: The type of report to fetch. One of "sqs" or "text".
 
     Returns:
         The Gretel report object.
     """
 
-    with model.get_artifact_handle("report_json") as file:
+    report_type = ReportType(report_type)
+
+    with model.get_artifact_handle(f"{report_type.artifact_name}_json") as file:
         report_dict = json.load(file)
 
-    with model.get_artifact_handle("report") as file:
+    with model.get_artifact_handle(report_type.artifact_name) as file:
         report_html = str(file.read(), encoding="utf-8")
 
     return GretelReport(as_dict=report_dict, as_html=report_html)

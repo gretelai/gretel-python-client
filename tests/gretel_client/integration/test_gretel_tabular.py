@@ -1,3 +1,5 @@
+import os
+
 from pathlib import Path
 from typing import Callable
 
@@ -25,7 +27,11 @@ def seed_data_file_path(get_fixture: Callable) -> Path:
 
 @pytest.fixture(scope="module")
 def gretel() -> Gretel:
-    gretel = Gretel(project_name="pytest", endpoint="https://api-dev.gretel.cloud")
+    gretel = Gretel(
+        project_name="pytest-tabular",
+        api_key=os.getenv("GRETEL_API_KEY"),
+        endpoint="https://api-dev.gretel.cloud",
+    )
     yield gretel
     gretel._project.delete()
 
@@ -63,9 +69,9 @@ def test_gretel_submit_train_tabular(
 
     # Verify that the model config was updated with the custom settings.
     for section, settings in custom_settings.items():
-        dict_name = list(trained.model_config["models"][0].keys())[0]
+        model_type = list(trained.model_config["models"][0].keys())[0]
         for k, v in settings.items():
-            assert trained.model_config["models"][0][dict_name][section][k] == v
+            assert trained.model_config["models"][0][model_type][section][k] == v
 
 
 def test_gretel_submit_generate_tabular(gretel: Gretel):
@@ -134,8 +140,27 @@ def test_gretel_submit_generate_invalid_arguments(gretel: Gretel):
         )
 
 
+@pytest.mark.parametrize(
+    "base_config",
+    [
+        "amplify",
+        "tabular-actgan",
+        "tabular-differential-privacy",
+        "tabular-lstm",
+        "time-series",
+    ],
+)
+def test_gretel_train_no_data_source_exception(gretel: Gretel, base_config: str):
+    """Test that an error is raised when a data source is required but not provided."""
+    with pytest.raises(GretelJobSubmissionError):
+        gretel.submit_train(base_config, data_source=None)
+
+
 def test_gretel_no_project_set_exceptions():
-    gretel = Gretel(endpoint="https://api-dev.gretel.cloud")
+    gretel = Gretel(
+        api_key=os.getenv("GRETEL_API_KEY"),
+        endpoint="https://api-dev.gretel.cloud",
+    )
 
     assert gretel._project is None
 

@@ -17,6 +17,10 @@ from gretel_client.gretel.artifact_fetching import (
     fetch_synthetic_data,
     GretelReport,
 )
+from gretel_client.gretel.config_setup import (
+    CONFIG_SETUP_DICT,
+    extract_model_config_section,
+)
 from gretel_client.gretel.exceptions import GretelJobResultsError
 from gretel_client.helpers import poll
 from gretel_client.projects import Project
@@ -70,6 +74,10 @@ class TrainJobResults(GretelJobResults):
         self.model.refresh()
         return self.model.status
 
+    @property
+    def model_config_section(self) -> dict:
+        return next(iter(self.model_config["models"][0].values()))
+
     def fetch_report_synthetic_data(self) -> _DataFrameT:
         """Fetch synthetic data generated for the report and return as a DataFrame.
 
@@ -79,6 +87,11 @@ class TrainJobResults(GretelJobResults):
             raise ImportError(
                 "The `pandas` package is required to use this method. "
                 "Please install it with `pip install pandas`."
+            )
+        if self.model_config_section.get("data_source") is None:
+            raise GretelJobResultsError(
+                "The training job did not have a data source, so "
+                "no synthetic data was generated for the report."
             )
         if self.job_status != Status.COMPLETED:
             raise GretelJobResultsError(
@@ -94,12 +107,18 @@ class TrainJobResults(GretelJobResults):
     def refresh(self):
         """Refresh the training job results attributes."""
         if self.job_status == Status.COMPLETED:
-            if self.report is None:
-                self.report = fetch_model_report(self.model)
             if self.model_logs is None:
                 self.model_logs = fetch_model_logs(self.model)
             if self.model_config is None:
                 self.model_config = fetch_final_model_config(self.model)
+            if (
+                self.report is None
+                and self.model_config_section.get("data_source") is not None
+            ):
+                model_type, _ = extract_model_config_section(self.model.model_config)
+                report_type = CONFIG_SETUP_DICT[model_type].report_type
+                if report_type is not None:
+                    self.report = fetch_model_report(self.model, report_type)
 
     def wait_for_completion(self):
         """Wait for the model to finish training."""

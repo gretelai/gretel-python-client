@@ -1,0 +1,17 @@
+schema_version: "1.0"
+name: "natural-language-gpt"
+models:
+  - gpt_x:
+      data_source: "__temp__"
+      pretrained_model: "gretelai/mpt-7b"
+      column_name: null
+      params:
+        batch_size: 4
+        steps: 750
+        weight_decay: 0.01
+        warmup_steps: 100
+        lr_scheduler: "linear"
+        learning_rate: 0.0002
+      generate:
+        num_records: 80
+        maximum_text_length: 100

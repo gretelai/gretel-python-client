@@ -7,23 +7,17 @@ from typing import Optional, Union
 
 from gretel_client.config import configure_session
 from gretel_client.dataframe import _DataFrameT
-from gretel_client.evaluation.quality_report import QualityReport
-from gretel_client.evaluation.reports import (
-    DEFAULT_CORRELATION_COLUMNS,
-    DEFAULT_RECORD_COUNT,
-    DEFAULT_SQS_REPORT_COLUMNS,
-)
 from gretel_client.gretel.artifact_fetching import (
     fetch_final_model_config,
     fetch_model_logs,
     fetch_model_report,
     fetch_synthetic_data,
-    GretelReport,
     PANDAS_IS_INSTALLED,
 )
 from gretel_client.gretel.config_setup import (
     CONFIG_SETUP_DICT,
     create_model_config_from_base,
+    extract_model_config_section,
 )
 from gretel_client.gretel.exceptions import (
     GretelJobSubmissionError,
@@ -43,9 +37,9 @@ logger.setLevel(logging.INFO)
 
 
 def _convert_to_valid_data_source(
-    data: Union[str, Path, _DataFrameT]
-) -> Union[str, _DataFrameT]:
-    """Returns a valid data source (str of DataFrame) for a Gretel job."""
+    data: Optional[Union[str, Path, _DataFrameT]] = None
+) -> Optional[Union[str, _DataFrameT]]:
+    """Returns a valid data source (str, DataFrame, or None) for a Gretel job."""
     return str(data) if isinstance(data, Path) else data
 
 
@@ -113,7 +107,7 @@ class Gretel:
         If a project has not been set, a new one will be created.
         """
         if self._project is None:
-            logger.info("No project set. Creating a new one...")
+            logger.info("No project set -> creating a new one...")
             self.set_project()
         return self._project
 
@@ -159,6 +153,7 @@ class Gretel:
 
         self._last_model = None
         self._project = project
+        logger.info(f"Project URL: {project.get_console_url()}")
 
     def fetch_model(self, model_id: str) -> Model:
         """Fetch a Gretel model using its ID.
@@ -225,54 +220,11 @@ class Gretel:
         generated.refresh()
         return generated
 
-    def submit_evaluate(
-        self,
-        real_data: Union[str, Path, _DataFrameT],
-        synthetic_data: Union[str, Path, _DataFrameT],
-        num_eval_records: int = DEFAULT_RECORD_COUNT,
-        job_label: Optional[str] = None,
-        **kwargs,
-    ) -> GretelReport:
-        """Submit a synthetic data quality evaluate job.
-
-        Args:
-            real_data: Real data source to compare against.
-            synthetic_data: Synthetic data source to evaluate.
-            num_eval_records: Number of records to sample for evaluation.
-            job_label: Descriptive label to append to job the name.
-
-        Returns:
-            GretelReport object with the report as a dict and as HTML.
-        """
-
-        project = self.get_project()
-
-        qr = QualityReport(
-            project=project,
-            name="evaluate" + (f"-{job_label}" if job_label else ""),
-            ref_data=_convert_to_valid_data_source(real_data),
-            data_source=_convert_to_valid_data_source(synthetic_data),
-            record_count=num_eval_records,
-            correlation_column_count=kwargs.get(
-                "correlation_column_count", DEFAULT_CORRELATION_COLUMNS
-            ),
-            column_count=kwargs.get("column_count", DEFAULT_SQS_REPORT_COLUMNS),
-            mandatory_columns=kwargs.get("mandatory_columns", []),
-        )
-
-        logger.info(
-            "Submitting synthetic data evaluation job...\n"
-            f"Console URL: {project.get_console_url()}/models/"
-        )
-        qr.run()
-
-        return GretelReport(as_dict=qr.as_dict, as_html=qr.as_html)
-
     def submit_train(
         self,
         base_config: str,
         *,
-        data_source: Union[str, Path, _DataFrameT],
+        data_source: Union[str, Path, _DataFrameT, None],
         job_label: Optional[str] = None,
         wait: bool = True,
         **non_default_config_settings,
@@ -293,6 +245,8 @@ class Gretel:
                 template. The format is `section={"setting": "value"}`,
                 where `section` is the name of a yaml section within the
                 specific model settings, e.g. `params` or `privacy_filters`.
+                If the parameter is not nested within a section, pass it
+                directly as a keyword argument.
 
         Returns:
             Job results including the model object, report, logs, and final config.
@@ -308,19 +262,29 @@ class Gretel:
                 privacy_filters={"similarity": "high", "outliers": None},
             )
         """
-        model_config = create_model_config_from_base(
+        job_config = create_model_config_from_base(
             base_config=base_config,
             job_label=job_label,
             **non_default_config_settings,
         )
 
+        data_source = _convert_to_valid_data_source(data_source)
+
+        model_type, model_config_section = extract_model_config_section(job_config)
+        model_setup = CONFIG_SETUP_DICT[model_type]
+        model_name = model_setup.model_name.replace("_", "-")
+
+        if data_source is None:
+            if not model_setup.data_source_optional:
+                raise GretelJobSubmissionError(
+                    f"A data source must be provided for {model_name.upper()}."
+                )
+            model_config_section["data_source"] = None
+
         project = self.get_project()
 
-        data_source = _convert_to_valid_data_source(data_source)
-        model = project.create_model_obj(model_config, data_source=data_source)
+        model = project.create_model_obj(job_config, data_source=data_source)
 
-        dict_name = list(model_config["models"][0].keys())[0]
-        model_name = CONFIG_SETUP_DICT[dict_name].model_name.replace("_", "-")
         docs_path = f"reference/synthetics/models/gretel-{model_name}"
         project_url = project.get_console_url()
 
@@ -339,9 +303,13 @@ class Gretel:
 
         if wait:
             poll(model, verbose=False)
-            report = fetch_model_report(model)
             logs = fetch_model_logs(model)
             final_config = fetch_final_model_config(model)
+            if (
+                model_setup.report_type is not None
+                and model_config_section.get("data_source") is not None
+            ):
+                report = fetch_model_report(model, model_setup.report_type)
 
         self._last_model = model
 
@@ -393,7 +361,7 @@ class Gretel:
             import pandas pd
             from gretel_client import Gretel
             gretel = Gretel(project_name="my-project")
-            df_seed = pd.DataFrame(["rare_class"] * 1000, columns=["rare"])
+            df_seed = pd.DataFrame(["rare_class"] * 1000, columns=["field_name"])
             generated = gretel.submit_generate(model_id, seed_data=df_seed)
         """
 
@@ -417,8 +385,8 @@ class Gretel:
             data_source=_convert_to_valid_data_source(seed_data), params=generate_kwargs
         )
 
-        dict_name = list(model.model_config["models"][0].keys())[0]
-        model_name = CONFIG_SETUP_DICT[dict_name].model_name.replace("_", "-")
+        model_type, _ = extract_model_config_section(model.model_config)
+        model_name = CONFIG_SETUP_DICT[model_type].model_name.replace("_", "-")
         docs_path = f"reference/synthetics/models/gretel-{model_name}"
         project_url = project.get_console_url()
 

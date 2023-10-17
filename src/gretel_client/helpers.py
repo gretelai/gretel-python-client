@@ -3,7 +3,7 @@ import os
 import sys
 
 from pathlib import Path
-from typing import Callable, Dict, Optional, Union
+from typing import Callable, Dict, Optional, Tuple, Union
 
 from gretel_client.cli.utils.parser_utils import ref_data_factory
 from gretel_client.config import get_logger, get_session_config
@@ -142,7 +142,7 @@ def _quiet_poll(
             )
 
 
-def _get_quiet_poll_context(job: Job) -> int:
+def _get_quiet_poll_context(job: Job) -> Tuple[Optional[int], Optional[int]]:
     num_epochs = None
     num_records = None
     if isinstance(job, RecordHandler):
@@ -152,13 +152,10 @@ def _get_quiet_poll_context(job: Job) -> int:
             num_records = job.model_config["models"][0][job.model_type]["params"][
                 "num_records"
             ]
-        if job.model_type in ["actgan", "gpt_x", "synthetics"]:
-            if job.model_type == "gpt_x":
-                num_epochs = job.model_config["models"][0][job.model_type]["epochs"]
-            else:
-                num_epochs = job.model_config["models"][0][job.model_type]["params"][
-                    "epochs"
-                ]
+        elif job.model_type in ["actgan", "gpt_x", "synthetics"]:
+            num_epochs = job.model_config["models"][0][job.model_type]["params"][
+                "epochs"
+            ]
             num_records = job.model_config["models"][0][job.model_type]["generate"][
                 "num_records"
             ]
