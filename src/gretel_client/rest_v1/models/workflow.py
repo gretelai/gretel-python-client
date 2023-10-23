@@ -38,6 +38,7 @@ class Workflow(BaseModel):
     project_id: StrictStr = Field(...)
     project: Optional[Project] = None
     config: Optional[Dict[str, Any]] = None
+    config_text: Optional[StrictStr] = None
     runner_mode: Optional[StrictStr] = None
     next_scheduled_run: Optional[datetime] = None
     created_by: StrictStr = Field(...)
@@ -53,6 +54,7 @@ class Workflow(BaseModel):
         "project_id",
         "project",
         "config",
+        "config_text",
         "runner_mode",
         "next_scheduled_run",
         "created_by",
@@ -134,6 +136,7 @@ class Workflow(BaseModel):
                 if obj.get("project") is not None
                 else None,
                 "config": obj.get("config"),
+                "config_text": obj.get("config_text"),
                 "runner_mode": obj.get("runner_mode"),
                 "next_scheduled_run": obj.get("next_scheduled_run"),
                 "created_by": obj.get("created_by"),

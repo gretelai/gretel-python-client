@@ -31,8 +31,9 @@ class CreateWorkflowRequest(BaseModel):
     name: StrictStr = Field(...)
     project_id: StrictStr = Field(...)
     config: Optional[Dict[str, Any]] = None
+    config_text: Optional[StrictStr] = None
     runner_mode: Optional[StrictStr] = None
-    __properties = ["name", "project_id", "config", "runner_mode"]
+    __properties = ["name", "project_id", "config", "config_text", "runner_mode"]
 
     @validator("runner_mode")
     def runner_mode_validate_enum(cls, value):
@@ -88,6 +89,7 @@ class CreateWorkflowRequest(BaseModel):
                 "name": obj.get("name"),
                 "project_id": obj.get("project_id"),
                 "config": obj.get("config"),
+                "config_text": obj.get("config_text"),
                 "runner_mode": obj.get("runner_mode"),
             }
         )

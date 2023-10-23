@@ -1,3 +1,4 @@
+import json
 import sys
 import time
 
@@ -122,10 +123,11 @@ def get(sc: SessionContext, id: str):
 @pass_session
 def update(sc: SessionContext, workflow_id: str, config: str):
     with open(config, encoding="utf-8") as file:
-        workflow_config = yaml.safe_load(file)
+        # Temporarily load the yaml into a json string and upload that, we can upload raw yaml once the api changes land. -md
+        workflow_config = json.dumps(yaml.safe_load(file))
     workflow_api = get_workflows_api()
     updated_workflow = workflow_api.update_workflow_config(
-        workflow_id=workflow_id, body=workflow_config
+        workflow_id=workflow_id, body=workflow_config, _content_type="text/yaml"
     )
     sc.log.info("Updated workflow:")
     sc.print(data=updated_workflow.to_dict())

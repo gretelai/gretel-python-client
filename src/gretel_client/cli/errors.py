@@ -6,6 +6,7 @@ from typing import Dict, Generic, Optional, Type, TypeVar
 
 import click
 import urllib3.exceptions
+import yaml
 
 from gretel_client.cli.common import SessionContext
 from gretel_client.projects.exceptions import GretelResourceNotFound
@@ -89,12 +90,15 @@ class HandleApiClientError(_ErrorHandler, ApiException, ApiExceptionV1):
         return f"There was a problem with the API request ({self.ex.status})."
 
     def handle(self):
-        err_body = json.loads(self.ex.body)
-        err_sections = [
-            f"{self._get_error_message()}",
-            f'Reason: {err_body.get("message", ""), err_body.get("details", "")}',
-            f"Context: \n{self._context_to_str(err_body)}",
-        ]
+        err_sections = [f"{self._get_error_message()}"]
+        try:
+            err_body = json.loads(self.ex.body)
+            err_sections.append(
+                f'Reason: {err_body.get("message", ""), err_body.get("details", "")}',
+                f"Context: \n{self._context_to_str(err_body)}",
+            )
+        except:
+            err_sections.append(f"Reason: {self.ex.body}")
         self.sc.log.error("\n".join(err_sections))
         self.sc.exit(1)
 
