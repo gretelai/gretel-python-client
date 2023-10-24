@@ -1,4 +1,5 @@
 import os
+import uuid
 
 from pathlib import Path
 from typing import Callable
@@ -18,7 +19,7 @@ def data_file_path(get_fixture: Callable) -> Path:
 @pytest.fixture(scope="module")
 def gretel() -> Gretel:
     gretel = Gretel(
-        project_name="pytest-timeseries",
+        project_name=f"pytest-timeseries-{uuid.uuid4().hex[:8]}",
         api_key=os.getenv("GRETEL_API_KEY"),
         endpoint="https://api-dev.gretel.cloud",
     )
