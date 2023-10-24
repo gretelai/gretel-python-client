@@ -1,8 +1,4 @@
 {
     "type": "s3",
-    "name": "unit_test_name_edited",
-    "credentials": {
-        "access_key_id": "aa",
-        "secret_access_key": "zz"
-    }
+    "name": "unit_test_name_edited"
 }

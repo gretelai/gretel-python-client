@@ -461,3 +461,26 @@ def poll_and_print(
                 f"Exiting the script, but the job will remain running until it reaches the end state."
             )
         sc.exit(0)
+
+
+class _KVPairsType(click.ParamType):
+    name = "key/value pairs"
+
+    def convert(self, value, param, ctx):
+        if isinstance(value, dict):
+            return value
+
+        try:
+            value = value.strip()
+            if not value:
+                return {}
+            return {
+                k.strip(): v.strip()
+                for kvpair in value.split(",")
+                for k, v in (kvpair.split("="),)
+            }
+        except ValueError:
+            self.fail(f"{value!r} is not a valid key/value pair list")
+
+
+KVPairs = _KVPairsType()

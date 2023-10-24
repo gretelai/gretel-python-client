@@ -1,12 +1,15 @@
+import base64
 import json
 
 from json import JSONDecodeError
 from pathlib import Path
+from typing import Dict, Optional
 
 import click
 import yaml
 
 from gretel_client.cli.common import pass_session, SessionContext
+from gretel_client.cli.connection_credentials import aws_kms_flags, AWSKMSEncryption
 from gretel_client.config import get_session_config
 from gretel_client.rest_v1.api.connections_api import ConnectionsApi
 from gretel_client.rest_v1.models import CreateConnectionRequest
@@ -47,8 +50,14 @@ def _read_connection_file(file: str) -> dict:
     help="Specify the project to create the connection in.",
     required=False,
 )
+@aws_kms_flags("aws_kms")
 @pass_session
-def create(sc: SessionContext, from_file: str, project: str):
+def create(
+    sc: SessionContext,
+    from_file: str,
+    project: Optional[str],
+    aws_kms: Optional[AWSKMSEncryption],
+):
     connection_api = get_connections_api()
 
     conn = _read_connection_file(from_file)
@@ -62,15 +71,47 @@ def create(sc: SessionContext, from_file: str, project: str):
     project_id = conn.get("project_id")
 
     # `project` is set if `--project` is passed.
-    if project is not None:
+    if project:
+        if project_id and project_id != project:
+            sc.log.warning(
+                f"Overriding project {project_id} in connections config file with project {project} specified on the command line",
+            )
         project_id = project
 
     # `project_id` is unset at this point if no project flag is passed, and no
     # project id is configured on the connection file.
-    if project_id is None:
+    if not project_id:
         project_id = sc.project.project_guid
 
     conn["project_id"] = project_id
+
+    # Add more supported encryption providers here, if applicable
+    encryption_providers = [p for p in (aws_kms,) if p is not None]
+    if len(encryption_providers) > 1:
+        raise click.UsageError(
+            "Please specify options for at most one encryption provider only"
+        )
+    encryption_provider = encryption_providers[0] if encryption_providers else None
+
+    if conn.get("encrypted_credentials") is not None:
+        if conn.get("credentials") is not None:
+            raise ValueError(
+                "connection config must not specify both encrypted and plaintext credentials"
+            )
+        if encryption_provider is not None:
+            raise click.UsageError(
+                "Encryption provider options must not be used if connection config contains pre-encrypted "
+                "credentials",
+            )
+    elif encryption_provider is not None:
+        conn["encrypted_credentials"] = encryption_provider.apply(
+            conn.pop("credentials", None)
+        )
+    elif "credentials" not in conn:
+        raise ValueError(
+            "connection config contains neither plaintext nor encrypted credentials, "
+            "and you have not specified pre-encrypted credentials either."
+        )
 
     connection = connection_api.create_connection(CreateConnectionRequest(**conn))
 

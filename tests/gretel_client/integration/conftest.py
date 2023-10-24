@@ -19,6 +19,7 @@ from gretel_client.config import (
 from gretel_client.projects.models import Model
 from gretel_client.projects.projects import get_project, Project
 from gretel_client.rest.api.projects_api import ProjectsApi
+from gretel_client.rest_v1.api.connections_api import ConnectionsApi
 
 fixtures = Path(__file__).parent / "../fixtures"
 
@@ -67,6 +68,11 @@ def project():
 @pytest.fixture
 def projects_api() -> ProjectsApi:
     return get_session_config().get_api(ProjectsApi)
+
+
+@pytest.fixture
+def connections_api() -> ConnectionsApi:
+    return get_session_config().get_v1_api(ConnectionsApi)
 
 
 @pytest.fixture
