@@ -1,0 +1,14 @@
+{
+    "type": "test",
+    "name": "integration_test",
+    "encrypted_credentials": {
+        "aws_kms": {
+            "key_arn": "arn:aws:kms:us-west-2:632094185468:key/4bacf6e3-7df6-4e30-b79a-df2afb56f849",
+            "encryption_context": {
+                "foo": "bar",
+                "baz": "qux"
+            },
+            "data": "faXeFYXazMc2NQDYhoN6ZzdHKzJ/XvNx6WWWENcLB+QqD+jsHKRdCsFYLKEOr5OVwpr0vCvLI+prPg7z2ffttymppuULExNG72GJ+R1nsyJpiHlwfdbwTOLEdXCFoZsm/qKq4r4C9R7uvQ4mwi+ihnxDZonkVJoQHL+ZOYGyYcbzYhQePamnZKL69SPg+br1s78kHxAG4zTxMRnHh0EzfLUGnDl9uUXYFJZxdeOXIgMEgVH04P5dh4hyS71FcDMNKg6y2h2nxvvBVkkE4brdtWLENXGpRz3mSNquWONobwW/A7zxIgzzlFEqhOVIH0cAk7xepL9g2n2Pvt7PdqRL6tPnwJGLvlmuCijigEIeqAsG/+dz17sM0gN/2pXgUNfENxkLtlGS2W/IgjgcFqS1EPoxluRuS6gkt05flLNR6sjUnVCPiHJLeP1SmgprdBDq44uept+2gpDp/zWiJG5fL5klnHaUXAEQGMqT9S648lEDHk6Lzq2tFQg4nb23+ENqrZkBhgR57aRtZOrAB3p1TitafOiagc2gGNq/RDKzyusTnlw2en/+GP8J3AM1pH6BbdHpFwed/5ahQ/N5yk8k7s0vTGCBB59g2GIahhDmgGz4s/6rjqf86WEkOEyJhbjpEbTOnQ/4oxdokOdNm4lNDMmDgOwsrtq730sFfvKhxEA="
+        }
+    }
+}

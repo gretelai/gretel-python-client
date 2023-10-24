@@ -32,7 +32,7 @@ from gretel_client.rest_v1.models.workflow_run_cancellation_request import (
 
 class WorkflowRun(BaseModel):
     """
-    Next tag: 18
+    WorkflowRun
     """
 
     id: StrictStr = Field(...)
@@ -40,6 +40,7 @@ class WorkflowRun(BaseModel):
     project_id: StrictStr = Field(...)
     project: Optional[Project] = None
     config: Optional[Dict[str, Any]] = None
+    config_text: Optional[StrictStr] = None
     runner_mode: StrictStr = Field(...)
     status: StrictStr = Field(...)
     created_by: StrictStr = Field(...)
@@ -58,6 +59,7 @@ class WorkflowRun(BaseModel):
         "project_id",
         "project",
         "config",
+        "config_text",
         "runner_mode",
         "status",
         "created_by",
@@ -155,6 +157,7 @@ class WorkflowRun(BaseModel):
                 if obj.get("project") is not None
                 else None,
                 "config": obj.get("config"),
+                "config_text": obj.get("config_text"),
                 "runner_mode": obj.get("runner_mode"),
                 "status": obj.get("status"),
                 "created_by": obj.get("created_by"),

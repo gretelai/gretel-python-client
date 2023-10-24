@@ -1819,7 +1819,7 @@ class WorkflowsApi(object):
 
     @validate_arguments
     def update_workflow_config(
-        self, workflow_id: StrictStr, body: Dict[str, Any], **kwargs
+        self, workflow_id: StrictStr, body: StrictStr, **kwargs
     ) -> Workflow:  # noqa: E501
         """update_workflow_config  # noqa: E501
 
@@ -1833,7 +1833,7 @@ class WorkflowsApi(object):
         :param workflow_id: (required)
         :type workflow_id: str
         :param body: (required)
-        :type body: object
+        :type body: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
         :param _request_timeout: timeout setting for this request. If one
@@ -1856,7 +1856,7 @@ class WorkflowsApi(object):
 
     @validate_arguments
     def update_workflow_config_with_http_info(
-        self, workflow_id: StrictStr, body: Dict[str, Any], **kwargs
+        self, workflow_id: StrictStr, body: StrictStr, **kwargs
     ) -> ApiResponse:  # noqa: E501
         """update_workflow_config  # noqa: E501
 
@@ -1870,7 +1870,7 @@ class WorkflowsApi(object):
         :param workflow_id: (required)
         :type workflow_id: str
         :param body: (required)
-        :type body: object
+        :type body: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
         :param _preload_content: if False, the ApiResponse.data will

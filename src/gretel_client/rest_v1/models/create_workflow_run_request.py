@@ -30,7 +30,8 @@ class CreateWorkflowRunRequest(BaseModel):
 
     workflow_id: StrictStr = Field(...)
     config: Optional[Dict[str, Any]] = None
-    __properties = ["workflow_id", "config"]
+    config_text: Optional[StrictStr] = None
+    __properties = ["workflow_id", "config", "config_text"]
 
     class Config:
         """Pydantic configuration"""
@@ -66,6 +67,10 @@ class CreateWorkflowRunRequest(BaseModel):
             return CreateWorkflowRunRequest.parse_obj(obj)
 
         _obj = CreateWorkflowRunRequest.parse_obj(
-            {"workflow_id": obj.get("workflow_id"), "config": obj.get("config")}
+            {
+                "workflow_id": obj.get("workflow_id"),
+                "config": obj.get("config"),
+                "config_text": obj.get("config_text"),
+            }
         )
         return _obj
