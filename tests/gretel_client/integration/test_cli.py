@@ -31,8 +31,10 @@ def clear_session_config():
     """
     with patch.dict(os.environ, {}, clear=True):
         configure_session(ClientConfig())
-    yield
-    configure_session(_load_config())
+    try:
+        yield
+    finally:
+        configure_session(_load_config())
 
 
 def test_cli(runner):

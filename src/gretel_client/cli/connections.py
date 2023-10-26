@@ -12,7 +12,10 @@ from gretel_client.cli.common import pass_session, SessionContext
 from gretel_client.cli.connection_credentials import aws_kms_flags, AWSKMSEncryption
 from gretel_client.config import get_session_config
 from gretel_client.rest_v1.api.connections_api import ConnectionsApi
-from gretel_client.rest_v1.models import CreateConnectionRequest
+from gretel_client.rest_v1.models import (
+    CreateConnectionRequest,
+    UpdateConnectionRequest,
+)
 
 
 @click.group(
@@ -130,7 +133,17 @@ def create(
 def update(sc: SessionContext, id: str, from_file: str):
     connection_api = get_connections_api()
     conn = _read_connection_file(from_file)
-    connection = connection_api.update_connection(connection_id=id, connection=conn)
+    existing_connection = connection_api.get_connection(connection_id=id)
+    if existing_connection.type.lower() != conn["type"].lower():
+        raise ValueError(
+            f"cannot change type of connect {id} from '{existing_connection.type}' to '{conn['type']}'"
+        )
+    del conn["type"]
+    update_conn_req = UpdateConnectionRequest(**conn)
+    connection = connection_api.update_connection(
+        connection_id=id,
+        update_connection_request=update_conn_req,
+    )
 
     sc.log.info("Updated connection:")
     sc.print(data=connection.to_dict())
