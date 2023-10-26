@@ -47,6 +47,9 @@ from gretel_client.rest_v1.models.create_workflow_run_request import (
 )
 from gretel_client.rest_v1.models.event_component import EventComponent
 from gretel_client.rest_v1.models.get_log_response import GetLogResponse
+from gretel_client.rest_v1.models.get_log_upload_url_response import (
+    GetLogUploadURLResponse,
+)
 from gretel_client.rest_v1.models.get_workflows_response import GetWorkflowsResponse
 from gretel_client.rest_v1.models.google_protobuf_any import GoogleProtobufAny
 from gretel_client.rest_v1.models.list_connections_response import (
