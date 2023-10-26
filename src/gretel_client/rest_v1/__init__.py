@@ -20,6 +20,7 @@ __version__ = "1.0.0"
 from gretel_client.rest_v1.api.activity_api import ActivityApi
 from gretel_client.rest_v1.api.connections_api import ConnectionsApi
 from gretel_client.rest_v1.api.logs_api import LogsApi
+from gretel_client.rest_v1.api.projects_api import ProjectsApi
 from gretel_client.rest_v1.api.workflows_api import WorkflowsApi
 from gretel_client.rest_v1.api_client import ApiClient
 
@@ -58,6 +59,7 @@ from gretel_client.rest_v1.models.list_connections_response import (
 from gretel_client.rest_v1.models.log_envelope import LogEnvelope
 from gretel_client.rest_v1.models.project import Project
 from gretel_client.rest_v1.models.search_activity_response import SearchActivityResponse
+from gretel_client.rest_v1.models.search_projects_response import SearchProjectsResponse
 from gretel_client.rest_v1.models.search_workflow_runs_response import (
     SearchWorkflowRunsResponse,
 )
