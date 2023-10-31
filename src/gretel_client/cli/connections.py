@@ -9,7 +9,8 @@ import click
 import yaml
 
 from gretel_client.cli.common import pass_session, SessionContext
-from gretel_client.cli.connection_credentials import aws_kms_flags, AWSKMSEncryption
+from gretel_client.cli.connection_credentials import encryption_flags
+from gretel_client.cli.connection_credentials_aws_kms import AWSKMSEncryption
 from gretel_client.config import get_session_config
 from gretel_client.rest_v1.api.connections_api import ConnectionsApi
 from gretel_client.rest_v1.models import (
@@ -53,7 +54,7 @@ def _read_connection_file(file: str) -> dict:
     help="Specify the project to create the connection in.",
     required=False,
 )
-@aws_kms_flags("aws_kms")
+@encryption_flags(AWSKMSEncryption, "aws_kms")
 @pass_session
 def create(
     sc: SessionContext,

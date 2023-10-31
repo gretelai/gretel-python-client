@@ -1,22 +1,67 @@
 import base64
-import functools
 import json
 import re
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Optional
-
-import click
-
-from gretel_client.cli.common import KVPairs
+from typing import Optional, Type
 
 _STD_B64_RE = re.compile(r"^[\sa-zA-Z0-9/+]+(?:=\s*){,2}$")
 _URL_B64_RE = re.compile(r"^[\sa-zA-Z0-9_-]+(?:=\s*){,2}$")
 
 
 class CredentialsEncryption(ABC):
+    _encrypted_creds_file: Optional[Path]
+
+    def __init__(self, encrypted_credentials_file: Optional[Path]):
+        self._encrypted_creds_file = encrypted_credentials_file
+
+    @classmethod
     @abstractmethod
+    def cli_decorate(cls, fn, param_name: str):
+        """
+        Decorates a CLI entrypoint with flags pertaining to this
+        encryption provider implementation.
+
+        Args:
+            param_name: the name of the parameter receiving the (optional)
+                instance of the respective encryption provider.
+
+        Returns:
+            A decorated version of fn.
+        """
+        ...
+
+    @abstractmethod
+    def _encrypt_payload(self, payload: bytes) -> bytes:
+        """
+        Encrypts the given payload using the provider-specific
+        encryption mechanism.
+
+        Args:
+            payload: the encryption payload. This will always be
+                a serialized form of the plaintext credentials.
+
+        Returns:
+            the encrypted ciphertext as a bytes object.
+        """
+        ...
+
+    @abstractmethod
+    def _make_encrypted_creds_config(self, ciphertext: bytes) -> dict:
+        """
+        Creates an `encrypted_credentials` configuration dictionary.
+
+        Args:
+            ciphertext: the encrypted credentials ciphertext.
+
+        Returns:
+            a dictionary that can be used as the `encrypted_credentials`
+            section in a connection config, incorporating the given
+            ``ciphertext`` plus metadata.
+        """
+        ...
+
     def apply(self, credentials: Optional[dict]) -> dict:
         """
         Applies encryption to the credentials of a connection.
@@ -30,29 +75,10 @@ class CredentialsEncryption(ABC):
             the ``encrypted_credentials`` config section to be used in the
             connection.
         """
-        ...
+        ciphertext = self._get_ciphertext(credentials)
+        return self._make_encrypted_creds_config(ciphertext)
 
-
-class AWSKMSEncryption(CredentialsEncryption):
-
-    _key_arn: str
-    _key_region: str
-    _encryption_context: dict
-    _encrypted_creds_file: Optional[Path]
-
-    def __init__(
-        self,
-        key_arn: str,
-        key_region: str,
-        encryption_context: Optional[dict],
-        encrypted_creds_file: Optional[Path],
-    ):
-        self._key_arn = key_arn
-        self._key_region = key_region
-        self._encryption_context = encryption_context or {}
-        self._encrypted_creds_file = encrypted_creds_file
-
-    def _get_ciphertext(self, creds: Optional[dict] = None) -> bytes:
+    def _get_ciphertext(self, creds: Optional[dict]) -> bytes:
         if creds is None:
             if self._encrypted_creds_file is None:
                 raise ValueError(
@@ -87,128 +113,25 @@ class AWSKMSEncryption(CredentialsEncryption):
                 "the connection config contains plaintext credentials"
             )
 
-        # Encrypt credentials
-        try:
-            import boto3
-        except ImportError as e:
-            raise Exception(
-                "You are trying to encrypt connection credentials with an AWS KMS key, "
-                "but the AWS client libraries could not be found. If you want to use this "
-                "feature, please re-install the Gretel CLI with the [aws] option.",
-            ) from e
-
-        kms_client = boto3.client("kms", region_name=self._key_region)
         creds_json = json.dumps(creds)
-        encrypt_response = kms_client.encrypt(
-            KeyId=self._key_arn,
-            Plaintext=creds_json.encode("utf-8"),
-            EncryptionContext=self._encryption_context,
-        )
-        return encrypt_response["CiphertextBlob"]
-
-    def apply(self, credentials: Optional[dict]) -> dict:
-        ciphertext = self._get_ciphertext(credentials)
-
-        return {
-            "aws_kms": {
-                "key_arn": self._key_arn,
-                "encryption_context": self._encryption_context,
-                "data": base64.b64encode(ciphertext).decode("ascii"),
-            }
-        }
+        return self._encrypt_payload(creds_json.encode("utf-8"))
 
 
-def _aws_kms_decorate(fn, param_name: str):
-    @click.option(
-        "--aws-kms-key-arn",
-        metavar="KEY-ARN",
-        help="ARN of the AWS KMS key used for Customer-managed credentials encryption",
-        required=False,
-    )
-    @click.option(
-        "--aws-kms-encryption-context",
-        metavar="KEY1=VALUE1[,...,KEYn=VALUEn]",
-        help="Comma-separated key/value pairs for AWS KMS encryption context",
-        type=KVPairs,
-        required=False,
-    )
-    @click.option(
-        "--aws-kms-encrypted-credentials",
-        metavar="FILE",
-        help="Path to the file containing the credentials encrypted using AWS KMS",
-        type=click.Path(
-            exists=True,
-            dir_okay=False,
-            path_type=Path,
-        ),
-        required=False,
-    )
-    @functools.wraps(fn)
-    def proxy(
-        aws_kms_key_arn: Optional[str],
-        aws_kms_encryption_context: Optional[dict],
-        aws_kms_encrypted_credentials: Optional[Path],
-        **kwargs,
-    ):
-        kwargs[param_name] = _process_aws_kms_params(
-            aws_kms_key_arn,
-            aws_kms_encryption_context,
-            aws_kms_encrypted_credentials,
-        )
-        return fn(**kwargs)
-
-    return proxy
-
-
-def _process_aws_kms_params(
-    aws_kms_key_arn: Optional[str],
-    aws_kms_encryption_context: Optional[dict],
-    aws_kms_encrypted_credentials: Optional[Path],
-) -> Optional[AWSKMSEncryption]:
-    if (
-        aws_kms_key_arn is None
-        and aws_kms_encryption_context is None
-        and aws_kms_encrypted_credentials is None
-    ):
-        return None
-
-    if aws_kms_key_arn is None:
-        raise click.UsageError(
-            "The --aws-kms-key-arn option must always be specified in conjunction with other AWS KMS options",
-        )
-
-    parsed_arn = aws_kms_key_arn.split(":", 5)
-    if parsed_arn[:3] != ["arn", "aws", "kms"] or len(parsed_arn) < 6:
-        raise click.BadOptionUsage(
-            "--aws-kms-key-arn",
-            f"Key ARN {aws_kms_key_arn} is invalid",
-        )
-
-    key_region = parsed_arn[3]
-
-    return AWSKMSEncryption(
-        aws_kms_key_arn,
-        key_region,
-        aws_kms_encryption_context,
-        aws_kms_encrypted_credentials,
-    )
-
-
-def aws_kms_flags(param_name: str):
+def encryption_flags(cls: Type[CredentialsEncryption], param_name: str):
     """
-    Returns a decorator to add AWS KMS-related flags to a command function.
+    Returns a decorator to flags for the given encryption provider to a command function.
 
     Args:
         param_name: the name of the parameter of the function to be decorated
-            receiving the ``Optional[AWSKMSEncryption]`` value.
+            receiving the optional provider instance.
 
     Returns:
-        a decorator that adds AWS KMS-related flags to a command function,
-        exposing them via a single ``Optional[AWSKMSEncryption]``-typed
-        value.
+        a decorator that adds encryption-related flags to a command function
+        for a given provider, exposing them via a single optional
+        ``CredentialsEncryption`` value.
     """
 
     def wrapper(fn):
-        return _aws_kms_decorate(fn, param_name)
+        return cls.cli_decorate(fn, param_name)
 
     return wrapper
