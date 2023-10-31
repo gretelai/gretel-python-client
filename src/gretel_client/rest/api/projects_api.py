@@ -1004,6 +1004,7 @@ class ProjectsApi(object):
 
             Keyword Args:
                 key (str): Download artifact by key. [optional]
+                uncompressed (str): Return a URL pointing to the uncompressed version of a gzip compressed file. [optional]
                 _return_http_data_only (bool): response data without head status
                     code and headers. Default is True.
                 _preload_content (bool): if False, the urllib3.HTTPResponse object
@@ -1068,28 +1069,40 @@ class ProjectsApi(object):
                 "all": [
                     "project_id",
                     "key",
+                    "uncompressed",
                 ],
                 "required": [
                     "project_id",
                 ],
                 "nullable": [],
-                "enum": [],
+                "enum": [
+                    "uncompressed",
+                ],
                 "validation": [],
             },
             root_map={
                 "validations": {},
-                "allowed_values": {},
+                "allowed_values": {
+                    ("uncompressed",): {
+                        "FALSE": "false",
+                        "TRUE": "true",
+                        "AUTO": "auto",
+                    },
+                },
                 "openapi_types": {
                     "project_id": (str,),
                     "key": (str,),
+                    "uncompressed": (str,),
                 },
                 "attribute_map": {
                     "project_id": "project_id",
                     "key": "key",
+                    "uncompressed": "uncompressed",
                 },
                 "location_map": {
                     "project_id": "path",
                     "key": "query",
+                    "uncompressed": "query",
                 },
                 "collection_format_map": {},
             },
@@ -1464,6 +1477,7 @@ class ProjectsApi(object):
                 type (str):
 
             Keyword Args:
+                uncompressed (str): Return a URL pointing to the uncompressed version of a gzip compressed file. [optional]
                 _return_http_data_only (bool): response data without head status
                     code and headers. Default is True.
                 _preload_content (bool): if False, the urllib3.HTTPResponse object
@@ -1531,6 +1545,7 @@ class ProjectsApi(object):
                     "project_id",
                     "model_id",
                     "type",
+                    "uncompressed",
                 ],
                 "required": [
                     "project_id",
@@ -1540,6 +1555,7 @@ class ProjectsApi(object):
                 "nullable": [],
                 "enum": [
                     "type",
+                    "uncompressed",
                 ],
                 "validation": [],
             },
@@ -1560,21 +1576,29 @@ class ProjectsApi(object):
                         "DATA": "data",
                         "MODEL_LOGS": "model_logs",
                     },
+                    ("uncompressed",): {
+                        "FALSE": "false",
+                        "TRUE": "true",
+                        "AUTO": "auto",
+                    },
                 },
                 "openapi_types": {
                     "project_id": (str,),
                     "model_id": (str,),
                     "type": (str,),
+                    "uncompressed": (str,),
                 },
                 "attribute_map": {
                     "project_id": "project_id",
                     "model_id": "model_id",
                     "type": "type",
+                    "uncompressed": "uncompressed",
                 },
                 "location_map": {
                     "project_id": "path",
                     "model_id": "path",
                     "type": "query",
+                    "uncompressed": "query",
                 },
                 "collection_format_map": {},
             },
@@ -1986,6 +2010,7 @@ class ProjectsApi(object):
                 type (str):
 
             Keyword Args:
+                uncompressed (str): Return a URL pointing to the uncompressed version of a gzip compressed file. [optional]
                 _return_http_data_only (bool): response data without head status
                     code and headers. Default is True.
                 _preload_content (bool): if False, the urllib3.HTTPResponse object
@@ -2055,6 +2080,7 @@ class ProjectsApi(object):
                     "model_id",
                     "record_handler_id",
                     "type",
+                    "uncompressed",
                 ],
                 "required": [
                     "project_id",
@@ -2065,6 +2091,7 @@ class ProjectsApi(object):
                 "nullable": [],
                 "enum": [
                     "type",
+                    "uncompressed",
                 ],
                 "validation": [],
             },
@@ -2077,24 +2104,32 @@ class ProjectsApi(object):
                         "RUN_LOGS": "run_logs",
                         "OUTPUT_FILES": "output_files",
                     },
+                    ("uncompressed",): {
+                        "FALSE": "false",
+                        "TRUE": "true",
+                        "AUTO": "auto",
+                    },
                 },
                 "openapi_types": {
                     "project_id": (str,),
                     "model_id": (str,),
                     "record_handler_id": (str,),
                     "type": (str,),
+                    "uncompressed": (str,),
                 },
                 "attribute_map": {
                     "project_id": "project_id",
                     "model_id": "model_id",
                     "record_handler_id": "record_handler_id",
                     "type": "type",
+                    "uncompressed": "uncompressed",
                 },
                 "location_map": {
                     "project_id": "path",
                     "model_id": "path",
                     "record_handler_id": "path",
                     "type": "query",
+                    "uncompressed": "query",
                 },
                 "collection_format_map": {},
             },

@@ -702,6 +702,7 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
     api_instance = projects_api.ProjectsApi(api_client)
     project_id = "project_id_example" # str | Project id
     key = "key_example" # str | Download artifact by key (optional)
+    uncompressed = "false" # str | Return a URL pointing to the uncompressed version of a gzip compressed file (optional)
 
     # example passing only required values which don't have defaults set
     try:
@@ -713,7 +714,7 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
     # example passing only required values which don't have defaults set
     # and optional values
     try:
-        api_response = api_instance.download_artifact(project_id, key=key)
+        api_response = api_instance.download_artifact(project_id, key=key, uncompressed=uncompressed)
         pprint(api_response)
     except gretel_client.rest.ApiException as e:
         print("Exception when calling ProjectsApi->download_artifact: %s\n" % e)
@@ -726,6 +727,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **project_id** | **str**| Project id |
  **key** | **str**| Download artifact by key | [optional]
+ **uncompressed** | **str**| Return a URL pointing to the uncompressed version of a gzip compressed file | [optional]
 
 ### Return type
 
@@ -1030,11 +1032,21 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
     project_id = "project_id_example" # str | Project id
     model_id = "model_id_example" # str | Model id
     type = "model" # str | 
+    uncompressed = "false" # str | Return a URL pointing to the uncompressed version of a gzip compressed file (optional)
 
     # example passing only required values which don't have defaults set
     try:
         # Get model details
         api_response = api_instance.get_model_artifact(project_id, model_id, type)
+        pprint(api_response)
+    except gretel_client.rest.ApiException as e:
+        print("Exception when calling ProjectsApi->get_model_artifact: %s\n" % e)
+
+    # example passing only required values which don't have defaults set
+    # and optional values
+    try:
+        # Get model details
+        api_response = api_instance.get_model_artifact(project_id, model_id, type, uncompressed=uncompressed)
         pprint(api_response)
     except gretel_client.rest.ApiException as e:
         print("Exception when calling ProjectsApi->get_model_artifact: %s\n" % e)
@@ -1048,6 +1060,7 @@ Name | Type | Description  | Notes
  **project_id** | **str**| Project id |
  **model_id** | **str**| Model id |
  **type** | **str**|  |
+ **uncompressed** | **str**| Return a URL pointing to the uncompressed version of a gzip compressed file | [optional]
 
 ### Return type
 
@@ -1362,11 +1375,21 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
     model_id = "model_id_example" # str | Model id
     record_handler_id = "record_handler_id_example" # str | Record handler id
     type = "run_report_json" # str | 
+    uncompressed = "false" # str | Return a URL pointing to the uncompressed version of a gzip compressed file (optional)
 
     # example passing only required values which don't have defaults set
     try:
         # Get record handler artifact
         api_response = api_instance.get_record_handler_artifact(project_id, model_id, record_handler_id, type)
+        pprint(api_response)
+    except gretel_client.rest.ApiException as e:
+        print("Exception when calling ProjectsApi->get_record_handler_artifact: %s\n" % e)
+
+    # example passing only required values which don't have defaults set
+    # and optional values
+    try:
+        # Get record handler artifact
+        api_response = api_instance.get_record_handler_artifact(project_id, model_id, record_handler_id, type, uncompressed=uncompressed)
         pprint(api_response)
     except gretel_client.rest.ApiException as e:
         print("Exception when calling ProjectsApi->get_record_handler_artifact: %s\n" % e)
@@ -1381,6 +1404,7 @@ Name | Type | Description  | Notes
  **model_id** | **str**| Model id |
  **record_handler_id** | **str**| Record handler id |
  **type** | **str**|  |
+ **uncompressed** | **str**| Return a URL pointing to the uncompressed version of a gzip compressed file | [optional]
 
 ### Return type
 
