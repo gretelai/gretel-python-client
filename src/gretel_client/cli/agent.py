@@ -139,7 +139,7 @@ def start(
         ]
 
     projects = []
-    if project is not None and project != "":
+    if project:
         projects = [p.strip() for p in project.split(",")]
 
     config = AgentConfig(
