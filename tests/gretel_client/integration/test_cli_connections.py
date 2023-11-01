@@ -96,16 +96,16 @@ def test_connection_crud_from_cli(get_fixture: Callable, project: Project):
     assert cmd.exit_code == 0
 
 
+@pytest.mark.skipif(
+    not os.getenv("GRETEL_CREDS_ENCRYPTION_KEY_ARN"),
+    reason="Skipping hybrid tests based on missing GRETEL_CREDS_ENCRYPTION_KEY_ARN environment variable",
+)
 def test_hybrid_connection_crud_from_cli(
     get_fixture: Callable,
     project: Project,
     connections_api: ConnectionsApi,
 ):
-    key_arn = os.getenv(
-        "GRETEL_CREDS_ENCRYPTION_KEY_ARN",
-        "arn:aws:kms:us-west-2:632094185468:key/4bacf6e3-7df6-4e30-b79a-df2afb56f849",
-    )
-    assert key_arn, "GRETEL_CREDS_ENCRYPTION_KEY_ARN must be set for this test"
+    key_arn = os.getenv("GRETEL_CREDS_ENCRYPTION_KEY_ARN")
 
     runner = CliRunner()
 

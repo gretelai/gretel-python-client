@@ -18,7 +18,7 @@ def reqs(file_path):
         ]
 
 
-aws_deps = ["smart_open[s3]"]
+aws_deps = ["boto3", "smart_open[s3]"]
 gcp_deps = ["smart_open[gcs]"]
 azure_deps = ["smart_open[azure]", "azure-identity"]
 
