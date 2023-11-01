@@ -7,7 +7,7 @@ from gretel_client.config import RunnerMode
 from gretel_client.docker import AuthStrategy, DockerError, pull_image
 from gretel_client.projects import Project
 from gretel_client.projects.models import Model
-from python.tests.gretel_client.integration.conftest import pytest_skip_on_windows
+from .conftest import pytest_skip_on_windows
 
 
 @pytest.mark.skip("Update and enable after PR#3072 gets merged")
