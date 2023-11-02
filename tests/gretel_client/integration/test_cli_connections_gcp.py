@@ -24,7 +24,7 @@ def _parse_output(output: str) -> dict:
 
 
 @pytest.mark.skipif(
-    GRETEL_CREDS_GCP_ENCRYPTION_KEY_RESOURCE_NAME == "",
+    not os.getenv("GRETEL_CREDS_GCP_ENCRYPTION_KEY_RESOURCE_NAME"),
     reason="Skipping hybrid tests based on missing GRETEL_CREDS_GCP_ENCRYPTION_KEY_RESOURCE_NAME environment variable",
 )
 def test_gcp_hybrid_connection_crud_from_cli(
