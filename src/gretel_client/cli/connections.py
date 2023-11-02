@@ -1,9 +1,8 @@
-import base64
 import json
 
 from json import JSONDecodeError
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 import click
 import yaml
@@ -11,6 +10,9 @@ import yaml
 from gretel_client.cli.common import pass_session, SessionContext
 from gretel_client.cli.connection_credentials import encryption_flags
 from gretel_client.cli.connection_credentials_aws_kms import AWSKMSEncryption
+from gretel_client.cli.connection_credentials_azure_key_vault import (
+    AzureKeyVaultEncryption,
+)
 from gretel_client.cli.connection_credentials_gcp_kms import GCPKMSEncryption
 from gretel_client.config import get_session_config
 from gretel_client.rest_v1.api.connections_api import ConnectionsApi
@@ -57,6 +59,7 @@ def _read_connection_file(file: str) -> dict:
 )
 @encryption_flags(AWSKMSEncryption, "aws_kms")
 @encryption_flags(GCPKMSEncryption, "gcp_kms")
+@encryption_flags(AzureKeyVaultEncryption, "azure_key_vault")
 @pass_session
 def create(
     sc: SessionContext,
@@ -64,6 +67,7 @@ def create(
     project: Optional[str],
     aws_kms: Optional[AWSKMSEncryption],
     gcp_kms: Optional[GCPKMSEncryption],
+    azure_key_vault: Optional[AzureKeyVaultEncryption],
 ):
     connection_api = get_connections_api()
 
@@ -94,12 +98,7 @@ def create(
 
     # Add more supported encryption providers here, if applicable
     encryption_providers = [
-        p
-        for p in (
-            aws_kms,
-            gcp_kms,
-        )
-        if p is not None
+        p for p in (aws_kms, gcp_kms, azure_key_vault) if p is not None
     ]
     if len(encryption_providers) > 1:
         raise click.UsageError(
