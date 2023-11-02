@@ -19,7 +19,7 @@ def reqs(file_path):
 
 
 aws_deps = ["boto3", "smart_open[s3]"]
-gcp_deps = ["smart_open[gcs]"]
+gcp_deps = ["smart_open[gcs]", "google-cloud-kms"]
 azure_deps = ["smart_open[azure]", "azure-identity"]
 
 setup(

@@ -11,6 +11,7 @@ import yaml
 from gretel_client.cli.common import pass_session, SessionContext
 from gretel_client.cli.connection_credentials import encryption_flags
 from gretel_client.cli.connection_credentials_aws_kms import AWSKMSEncryption
+from gretel_client.cli.connection_credentials_gcp_kms import GCPKMSEncryption
 from gretel_client.config import get_session_config
 from gretel_client.rest_v1.api.connections_api import ConnectionsApi
 from gretel_client.rest_v1.models import (
@@ -55,12 +56,14 @@ def _read_connection_file(file: str) -> dict:
     required=False,
 )
 @encryption_flags(AWSKMSEncryption, "aws_kms")
+@encryption_flags(GCPKMSEncryption, "gcp_kms")
 @pass_session
 def create(
     sc: SessionContext,
     from_file: str,
     project: Optional[str],
     aws_kms: Optional[AWSKMSEncryption],
+    gcp_kms: Optional[GCPKMSEncryption],
 ):
     connection_api = get_connections_api()
 
@@ -90,7 +93,14 @@ def create(
     conn["project_id"] = project_id
 
     # Add more supported encryption providers here, if applicable
-    encryption_providers = [p for p in (aws_kms,) if p is not None]
+    encryption_providers = [
+        p
+        for p in (
+            aws_kms,
+            gcp_kms,
+        )
+        if p is not None
+    ]
     if len(encryption_providers) > 1:
         raise click.UsageError(
             "Please specify options for at most one encryption provider only"
