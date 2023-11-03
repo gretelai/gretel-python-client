@@ -81,9 +81,10 @@ class WorkflowRun(BaseModel):
             "RUNNER_MODE_UNSET",
             "RUNNER_MODE_CLOUD",
             "RUNNER_MODE_HYBRID",
+            "RUNNER_MODE_INVALID",
         ):
             raise ValueError(
-                "must be one of enum values ('RUNNER_MODE_UNSET', 'RUNNER_MODE_CLOUD', 'RUNNER_MODE_HYBRID')"
+                "must be one of enum values ('RUNNER_MODE_UNSET', 'RUNNER_MODE_CLOUD', 'RUNNER_MODE_HYBRID', 'RUNNER_MODE_INVALID')"
             )
         return value
 

@@ -21,7 +21,7 @@ import re  # noqa: F401
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, StrictBool, StrictStr
+from pydantic import BaseModel, StrictBool, StrictStr, validator
 
 
 class Project(BaseModel):
@@ -38,6 +38,7 @@ class Project(BaseModel):
     owner: Optional[StrictStr] = None
     color: Optional[StrictStr] = None
     public: Optional[StrictBool] = None
+    runner_mode: Optional[StrictStr] = None
     modified: Optional[datetime] = None
     created: Optional[datetime] = None
     __properties = [
@@ -50,9 +51,27 @@ class Project(BaseModel):
         "owner",
         "color",
         "public",
+        "runner_mode",
         "modified",
         "created",
     ]
+
+    @validator("runner_mode")
+    def runner_mode_validate_enum(cls, value):
+        """Validates the enum"""
+        if value is None:
+            return value
+
+        if value not in (
+            "RUNNER_MODE_UNSET",
+            "RUNNER_MODE_CLOUD",
+            "RUNNER_MODE_HYBRID",
+            "RUNNER_MODE_INVALID",
+        ):
+            raise ValueError(
+                "must be one of enum values ('RUNNER_MODE_UNSET', 'RUNNER_MODE_CLOUD', 'RUNNER_MODE_HYBRID', 'RUNNER_MODE_INVALID')"
+            )
+        return value
 
     class Config:
         """Pydantic configuration"""
@@ -98,6 +117,7 @@ class Project(BaseModel):
                 "owner": obj.get("owner"),
                 "color": obj.get("color"),
                 "public": obj.get("public"),
+                "runner_mode": obj.get("runner_mode"),
                 "modified": obj.get("modified"),
                 "created": obj.get("created"),
             }
