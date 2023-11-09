@@ -11,3 +11,4 @@
 
 from gretel_client.rest.model.artifact import Artifact
 from gretel_client.rest.model.project import Project
+from gretel_client.rest.model.project_invite import ProjectInvite

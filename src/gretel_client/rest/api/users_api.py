@@ -36,6 +36,236 @@ class UsersApi(object):
             api_client = ApiClient()
         self.api_client = api_client
 
+        def __accept_users_me_invites(self, invite_id, **kwargs):
+            """accept_users_me_invites  # noqa: E501
+
+            Accept the given invite for the current user  # noqa: E501
+            This method makes a synchronous HTTP request by default. To make an
+            asynchronous HTTP request, please pass async_req=True
+
+            >>> thread = api.accept_users_me_invites(invite_id, async_req=True)
+            >>> result = thread.get()
+
+            Args:
+                invite_id (str): ID of the invite to accept
+
+            Keyword Args:
+                _return_http_data_only (bool): response data without head status
+                    code and headers. Default is True.
+                _preload_content (bool): if False, the urllib3.HTTPResponse object
+                    will be returned without reading/decoding response data.
+                    Default is True.
+                _request_timeout (float/tuple): timeout setting for this request. If one
+                    number provided, it will be total request timeout. It can also
+                    be a pair (tuple) of (connection, read) timeouts.
+                    Default is None.
+                _check_input_type (bool): specifies if type checking
+                    should be done one the data sent to the server.
+                    Default is True.
+                _check_return_type (bool): specifies if type checking
+                    should be done one the data received from the server.
+                    Default is True.
+                _host_index (int/None): specifies the index of the server
+                    that we want to use.
+                    Default is read from the configuration.
+                async_req (bool): execute request asynchronously
+
+            Returns:
+                {str: (bool, date, datetime, dict, float, int, list, str, none_type)}
+                    If the method is called asynchronously, returns the request
+                    thread.
+            """
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
+            )
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            kwargs["invite_id"] = invite_id
+            return self.call_with_http_info(**kwargs)
+
+        self.accept_users_me_invites = _Endpoint(
+            settings={
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/users/me/invites/{invite_id}",
+                "operation_id": "accept_users_me_invites",
+                "http_method": "PATCH",
+                "servers": None,
+            },
+            params_map={
+                "all": [
+                    "invite_id",
+                ],
+                "required": [
+                    "invite_id",
+                ],
+                "nullable": [],
+                "enum": [],
+                "validation": [],
+            },
+            root_map={
+                "validations": {},
+                "allowed_values": {},
+                "openapi_types": {
+                    "invite_id": (str,),
+                },
+                "attribute_map": {
+                    "invite_id": "invite_id",
+                },
+                "location_map": {
+                    "invite_id": "path",
+                },
+                "collection_format_map": {},
+            },
+            headers_map={
+                "accept": ["application/json"],
+                "content_type": [],
+            },
+            api_client=api_client,
+            callable=__accept_users_me_invites,
+        )
+
+        def __get_users_me_invites(self, **kwargs):
+            """get_users_me_invites  # noqa: E501
+
+            This method makes a synchronous HTTP request by default. To make an
+            asynchronous HTTP request, please pass async_req=True
+
+            >>> thread = api.get_users_me_invites(async_req=True)
+            >>> result = thread.get()
+
+
+            Keyword Args:
+                org_only (bool): Include invites within organization only. [optional]
+                since (str): Include new invites since the given timestamp only. [optional]
+                include_expired (bool): Include expired invites. [optional]
+                invite_types ([str]): [optional]
+                _return_http_data_only (bool): response data without head status
+                    code and headers. Default is True.
+                _preload_content (bool): if False, the urllib3.HTTPResponse object
+                    will be returned without reading/decoding response data.
+                    Default is True.
+                _request_timeout (float/tuple): timeout setting for this request. If one
+                    number provided, it will be total request timeout. It can also
+                    be a pair (tuple) of (connection, read) timeouts.
+                    Default is None.
+                _check_input_type (bool): specifies if type checking
+                    should be done one the data sent to the server.
+                    Default is True.
+                _check_return_type (bool): specifies if type checking
+                    should be done one the data received from the server.
+                    Default is True.
+                _host_index (int/None): specifies the index of the server
+                    that we want to use.
+                    Default is read from the configuration.
+                async_req (bool): execute request asynchronously
+
+            Returns:
+                {str: (bool, date, datetime, dict, float, int, list, str, none_type)}
+                    If the method is called asynchronously, returns the request
+                    thread.
+            """
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
+            )
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            return self.call_with_http_info(**kwargs)
+
+        self.get_users_me_invites = _Endpoint(
+            settings={
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/users/me/invites",
+                "operation_id": "get_users_me_invites",
+                "http_method": "GET",
+                "servers": None,
+            },
+            params_map={
+                "all": [
+                    "org_only",
+                    "since",
+                    "include_expired",
+                    "invite_types",
+                ],
+                "required": [],
+                "nullable": [],
+                "enum": [
+                    "invite_types",
+                ],
+                "validation": [],
+            },
+            root_map={
+                "validations": {},
+                "allowed_values": {
+                    ("invite_types",): {"PROJECT": "project", "TEAM": "team"},
+                },
+                "openapi_types": {
+                    "org_only": (bool,),
+                    "since": (str,),
+                    "include_expired": (bool,),
+                    "invite_types": ([str],),
+                },
+                "attribute_map": {
+                    "org_only": "org_only",
+                    "since": "since",
+                    "include_expired": "include_expired",
+                    "invite_types": "invite_types",
+                },
+                "location_map": {
+                    "org_only": "query",
+                    "since": "query",
+                    "include_expired": "query",
+                    "invite_types": "query",
+                },
+                "collection_format_map": {
+                    "invite_types": "csv",
+                },
+            },
+            headers_map={
+                "accept": ["application/json"],
+                "content_type": [],
+            },
+            api_client=api_client,
+            callable=__get_users_me_invites,
+        )
+
         def __users_me(self, **kwargs):
             """users_me  # noqa: E501
 

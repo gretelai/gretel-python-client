@@ -15,6 +15,7 @@ from gretel_client.rest.api_client import ApiClient
 from gretel_client.rest.api_client import Endpoint as _Endpoint
 from gretel_client.rest.model.artifact import Artifact
 from gretel_client.rest.model.project import Project
+from gretel_client.rest.model.project_invite import ProjectInvite
 from gretel_client.rest.model_utils import (  # noqa: F401
     check_allowed_values,
     check_validations,
@@ -148,6 +149,118 @@ class ProjectsApi(object):
             },
             api_client=api_client,
             callable=__create_artifact,
+        )
+
+        def __create_invite(self, project_id, project_invite, **kwargs):
+            """Create a project invite  # noqa: E501
+
+            This method makes a synchronous HTTP request by default. To make an
+            asynchronous HTTP request, please pass async_req=True
+
+            >>> thread = api.create_invite(project_id, project_invite, async_req=True)
+            >>> result = thread.get()
+
+            Args:
+                project_id (str): Project id
+                project_invite (ProjectInvite):
+
+            Keyword Args:
+                _return_http_data_only (bool): response data without head status
+                    code and headers. Default is True.
+                _preload_content (bool): if False, the urllib3.HTTPResponse object
+                    will be returned without reading/decoding response data.
+                    Default is True.
+                _request_timeout (float/tuple): timeout setting for this request. If one
+                    number provided, it will be total request timeout. It can also
+                    be a pair (tuple) of (connection, read) timeouts.
+                    Default is None.
+                _check_input_type (bool): specifies if type checking
+                    should be done one the data sent to the server.
+                    Default is True.
+                _check_return_type (bool): specifies if type checking
+                    should be done one the data received from the server.
+                    Default is True.
+                _host_index (int/None): specifies the index of the server
+                    that we want to use.
+                    Default is read from the configuration.
+                async_req (bool): execute request asynchronously
+
+            Returns:
+                {str: (bool, date, datetime, dict, float, int, list, str, none_type)}
+                    If the method is called asynchronously, returns the request
+                    thread.
+            """
+            kwargs["async_req"] = kwargs.get("async_req", False)
+            kwargs["_return_http_data_only"] = kwargs.get(
+                "_return_http_data_only", True
+            )
+            kwargs["_preload_content"] = kwargs.get("_preload_content", True)
+            kwargs["_request_timeout"] = kwargs.get("_request_timeout", None)
+            kwargs["_check_input_type"] = kwargs.get("_check_input_type", True)
+            kwargs["_check_return_type"] = kwargs.get("_check_return_type", True)
+            kwargs["_host_index"] = kwargs.get("_host_index")
+            kwargs["project_id"] = project_id
+            kwargs["project_invite"] = project_invite
+            return self.call_with_http_info(**kwargs)
+
+        self.create_invite = _Endpoint(
+            settings={
+                "response_type": (
+                    {
+                        str: (
+                            bool,
+                            date,
+                            datetime,
+                            dict,
+                            float,
+                            int,
+                            list,
+                            str,
+                            none_type,
+                        )
+                    },
+                ),
+                "auth": ["ApiKey"],
+                "endpoint_path": "/projects/{project_id}/invites",
+                "operation_id": "create_invite",
+                "http_method": "POST",
+                "servers": None,
+            },
+            params_map={
+                "all": [
+                    "project_id",
+                    "project_invite",
+                ],
+                "required": [
+                    "project_id",
+                    "project_invite",
+                ],
+                "nullable": [],
+                "enum": [],
+                "validation": [],
+            },
+            root_map={
+                "validations": {},
+                "allowed_values": {},
+                "openapi_types": {
+                    "project_id": (str,),
+                    "project_invite": (ProjectInvite,),
+                },
+                "attribute_map": {
+                    "project_id": "project_id",
+                },
+                "location_map": {
+                    "project_id": "path",
+                    "project_invite": "body",
+                },
+                "collection_format_map": {},
+            },
+            headers_map={
+                "accept": ["application/json"],
+                "content_type": ["application/json"],
+            },
+            api_client=api_client,
+            callable=__create_invite,
         )
 
         def __create_model(self, project_id, body, **kwargs):

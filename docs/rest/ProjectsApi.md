@@ -5,6 +5,7 @@ All URIs are relative to *https://api-dev.gretel.cloud*
 Method | HTTP request | Description
 ------------- | ------------- | -------------
 [**create_artifact**](ProjectsApi.md#create_artifact) | **POST** /projects/{project_id}/artifacts | Create a new artifact
+[**create_invite**](ProjectsApi.md#create_invite) | **POST** /projects/{project_id}/invites | Create a project invite
 [**create_model**](ProjectsApi.md#create_model) | **POST** /projects/{project_id}/models | Create and train a new model
 [**create_project**](ProjectsApi.md#create_project) | **POST** /projects | 
 [**create_record_handler**](ProjectsApi.md#create_record_handler) | **POST** /projects/{project_id}/models/{model_id}/record_handlers | Create a record handler for a model
@@ -102,6 +103,85 @@ Name | Type | Description  | Notes
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 **200** | Artifact upload details |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **create_invite**
+> {str: (bool, date, datetime, dict, float, int, list, str, none_type)} create_invite(project_id, project_invite)
+
+Create a project invite
+
+### Example
+
+* Api Key Authentication (ApiKey):
+```python
+import time
+import gretel_client.rest
+from gretel_client.rest.api import projects_api
+from gretel_client.rest.model.project_invite import ProjectInvite
+from pprint import pprint
+# Defining the host is optional and defaults to https://api-dev.gretel.cloud
+# See configuration.py for a list of all supported configuration parameters.
+configuration = gretel_client.rest.Configuration(
+    host = "https://api-dev.gretel.cloud"
+)
+
+# The client must configure the authentication and authorization parameters
+# in accordance with the API server security policy.
+# Examples for each auth method are provided below, use the example that
+# satisfies your auth use case.
+
+# Configure API key authorization: ApiKey
+configuration.api_key['ApiKey'] = 'YOUR_API_KEY'
+
+# Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
+# configuration.api_key_prefix['ApiKey'] = 'Bearer'
+
+# Enter a context with an instance of the API client
+with gretel_client.rest.ApiClient(configuration) as api_client:
+    # Create an instance of the API class
+    api_instance = projects_api.ProjectsApi(api_client)
+    project_id = "project_id_example" # str | Project id
+    project_invite = ProjectInvite(
+        email="email_example",
+        level=1,
+    ) # ProjectInvite | 
+
+    # example passing only required values which don't have defaults set
+    try:
+        # Create a project invite
+        api_response = api_instance.create_invite(project_id, project_invite)
+        pprint(api_response)
+    except gretel_client.rest.ApiException as e:
+        print("Exception when calling ProjectsApi->create_invite: %s\n" % e)
+```
+
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **project_id** | **str**| Project id |
+ **project_invite** | [**ProjectInvite**](ProjectInvite.md)|  |
+
+### Return type
+
+**{str: (bool, date, datetime, dict, float, int, list, str, none_type)}**
+
+### Authorization
+
+[ApiKey](../README.md#ApiKey)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+**200** | Project invite details |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
