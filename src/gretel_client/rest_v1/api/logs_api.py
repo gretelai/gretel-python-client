@@ -44,18 +44,24 @@ class LogsApi(object):
 
     @validate_arguments
     def get_log_upload_url(
-        self, workflow_run_id: StrictStr, workflow_task_id: StrictStr, **kwargs
+        self,
+        workflow_run_id: StrictStr,
+        action_name: StrictStr,
+        workflow_task_id: StrictStr,
+        **kwargs,
     ) -> GetLogUploadURLResponse:  # noqa: E501
         """get_log_upload_url  # noqa: E501
 
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
-        >>> thread = api.get_log_upload_url(workflow_run_id, workflow_task_id, async_req=True)
+        >>> thread = api.get_log_upload_url(workflow_run_id, action_name, workflow_task_id, async_req=True)
         >>> result = thread.get()
 
         :param workflow_run_id: (required)
         :type workflow_run_id: str
+        :param action_name: (required)
+        :type action_name: str
         :param workflow_task_id: (required)
         :type workflow_task_id: str
         :param async_req: Whether to execute the request asynchronously.
@@ -75,23 +81,29 @@ class LogsApi(object):
                 "Error! Please call the get_log_upload_url_with_http_info method with `_preload_content` instead and obtain raw data from ApiResponse.raw_data"
             )
         return self.get_log_upload_url_with_http_info(
-            workflow_run_id, workflow_task_id, **kwargs
+            workflow_run_id, action_name, workflow_task_id, **kwargs
         )  # noqa: E501
 
     @validate_arguments
     def get_log_upload_url_with_http_info(
-        self, workflow_run_id: StrictStr, workflow_task_id: StrictStr, **kwargs
+        self,
+        workflow_run_id: StrictStr,
+        action_name: StrictStr,
+        workflow_task_id: StrictStr,
+        **kwargs,
     ) -> ApiResponse:  # noqa: E501
         """get_log_upload_url  # noqa: E501
 
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
-        >>> thread = api.get_log_upload_url_with_http_info(workflow_run_id, workflow_task_id, async_req=True)
+        >>> thread = api.get_log_upload_url_with_http_info(workflow_run_id, action_name, workflow_task_id, async_req=True)
         >>> result = thread.get()
 
         :param workflow_run_id: (required)
         :type workflow_run_id: str
+        :param action_name: (required)
+        :type action_name: str
         :param workflow_task_id: (required)
         :type workflow_task_id: str
         :param async_req: Whether to execute the request asynchronously.
@@ -121,7 +133,7 @@ class LogsApi(object):
 
         _params = locals()
 
-        _all_params = ["workflow_run_id", "workflow_task_id"]
+        _all_params = ["workflow_run_id", "action_name", "workflow_task_id"]
         _all_params.extend(
             [
                 "async_req",
@@ -151,6 +163,9 @@ class LogsApi(object):
         if _params["workflow_run_id"]:
             _path_params["workflow_run_id"] = _params["workflow_run_id"]
 
+        if _params["action_name"]:
+            _path_params["action_name"] = _params["action_name"]
+
         if _params["workflow_task_id"]:
             _path_params["workflow_task_id"] = _params["workflow_task_id"]
 
@@ -176,7 +191,7 @@ class LogsApi(object):
         }
 
         return self.api_client.call_api(
-            "/v1/logs/workflowruns/{workflow_run_id}/tasks/{workflow_task_id}",
+            "/v1/logs/workflowruns/{workflow_run_id}/actions/{action_name}/tasks/{workflow_task_id}",
             "GET",
             _path_params,
             _query_params,
