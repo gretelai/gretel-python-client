@@ -27,6 +27,7 @@ from gretel_client.docker import CloudCreds, DataVolumeDef
 from gretel_client.helpers import do_api_call
 from gretel_client.projects import get_project
 from gretel_client.projects.exceptions import GretelProjectError
+from gretel_client.rest.api.users_api import UsersApi
 from gretel_client.rest.apis import JobsApi, ProjectsApi
 
 configure_logging()
@@ -60,7 +61,24 @@ class AgentConfig:
 
     projects: List[str] = field(default_factory=list)
     """Determines the projects to pull jobs for. If none is provided, then
-    jobs from all projects will be fetched.
+    jobs from all projects will be fetched. As a special value, a list with
+    the single value "all" will instruct the agent to fetch jobs from all
+    projects that the user has at least admin access to.
+    """
+
+    org_only: bool = field(default=False)
+    """Limits the agent to dispatching jobs in the same organization (enterprise/team)
+    as the user running the agent only. If the user is not part of an organization,
+    only jobs owned by the user will be processed. For security reasons, it is
+    recommended to set this option to True.
+    """
+
+    auto_accept_project_invites: bool = field(default=False)
+    """If set to true, the agent will check for and accept pending project invites
+    originating from the same organization before polling for jobs. This is useful
+    in conjunction with the projects = ["all"] setting mentioned above, to allow
+    users to make their projects available to the agent without having to manually
+    accept invites.
     """
 
     creds: Optional[List[CloudCreds]] = None
@@ -392,6 +410,7 @@ class Poller(Iterator):
         self._logger = logging.getLogger(__name__)
         self._interrupt = threading.Event()
         self._runner_modes = agent_config.runner_modes or [RunnerMode.MANUAL]
+        self._last_invite_check_time = None
 
     def __iter__(self):
         return self
@@ -404,6 +423,8 @@ class Poller(Iterator):
         project_ids = self._agent_config.project_ids
         if len(project_ids) > 0:
             api_kwargs["project_ids"] = project_ids
+        if self._agent_config.org_only:
+            api_kwargs["org_only"] = True
         if self._runner_modes:
             api_kwargs["runner_modes"] = [
                 runner_mode.value for runner_mode in self._runner_modes
@@ -417,6 +438,14 @@ class Poller(Iterator):
         while True and not self._interrupt.is_set():
             if self._rate_limiter.has_capacity():
                 job = None
+                if self._agent_config.auto_accept_project_invites:
+                    try:
+                        self._check_project_invites()
+                    except Exception:
+                        self._logger.warning(
+                            "Could not check for pending project invites.",
+                            exc_info=True,
+                        )
                 try:
                     job = self.poll_endpoint()
                 except Exception:
@@ -433,6 +462,35 @@ class Poller(Iterator):
                 self._logger.info("Heartbeat from poller, still here...")
             else:
                 wait_secs += wait_secs**2
+
+    def _check_project_invites(self):
+        users_api = get_session_config().get_api(UsersApi)
+
+        kwargs = {
+            "invite_types": ["project"],
+            "org_only": True,
+            "include_expired": False,
+        }
+        if self._last_invite_check_time:
+            kwargs["since"] = self._last_invite_check_time
+
+        resp = users_api.get_users_me_invites(**kwargs)
+        resp_data = resp.get("data", {})
+        for invite in resp_data.get("invites", []):
+            project_guid = invite["project_guid"]
+            inviter = invite.get("invited_by", {}).get("email", "unknown")
+            self._logger.info(
+                f"Accepting invite to project {project_guid} by {inviter}"
+            )
+            if invite.get("level", 0) < 3:
+                self._logger.warn(
+                    "Warning: invite does not grant administrator access, some features might not work"
+                )
+            users_api.accept_users_me_invites(invite_id=invite["_id"])
+
+        self._last_invite_check_time = resp_data.get(
+            "timestamp", self._last_invite_check_time
+        )
 
 
 class Agent:

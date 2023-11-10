@@ -43,6 +43,22 @@ def build_logger(job_id: str) -> Callable:
     metavar="NAME",
 )
 @click.option(
+    "--same-org-only",
+    is_flag=True,
+    envvar="GRETEL_SAME_ORG_ONLY",
+    allow_from_autoenv=True,
+    help="If this is set, only jobs from the same organization as the running user will be executed.",
+    type=bool,
+)
+@click.option(
+    "--auto-accept-project-invites",
+    is_flag=True,
+    envvar="GRETEL_AGENT_AUTO_ACCEPT_PROJECT_INVITES",
+    allow_from_autoenv=True,
+    help="If this is set, the Gretel Agent will automatically check for and accept project invites originating from within the organization.",
+    type=bool,
+)
+@click.option(
     "--aws-cred-path",
     metavar="PATH",
     help="Path to AWS credential file. These will be propagated to each worker.",
@@ -95,6 +111,8 @@ def start(
     driver: str,
     max_workers: int,
     project: str = None,
+    same_org_only: bool = False,
+    auto_accept_project_invites: bool = False,
     aws_cred_path: str = None,
     artifact_endpoint: str = None,
     env: List[str] = None,
@@ -144,6 +162,8 @@ def start(
 
     config = AgentConfig(
         projects=projects,
+        org_only=same_org_only,
+        auto_accept_project_invites=auto_accept_project_invites,
         max_workers=max_workers,
         driver=driver,
         creds=creds,
