@@ -155,6 +155,10 @@ class AgentConfig:
     def project_ids(self) -> List[str]:
         if not self.projects:
             return []
+        # Special case: single-element list with just "all" means to query jobs from
+        # all projects with sufficient access to, regardless of job or project ownership.
+        if self.projects == ["all"]:
+            return self.projects
         self._check_cache()
         if not self._project_ids:
             # Need to throw in this scenario to avoid not filtering by at least one project.

@@ -50,6 +50,7 @@ class JobsApi(object):
                 project_id (str): Deprecated, use project_ids instead.. [optional]
                 project_ids ([str]): [optional]
                 runner_modes ([str]): [optional]
+                org_only (bool): Query for jobs within the same organization only. [optional]
                 _return_http_data_only (bool): response data without head status
                     code and headers. Default is True.
                 _preload_content (bool): if False, the urllib3.HTTPResponse object
@@ -114,6 +115,7 @@ class JobsApi(object):
                     "project_id",
                     "project_ids",
                     "runner_modes",
+                    "org_only",
                 ],
                 "required": [],
                 "nullable": [],
@@ -135,16 +137,19 @@ class JobsApi(object):
                     "project_id": (str,),
                     "project_ids": ([str],),
                     "runner_modes": ([str],),
+                    "org_only": (bool,),
                 },
                 "attribute_map": {
                     "project_id": "project_id",
                     "project_ids": "project_ids",
                     "runner_modes": "runner_modes",
+                    "org_only": "org_only",
                 },
                 "location_map": {
                     "project_id": "query",
                     "project_ids": "query",
                     "runner_modes": "query",
+                    "org_only": "query",
                 },
                 "collection_format_map": {
                     "project_ids": "csv",
