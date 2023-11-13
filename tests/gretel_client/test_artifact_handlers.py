@@ -74,6 +74,7 @@ def test_hybrid_created_with_custom_artifact_endpoint():
             "BlobEndpoint=https://test.blob.core.windows.net/",
         ),
         ("OAUTH_STORAGE_ACCOUNT_NAME", "test-bucket"),
+        ("AZURE_STORAGE_ACCOUNT_NAME", "test-bucket"),
     ],
 )
 def test_hybrid_created_with_azure_artifact_endpoint(key: str, value: str):

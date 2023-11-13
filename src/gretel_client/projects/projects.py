@@ -267,7 +267,6 @@ class Project:
         """
         return self.default_artifacts_handler.get_project_artifact_link(key)
 
-    @contextmanager
     def get_artifact_handle(self, key: str) -> BinaryIO:
         """Returns a reference to a remote artifact that can be used to
         read binary data within a context manager
