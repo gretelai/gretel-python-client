@@ -1,0 +1,4 @@
+schema_version: 1.0
+models:
+  - gpt_x:
+        pretrained_model: "meta-llama/LLama-2-7b-hf"

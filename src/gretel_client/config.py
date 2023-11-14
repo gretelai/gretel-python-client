@@ -516,7 +516,13 @@ _session_client_config = _load_config()  # noqa
 
 def get_session_config() -> ClientConfig:
     """Return the session's client config"""
+    global _session_client_config
     return _session_client_config
+
+
+def set_session_config(config: ClientConfig):
+    global _session_client_config
+    _session_client_config = config
 
 
 def configure_session(

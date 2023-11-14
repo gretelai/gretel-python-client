@@ -1,4 +1,3 @@
-import base64
 import functools
 import re
 
@@ -7,79 +6,19 @@ from typing import Optional
 
 import click
 
-from gretel_client.cli.common import KVPairs
-from gretel_client.cli.connection_credentials import CredentialsEncryption
+import gretel_client._hybrid.azure as azure_hybrid
+
+from gretel_client.cli.connection_credentials import (
+    CredentialsEncryptionAdapter,
+    CredentialsEncryptionFlagsBase,
+)
 
 VALID_VAULT_URL = re.compile(r"https://[A-Za-z0-9_-]+\.vault\.azure\.net/?")
 
 
-class AzureKeyVaultEncryption(CredentialsEncryption):
-    _vault_url: str
-    _key_id: str
-    _encryption_algorithm: str
-    _encryption_context: dict
-
-    def __init__(
-        self,
-        vault_url: str,
-        key_id: str,
-        encryption_algorithm: str,
-        encryption_context: Optional[dict],
-        encrypted_creds_file: Optional[Path],
-    ):
-        super().__init__(encrypted_creds_file)
-        self._vault_url = vault_url
-        self._key_id = key_id
-        self._encryption_algorithm = encryption_algorithm or "RSA-OAEP"
-        self._encryption_context = encryption_context or {}
-
-    def _encrypt_payload(self, payload: bytes) -> bytes:
-        # Encrypt credentials
-        try:
-            from azure.identity import DefaultAzureCredential
-            from azure.keyvault.keys import KeyClient
-            from azure.keyvault.keys.crypto import (
-                CryptographyClient,
-                EncryptionAlgorithm,
-            )
-        except ImportError as e:
-            raise Exception(
-                "You are trying to encrypt connection credentials with an Azure Keyvault key, "
-                "but the Azure client libraries could not be found. If you want to use this "
-                "feature, please re-install the Gretel CLI with the [azure] option.",
-            ) from e
-
-        credential = DefaultAzureCredential()
-
-        # Example: https://myvault.vault.azure.net
-        key_client = KeyClient(vault_url=self._vault_url, credential=credential)
-
-        # Example: my-key-name
-        key = key_client.get_key(self._key_id)
-        crypto_client = CryptographyClient(key, credential=credential)
-
-        # Example: RSA-OAEP
-        encryption_algorithm = EncryptionAlgorithm(self._encryption_algorithm)
-
-        result = crypto_client.encrypt(encryption_algorithm, payload)
-        return result.ciphertext
-
-    def _make_encrypted_creds_config(self, ciphertext: bytes) -> dict:
-        vault_url_without_slash = (
-            self._vault_url[:-1] if self._vault_url.endswith("/") else self._vault_url
-        )
-        key_id = f"{vault_url_without_slash}/keys/{self._key_id}"
-        return {
-            "azure_key_vault": {
-                "key_id": key_id,
-                "encryption_context": self._encryption_context,
-                "encryption_algorithm": self._encryption_algorithm,
-                "data": base64.b64encode(ciphertext).decode("ascii"),
-            }
-        }
-
+class AzureKeyVaultEncryption(CredentialsEncryptionFlagsBase):
     @classmethod
-    def cli_decorate(cls, fn, param_name: str):
+    def _cli_decorate(cls, fn, param_name: str):
         @click.option(
             "--azure-key-vault-url",
             metavar="AZURE_KEY_VAULT_URL",
@@ -99,13 +38,6 @@ class AzureKeyVaultEncryption(CredentialsEncryption):
             required=False,
         )
         @click.option(
-            "--azure-encryption-context",
-            metavar="KEY1=VALUE1[,...,KEYn=VALUEn]",
-            help="Comma-separated key/value pairs for Azure Key Vault encryption context",
-            type=KVPairs,
-            required=False,
-        )
-        @click.option(
             "--azure-encrypted-credentials",
             metavar="FILE",
             help="Path to the file containing the credentials encrypted using Azure Key Vault",
@@ -121,7 +53,6 @@ class AzureKeyVaultEncryption(CredentialsEncryption):
             azure_key_vault_url: Optional[str],
             azure_key_id: Optional[str],
             azure_encryption_algorithm: Optional[str],
-            azure_encryption_context: Optional[dict],
             azure_encrypted_credentials: Optional[Path],
             **kwargs,
         ):
@@ -129,29 +60,25 @@ class AzureKeyVaultEncryption(CredentialsEncryption):
                 azure_key_vault_url,
                 azure_key_id,
                 azure_encryption_algorithm,
-                azure_encryption_context,
                 azure_encrypted_credentials,
             )
             return fn(**kwargs)
 
         return proxy
 
-    @classmethod
+    @staticmethod
     def _process_azure_key_vault_params(
-        cls,
         azure_key_vault_url: Optional[str],
         azure_key_id: Optional[str],
         azure_encryption_algorithm: Optional[str],
-        azure_encryption_context: Optional[dict],
         azure_encrypted_credentials: Optional[Path],
-    ) -> Optional["AzureKeyVaultEncryption"]:
+    ) -> Optional[CredentialsEncryptionAdapter]:
         if all(
             item is None
             for item in [
                 azure_key_vault_url,
                 azure_key_id,
                 azure_encryption_algorithm,
-                azure_encryption_context,
                 azure_encrypted_credentials,
             ]
         ):
@@ -171,10 +98,11 @@ class AzureKeyVaultEncryption(CredentialsEncryption):
                 "--azure-encryption-algorithm must be set if --azure-encrypted-credentials are specified"
             )
 
-        return AzureKeyVaultEncryption(
-            azure_key_vault_url,
-            azure_key_id,
-            azure_encryption_algorithm,
-            azure_encryption_context,
+        return CredentialsEncryptionAdapter(
+            lambda: azure_hybrid.KeyVaultEncryption(
+                azure_key_vault_url,
+                azure_key_id,
+                azure_encryption_algorithm,
+            ),
             azure_encrypted_credentials,
         )

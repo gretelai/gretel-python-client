@@ -42,14 +42,12 @@ def test_azure_connection_validations(get_fixture: Callable, project: Project):
             "fake",
             "--azure-key-vault-url",
             "https://fake-vault.com",
-            "--azure-encryption-context",
-            "foo=bar,baz=qux",
         ],
     )
     assert "The keyvault URL must match the format" in cmd.output
     assert cmd.exit_code != 0
 
-    # Only pass an encryption context, no key id
+    # Only pass a key vault URL, no key id
     cmd = runner.invoke(
         cli,
         [
@@ -61,8 +59,6 @@ def test_azure_connection_validations(get_fixture: Callable, project: Project):
             get_fixture("connections/test_connection.json"),
             "--azure-key-vault-url",
             "https://fake.vault.azure.net/",
-            "--azure-encryption-context",
-            "foo=bar,baz=qux",
         ],
     )
     assert "--azure-key-id" in cmd.output
@@ -102,8 +98,6 @@ def test_azure_connection_validations(get_fixture: Callable, project: Project):
             "https://fake.vault.azure.net/",
             "--azure-key-id",
             "fake",
-            "--azure-encryption-context",
-            "foo=bar,baz=qux",
         ],
     )
     assert "An encrypted credentials file must be specified" in cmd.output
@@ -202,8 +196,6 @@ def test_azure_connection_crud_from_cli(
             key_vault_url,
             "--azure-key-id",
             key_id,
-            "--azure-encryption-context",
-            "foo=bar,don=quixote",
         ],
     )
     assert "Created connection:" in cmd.output
@@ -218,12 +210,6 @@ def test_azure_connection_crud_from_cli(
         conn_with_creds.encrypted_credentials["azure_key_vault"]["key_id"]
         == expected_key_id
     )
-    assert conn_with_creds.encrypted_credentials["azure_key_vault"][
-        "encryption_context"
-    ] == {
-        "foo": "bar",
-        "don": "quixote",
-    }
 
     # Create a connection with a connection config without plaintext credentials
     # and a pre-encrypted credentials file (b64 encoded).
@@ -240,8 +226,6 @@ def test_azure_connection_crud_from_cli(
             key_vault_url,
             "--azure-key-id",
             key_id,
-            "--azure-encryption-context",
-            "foo=bar,baz=qux",
             "--azure-encryption-algorithm",
             "RSA-OAEP",
             "--azure-encrypted-credentials",
@@ -259,12 +243,6 @@ def test_azure_connection_crud_from_cli(
         conn_with_creds.encrypted_credentials["azure_key_vault"]["key_id"]
         == expected_key_id
     )
-    assert conn_with_creds.encrypted_credentials["azure_key_vault"][
-        "encryption_context"
-    ] == {
-        "foo": "bar",
-        "baz": "qux",
-    }
     assert (
         conn_with_creds.encrypted_credentials["azure_key_vault"]["data"]
         == Path(get_fixture("connections/test_encrypted_creds.b64"))

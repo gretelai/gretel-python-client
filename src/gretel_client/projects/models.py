@@ -261,10 +261,11 @@ class Model(Job):
         """
         try:
             model_config = self.model_config["models"][0][self.model_type]
-            if "data_source" not in model_config:
+
+            data_source = model_config.get("data_source")
+            if data_source is None:
                 return None
 
-            data_source = model_config["data_source"]
             if isinstance(data_source, list):
                 data_source = data_source[0]
             if isinstance(data_source, _DataFrameT):

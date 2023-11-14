@@ -7,7 +7,12 @@ from typing import Optional
 
 import click
 
-from gretel_client.cli.connection_credentials import CredentialsEncryption
+import gretel_client._hybrid.gcp as gcp_hybrid
+
+from gretel_client.cli.connection_credentials import (
+    CredentialsEncryptionAdapter,
+    CredentialsEncryptionFlagsBase,
+)
 
 # Valid case 1: "projects/<PROJECT_ID>/locations/<LOCATION>/keyRings/<KEY_RING_ID>/cryptoKeys/<KEY_ID>"
 # Valid case 2: "//cloudkms.googleapis.com/projects/<PROJECT_ID>/locations/<LOCATION>/keyRings/<KEY_RING_ID>/cryptoKeys/<KEY_ID>"
@@ -17,44 +22,9 @@ regex_kms_pattern = re.compile(
 )
 
 
-class GCPKMSEncryption(CredentialsEncryption):
-    def __init__(
-        self,
-        key_resource_name: str,
-        encrypted_creds_file: Optional[Path],
-    ):
-        self._key_resource_name = key_resource_name
-        self._encrypted_creds_file = encrypted_creds_file
-
-    def _encrypt_payload(self, payload: bytes) -> bytes:
-        try:
-            from google.cloud import kms
-        except ImportError as e:
-            raise Exception(
-                "You are trying to encrypt connection credentials with a GCP KMS key, "
-                "but the GCP client libraries could not be found. If you want to use this "
-                "feature, please re-install the Gretel CLI with the [gcp] option.",
-            ) from e
-
-        kms_client = kms.KeyManagementServiceClient()
-        encrypt_response = kms_client.encrypt(
-            request={
-                "name": self._key_resource_name,
-                "plaintext": payload,
-            }
-        )
-        return encrypt_response.ciphertext
-
-    def _make_encrypted_creds_config(self, ciphertext: bytes) -> dict:
-        return {
-            "gcp_kms": {
-                "resource_name": self._key_resource_name,
-                "data": base64.b64encode(ciphertext).decode("ascii"),
-            }
-        }
-
+class GCPKMSEncryption(CredentialsEncryptionFlagsBase):
     @classmethod
-    def cli_decorate(cls, fn, param_name: str):
+    def _cli_decorate(cls, fn, param_name: str):
         @click.option(
             "--gcp-kms-key-resource-name",
             metavar="KEY-RN",
@@ -86,12 +56,11 @@ class GCPKMSEncryption(CredentialsEncryption):
 
         return proxy
 
-    @classmethod
+    @staticmethod
     def _process_cli_params(
-        cls,
         gcp_kms_key_resource_name: Optional[str],
         gcp_kms_encrypted_credentials: Optional[Path],
-    ) -> Optional["GCPKMSEncryption"]:
+    ) -> Optional[CredentialsEncryptionAdapter]:
         if gcp_kms_key_resource_name is None and gcp_kms_encrypted_credentials is None:
             return None
 
@@ -106,7 +75,7 @@ class GCPKMSEncryption(CredentialsEncryption):
                 f"Key resource name {gcp_kms_key_resource_name} is invalid",
             )
 
-        return GCPKMSEncryption(
-            gcp_kms_key_resource_name,
+        return CredentialsEncryptionAdapter(
+            gcp_hybrid.KMSEncryption(gcp_kms_key_resource_name),
             gcp_kms_encrypted_credentials,
         )

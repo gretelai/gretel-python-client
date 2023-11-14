@@ -10,6 +10,7 @@ import pytest
 
 from click.testing import CliRunner, Result
 
+from gretel_client._hybrid.config import configure_hybrid_session
 from gretel_client.config import (
     _load_config,
     ClientConfig,
@@ -41,7 +42,7 @@ def runner() -> CliRunner:
 
 
 @pytest.fixture(autouse=True)
-def configure_session_client():
+def configure_session_client(request):
     """Ensures the the host client config is reset after each test."""
     gretel_api_key = os.getenv("GRETEL_API_KEY")
     assert gretel_api_key is not None, "GRETEL_API_KEY must be set!"
@@ -53,7 +54,17 @@ def configure_session_client():
         },
         clear=True,
     ):
-        configure_session(ClientConfig.from_env())
+        config = ClientConfig.from_env()
+        configurator = configure_session
+        configure_kwargs = {}
+
+        hybrid = request.node.get_closest_marker("gretel_hybrid")
+        if hybrid:
+            configurator = configure_hybrid_session
+            configure_kwargs = hybrid.kwargs or {}
+
+        configurator(config, **configure_kwargs)
+
     yield
     configure_session(_load_config())
 

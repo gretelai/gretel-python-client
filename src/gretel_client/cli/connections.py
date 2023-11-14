@@ -8,7 +8,6 @@ import click
 import yaml
 
 from gretel_client.cli.common import pass_session, SessionContext
-from gretel_client.cli.connection_credentials import encryption_flags
 from gretel_client.cli.connection_credentials_aws_kms import AWSKMSEncryption
 from gretel_client.cli.connection_credentials_azure_key_vault import (
     AzureKeyVaultEncryption,
@@ -57,9 +56,9 @@ def _read_connection_file(file: str) -> dict:
     help="Specify the project to create the connection in.",
     required=False,
 )
-@encryption_flags(AWSKMSEncryption, "aws_kms")
-@encryption_flags(GCPKMSEncryption, "gcp_kms")
-@encryption_flags(AzureKeyVaultEncryption, "azure_key_vault")
+@AWSKMSEncryption.options("aws_kms")
+@GCPKMSEncryption.options("gcp_kms")
+@AzureKeyVaultEncryption.options("azure_key_vault")
 @pass_session
 def create(
     sc: SessionContext,

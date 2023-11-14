@@ -111,6 +111,8 @@ def hybrid_handler(project: _Project) -> HybridArtifactsHandler:
         raise ArtifactsException(
             "Cannot manage artifacts with hybrid strategy without custom artifact endpoint."
         )
+    if endpoint == "none":
+        return NoneArtifactsHandler()
 
     return HybridArtifactsHandler(endpoint=endpoint, project_id=project.project_id)
 
@@ -408,6 +410,54 @@ class HybridArtifactsHandler:
             log,
             _get_transport_params(self.endpoint),
         )
+
+
+class NoneArtifactsHandler:
+    def upload_project_artifact(
+        self,
+        artifact_path: Union[Path, str, _DataFrameT],
+    ) -> str:
+        raise NotImplementedError("no artifact endpoint is configured")
+
+    def delete_project_artifact(self, key: str) -> None:
+        raise NotImplementedError("no artifact endpoint is configured")
+
+    def list_project_artifacts(self) -> List[dict]:
+        raise NotImplementedError("no artifact endpoint is configured")
+
+    def get_project_artifact_link(self, key: str) -> str:
+        raise NotImplementedError("no artifact endpoint is configured")
+
+    def get_project_artifact_handle(self, key: str) -> BinaryIO:
+        raise NotImplementedError("no artifact endpoint is configured")
+
+    def get_project_artifact_manifest(
+        self,
+        key: str,
+        retry_on_not_found: bool = True,
+        retry_on_pending: bool = True,
+    ) -> Dict[str, Any]:
+        raise NotImplementedError("no artifact endpoint is configured")
+
+    def get_model_artifact_link(self, model_id: str, artifact_type: str) -> str:
+        raise NotImplementedError("no artifact endpoint is configured")
+
+    def get_record_handler_artifact_link(
+        self,
+        model_id: str,
+        record_handler_id: str,
+        artifact_type: str,
+    ) -> str:
+        raise NotImplementedError("no artifact endpoint is configured")
+
+    def download(
+        self,
+        download_link: str,
+        output_path: Path,
+        artifact_type: str,
+        log: logging.Logger,
+    ) -> None:
+        raise NotImplementedError("no artifact endpoint is configured")
 
 
 def _download(
