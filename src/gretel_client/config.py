@@ -86,6 +86,8 @@ class GretelClientConfigurationError(Exception):
 
 
 T = TypeVar("T", bound=Type)
+ClientT = TypeVar("ClientT", bound=Union[ApiClient, V1ApiClient])
+ConfigT = TypeVar("ConfigT", bound=Union[Configuration, V1Configuration])
 
 
 class RunnerMode(str, Enum):
@@ -140,7 +142,7 @@ class GretelApiRetry(Retry):
             allowed_methods=frozenset(
                 {"DELETE", "GET", "HEAD", "OPTIONS", "PUT", "TRACE", "POST"}
             ),
-            status_forcelist=frozenset({413, 429, 503, 403}),
+            status_forcelist=frozenset({413, 429, 502, 503, 504, 403}),
             raise_on_status=False,
         )
 
@@ -283,9 +285,13 @@ class ClientConfig:
             return os.environ.get("https_proxy")
         return os.environ.get("http_proxy")
 
-    def _get_api_client(
-        self, max_retry_attempts: int = 3, backoff_factor: float = 1
-    ) -> ApiClient:
+    def _get_api_client_generic(
+        self,
+        client_cls: Type[ClientT],
+        config_cls: Type[ConfigT],
+        max_retry_attempts: int = 3,
+        backoff_factor: float = 1,
+    ) -> ClientT:
         # disable log warnings when the retry kicks in
         logging.getLogger("urllib3.connectionpool").setLevel(logging.ERROR)
         if not self.api_key:
@@ -297,17 +303,33 @@ class ClientConfig:
                 "Invalid Gretel API key. Please check your configuration and try again."
             )
 
-        configuration = Configuration(
+        configuration = config_cls(
             host=self.endpoint,
             api_key={"ApiKey": self.api_key},
             ssl_ca_cert=self._cert_file(),
         )
+        client_kwargs = {}
+        if "ApiKey" not in configuration.auth_settings():
+            # ApiKey not recognized as authentication method by config,
+            # need to pass header directly.
+            client_kwargs = {
+                "header_name": "Authorization",
+                "header_value": self.api_key,
+            }
         configuration.proxy = self._determine_proxy()
         configuration.retries = GretelApiRetry.create_default(  # type:ignore
             max_retry_attempts=max_retry_attempts,
             backoff_factor=backoff_factor,
         )
-        return ApiClient(configuration)
+        return client_cls(configuration, **client_kwargs)
+
+    def _get_api_client(self, *args, **kwargs) -> ApiClient:
+        return self._get_api_client_generic(ApiClient, Configuration, *args, **kwargs)
+
+    def _get_v1_api_client(self, *args, **kwargs) -> V1ApiClient:
+        return self._get_api_client_generic(
+            V1ApiClient, V1Configuration, *args, **kwargs
+        )
 
     @property
     def email(self) -> str:
@@ -338,14 +360,15 @@ class ClientConfig:
         """
         return api_interface(self._get_api_client(max_retry_attempts, backoff_factor))
 
-    def get_v1_api(self, api_interface: Type[T]) -> T:
-        api_client = V1ApiClient(
-            header_name="Authorization",
-            header_value=self.api_key,
-            configuration=V1Configuration(host=self.endpoint),
+    def get_v1_api(
+        self,
+        api_interface: Type[T],
+        max_retry_attempts: int = 5,
+        backoff_factor: float = 1,
+    ) -> T:
+        return api_interface(
+            self._get_v1_api_client(max_retry_attempts, backoff_factor)
         )
-
-        return api_interface(api_client)
 
     def _check_project(self, project_name: str = None) -> Optional[str]:
         if not project_name:
