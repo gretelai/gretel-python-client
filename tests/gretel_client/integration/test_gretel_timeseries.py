@@ -13,7 +13,7 @@ NUM_RECORDS = 1000
 
 @pytest.fixture
 def data_file_path(get_fixture: Callable) -> Path:
-    return get_fixture("daily-website-visitors.csv")
+    return get_fixture("gretel/daily-website-visitors.csv")
 
 
 @pytest.fixture(scope="module")

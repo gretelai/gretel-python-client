@@ -1,0 +1,35 @@
+base_config: "tabular-actgan"
+
+metric: synthetic_data_quality_score
+
+params:
+
+  batch_size: 
+    fixed: 500
+
+  generator_dim: 
+    choices:
+      - [128, 128, 128]
+      - [512, 512, 512]
+  
+  discriminator_dim:
+    choices:
+      - [128, 128, 128]
+      - [512, 512, 512]
+  
+  epochs: 
+    int_range: [50, 70]
+
+  generator_lr: 
+    log_range: [0.001, 0.01]
+
+  discriminator_lr: 
+    float_range: [0.005, 0.008]
+
+privacy_filters:
+  
+  outliers: 
+    choices: [null, "medium", "high"]
+
+  similarity:
+    choices: [null, "medium", "high"]

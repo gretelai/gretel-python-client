@@ -2,7 +2,7 @@ class GretelHighLevelInterfaceError(Exception):
     """Base exception for all high-level Gretel interface errors."""
 
 
-class BaseConfigError(GretelHighLevelInterfaceError):
+class ModelConfigReadError(GretelHighLevelInterfaceError):
     """Raised when the base config is an invalid name or path"""
 
 
@@ -20,3 +20,7 @@ class GretelJobResultsError(GretelHighLevelInterfaceError):
 
 class GretelProjectNotSetError(GretelHighLevelInterfaceError):
     """Raised when a Gretel project is not set."""
+
+
+class InvalidYamlError(Exception):
+    """Raised when a loaded YAML is invalid."""

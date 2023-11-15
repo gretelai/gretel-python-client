@@ -18,6 +18,7 @@ from gretel_client.gretel.config_setup import (
     CONFIG_SETUP_DICT,
     create_model_config_from_base,
     extract_model_config_section,
+    get_model_docs_url,
 )
 from gretel_client.gretel.exceptions import (
     GretelJobSubmissionError,
@@ -29,6 +30,13 @@ from gretel_client.projects import get_project, Project
 from gretel_client.projects.models import Model
 from gretel_client.rest.exceptions import ApiException
 from gretel_client.users.users import get_me
+
+try:
+    from gretel_client.tuner.tuner import create_tuner_from_config
+
+    HAS_TUNER = True
+except ImportError:
+    HAS_TUNER = False
 
 logger = logging.getLogger(__name__)
 logger.propagate = False
@@ -227,6 +235,7 @@ class Gretel:
         data_source: Union[str, Path, _DataFrameT, None],
         job_label: Optional[str] = None,
         wait: bool = True,
+        verbose_logging: bool = False,
         **non_default_config_settings,
     ) -> TrainJobResults:
         """Submit a Gretel model training job.
@@ -237,10 +246,11 @@ class Gretel:
         https://github.com/gretelai/gretel-blueprints/tree/main/config_templates/gretel/synthetics
 
         Args:
-            base_config: Gretel base config name or yaml config file path.
+            base_config: Gretel base config name, yaml path, or yaml string.
             data_source: Training data source as a file path or pandas DataFrame.
             job_label: Descriptive label to append to job the name.
             wait: If True, wait for the job to complete before returning.
+            verbose_logging: If True, will print all logs from the job.
             **non_default_config_settings: Config settings to override in the
                 template. The format is `section={"setting": "value"}`,
                 where `section` is the name of a yaml section within the
@@ -284,13 +294,11 @@ class Gretel:
         project = self.get_project()
 
         model = project.create_model_obj(job_config, data_source=data_source)
-
-        docs_path = f"reference/synthetics/models/gretel-{model_name}"
         project_url = project.get_console_url()
 
         logger.info(
             f"Submitting {model_name.upper()} training job...\n"
-            f"Model Docs: https://docs.gretel.ai/{docs_path}"
+            f"Model Docs:{get_model_docs_url(model_type)}\n"
         )
 
         model.submit()
@@ -302,7 +310,7 @@ class Gretel:
         final_config = None
 
         if wait:
-            poll(model, verbose=False)
+            poll(model, verbose=verbose_logging)
             logs = fetch_model_logs(model)
             final_config = fetch_final_model_config(model)
             if (
@@ -329,6 +337,7 @@ class Gretel:
         seed_data: Optional[Union[str, Path, _DataFrameT]] = None,
         wait: bool = True,
         fetch_data: bool = True,
+        verbose_logging: bool = False,
         **generate_kwargs,
     ) -> GenerateJobResults:
         """Submit a Gretel model generate job.
@@ -343,6 +352,7 @@ class Gretel:
             seed_data: Seed data source as a file path or pandas DataFrame.
             wait: If True, wait for the job to complete before returning.
             fetch_data: If True, fetch the synthetic data as a DataFrame.
+            verbose_logging: If True, will print all logs from the job.
 
         Raises:
             GretelJobSubmissionError: If the combination of arguments is invalid.
@@ -387,12 +397,11 @@ class Gretel:
 
         model_type, _ = extract_model_config_section(model.model_config)
         model_name = CONFIG_SETUP_DICT[model_type].model_name.replace("_", "-")
-        docs_path = f"reference/synthetics/models/gretel-{model_name}"
         project_url = project.get_console_url()
 
         logger.info(
             f"Submitting {model_name.upper()} generate job...\n"
-            f"Model Docs: https://docs.gretel.ai/{docs_path}\n"
+            f"Model Docs:{get_model_docs_url(model_type)}\n"
             f"Console URL: {project_url}/models/{model.model_id}/data"
         )
 
@@ -402,7 +411,7 @@ class Gretel:
         synthetic_data_link = None
 
         if wait:
-            poll(record_handler, verbose=False)
+            poll(record_handler, verbose=verbose_logging)
             synthetic_data_link = record_handler.get_artifact_link("data")
             if fetch_data:
                 if PANDAS_IS_INSTALLED:
@@ -421,6 +430,97 @@ class Gretel:
             synthetic_data=synthetic_data,
             synthetic_data_link=synthetic_data_link,
         )
+
+    def run_tuner(
+        self,
+        tuner_config: Union[str, Path, dict],
+        *,
+        data_source: Union[str, Path, _DataFrameT],
+        n_trials: int = 5,
+        n_jobs: int = 1,
+        use_temporary_project: bool = False,
+        verbose_logging: bool = False,
+        **non_default_config_settings,
+    ):
+        """Run a hyperparameter tuning experiment with Gretel Tuner.
+
+        Args:
+            tuner_config: Config yaml file path, yaml string, or dict.
+            data_source: Training data source as a file path or pandas DataFrame.
+            n_trials: Number of trials to run.
+            n_jobs: Number of parallel jobs to run locally. Note each job will
+                spin up a Gretel worker.
+            use_temporary_project: If True, will create a temporary project for
+                the tuning experiment. The project will be deleted when the
+                experiment is complete. If False, will use the current project.
+            verbose_logging: If True, will print all logs from submitted Gretel jobs.
+            **non_default_config_settings: Config settings to override in the
+                given tuner config. The kwargs must follow the same nesting
+                format as the yaml config file. See example below.
+
+        Raises:
+            ImportError: If the Gretel Tuner is not installed.
+
+        Returns:
+            Tuner results dataclass with the best config, Optuna study object,
+            and trial data as attributes.
+
+        Example::
+
+            from gretel_client import Gretel
+            gretel = Gretel(api_key="prompt")
+
+            yaml_config_string = '''
+            base_config: "tabular-actgan"
+            metric: synthetic_data_quality_score
+            params:
+                epochs:
+                    fixed: 50
+                batch_size:
+                    choices: [500, 1000]
+            privacy_filters:
+                similarity:
+                    choices: ["medium", "high"]
+            '''
+
+            data_source="https://gretel-public-website.s3-us-west-2.amazonaws.com/datasets/USAdultIncome5k.csv"
+
+            results = gretel.run_tuner(
+                tuner_config=yaml_config_string,
+                data_source=data_source,
+                n_trials=2,
+                use_temporary_project=True,
+                params={
+                    "batch_size": {"choices": [50, 100]},
+                    "generator_lr": {"log_range": [0.001, 0.01]}
+                },
+                privacy_filters={"similarity": {"choices": [None, "medium", "high"]}},
+            )
+
+            print(results.best_config)
+        """
+        if not HAS_TUNER:
+            raise ImportError(
+                "This method requires the Gretel Tuner. To install, run "
+                "`pip install -U gretel-client[tuner]`"
+            )
+
+        study = non_default_config_settings.pop("study", None)
+
+        tuner = create_tuner_from_config(
+            config=tuner_config, **non_default_config_settings
+        )
+
+        results = tuner.run(
+            data_source=_convert_to_valid_data_source(data_source),
+            project=self.get_project() if not use_temporary_project else None,
+            n_jobs=n_jobs,
+            n_trials=n_trials,
+            study=study,
+            verbose_logging=verbose_logging,
+        )
+
+        return results
 
     def __repr__(self):
         name = self._project.name if self._project else None
