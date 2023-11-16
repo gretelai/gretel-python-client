@@ -18,12 +18,12 @@ NUM_RECORDS = 100
 
 @pytest.fixture
 def data_source(get_fixture: Callable) -> Path:
-    return get_fixture("us-adult-income.csv")
+    return get_fixture("gretel/us-adult-income.csv")
 
 
 @pytest.fixture
 def seed_data_file_path(get_fixture: Callable) -> Path:
-    return get_fixture("us-adult-income_seed-data.csv")
+    return get_fixture("gretel/us-adult-income_seed-data.csv")
 
 
 @pytest.fixture(scope="module")

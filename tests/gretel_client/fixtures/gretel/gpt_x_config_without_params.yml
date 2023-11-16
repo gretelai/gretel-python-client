@@ -4,6 +4,7 @@
 # in Gretel's open source GPT-2 XL model
 
 schema_version: 1.0
+name: test-gpt-x-config
 
 models:
   - gpt_x:

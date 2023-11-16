@@ -36,12 +36,14 @@ setup(
     packages=find_packages("src"),
     python_requires=">=3.9",
     entry_points={"console_scripts": ["gretel=gretel_client.cli.cli:cli"]},
-    install_requires=reqs("requirements.txt"),
-    tests_require=reqs("test-requirements.txt"),
+    install_requires=reqs("requirements/base.txt"),
+    tests_require=reqs("requirements/test.txt"),
     extras_require={
         "aws": aws_deps,
         "gcp": gcp_deps,
         "azure": azure_deps,
+        "tuner": reqs("requirements/tuner.txt"),
+        "test": reqs("requirements/test.txt"),
     },
     classifiers=[
         "Programming Language :: Python :: 3",

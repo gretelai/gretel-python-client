@@ -1,0 +1,29 @@
+base_config: "natural-language"
+
+column_name: 
+  fixed: intent_and_text
+
+pretrained_model: 
+  choices: ["gretelai/mpt-7b", "meta-llama/Llama-2-7b-chat-hf"]
+
+params:
+  
+  epochs: 
+    fixed: null
+
+  batch_size: 
+    choices: [8, 16]
+
+  warmup_steps: 
+    int_range: [50, 55]
+
+  learning_rate: 
+    log_range: [0.01, 0.015]
+
+generate:
+  
+  num_records: 
+    int_range: [500, 600]
+  
+  temperature: 
+    float_range: [0.5, 1.5]

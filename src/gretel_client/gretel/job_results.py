@@ -154,6 +154,10 @@ class GenerateJobResults(GretelJobResults):
         self.record_handler.refresh()
         return self.record_handler.status
 
+    @property
+    def run_logs(self) -> List[dict]:
+        return self.record_handler.logs
+
     def refresh(self):
         """Refresh the generate job results attributes."""
         if self.job_status == Status.COMPLETED:
