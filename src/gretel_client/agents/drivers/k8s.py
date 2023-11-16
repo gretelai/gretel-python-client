@@ -7,16 +7,19 @@ from __future__ import annotations
 import base64
 import itertools
 import json
+import math
 import os
 import sys
 import traceback
 
+from copy import deepcopy
 from threading import Condition, Thread
 from time import sleep
 from typing import List, Optional, Tuple, Type, TYPE_CHECKING, TypeVar
 
 from kubernetes import client, config
 from kubernetes.client import ApiClient, BatchV1Api, CoreV1Api
+from kubernetes.utils.quantity import parse_quantity
 
 from gretel_client.agents.drivers.driver import Driver
 from gretel_client.config import get_logger
@@ -29,6 +32,8 @@ T = TypeVar("T")
 OVERRIDE_CERT_NAME = "override-cert"
 
 WORKER_NAMESPACE_ENV_NAME = "GRETEL_WORKER_NAMESPACE"
+WORKER_RESOURCES_ENV_NAME = "GRETEL_WORKER_RESOURCES"
+WORKER_MEMORY_GB_ENV_NAME = "MEMORY_LIMIT_IN_GB"
 PULL_SECRET_ENV_NAME = "GRETEL_PULL_SECRET"
 GPU_NODE_SELECTOR_ENV_NAME = "GPU_NODE_SELECTOR"
 CPU_NODE_SELECTOR_ENV_NAME = "CPU_NODE_SELECTOR"
@@ -65,6 +70,13 @@ def _create_secret_json_b64(server: str, username: str, password: str):
     return data
 
 
+def _ensure_valid_quantity(qstr: str, label: str):
+    try:
+        parse_quantity(qstr)
+    except ValueError as ex:
+        raise KubernetesError(f"{label} must be a valid quantity, got: {qstr}") from ex
+
+
 class Kubernetes(Driver):
     """Run a worker using a Kubernetes daemon.
 
@@ -84,9 +96,74 @@ class Kubernetes(Driver):
         self._worker = None
         self._load_env_and_set_vars()
 
+    def _load_and_setup_worker_resources(self):
+        requests, limits = {}, {}
+
+        if env_resources := self._parse_kube_env_var(WORKER_RESOURCES_ENV_NAME, dict):
+            requests.update(
+                **{k: str(v) for k, v in env_resources.pop("requests", {}).items()}
+            )
+            limits.update(
+                **{k: str(v) for k, v in env_resources.pop("limits", {}).items()}
+            )
+            if env_resources:
+                raise KubernetesError(
+                    f"worker resources specified via '{WORKER_RESOURCES_ENV_NAME}' invalid: only 'requests' and 'limits' are allowed, extra keys: {','.join(env_resources.keys())}"
+                )
+            # Ensure that quantities supplied via env resources are valid
+            for k, v in requests.items():
+                _ensure_valid_quantity(
+                    v, f"requests.{k} in '{WORKER_RESOURCES_ENV_NAME}' value"
+                )
+            for k, v in limits.items():
+                _ensure_valid_quantity(
+                    v, f"limits.{k} in '{WORKER_RESOURCES_ENV_NAME}' value"
+                )
+
+        if env_mem_limit := os.getenv(WORKER_MEMORY_GB_ENV_NAME, "").strip():
+            try:
+                if int(env_mem_limit) <= 0:
+                    raise ValueError("memory limit must be positive")
+            except ValueError as ex:
+                raise KubernetesError(
+                    f"{WORKER_MEMORY_GB_ENV_NAME} must be a positive integer, got: {env_mem_limit}"
+                ) from ex
+
+            if "memory" in requests or "memory" in limits:
+                logger.warning(
+                    f"ignoring '{WORKER_MEMORY_GB_ENV_NAME}' environment variable as memory resources are set via '{WORKER_RESOURCES_ENV_NAME}'"
+                )
+            else:
+                quantity_str = f"{env_mem_limit.strip()}Gi"
+                requests["memory"] = quantity_str
+                limits["memory"] = quantity_str
+
+        if env_cpu_count := os.getenv(CPU_COUNT_ENV_NAME, "").strip():
+            try:
+                if int(env_cpu_count) <= 0:
+                    raise ValueError("CPU count must be positive")
+            except ValueError as ex:
+                raise KubernetesError(
+                    f"Gretel CPU Count must be a positive integer, instead received {env_cpu_count}"
+                ) from ex
+
+            if "cpu" in requests or "cpu" in limits:
+                logger.warning(
+                    f"ignoring '{CPU_COUNT_ENV_NAME}' as CPU resources are set via '{WORKER_RESOURCES_ENV_NAME}'"
+                )
+            else:
+                requests["cpu"] = env_cpu_count
+
+        # Apply defaults
+        requests.setdefault("cpu", "1")
+        # Memory request default should be 14Gi, but if a limit is specified, use that.
+        requests.setdefault("memory", limits.get("memory", "14Gi"))
+        limits.setdefault("memory", requests.get("memory"))
+
+        self._worker_resources = {"requests": requests, "limits": limits}
+
     def _load_env_and_set_vars(self, restart_worker: bool = False):
-        self._memory_limit_in_gb = os.getenv("MEMORY_LIMIT_IN_GB") or "14"
-        self._gretel_cpu_count = os.getenv(CPU_COUNT_ENV_NAME) or "1"
+        self._load_and_setup_worker_resources()
         self._cert_override = os.getenv(CA_CERT_CONFIGMAP_ENV_NAME)
 
         self._gpu_node_selector = self._parse_kube_env_var(
@@ -209,9 +286,13 @@ class Kubernetes(Driver):
             raise ex
 
     def _build_job(self, job_config: Job) -> client.V1Job:
-        resource_requests, limits = self._setup_resources(job_config)
+        resource_requests, resource_limits = self._setup_resources(job_config)
+        resources = client.V1ResourceRequirements(
+            requests=resource_requests,
+            limits=resource_limits,
+        )
 
-        env = self._setup_environment_variables(job_config)
+        env = self._setup_environment_variables(job_config, resources)
 
         args = list(itertools.chain.from_iterable(job_config.params.items()))
 
@@ -220,9 +301,7 @@ class Kubernetes(Driver):
         container = client.V1Container(
             name=job_config.uid,
             image=image,
-            resources=client.V1ResourceRequirements(
-                requests=resource_requests, limits=limits
-            ),
+            resources=resources,
             args=args,
             env=env,
             image_pull_policy="IfNotPresent",
@@ -282,21 +361,16 @@ class Kubernetes(Driver):
         return job
 
     def _setup_resources(self, job_config: Job) -> Tuple[dict, dict]:
-        resource_requests = {"memory": f"{self._memory_limit_in_gb}Gi"}
+        worker_resources = deepcopy(self._worker_resources)
         if job_config.needs_gpu:
-            resource_requests["nvidia.com/gpu"] = "1"
+            worker_resources["requests"]["nvidia.com/gpu"] = "1"
+            worker_resources["limits"]["nvidia.com/gpu"] = "1"
 
-        limits = resource_requests.copy()
+        return worker_resources["requests"], worker_resources["limits"]
 
-        if not self._gretel_cpu_count.isdigit():
-            raise KubernetesError(
-                f"Gretel CPU Count must be an integer, instead received {self._gretel_cpu_count}"
-            )
-        resource_requests["cpu"] = self._gretel_cpu_count
-
-        return resource_requests, limits
-
-    def _setup_environment_variables(self, job_config: Job) -> List[client.V1EnvVar]:
+    def _setup_environment_variables(
+        self, job_config: Job, resources: client.V1ResourceRequirements
+    ) -> List[client.V1EnvVar]:
         env = []
         if job_config.env_vars:
             env = [
@@ -307,9 +381,9 @@ class Kubernetes(Driver):
         )
         env.append(client.V1EnvVar(name="GRETEL_STAGE", value=job_config.gretel_stage))
 
-        gretel_cpu_count = self._gretel_cpu_count
-        if gretel_cpu_count:
-            env.append(client.V1EnvVar(name=CPU_COUNT_ENV_NAME, value=gretel_cpu_count))
+        cpu_quantity = parse_quantity(resources.requests.get("cpu", "1"))
+        cpu_count = max(math.floor(cpu_quantity), 1)
+        env.append(client.V1EnvVar(name=CPU_COUNT_ENV_NAME, value=str(cpu_count)))
 
         return env
 

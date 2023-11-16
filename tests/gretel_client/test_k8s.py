@@ -42,6 +42,8 @@ from gretel_client.agents.drivers.k8s import (
     KubernetesError,
     OVERRIDE_CERT_NAME,
     PREVENT_AUTOSCALER_EVICTION_ENV_NAME,
+    WORKER_MEMORY_GB_ENV_NAME,
+    WORKER_RESOURCES_ENV_NAME,
 )
 
 
@@ -88,6 +90,12 @@ def patch_cpu_environ(var_value: str):
 
 
 @contextmanager
+def patch_worker_resources(var_value: str):
+    with patch.dict(os.environ, {WORKER_RESOURCES_ENV_NAME: var_value}):
+        yield
+
+
+@contextmanager
 def patch_gpu_toleration_environ(var_value: str):
     with patch.dict(
         os.environ,
@@ -108,6 +116,12 @@ def patch_cpu_toleration_environ(var_value: str):
 @contextmanager
 def patch_cpu_count_environ(var_value: str):
     with patch.dict(os.environ, {CPU_COUNT_ENV_NAME: var_value}):
+        yield
+
+
+@contextmanager
+def patch_worker_memory_gb_environ(var_value: str):
+    with patch.dict(os.environ, {WORKER_MEMORY_GB_ENV_NAME: var_value}):
         yield
 
 
@@ -373,7 +387,7 @@ class TestKubernetesDriver(TestCase):
                 job = Job.from_dict(get_mock_job(), self.config)
                 with self.assertRaisesRegex(
                     KubernetesError,
-                    f"Gretel CPU Count must be an integer, instead received {val}",
+                    f"Gretel CPU Count must be a positive integer, instead received {val}",
                 ):
                     self.reload_env_and_build_job(job)
 
@@ -391,6 +405,129 @@ class TestKubernetesDriver(TestCase):
             self.assertEqual(
                 {"memory": "14Gi"},
                 job_template.spec.containers[0].resources.limits,
+            )
+            self.assertEqual(
+                "5",
+                next(
+                    (
+                        v.value
+                        for v in job_template.spec.containers[0].env
+                        if v.name == CPU_COUNT_ENV_NAME
+                    )
+                ),
+            )
+
+    def test_worker_resources_set_not_dictionary(self):
+        for test_val in ["1", "[1,2,3]", "[]"]:
+            with patch_worker_resources(test_val):
+                with self.assertRaisesRegex(
+                    KubernetesError,
+                    "The GRETEL_WORKER_RESOURCES variable was not a JSON dict",
+                ):
+                    self.driver._load_env_and_set_vars()
+
+    def test_worker_resources_set_invalid_fields(self):
+        with patch_worker_resources(
+            json.dumps({"requests": {}, "limits": {}, "more": {}})
+        ):
+            with self.assertRaisesRegex(
+                KubernetesError,
+                "worker resources specified via 'GRETEL_WORKER_RESOURCES' invalid:.*more",
+            ):
+                self.driver._load_env_and_set_vars()
+
+    def test_worker_resources_set_invalid_quantity(self):
+        with patch_worker_resources(
+            json.dumps({"requests": {}, "limits": {"cpu": "1x"}})
+        ):
+            with self.assertRaisesRegex(
+                KubernetesError,
+                "limits.cpu in 'GRETEL_WORKER_RESOURCES' value must be a valid quantity, got: 1x",
+            ):
+                self.driver._load_env_and_set_vars()
+
+    def test_worker_resources_set_ignores_legacy_settings(self):
+        with patch_worker_resources(
+            json.dumps({"requests": {"cpu": "3.5", "memory": "12Gi"}, "limits": {}})
+        ), patch_cpu_count_environ("2"), patch_worker_memory_gb_environ("14"):
+            job = Job.from_dict(get_mock_job(), self.config)
+            k8s_job = self.reload_env_and_build_job(job)
+
+            job_spec: V1JobSpec = k8s_job.spec
+            job_template: V1PodTemplateSpec = job_spec.template
+            self.assertEqual(
+                {"memory": "12Gi", "cpu": "3.5"},
+                job_template.spec.containers[0].resources.requests,
+            )
+            self.assertEqual(
+                {"memory": "12Gi"},
+                job_template.spec.containers[0].resources.limits,
+            )
+            self.assertEqual(
+                "3",
+                next(
+                    (
+                        v.value
+                        for v in job_template.spec.containers[0].env
+                        if v.name == CPU_COUNT_ENV_NAME
+                    )
+                ),
+            )
+
+    def test_worker_resources_partially_set_uses_legacy_cpu(self):
+        with patch_worker_resources(
+            json.dumps({"requests": {"memory": "12Gi"}, "limits": {}})
+        ), patch_cpu_count_environ("2"), patch_worker_memory_gb_environ("14"):
+            job = Job.from_dict(get_mock_job(), self.config)
+            k8s_job = self.reload_env_and_build_job(job)
+
+            job_spec: V1JobSpec = k8s_job.spec
+            job_template: V1PodTemplateSpec = job_spec.template
+            self.assertEqual(
+                {"memory": "12Gi", "cpu": "2"},
+                job_template.spec.containers[0].resources.requests,
+            )
+            self.assertEqual(
+                {"memory": "12Gi"},
+                job_template.spec.containers[0].resources.limits,
+            )
+            self.assertEqual(
+                "2",
+                next(
+                    (
+                        v.value
+                        for v in job_template.spec.containers[0].env
+                        if v.name == CPU_COUNT_ENV_NAME
+                    )
+                ),
+            )
+
+    def test_worker_resources_partially_set_uses_legacy_memory(self):
+        with patch_worker_resources(
+            json.dumps({"requests": {"cpu": "3.5"}, "limits": {}})
+        ), patch_cpu_count_environ("2"), patch_worker_memory_gb_environ("14"):
+            job = Job.from_dict(get_mock_job(), self.config)
+            k8s_job = self.reload_env_and_build_job(job)
+
+            job_spec: V1JobSpec = k8s_job.spec
+            job_template: V1PodTemplateSpec = job_spec.template
+            self.assertEqual(
+                {"memory": "14Gi", "cpu": "3.5"},
+                job_template.spec.containers[0].resources.requests,
+            )
+            self.assertEqual(
+                {"memory": "14Gi"},
+                job_template.spec.containers[0].resources.limits,
+            )
+            self.assertEqual(
+                "3",
+                next(
+                    (
+                        v.value
+                        for v in job_template.spec.containers[0].env
+                        if v.name == CPU_COUNT_ENV_NAME
+                    )
+                ),
             )
 
     def test_is_job_active_true_then_false(self):
