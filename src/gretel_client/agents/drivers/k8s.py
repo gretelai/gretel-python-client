@@ -40,10 +40,6 @@ IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME = "IMAGE_REGISTRY_OVERRIDE_HOST"
 PREVENT_AUTOSCALER_EVICTION_ENV_NAME = "PREVENT_AUTOSCALER_EVICTION"
 
 
-# Crash agent if pull secret update failed three times in a row
-_MAX_PULL_SECRET_UPDATE_FAILURE_COUNT = 3
-
-
 if TYPE_CHECKING:
     from gretel_client.agents.agent import AgentConfig, Job
 
@@ -500,23 +496,17 @@ class KubernetesDriverDaemon:
             self._stop = False
 
     def _run_pull_secret_thread(self) -> None:
-        failure_count = 0
         while not self._should_stop():
             sleep_length = self.sleep_length
             try:
                 self._update_pull_secrets()
-                failure_count = 0
             # We don't want the thread to die unless a
             # keyboard interrupt occurs
             except KeyboardInterrupt as ex:
                 logger.info("Exiting early")
                 raise ex
-            except Exception:
+            except BaseException:
                 logger.exception("Error updating pull secret")
-                failure_count += 1
-                if failure_count > _MAX_PULL_SECRET_UPDATE_FAILURE_COUNT:
-                    logger.error("pull secret update failed too often, crashing ...")
-                    sys.exit(1)
                 sleep_length = self.sleep_length_retry
 
             self._sleep(sleep_length)
