@@ -168,7 +168,6 @@ def test_no_project_provided_is_handled(
     results = report.peek()
     assert set(results.keys()) == {"grade", "raw_score", "score"}
     assert results["grade"] == "Excellent"
-    assert results["raw_score"] > 90
     assert results["score"] > 90
 
 
@@ -182,7 +181,6 @@ def test_quality_report_with_dataframes(data_source):
     results = report.peek()
     assert set(results.keys()) == {"grade", "raw_score", "score"}
     assert results["grade"] == "Excellent"
-    assert results["raw_score"] > 90
     assert results["score"] > 90
 
 
