@@ -39,6 +39,8 @@ GPU_NODE_SELECTOR_ENV_NAME = "GPU_NODE_SELECTOR"
 CPU_NODE_SELECTOR_ENV_NAME = "CPU_NODE_SELECTOR"
 GPU_TOLERATIONS_ENV_NAME = "GPU_TOLERATIONS"
 CPU_TOLERATIONS_ENV_NAME = "CPU_TOLERATIONS"
+GPU_AFFINITY_ENV_NAME = "GPU_AFFINITY"
+CPU_AFFINITY_ENV_NAME = "CPU_AFFINITY"
 CPU_COUNT_ENV_NAME = "GRETEL_CPU_COUNT"
 CA_CERT_CONFIGMAP_ENV_NAME = "GRETEL_CA_CERT_CONFIGMAP_NAME"
 IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME = "IMAGE_REGISTRY_OVERRIDE_HOST"
@@ -153,6 +155,7 @@ class Kubernetes(Driver):
                 )
             else:
                 requests["cpu"] = env_cpu_count
+                limits["cpu"] = env_cpu_count
 
         # Apply defaults
         requests.setdefault("cpu", "1")
@@ -174,6 +177,9 @@ class Kubernetes(Driver):
         )
         self._gpu_tolerations = self._parse_kube_env_var(GPU_TOLERATIONS_ENV_NAME, list)
         self._cpu_tolerations = self._parse_kube_env_var(CPU_TOLERATIONS_ENV_NAME, list)
+
+        self._gpu_affinity = self._parse_kube_env_var(GPU_AFFINITY_ENV_NAME, dict)
+        self._cpu_affinity = self._parse_kube_env_var(CPU_AFFINITY_ENV_NAME, dict)
 
         self._gretel_worker_sa = os.getenv("GRETEL_WORKER_SA") or "gretel-agent"
         self._gretel_worker_secret_name = (
@@ -343,9 +349,11 @@ class Kubernetes(Driver):
         if job_config.needs_gpu:
             self._add_selector_if_present(template, self._gpu_node_selector)
             self._add_tolerations_if_present(template, self._gpu_tolerations)
+            self._add_affinity_if_present(template, self._gpu_affinity)
         else:
             self._add_selector_if_present(template, self._cpu_node_selector)
             self._add_tolerations_if_present(template, self._cpu_tolerations)
+            self._add_affinity_if_present(template, self._cpu_affinity)
 
         spec = client.V1JobSpec(
             template=template, backoff_limit=0, ttl_seconds_after_finished=86400
@@ -381,9 +389,10 @@ class Kubernetes(Driver):
         )
         env.append(client.V1EnvVar(name="GRETEL_STAGE", value=job_config.gretel_stage))
 
-        cpu_quantity = parse_quantity(resources.requests.get("cpu", "1"))
-        cpu_count = max(math.floor(cpu_quantity), 1)
-        env.append(client.V1EnvVar(name=CPU_COUNT_ENV_NAME, value=str(cpu_count)))
+        if cpu_limit := resources.limits.get("cpu"):
+            cpu_quantity = parse_quantity(cpu_limit)
+            cpu_count = max(math.floor(cpu_quantity), 1)
+            env.append(client.V1EnvVar(name=CPU_COUNT_ENV_NAME, value=str(cpu_count)))
 
         return env
 
@@ -451,6 +460,13 @@ class Kubernetes(Driver):
         if selector_dict:
             pod_spec: client.V1PodSpec = template.spec
             pod_spec.node_selector = selector_dict
+
+    def _add_affinity_if_present(
+        self, template: client.V1PodTemplateSpec, affinity_dict: dict
+    ) -> None:
+        if affinity_dict:
+            pod_spec: client.V1PodSpec = template.spec
+            pod_spec.affinity = affinity_dict
 
     def _add_tolerations_if_present(
         self, template: client.V1PodTemplateSpec, tolerations_list: list

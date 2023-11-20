@@ -31,9 +31,11 @@ from kubernetes.client import (
 from gretel_client.agents.agent import AgentConfig, Job
 from gretel_client.agents.drivers.k8s import (
     CA_CERT_CONFIGMAP_ENV_NAME,
+    CPU_AFFINITY_ENV_NAME,
     CPU_COUNT_ENV_NAME,
     CPU_NODE_SELECTOR_ENV_NAME,
     CPU_TOLERATIONS_ENV_NAME,
+    GPU_AFFINITY_ENV_NAME,
     GPU_NODE_SELECTOR_ENV_NAME,
     GPU_TOLERATIONS_ENV_NAME,
     IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME,
@@ -109,6 +111,15 @@ def patch_cpu_toleration_environ(var_value: str):
     with patch.dict(
         os.environ,
         {CPU_TOLERATIONS_ENV_NAME: var_value},
+    ):
+        yield
+
+
+@contextmanager
+def patch_env(var_name: str, var_value: str):
+    with patch.dict(
+        os.environ,
+        {var_name: var_value},
     ):
         yield
 
@@ -312,6 +323,46 @@ class TestKubernetesDriver(TestCase):
                     job_template.spec.tolerations,
                 )
 
+    @patch_env(
+        CPU_AFFINITY_ENV_NAME,
+        '{"nodeAffinity": {"requiredDuringSchedulingIgnoredDuringExecution": {"nodeSelectorTerms":[{"matchExpressions":[{"key":"gretel.ai/node-type","operator":"In","values":["cpu-standard"]}]}]}}}',
+    )
+    @patch_env(
+        GPU_AFFINITY_ENV_NAME,
+        '{"nodeAffinity": {"requiredDuringSchedulingIgnoredDuringExecution": {"nodeSelectorTerms":[{"matchExpressions":[{"key":"gretel.ai/node-type","operator":"In","values":["gpu-standard"]}]}]}}}',
+    )
+    def test_build_job_tolerations_set(self):
+        for job_type in ["cpu-standard", "gpu-standard"]:
+            with self.subTest(job_type):
+                job_data = get_mock_job(job_type)
+                job = Job.from_dict(job_data, self.config)
+
+                k8s_job = self.reload_env_and_build_job(job)
+
+                job_spec: V1JobSpec = k8s_job.spec
+                job_template: V1PodTemplateSpec = job_spec.template
+
+                self.assertEqual(
+                    {
+                        "nodeAffinity": {
+                            "requiredDuringSchedulingIgnoredDuringExecution": {
+                                "nodeSelectorTerms": [
+                                    {
+                                        "matchExpressions": [
+                                            {
+                                                "key": "gretel.ai/node-type",
+                                                "operator": "In",
+                                                "values": [job_type],
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    job_template.spec.affinity,
+                )
+
     def test_build_job_cpu_req_node_selector_set(self):
         with patch_cpu_environ('{"selector":"my-cpu-node"}'):
             self.driver._load_env_and_set_vars()
@@ -403,7 +454,7 @@ class TestKubernetesDriver(TestCase):
                 job_template.spec.containers[0].resources.requests,
             )
             self.assertEqual(
-                {"memory": "14Gi"},
+                {"memory": "14Gi", "cpu": "5"},
                 job_template.spec.containers[0].resources.limits,
             )
             self.assertEqual(
@@ -463,6 +514,33 @@ class TestKubernetesDriver(TestCase):
                 {"memory": "12Gi"},
                 job_template.spec.containers[0].resources.limits,
             )
+            self.assertNotIn(
+                CPU_COUNT_ENV_NAME,
+                (v.name for v in job_template.spec.containers[0].env),
+            )
+
+    def test_worker_resources_set_sets_cpu_count_from_cpu_limit(self):
+        with patch_worker_resources(
+            json.dumps(
+                {
+                    "requests": {"cpu": "1.5", "memory": "12Gi"},
+                    "limits": {"cpu": "3.5", "memory": "12Gi"},
+                }
+            )
+        ):
+            job = Job.from_dict(get_mock_job(), self.config)
+            k8s_job = self.reload_env_and_build_job(job)
+
+            job_spec: V1JobSpec = k8s_job.spec
+            job_template: V1PodTemplateSpec = job_spec.template
+            self.assertEqual(
+                {"memory": "12Gi", "cpu": "1.5"},
+                job_template.spec.containers[0].resources.requests,
+            )
+            self.assertEqual(
+                {"memory": "12Gi", "cpu": "3.5"},
+                job_template.spec.containers[0].resources.limits,
+            )
             self.assertEqual(
                 "3",
                 next(
@@ -488,7 +566,7 @@ class TestKubernetesDriver(TestCase):
                 job_template.spec.containers[0].resources.requests,
             )
             self.assertEqual(
-                {"memory": "12Gi"},
+                {"memory": "12Gi", "cpu": "2"},
                 job_template.spec.containers[0].resources.limits,
             )
             self.assertEqual(
@@ -519,15 +597,9 @@ class TestKubernetesDriver(TestCase):
                 {"memory": "14Gi"},
                 job_template.spec.containers[0].resources.limits,
             )
-            self.assertEqual(
-                "3",
-                next(
-                    (
-                        v.value
-                        for v in job_template.spec.containers[0].env
-                        if v.name == CPU_COUNT_ENV_NAME
-                    )
-                ),
+            self.assertNotIn(
+                CPU_COUNT_ENV_NAME,
+                (v.name for v in job_template.spec.containers[0].env),
             )
 
     def test_is_job_active_true_then_false(self):
