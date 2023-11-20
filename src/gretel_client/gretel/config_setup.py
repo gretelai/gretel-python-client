@@ -158,42 +158,37 @@ def create_model_config_from_base(
     If the parameter is not nested within a section, pass it directly as
     a keyword argument.
 
-    The base config can be given as a yaml file path or the name of one of
-    the Gretel template files (without the extension) listed here:
+    The base config can be given as a dict, yaml file path, yaml string, or
+    the name of one of the base config files (without the extension) listed here:
     https://github.com/gretelai/gretel-blueprints/tree/main/config_templates/gretel/synthetics
+
+    Args:
+        base_config: Base config name, yaml path, yaml string, or dict.
+        job_label: Descriptive label to append to job the name.
+
+    Raises:
+        ModelConfigReadError: If the input base config format is not valid.
+        ConfigSettingError: If a config section or setting format is invalid.
+
+    Returns:
+        The model config derived from the base template and non-default settings.
 
     Examples::
 
-        # Create an ACTGAN config with 10 epochs.
         from gretel_client.gretel.config_setup import create_model_config_from_base
+
+        # Create an ACTGAN config with 10 epochs.
         config = create_model_config_from_base(
             base_config="tabular-actgan",
             params={"epochs": 10},
         )
 
         # Create a GPT config with a custom column name and 100 epochs.
-        from gretel_client.gretel.config_setup import create_model_config_from_base
         config = create_model_config_from_base(
             base_config="natural-language",
             column_name="custom_name", # not nested in a config section
             params={"epochs": 100},    # nested in the `params` section
         )
-
-
-    The model configs are documented at
-    https://docs.gretel.ai/reference/synthetics/models. For ACTGAN, the
-    available config sections are `params`, `generate`, and `privacy_filters`.
-
-    Args:
-        base_config: Base config name, yaml path, yaml string, or dict to update.
-        job_label: Descriptive label to append to job the name.
-
-    Raises:
-        BaseConfigError: If the base config is an invalid name or path.
-        ConfigSettingError: If the config section or setting format is invalid.
-
-    Returns:
-        The model config derived from the base template and non-default settings.
     """
     config = smart_read_model_config(base_config)
     model_type, model_config_section = extract_model_config_section(config)

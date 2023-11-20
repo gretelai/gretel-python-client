@@ -95,6 +95,13 @@ def test_hybrid_created_with_azure_artifact_endpoint(key: str, value: str):
         assert isinstance(transport_params.get("client"), BlobServiceClient)
 
 
+def test_missing_environment_variable_error_with_azure_hybrid():
+    with pytest.raises(
+        ArtifactsException, match="Could not find Azure storage account credentials."
+    ):
+        _get_transport_params("azure://my-bucket")
+
+
 def test_get_artifact_path_and_file_name():
     # Test a DataFrame first
     dataframe = pd.DataFrame(data={"foo": [1, 2, 3], "bar": [4, 5, 6]})
@@ -170,7 +177,7 @@ def test_hybrid_upload_dataframe_as_project_artifact(uuid4, endpoint):
     uploaded_artifact = Path(artifact_key)
     sources_dir = Path(endpoint) / "sources" / "project_id"
     expected_uploaded_artifact_path = (
-        sources_dir / f"gretel_gruuid_dataframe-df-uuid.csv"
+        sources_dir / "gretel_gruuid_dataframe-df-uuid.csv"
     )
 
     assert uploaded_artifact.exists()

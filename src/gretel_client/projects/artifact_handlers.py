@@ -49,6 +49,13 @@ def _get_azure_blob_srv_client() -> Optional[BlobServiceClient]:
     if (connect_str := os.getenv("AZURE_STORAGE_CONNECTION_STRING")) is not None:
         return BlobServiceClient.from_connection_string(connect_str)
 
+    raise ArtifactsException(
+        "Could not find Azure storage account credentials. "
+        "Please set one of the following environment variables: "
+        "AZURE_STORAGE_ACCOUNT_NAME, OAUTH_STORAGE_ACCOUNT_NAME, "
+        "AZURE_STORAGE_CONNECTION_STRING."
+    )
+
 
 def _get_transport_params(endpoint: str) -> dict:
     """Returns a set of transport params that are suitable for passing

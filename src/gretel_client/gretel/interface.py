@@ -230,7 +230,7 @@ class Gretel:
 
     def submit_train(
         self,
-        base_config: str,
+        base_config: Union[str, Path, dict],
         *,
         data_source: Union[str, Path, _DataFrameT, None],
         job_label: Optional[str] = None,
@@ -241,12 +241,12 @@ class Gretel:
         """Submit a Gretel model training job.
 
         Training jobs are configured by updating a base config, which can be
-        given as a yaml file path or as the name of one of the Gretel base
-        config files (without the extension) listed here:
+        given as a dict, yaml file path, yaml string, or as the name of one of
+        the Gretel base config files (without the extension) listed here:
         https://github.com/gretelai/gretel-blueprints/tree/main/config_templates/gretel/synthetics
 
         Args:
-            base_config: Gretel base config name, yaml path, or yaml string.
+            base_config: Base config name, yaml file path, yaml string, or dict.
             data_source: Training data source as a file path or pandas DataFrame.
             job_label: Descriptive label to append to job the name.
             wait: If True, wait for the job to complete before returning.
@@ -264,10 +264,13 @@ class Gretel:
         Example::
 
             from gretel_client import Gretel
+
+            data_source="https://gretel-public-website.s3-us-west-2.amazonaws.com/datasets/USAdultIncome5k.csv"
+
             gretel = Gretel(project_name="my-project")
             trained = gretel.submit_train(
                 base_config="tabular-actgan",
-                data_source="data.csv",
+                data_source=data_source,
                 params={"epochs": 100, "generator_dim": [128, 128]},
                 privacy_filters={"similarity": "high", "outliers": None},
             )
@@ -445,7 +448,7 @@ class Gretel:
         """Run a hyperparameter tuning experiment with Gretel Tuner.
 
         Args:
-            tuner_config: Config yaml file path, yaml string, or dict.
+            tuner_config: The config as a yaml file path, yaml string, or dict.
             data_source: Training data source as a file path or pandas DataFrame.
             n_trials: Number of trials to run.
             n_jobs: Number of parallel jobs to run locally. Note each job will

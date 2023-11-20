@@ -54,7 +54,7 @@ class GretelTunerResults:
 
 
 class GretelTuner:
-    """Class for running hyperparameter tuning experiments with Optuna.
+    """Class for running hyperparameter tuning experiments.
 
     Args:
         config_sampler: Sampler for generating trial model configs.
