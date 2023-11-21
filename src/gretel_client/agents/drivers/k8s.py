@@ -45,7 +45,8 @@ CPU_COUNT_ENV_NAME = "GRETEL_CPU_COUNT"
 CA_CERT_CONFIGMAP_ENV_NAME = "GRETEL_CA_CERT_CONFIGMAP_NAME"
 IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME = "IMAGE_REGISTRY_OVERRIDE_HOST"
 PREVENT_AUTOSCALER_EVICTION_ENV_NAME = "PREVENT_AUTOSCALER_EVICTION"
-
+WORKER_POD_LABELS_ENV_NAME = "WORKER_POD_LABELS"
+WORKER_POD_ANNOTATIONS_ENV_NAME = "WORKER_POD_ANNOTATIONS"
 
 if TYPE_CHECKING:
     from gretel_client.agents.agent import AgentConfig, Job
@@ -191,9 +192,29 @@ class Kubernetes(Driver):
         self._gretel_pull_secret = (
             os.getenv(PULL_SECRET_ENV_NAME) or "gretel-pull-secret"
         )
-        self._prevent_autoscaler_eviction = (
-            os.environ.get(PREVENT_AUTOSCALER_EVICTION_ENV_NAME) == "true"
+
+        self._worker_pod_labels = (
+            self._parse_kube_env_var(WORKER_POD_LABELS_ENV_NAME, dict) or {}
         )
+        if "app" in self._worker_pod_labels:
+            logger.warning(
+                f"User-provided worker pod label app={self._worker_pod_labels['app']} will be ignored, 'app' is a reserved label key and cannot be user-specified"
+            )
+        self._worker_pod_annotations = (
+            self._parse_kube_env_var(WORKER_POD_ANNOTATIONS_ENV_NAME, dict) or {}
+        )
+        if os.environ.get(PREVENT_AUTOSCALER_EVICTION_ENV_NAME) == "true":
+            if (
+                "cluster-autoscaler.kubernetes.io/safe-to-evict"
+                not in self._worker_pod_annotations
+            ):
+                self._worker_pod_annotations[
+                    "cluster-autoscaler.kubernetes.io/safe-to-evict"
+                ] = "false"
+            else:
+                logger.warning(
+                    f"ignoring '{PREVENT_AUTOSCALER_EVICTION_ENV_NAME}' setting as '{WORKER_POD_ANNOTATIONS_ENV_NAME}' already contains key 'cluster-autoscaler.kubernetes.io/safe-to-evict'"
+                )
 
         if restart_worker or self._worker is None:
             if self._worker is not None:
@@ -324,12 +345,12 @@ class Kubernetes(Driver):
                 ),
             ],
         )
-        annotations = {}
-        if self._prevent_autoscaler_eviction:
-            annotations["cluster-autoscaler.kubernetes.io/safe-to-evict"] = "false"
+        labels = deepcopy(self._worker_pod_labels)
+        labels["app"] = "gretel-jobs-worker"
+        annotations = deepcopy(self._worker_pod_annotations)
         template = client.V1PodTemplateSpec(
             metadata=client.V1ObjectMeta(
-                labels={"app": "gretel-jobs-worker"},
+                labels=labels,
                 namespace=self._gretel_worker_namespace,
                 annotations=annotations,
             ),

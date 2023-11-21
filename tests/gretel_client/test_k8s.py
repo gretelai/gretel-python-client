@@ -45,6 +45,8 @@ from gretel_client.agents.drivers.k8s import (
     OVERRIDE_CERT_NAME,
     PREVENT_AUTOSCALER_EVICTION_ENV_NAME,
     WORKER_MEMORY_GB_ENV_NAME,
+    WORKER_POD_ANNOTATIONS_ENV_NAME,
+    WORKER_POD_LABELS_ENV_NAME,
     WORKER_RESOURCES_ENV_NAME,
 )
 
@@ -802,3 +804,33 @@ class TestKubernetesDriver(TestCase):
         pod_template: V1PodTemplateSpec = job_spec.template
         metadata: V1ObjectMeta = pod_template.metadata
         assert {} == metadata.annotations
+
+    @patch_env(WORKER_POD_LABELS_ENV_NAME, '{"foo": "bar"}')
+    @patch_env(WORKER_POD_ANNOTATIONS_ENV_NAME, '{"baz": "qux"}')
+    @patch_autoscaler_env_var("true")
+    def test_worker_pod_metadata(self):
+        job = Job.from_dict(get_mock_job(), self.config)
+        k8s_job = self.reload_env_and_build_job(job)
+        job_spec: V1JobSpec = k8s_job.spec
+        pod_template: V1PodTemplateSpec = job_spec.template
+        metadata: V1ObjectMeta = pod_template.metadata
+        assert {"foo": "bar", "app": "gretel-jobs-worker"} == metadata.labels
+        assert {
+            "baz": "qux",
+            "cluster-autoscaler.kubernetes.io/safe-to-evict": "false",
+        } == metadata.annotations
+
+    @patch_env(
+        WORKER_POD_ANNOTATIONS_ENV_NAME,
+        '{"cluster-autoscaler.kubernetes.io/safe-to-evict": "true"}',
+    )
+    @patch_autoscaler_env_var("true")
+    def test_worker_pod_annotations_overrides_safe_to_evict(self):
+        job = Job.from_dict(get_mock_job(), self.config)
+        k8s_job = self.reload_env_and_build_job(job)
+        job_spec: V1JobSpec = k8s_job.spec
+        pod_template: V1PodTemplateSpec = job_spec.template
+        metadata: V1ObjectMeta = pod_template.metadata
+        assert {
+            "cluster-autoscaler.kubernetes.io/safe-to-evict": "true"
+        } == metadata.annotations
