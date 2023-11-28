@@ -31,20 +31,33 @@ try:
 except ImportError:  # pragma: no cover
     DefaultAzureCredential = None
 try:
-    from azure.storage.blob import BlobServiceClient
+    from azure.storage.blob import BlobClient, BlobServiceClient
 except ImportError:  # pragma: no cover
     BlobServiceClient = None
+    BlobClient = None
 
 HYBRID_ARTIFACT_ENDPOINT_PREFIXES = ["azure://", "gs://", "s3://"]
 
 
-def _get_azure_blob_srv_client() -> Optional[BlobServiceClient]:
+def _get_azure_blob_srv_client(endpoint: str) -> Optional[BlobServiceClient]:
     for env_var_name in ("AZURE_STORAGE_ACCOUNT_NAME", "OAUTH_STORAGE_ACCOUNT_NAME"):
         if (storage_account := os.getenv(env_var_name)) is not None:
             oauth_url = f"https://{storage_account}.blob.core.windows.net"
             return BlobServiceClient(
                 account_url=oauth_url, credential=DefaultAzureCredential()
             )
+
+    # Note: This will only work for one container
+    if (sas_url := os.getenv("AZURE_BLOB_SAS_URL")) is not None:
+        client = BlobClient.from_blob_url(sas_url)
+
+        artifact_endpoint = urlparse(endpoint)
+        if client.container_name != artifact_endpoint.netloc:
+            raise ArtifactsException(
+                f"SAS URL's container name: '{client.container_name}' "
+                f"does not match artifact's container name: '{artifact_endpoint.netloc}'"
+            )
+        return client
 
     if (connect_str := os.getenv("AZURE_STORAGE_CONNECTION_STRING")) is not None:
         return BlobServiceClient.from_connection_string(connect_str)
@@ -53,7 +66,7 @@ def _get_azure_blob_srv_client() -> Optional[BlobServiceClient]:
         "Could not find Azure storage account credentials. "
         "Please set one of the following environment variables: "
         "AZURE_STORAGE_ACCOUNT_NAME, OAUTH_STORAGE_ACCOUNT_NAME, "
-        "AZURE_STORAGE_CONNECTION_STRING."
+        "AZURE_BLOB_SAS_URL, AZURE_STORAGE_CONNECTION_STRING."
     )
 
 
@@ -63,7 +76,7 @@ def _get_transport_params(endpoint: str) -> dict:
     """
     client = None
     if endpoint and endpoint.startswith("azure"):
-        client = _get_azure_blob_srv_client()
+        client = _get_azure_blob_srv_client(endpoint)
     return {"client": client} if client else {}
 
 
