@@ -336,3 +336,29 @@ def test_get_agent_env_var_passing_fails(
     print(cmd.output)
     get_agent_mock.assert_not_called()
     assert cmd.exit_code == 1
+
+
+@patch("gretel_client.cli.workflows.get_session_config")
+def test_workflows_read_from_env_manual(
+    get_session_config: MagicMock,
+    get_project: MagicMock,
+    runner: CliRunner,
+):
+    client_config = ClientConfig()
+    client_config.default_runner = "manual"
+    get_session_config.return_value = client_config
+    cmd = runner.invoke(
+        cli,
+        [
+            "workflows",
+            "create",
+            "--config",
+            "not-there",
+        ],
+    )
+
+    assert (
+        cmd.output
+        == "ERROR: Workflows only supported for 'cloud' or 'hybrid', not 'manual'\n"
+    )
+    assert cmd.exit_code == 1

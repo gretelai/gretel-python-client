@@ -21,4 +21,8 @@ class RunnerMode(str, Enum):
             "hybrid": RUNNER_MODE_HYBRID,
         },
     ) -> RunnerMode:
+        if unstrict not in _string_map:
+            raise ValueError(
+                f"Workflows only supported for 'cloud' or 'hybrid', not '{unstrict}'"
+            )
         return _string_map[unstrict]

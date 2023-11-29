@@ -32,6 +32,13 @@ def get_workflows_api() -> WorkflowsApi:
     return get_session_config().get_v1_api(WorkflowsApi)
 
 
+def determine_runner_mode() -> str:
+    default_runner = get_session_config().default_runner
+    if not default_runner:
+        return RunnerMode.RUNNER_MODE_CLOUD
+    return RunnerMode.from_str(default_runner)
+
+
 @workflows.command(help="Create a new workflow.")
 @click.option("--name", metavar="NAME", help="Workflow name.")
 @project_option
@@ -45,7 +52,7 @@ def get_workflows_api() -> WorkflowsApi:
     "--runner_mode",
     metavar="NAME",
     help="The RunnerMode to use by default when running this workflow.",
-    default=RunnerMode.RUNNER_MODE_CLOUD.value,
+    default=determine_runner_mode,
 )
 @pass_session
 def create(
@@ -55,7 +62,6 @@ def create(
     project: str,
     runner_mode: str = RunnerMode.RUNNER_MODE_CLOUD.value,
 ):
-
     with open(config, encoding="utf-8") as file:
         workflow_config = yaml.safe_load(file)
 
