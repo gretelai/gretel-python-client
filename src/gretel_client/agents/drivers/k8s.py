@@ -47,6 +47,10 @@ IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME = "IMAGE_REGISTRY_OVERRIDE_HOST"
 PREVENT_AUTOSCALER_EVICTION_ENV_NAME = "PREVENT_AUTOSCALER_EVICTION"
 WORKER_POD_LABELS_ENV_NAME = "WORKER_POD_LABELS"
 WORKER_POD_ANNOTATIONS_ENV_NAME = "WORKER_POD_ANNOTATIONS"
+COMMON_ENV_SECRET_NAME_ENV_NAME = "GRETEL_COMMON_ENV_SECRET_NAME"
+COMMON_DATA_SECRET_NAME_ENV_NAME = "GRETEL_COMMON_DATA_SECRET_NAME"
+COMMON_DATA_MOUNT_PATH_ENV_NAME = "GRETEL_COMMON_DATA_MOUNT_PATH"
+
 
 if TYPE_CHECKING:
     from gretel_client.agents.agent import AgentConfig, Job
@@ -169,6 +173,9 @@ class Kubernetes(Driver):
     def _load_env_and_set_vars(self, restart_worker: bool = False):
         self._load_and_setup_worker_resources()
         self._cert_override = os.getenv(CA_CERT_CONFIGMAP_ENV_NAME)
+        self._common_env_secret_name = os.getenv(COMMON_ENV_SECRET_NAME_ENV_NAME)
+        self._common_data_secret_name = os.getenv(COMMON_DATA_SECRET_NAME_ENV_NAME)
+        self._common_data_mount_path = os.getenv(COMMON_DATA_MOUNT_PATH_ENV_NAME)
 
         self._gpu_node_selector = self._parse_kube_env_var(
             GPU_NODE_SELECTOR_ENV_NAME, dict
@@ -325,6 +332,46 @@ class Kubernetes(Driver):
 
         image = self._resolve_image(job_config)
 
+        env_from = [
+            client.V1EnvFromSource(
+                secret_ref=client.V1SecretEnvSource(
+                    name=self._gretel_worker_secret_name
+                )
+            ),
+            client.V1EnvFromSource(
+                secret_ref=client.V1SecretEnvSource(
+                    name=job_config.uid, optional=False
+                ),
+            ),
+        ]
+
+        if self._common_env_secret_name:
+            env_from.append(
+                client.V1EnvFromSource(
+                    secret_ref=client.V1SecretEnvSource(
+                        name=self._common_env_secret_name,
+                    )
+                )
+            )
+
+        volumes = []
+        volume_mounts = []
+        if self._common_data_secret_name:
+            volumes.append(
+                client.V1Volume(
+                    name="common-data",
+                    secret=client.V1SecretVolumeSource(
+                        secret_name=self._common_data_secret_name,
+                    ),
+                )
+            )
+            volume_mounts.append(
+                client.V1VolumeMount(
+                    name="common-data",
+                    mount_path=self._common_data_mount_path,
+                )
+            )
+
         container = client.V1Container(
             name=job_config.uid,
             image=image,
@@ -332,18 +379,8 @@ class Kubernetes(Driver):
             args=args,
             env=env,
             image_pull_policy="IfNotPresent",
-            env_from=[
-                client.V1EnvFromSource(
-                    secret_ref=client.V1SecretEnvSource(
-                        name=self._gretel_worker_secret_name
-                    )
-                ),
-                client.V1EnvFromSource(
-                    secret_ref=client.V1SecretEnvSource(
-                        name=job_config.uid, optional=False
-                    ),
-                ),
-            ],
+            env_from=env_from,
+            volume_mounts=volume_mounts,
         )
         labels = deepcopy(self._worker_pod_labels)
         labels["app"] = "gretel-jobs-worker"
@@ -362,6 +399,7 @@ class Kubernetes(Driver):
                 image_pull_secrets=[
                     client.V1LocalObjectReference(name=self._gretel_pull_secret)
                 ],
+                volumes=volumes,
             ),
         )
 
