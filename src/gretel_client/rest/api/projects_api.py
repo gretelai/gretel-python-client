@@ -608,6 +608,7 @@ class ProjectsApi(object):
                         "CLOUD": "cloud",
                         "MANUAL": "manual",
                         "HYBRID": "hybrid",
+                        "INHERIT": "inherit",
                     },
                 },
                 "openapi_types": {
