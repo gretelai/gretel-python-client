@@ -29,7 +29,7 @@ params:
 privacy_filters:
   
   outliers: 
-    choices: [null, "medium", "high"]
+    fixed: null
 
   similarity:
-    choices: [null, "medium", "high"]
+    fixed: null
