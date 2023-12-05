@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch
 import pandas as pd
 import pytest
 
-from azure.storage.blob import BlobClient, BlobServiceClient
+from azure.storage.blob import BlobServiceClient
 
 from gretel_client.config import DEFAULT_GRETEL_ARTIFACT_ENDPOINT
 from gretel_client.projects.artifact_handlers import (
@@ -96,34 +96,7 @@ def test_hybrid_created_with_azure_artifact_endpoint(key: str, value: str):
         transport_params = _get_transport_params(artifact_endpoint)
 
         assert transport_params is not None
-        expected_instance = (
-            BlobClient if "AZURE_BLOB_SAS_URL" == key else BlobServiceClient
-        )
-        assert isinstance(transport_params.get("client"), expected_instance)
-
-
-def test_azure_sas_url_invalid():
-    with patch.dict(
-        os.environ,
-        {
-            "AZURE_BLOB_SAS_URL": "https://account.blob.core.windows.net/diff-bucket/blob-name?abc=123"
-        },
-    ):
-        artifact_endpoint = "azure://my-bucket"
-        config = Mock(artifact_endpoint=artifact_endpoint)
-        project = Mock(
-            project_id="123",
-            name="proj",
-            projects_api=Mock(),
-            client_config=config,
-        )
-
-        assert isinstance(hybrid_handler(project), HybridArtifactsHandler)
-        with pytest.raises(
-            ArtifactsException,
-            match="'diff-bucket' does not match artifact's container name: 'my-bucket'",
-        ):
-            _get_transport_params(artifact_endpoint)
+        assert isinstance(transport_params.get("client"), BlobServiceClient)
 
 
 def test_missing_environment_variable_error_with_azure_hybrid():

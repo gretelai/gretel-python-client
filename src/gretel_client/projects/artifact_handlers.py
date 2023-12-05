@@ -31,10 +31,9 @@ try:
 except ImportError:  # pragma: no cover
     DefaultAzureCredential = None
 try:
-    from azure.storage.blob import BlobClient, BlobServiceClient
+    from azure.storage.blob import BlobServiceClient
 except ImportError:  # pragma: no cover
     BlobServiceClient = None
-    BlobClient = None
 
 HYBRID_ARTIFACT_ENDPOINT_PREFIXES = ["azure://", "gs://", "s3://"]
 
@@ -47,17 +46,9 @@ def _get_azure_blob_srv_client(endpoint: str) -> Optional[BlobServiceClient]:
                 account_url=oauth_url, credential=DefaultAzureCredential()
             )
 
-    # Note: This will only work for one container
+    # Note: The SAS URL must be at the account level
     if (sas_url := os.getenv("AZURE_BLOB_SAS_URL")) is not None:
-        client = BlobClient.from_blob_url(sas_url)
-
-        artifact_endpoint = urlparse(endpoint)
-        if client.container_name != artifact_endpoint.netloc:
-            raise ArtifactsException(
-                f"SAS URL's container name: '{client.container_name}' "
-                f"does not match artifact's container name: '{artifact_endpoint.netloc}'"
-            )
-        return client
+        return BlobServiceClient(sas_url)
 
     if (connect_str := os.getenv("AZURE_STORAGE_CONNECTION_STRING")) is not None:
         return BlobServiceClient.from_connection_string(connect_str)
