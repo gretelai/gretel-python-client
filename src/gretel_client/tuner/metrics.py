@@ -2,13 +2,19 @@ import json
 
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import List
+from pathlib import Path
+from typing import List, Optional, Union
 
+import pandas as pd
+
+from gretel_client.gretel.artifact_fetching import fetch_synthetic_data
 from gretel_client.gretel.config_setup import (
     CONFIG_SETUP_DICT,
     extract_model_config_section,
     ModelName,
 )
+from gretel_client.gretel.exceptions import GretelJobSubmissionError
+from gretel_client.helpers import poll
 from gretel_client.projects.models import Model
 
 
@@ -66,6 +72,7 @@ class BaseTunerMetric(ABC):
     direction: MetricDirection = MetricDirection.MAXIMIZE
 
     def get_gretel_report(self, model: Model) -> dict:
+        """Get the Gretel synthetic data quality report."""
         model_type, _ = extract_model_config_section(model.model_config)
         report_type = CONFIG_SETUP_DICT[model_type].report_type
         if report_type is None:
@@ -76,6 +83,60 @@ class BaseTunerMetric(ABC):
         with model.get_artifact_handle(f"{report_type.artifact_name}_json") as file:
             report = json.load(file)
         return report
+
+    def submit_generate_for_trial(
+        self,
+        model: Model,
+        num_records: Optional[int] = None,
+        seed_data: Optional[Union[str, Path, pd.DataFrame]] = None,
+        **generate_kwargs,
+    ) -> pd.DataFrame:
+        """Submit generate job for hyperparameter tuning trial.
+
+        Only one of `num_records` or `seed_data` can be provided. The former
+        will generate a complete synthetic dataset, while the latter will
+        conditionally generate synthetic data based on the seed data.
+
+        Args:
+            model: Gretel `Model` instance.
+            num_records: Number of records to generate.
+            seed_data: Seed data source as a file path or pandas DataFrame.
+
+        Raises:
+            TypeError: If `model` is not a Gretel `Model` instance.
+            GretelJobSubmissionError: If the combination of arguments is invalid.
+
+        Returns:
+            Pandas DataFrame containing the synthetic data.
+        """
+        if not isinstance(model, Model):
+            raise TypeError(f"Expected a Gretel Model object, got {type(model)}.")
+
+        if num_records is not None and seed_data is not None:
+            raise GretelJobSubmissionError(
+                "Only one of `num_records` or `seed_data` can be provided."
+            )
+
+        if num_records is None and seed_data is None:
+            raise GretelJobSubmissionError(
+                "Either `num_records` or `seed_data` must be provided."
+            )
+
+        if num_records is not None:
+            generate_kwargs.update({"num_records": num_records})
+
+        data_source = str(seed_data) if isinstance(seed_data, Path) else seed_data
+
+        record_handler = model.create_record_handler_obj(
+            data_source=data_source,
+            params=generate_kwargs,
+        )
+
+        record_handler.submit()
+
+        poll(record_handler, verbose=False)
+
+        return fetch_synthetic_data(record_handler)
 
     @abstractmethod
     def __call__(self, model: Model) -> float:
