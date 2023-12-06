@@ -173,7 +173,6 @@ class AuthStrategy(Enum):
 
 @dataclass
 class DataVolumeDef:
-
     target_dir: str
     """Defines container directory to place host file"""
 
@@ -470,6 +469,16 @@ class Container:
             pass
         return "unknown"
 
+    @property
+    def exit_status(self) -> Optional[int]:
+        try:
+            self.run.reload()
+            if self.run.status not in ["exited", "dead", "removing"]:
+                return None
+        except (docker.errors.NotFound, DockerError):
+            return None
+        return self.run.wait()["StatusCode"]
+
 
 @dataclass
 class CloudCreds(ABC):
@@ -487,7 +496,6 @@ class CloudCreds(ABC):
 
 
 class AwsCredFile(CloudCreds):
-
     base_dir: str = "/root/.aws"
     credential_file = "config"
 
@@ -506,7 +514,6 @@ class AwsCredFile(CloudCreds):
 
 
 class CaCertFile(CloudCreds):
-
     base_dir: str = "/etc/ssl"
     credential_file = "agent_ca.crt"
 

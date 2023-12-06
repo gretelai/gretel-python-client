@@ -52,6 +52,11 @@ class Driver(ABC, Generic[ComputeUnit]):
         ...
 
     @abstractmethod
+    def has_errored(self, unit: ComputeUnit) -> bool:
+        """Return ``True`` if the job ended in an error state."""
+        ...
+
+    @abstractmethod
     def shutdown(self, unit: ComputeUnit):
         """Terminates the compute unit."""
         ...

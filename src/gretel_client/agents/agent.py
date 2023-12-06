@@ -366,12 +366,17 @@ class JobManager(Generic[ComputeUnit]):
         telemetry.increase_active_jobs()
 
     def _update_active_jobs(self) -> None:
-        for job in list(self._active_jobs):
-            if not self._driver.active(self._active_jobs[job]):
-                self._logger.info("Job %s completed/ended", job)
-                self._driver.clean(self._active_jobs[job])
-                self._active_jobs.pop(job)
-                telemetry.decrease_active_jobs()
+        for job_name, job in list(self._active_jobs.items()):
+            if self._driver.active(job):
+                continue
+            if self._driver.has_errored(job):
+                self._logger.error("Job %s errored out", job_name)
+                # Intentionally leave Job object for debugging, will eventually be garbage collected
+            else:
+                self._logger.info("Job %s completed/ended", job_name)
+                self._driver.clean(job)
+            self._active_jobs.pop(job_name)
+            telemetry.decrease_active_jobs()
 
     def contains_job(self, job: Job) -> bool:
         return job.uid in self._active_jobs

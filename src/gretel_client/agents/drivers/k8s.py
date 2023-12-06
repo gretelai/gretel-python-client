@@ -5,14 +5,15 @@ Support for running local docker workers.
 from __future__ import annotations
 
 import base64
+import datetime
 import itertools
 import json
 import math
 import os
-import sys
 import traceback
 
 from copy import deepcopy
+from pathlib import Path
 from threading import Condition, Thread
 from time import sleep
 from typing import List, Optional, Tuple, Type, TYPE_CHECKING, TypeVar
@@ -50,8 +51,10 @@ WORKER_POD_ANNOTATIONS_ENV_NAME = "WORKER_POD_ANNOTATIONS"
 COMMON_ENV_SECRET_NAME_ENV_NAME = "GRETEL_COMMON_ENV_SECRET_NAME"
 COMMON_DATA_SECRET_NAME_ENV_NAME = "GRETEL_COMMON_DATA_SECRET_NAME"
 COMMON_DATA_MOUNT_PATH_ENV_NAME = "GRETEL_COMMON_DATA_MOUNT_PATH"
+LIVENESS_FILE_ENV_NAME = "LIVENESS_FILE"
 
-
+LAST_UPDATED_ANNOTATION = "lastUpdated"
+DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 if TYPE_CHECKING:
     from gretel_client.agents.agent import AgentConfig, Job
 
@@ -261,6 +264,11 @@ class Kubernetes(Driver):
     def active(self, unit: client.V1Job) -> bool:
         if unit:
             return self._is_job_active(unit)
+        return False
+
+    def has_errored(self, unit: client.V1Job) -> bool:
+        if unit:
+            return self._has_job_errored(unit)
         return False
 
     def clean(self, unit: client.V1Job):
@@ -560,9 +568,7 @@ class Kubernetes(Driver):
                 ) from ex
 
     def _is_job_active(self, job: client.V1Job) -> bool:
-        job_resp: Optional[client.V1Job] = self._batch_api.read_namespaced_job(
-            job.metadata.name, namespace=self._gretel_worker_namespace
-        )
+        job_resp: Optional[client.V1Job] = self._maybe_read_namespaced_job(job)
         if not job_resp:
             return False
         status: Optional[client.V1JobStatus] = job_resp.status
@@ -579,6 +585,25 @@ class Kubernetes(Driver):
             if cond.type in ("Complete", "Failed")
         )
 
+    def _has_job_errored(self, job: client.V1Job):
+        job_resp: Optional[client.V1Job] = self._maybe_read_namespaced_job(job)
+        if not job_resp:  # Assume a job that doesn't exist is not "errored"
+            return False
+        status: Optional[client.V1JobStatus] = job_resp.status
+        if status:
+            return bool(status.failed)
+        return False  # Assume a job with no status hasn't failed
+
+    def _maybe_read_namespaced_job(self, job: client.V1Job) -> Optional[client.V1Job]:
+        try:
+            return self._batch_api.read_namespaced_job(
+                job.metadata.name, namespace=self._gretel_worker_namespace
+            )
+        except Exception:
+            logger.exception(f"Error reading job {job.metadata.name}")
+
+        return None
+
 
 class KubernetesDriverDaemon:
     """
@@ -589,7 +614,7 @@ class KubernetesDriverDaemon:
         self,
         agent_config: AgentConfig,
         core_api: CoreV1Api,
-        sleep_length: int = 300,
+        sleep_length: int = 3600,
         sleep_length_retry: int = 30,
     ):
         self._agent_config = agent_config
@@ -610,6 +635,16 @@ class KubernetesDriverDaemon:
 
         self._stop = False
         self._stop_cond = Condition()
+
+        self._liveness_file_path = Path(
+            os.getenv(LIVENESS_FILE_ENV_NAME) or "/tmp/liveness.txt"
+        )
+
+        self._pull_secret_thread = Thread(
+            target=self._run_pull_secret_thread, daemon=True
+        )
+
+        self._minutes_stale = 11 * 60  # 11 hours
 
     def stop(self):
         with self._stop_cond:
@@ -639,8 +674,9 @@ class KubernetesDriverDaemon:
             return self._registry_host
 
     def start_update_pull_secret_thread(self) -> None:
-        thread = Thread(target=self._run_pull_secret_thread, daemon=True)
-        thread.start()
+        healthcheck_thread = Thread(target=self._run_healthcheck_thread, daemon=True)
+        self._pull_secret_thread.start()
+        healthcheck_thread.start()
         with self._stop_cond:
             self._stop = False
 
@@ -650,8 +686,8 @@ class KubernetesDriverDaemon:
             try:
                 self._update_pull_secrets()
             # We don't want the thread to die unless a
-            # keyboard interrupt occurs
-            except KeyboardInterrupt as ex:
+            # test emitted exception occurs
+            except StopThread as ex:
                 logger.info("Exiting early")
                 raise ex
             except BaseException:
@@ -671,18 +707,26 @@ class KubernetesDriverDaemon:
         username = auth.get("username")
         password = auth.get("password")
         data = _create_secret_json_b64(server, username, password)
+        current_time_str = datetime.datetime.now().strftime(DATETIME_FORMAT)
         secret = client.V1Secret(
-            metadata=client.V1ObjectMeta(name=self._gretel_pull_secret),
+            metadata=client.V1ObjectMeta(
+                name=self._gretel_pull_secret,
+                annotations={LAST_UPDATED_ANNOTATION: current_time_str},
+            ),
             data=data,
             type="kubernetes.io/dockerconfigjson",
         )
         return secret
 
+    def _read_secret(self) -> client.V1Secret:
+        return self._core_api.read_namespaced_secret(
+            self._gretel_pull_secret, self._gretel_worker_namespace
+        )
+
     def _update_pull_secrets(self) -> None:
         try:
-            self._core_api.read_namespaced_secret(
-                self._gretel_pull_secret, self._gretel_worker_namespace
-            )
+            # Read the secret to see if we need to create it
+            self._read_secret()
             secret = self._create_secret_body()
             logger.info("Updating pull secret")
             self._core_api.patch_namespaced_secret(
@@ -700,6 +744,61 @@ class KubernetesDriverDaemon:
             else:
                 raise ex
 
+    def _run_healthcheck_thread(self) -> None:
+        """This thread monitors the pull secret thread, in case that
+        thread unexpectedly dies, or stops writing the pull secret"""
+        while not self._should_stop():
+            # Check if the pull secret exists and won't expire
+            try:
+                self._run_healthchecks()
+                self._update_liveness_file()
+            except Exception as e:
+                logger.warning("Healthcheck Failed: %s", str(e))
+
+            sleep(self.sleep_length_retry)
+
+    def _run_healthchecks(self) -> bool:
+        try:
+            secret = self._read_secret()
+        except client.ApiException as ex:
+            raise PullSecretError("Could not find pull secret") from ex
+
+        # First check update time
+        metadata: client.V1ObjectMeta = secret.metadata
+        if not metadata:
+            raise PullSecretError("Metadata not populated for pull secret")
+        annotations: dict[str, str] = metadata.annotations
+        if not annotations:
+            raise PullSecretError("Annotations not set for pull secret metadata")
+        updated_time_str: datetime.datetime = annotations.get(LAST_UPDATED_ANNOTATION)
+        if not updated_time_str:
+            raise PullSecretError("No update time found for pull secret")
+        updated_time = datetime.datetime.strptime(updated_time_str, DATETIME_FORMAT)
+        minutes_since_last_update = (
+            datetime.datetime.now(tz=updated_time.tzinfo) - updated_time
+        ).seconds // 60
+
+        if minutes_since_last_update > self._minutes_stale:
+            raise PullSecretError(
+                f"Pull secret is stale, last updated {minutes_since_last_update} minutes ago."
+            )
+
+        # Next check if the pull secret thread is alive
+        if not self._pull_secret_thread.is_alive():
+            raise PullSecretError("The pull secret thread died.")
+        return True
+
+    def _update_liveness_file(self):
+        self._liveness_file_path.touch()
+
 
 class KubernetesError(Exception):
+    ...
+
+
+class PullSecretError(Exception):
+    ...
+
+
+class StopThread(Exception):
     ...

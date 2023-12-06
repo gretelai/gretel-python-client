@@ -81,3 +81,6 @@ class Docker(Driver):
 
     def active(self, container: Container) -> bool:
         return container.active
+
+    def has_errored(self, unit: Container) -> bool:
+        return unit.exit_status != 0

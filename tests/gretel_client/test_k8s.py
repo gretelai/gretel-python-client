@@ -1,3 +1,4 @@
+import datetime
 import json
 import os
 import uuid
@@ -6,7 +7,7 @@ from base64 import b64decode
 from contextlib import contextmanager
 from functools import wraps
 from typing import Callable
-from unittest import TestCase
+from unittest import main, TestCase
 from unittest.mock import Mock, patch
 
 from kubernetes.client import (
@@ -20,6 +21,7 @@ from kubernetes.client import (
     V1JobSpec,
     V1JobStatus,
     V1LocalObjectReference,
+    V1ManagedFieldsEntry,
     V1ObjectMeta,
     V1PodSpec,
     V1PodTemplateSpec,
@@ -35,6 +37,7 @@ from gretel_client.agents.drivers.k8s import (
     CPU_COUNT_ENV_NAME,
     CPU_NODE_SELECTOR_ENV_NAME,
     CPU_TOLERATIONS_ENV_NAME,
+    DATETIME_FORMAT,
     GPU_AFFINITY_ENV_NAME,
     GPU_NODE_SELECTOR_ENV_NAME,
     GPU_TOLERATIONS_ENV_NAME,
@@ -42,8 +45,11 @@ from gretel_client.agents.drivers.k8s import (
     Kubernetes,
     KubernetesDriverDaemon,
     KubernetesError,
+    LAST_UPDATED_ANNOTATION,
     OVERRIDE_CERT_NAME,
     PREVENT_AUTOSCALER_EVICTION_ENV_NAME,
+    PullSecretError,
+    StopThread,
     WORKER_MEMORY_GB_ENV_NAME,
     WORKER_POD_ANNOTATIONS_ENV_NAME,
     WORKER_POD_LABELS_ENV_NAME,
@@ -200,7 +206,7 @@ class TestKubernetesDriver(TestCase):
         self.driver.schedule(self.job)
 
         self.batch_api.create_namespaced_job.assert_called_once()
-        self.core_api.read_namespaced_secret.assert_called_once()
+        assert 2 == self.core_api.read_namespaced_secret.call_count
 
     def _create_api_exception(self, status: int, data: str) -> ApiException:
         http_resp = Mock()
@@ -222,7 +228,7 @@ class TestKubernetesDriver(TestCase):
             self.driver.schedule(self.job)
 
         self.batch_api.create_namespaced_job.assert_called_once()
-        self.core_api.read_namespaced_secret.assert_called_once()
+        assert 2 == self.core_api.read_namespaced_secret.call_count
 
     def test_schedule_job_with_errors_non_api_exception(self):
         exception = RecursionError("ahhh")
@@ -233,7 +239,7 @@ class TestKubernetesDriver(TestCase):
             self.driver.schedule(self.job)
 
         self.batch_api.create_namespaced_job.assert_called_once()
-        self.core_api.read_namespaced_secret.assert_called_once()
+        assert 2 == self.core_api.read_namespaced_secret.call_count
 
     def test_schedule_job_with_errors_already_exists(self):
         self._stub_api_exception_for_batch(405, '{"reason":"AlreadyExists"}')
@@ -251,7 +257,7 @@ class TestKubernetesDriver(TestCase):
         self.assertIsNone(result)
 
         self.batch_api.create_namespaced_job.assert_called_once()
-        self.core_api.read_namespaced_secret.assert_called_once()
+        assert 2 == self.core_api.read_namespaced_secret.call_count
 
     def test_schedule_job_secret_already_exists(self):
         self.core_api.create_namespaced_secret.side_effect = self._create_api_exception(
@@ -710,18 +716,18 @@ class TestKubernetesDriver(TestCase):
     @patch_auth
     def test_daemon_create_secret_loop_with_exceptions(self):
         core_api = Mock()
-        daemon = KubernetesDriverDaemon(self.config, core_api, sleep_length=0)
+        daemon = KubernetesDriverDaemon(
+            self.config, core_api, sleep_length=0, sleep_length_retry=0
+        )
         core_api.patch_namespaced_secret.side_effect = [
             self._create_api_exception(500, '{"reason":"NotFound"}'),
             self._create_api_exception(403, '{"reason":"Forbidden"}'),
             Exception(),
-            KeyboardInterrupt(),
+            StopThread(),
         ]
-        with self.assertRaises(KeyboardInterrupt):
-            try:
-                daemon._run_pull_secret_thread()
-            finally:
-                daemon.stop()
+        with self.assertRaises(StopThread):
+            daemon._run_pull_secret_thread()
+
         assert 4 == core_api.patch_namespaced_secret.call_count
         assert 1 == core_api.create_namespaced_secret.call_count
 
@@ -834,3 +840,78 @@ class TestKubernetesDriver(TestCase):
         assert {
             "cluster-autoscaler.kubernetes.io/safe-to-evict": "true"
         } == metadata.annotations
+
+    @patch_auth
+    def test_healthcheck_thread_invalid_k8s_object(self) -> None:
+        daemon = KubernetesDriverDaemon(self.config, self.core_api)
+        self.core_api.read_namespaced_secret.return_value = V1Secret()
+        with self.assertRaisesRegex(
+            PullSecretError, "Metadata not populated for pull secret"
+        ):
+            daemon._run_healthchecks()
+
+        self.core_api.read_namespaced_secret.return_value = V1Secret(
+            metadata=V1ObjectMeta(annotations={LAST_UPDATED_ANNOTATION: None})
+        )
+        with self.assertRaisesRegex(
+            PullSecretError, "No update time found for pull secret"
+        ):
+            daemon._run_healthchecks()
+
+    @patch_auth
+    def test_healthcheck_thread_secret_too_old(self) -> None:
+        daemon = KubernetesDriverDaemon(self.config, self.core_api)
+        daemon._pull_secret_thread = Mock()
+        daemon._pull_secret_thread.is_alive.return_value = True
+        updated_time = datetime.datetime.now() - datetime.timedelta(
+            minutes=daemon._minutes_stale + 3
+        )
+
+        self.core_api.read_namespaced_secret.return_value = V1Secret(
+            metadata=V1ObjectMeta(
+                annotations={
+                    LAST_UPDATED_ANNOTATION: updated_time.strftime(DATETIME_FORMAT)
+                }
+            )
+        )
+        with self.assertRaisesRegex(
+            PullSecretError, "Pull secret is stale, last updated.*minutes ago"
+        ):
+            daemon._run_healthchecks()
+
+    @patch_auth
+    def test_healthcheck_thread_thread_dead(self) -> None:
+        daemon = KubernetesDriverDaemon(self.config, self.core_api)
+        daemon._pull_secret_thread = Mock()
+        daemon._pull_secret_thread.is_alive.return_value = False
+        updated_time = datetime.datetime.now() - datetime.timedelta(minutes=60)
+
+        self.core_api.read_namespaced_secret.return_value = V1Secret(
+            metadata=V1ObjectMeta(
+                annotations={
+                    LAST_UPDATED_ANNOTATION: updated_time.strftime(DATETIME_FORMAT)
+                }
+            )
+        )
+        with self.assertRaisesRegex(PullSecretError, "The pull secret thread died."):
+            daemon._run_healthchecks()
+
+    @patch_auth
+    def test_healthcheck_thread_thread_alive(self) -> None:
+        daemon = KubernetesDriverDaemon(self.config, self.core_api)
+        daemon._pull_secret_thread = Mock()
+        daemon._pull_secret_thread.is_alive.return_value = True
+        updated_time = datetime.datetime.now() - datetime.timedelta(minutes=60)
+
+        self.core_api.read_namespaced_secret.return_value = V1Secret(
+            metadata=V1ObjectMeta(
+                annotations={
+                    LAST_UPDATED_ANNOTATION: updated_time.strftime(DATETIME_FORMAT)
+                }
+            )
+        )
+        assert daemon._run_healthchecks()
+
+
+if __name__ == "__main__":
+    main()
