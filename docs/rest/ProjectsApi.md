@@ -1364,7 +1364,7 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
     record_handler_id = "record_handler_id_example" # str | Record handler id
     logs = "yes" # str | Deprecated, use `expand` parameter instead. (optional)
     expand = [
-        "logs",
+        "artifacts",
     ] # [str] |  (optional)
 
     # example passing only required values which don't have defaults set
@@ -1546,6 +1546,9 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
     status = "completed" # str | 
     skip = 1 # int | The number of records being skipped before returning the next set. (optional)
     limit = 1 # int | The number of records returned in each result set. (optional)
+    expand = [
+        "artifacts",
+    ] # [str] |  (optional)
 
     # example passing only required values which don't have defaults set
     try:
@@ -1559,7 +1562,7 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
     # and optional values
     try:
         # Queries record handlers
-        api_response = api_instance.query_record_handlers(project_id, model_id, status, skip=skip, limit=limit)
+        api_response = api_instance.query_record_handlers(project_id, model_id, status, skip=skip, limit=limit, expand=expand)
         pprint(api_response)
     except gretel_client.rest.ApiException as e:
         print("Exception when calling ProjectsApi->query_record_handlers: %s\n" % e)
@@ -1575,6 +1578,7 @@ Name | Type | Description  | Notes
  **status** | **str**|  |
  **skip** | **int**| The number of records being skipped before returning the next set. | [optional]
  **limit** | **int**| The number of records returned in each result set. | [optional]
+ **expand** | **[str]**|  | [optional]
 
 ### Return type
 

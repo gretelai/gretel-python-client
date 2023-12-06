@@ -2071,7 +2071,7 @@ class ProjectsApi(object):
                 "validations": {},
                 "allowed_values": {
                     ("logs",): {"YES": "yes", "NO": "no"},
-                    ("expand",): {"LOGS": "logs"},
+                    ("expand",): {"ARTIFACTS": "artifacts", "LOGS": "logs"},
                 },
                 "openapi_types": {
                     "project_id": (str,),
@@ -2272,6 +2272,7 @@ class ProjectsApi(object):
             Keyword Args:
                 skip (int): The number of records being skipped before returning the next set.. [optional]
                 limit (int): The number of records returned in each result set.. [optional]
+                expand ([str]): [optional]
                 _return_http_data_only (bool): response data without head status
                     code and headers. Default is True.
                 _preload_content (bool): if False, the urllib3.HTTPResponse object
@@ -2341,6 +2342,7 @@ class ProjectsApi(object):
                     "status",
                     "skip",
                     "limit",
+                    "expand",
                 ],
                 "required": [
                     "project_id",
@@ -2350,6 +2352,7 @@ class ProjectsApi(object):
                 "nullable": [],
                 "enum": [
                     "status",
+                    "expand",
                 ],
                 "validation": [],
             },
@@ -2365,6 +2368,7 @@ class ProjectsApi(object):
                         "CREATED": "created",
                         "CANCELLED": "cancelled",
                     },
+                    ("expand",): {"ARTIFACTS": "artifacts"},
                 },
                 "openapi_types": {
                     "project_id": (str,),
@@ -2372,6 +2376,7 @@ class ProjectsApi(object):
                     "status": (str,),
                     "skip": (int,),
                     "limit": (int,),
+                    "expand": ([str],),
                 },
                 "attribute_map": {
                     "project_id": "project_id",
@@ -2379,6 +2384,7 @@ class ProjectsApi(object):
                     "status": "status",
                     "skip": "skip",
                     "limit": "limit",
+                    "expand": "expand",
                 },
                 "location_map": {
                     "project_id": "path",
@@ -2386,8 +2392,11 @@ class ProjectsApi(object):
                     "status": "query",
                     "skip": "query",
                     "limit": "query",
+                    "expand": "query",
                 },
-                "collection_format_map": {},
+                "collection_format_map": {
+                    "expand": "csv",
+                },
             },
             headers_map={
                 "accept": ["application/json"],
