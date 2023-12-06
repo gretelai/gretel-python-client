@@ -10,12 +10,14 @@ SIMPLE_LEGACY_FIELDS = [
     "run_time_seconds",
 ]
 
-SQS_LEGACY_FIELDS = [
+SCORE_FIELDS = [
     "synthetic_data_quality_score",
     "field_correlation_stability",
     "principal_component_stability",
     "field_distribution_stability",
     "privacy_protection_level",
+    "semantic_similarity",
+    "structure_similarity",
 ]
 
 
@@ -33,7 +35,7 @@ def generate_summary_from_legacy(report_dict) -> dict:
     for f in SIMPLE_LEGACY_FIELDS:
         if report_dict.get(f) is not None:
             summary_list.append({"field": f, "value": report_dict[f]})
-    for f in SQS_LEGACY_FIELDS:
+    for f in SCORE_FIELDS:
         # "privacy_protection_level" can have value None.
         if isinstance(report_dict.get(f), dict) and report_dict.get(f).get("score"):
             summary_list.append({"field": f, "value": report_dict[f]["score"]})

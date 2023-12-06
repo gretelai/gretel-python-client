@@ -101,6 +101,11 @@ def build_logger(job_id: str) -> Callable:
     default=False,
 )
 @click.option(
+    "--disable-cloud-report-scores",
+    help="Disable sending model report scores to Gretel Cloud.",
+    default=False,
+)
+@click.option(
     "--enable-prometheus",
     help="Enable the prometheus metrics endpoint on port 8080",
     default=False,
@@ -119,6 +124,7 @@ def start(
     volume: List[str] = None,
     ca_bundle: Optional[str] = None,
     disable_cloud_logging: bool = False,
+    disable_cloud_report_scores: bool = False,
     enable_prometheus: bool = False,
     runner_modes: List[str] = None,
 ):
@@ -170,6 +176,7 @@ def start(
         log_factory=build_logger,
         artifact_endpoint=artifact_endpoint,
         disable_cloud_logging=disable_cloud_logging,
+        disable_cloud_report_scores=disable_cloud_report_scores,
         env_vars=env_dict,
         volumes=volumes,
         capabilities=capabilities,

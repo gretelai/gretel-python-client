@@ -90,6 +90,9 @@ class AgentConfig:
     disable_cloud_logging: bool = False
     """Disable sending worker logs to the cloud"""
 
+    disable_cloud_report_scores: bool = False
+    """Disable sending model quality report scores to the cloud"""
+
     volumes: Optional[List[DataVolumeDef]] = None
     """A list of volumes to mount into the worker container"""
 
@@ -249,6 +252,7 @@ class Job:
     cloud_creds: Optional[List[CloudCreds]] = None
     artifact_endpoint: Optional[str] = None
     disable_cloud_logging: bool = False
+    disable_cloud_report_scores: bool = False
     env_vars: Optional[dict] = None
 
     @classmethod
@@ -265,6 +269,7 @@ class Job:
             cloud_creds=agent_config.creds,
             artifact_endpoint=agent_config.artifact_endpoint,
             disable_cloud_logging=agent_config.disable_cloud_logging,
+            disable_cloud_report_scores=agent_config.disable_cloud_report_scores,
             env_vars=agent_config.env_vars,
         )
 
@@ -275,6 +280,8 @@ class Job:
             params["--artifact-endpoint"] = self.artifact_endpoint
         if self.disable_cloud_logging:
             params["--disable-cloud-logging"] = ""
+        if self.disable_cloud_report_scores:
+            params["--disable-cloud-report-scores"] = ""
         return params
 
     @property
