@@ -21,7 +21,7 @@ import re  # noqa: F401
 from datetime import datetime
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, Field, StrictStr, validator
+from pydantic import BaseModel, Field, StrictInt, StrictStr, validator
 
 from gretel_client.rest_v1.models.project import Project
 from gretel_client.rest_v1.models.user_profile import UserProfile
@@ -53,6 +53,7 @@ class WorkflowRun(BaseModel):
     cancelled_at: Optional[datetime] = None
     cancellation_request: Optional[WorkflowRunCancellationRequest] = None
     created_by_profile: Optional[UserProfile] = None
+    total_compute_time_sconds: Optional[StrictInt] = None
     __properties = [
         "id",
         "workflow_id",
@@ -72,6 +73,7 @@ class WorkflowRun(BaseModel):
         "cancelled_at",
         "cancellation_request",
         "created_by_profile",
+        "total_compute_time_sconds",
     ]
 
     @validator("runner_mode")
@@ -179,6 +181,7 @@ class WorkflowRun(BaseModel):
                 )
                 if obj.get("created_by_profile") is not None
                 else None,
+                "total_compute_time_sconds": obj.get("total_compute_time_sconds"),
             }
         )
         return _obj

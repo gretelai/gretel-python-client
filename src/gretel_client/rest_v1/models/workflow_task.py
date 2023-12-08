@@ -29,7 +29,7 @@ from gretel_client.rest_v1.models.user_profile import UserProfile
 
 class WorkflowTask(BaseModel):
     """
-    Next Tag: 23
+    Next Tag: 24
     """
 
     id: StrictStr = Field(...)
@@ -67,6 +67,7 @@ class WorkflowTask(BaseModel):
     error_at: Optional[datetime] = None
     lost_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
+    total_compute_time_sconds: Optional[StrictInt] = None
     __properties = [
         "id",
         "workflow_run_id",
@@ -88,6 +89,7 @@ class WorkflowTask(BaseModel):
         "error_at",
         "lost_at",
         "completed_at",
+        "total_compute_time_sconds",
     ]
 
     @validator("status")
@@ -176,6 +178,7 @@ class WorkflowTask(BaseModel):
                 "error_at": obj.get("error_at"),
                 "lost_at": obj.get("lost_at"),
                 "completed_at": obj.get("completed_at"),
+                "total_compute_time_sconds": obj.get("total_compute_time_sconds"),
             }
         )
         return _obj
