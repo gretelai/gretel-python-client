@@ -25,7 +25,7 @@ azure_deps = ["smart_open[azure]", "azure-identity", "azure-keyvault"]
 setup(
     name="gretel-client",
     author="Gretel Labs, Inc.",
-    author_email="open-source@gretel.ai",
+    author_email="support@gretel.ai",
     use_scm_version=True,
     setup_requires=["setuptools_scm"],
     description="Balance, anonymize, and share your data. With privacy guarantees.",
