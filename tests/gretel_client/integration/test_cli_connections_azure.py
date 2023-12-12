@@ -198,6 +198,7 @@ def test_azure_connection_crud_from_cli(
             key_id,
         ],
     )
+    print(cmd.output)
     assert "Created connection:" in cmd.output
     assert cmd.exit_code == 0
     connection_result = _parse_output(cmd.output)

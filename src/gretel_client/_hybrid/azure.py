@@ -1,6 +1,11 @@
+import base64
 import re
 
-from typing import Any, Optional, TYPE_CHECKING
+from typing import Optional, TYPE_CHECKING
+
+from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
+from Crypto.Util.Padding import pad
 
 if TYPE_CHECKING:
     from azure.identity import DefaultAzureCredential
@@ -16,7 +21,6 @@ _VALID_VAULT_URL = re.compile(r"https://[A-Za-z0-9_-]+\.vault\.azure\.net/?")
 
 
 class KeyVaultEncryption(CredentialsEncryption):
-
     _qualified_key_id: str
     _crypto_client: "CryptographyClient"
     _encryption_algorithm: "EncryptionAlgorithm"
@@ -35,6 +39,8 @@ class KeyVaultEncryption(CredentialsEncryption):
 
         vault_url = vault_url.rstrip("/")
         self._qualified_key_id = f"{vault_url}/keys/{key_id}"
+
+        self.client_key = None
 
         try:
             from azure.identity import DefaultAzureCredential
@@ -63,14 +69,28 @@ class KeyVaultEncryption(CredentialsEncryption):
         self._encryption_algorithm = EncryptionAlgorithm(encryption_algorithm)
 
     def _encrypt_payload(self, payload: bytes) -> bytes:
+        self.client_key = get_random_bytes(32)
+        cipher = AES.new(self.client_key, AES.MODE_CBC)
+
+        cipher_text = cipher.encrypt(pad(payload, 16, style="pkcs7"))
+        # Store the IV in the first 16 bytes
+        return cipher.iv + cipher_text
+
+    def _kv_encrypt_key(self, payload: bytes) -> bytes:
         result = self._crypto_client.encrypt(self._encryption_algorithm, payload)
-        return result.ciphertext
+        return base64.b64encode(result.ciphertext).decode("ascii")
 
     def make_encrypted_creds_config(self, ciphertext_b64: str) -> dict:
-        return {
+        creds_config = {
             "azure_key_vault": {
                 "key_id": self._qualified_key_id,
                 "encryption_algorithm": self._encryption_algorithm.value,
                 "data": ciphertext_b64,
             }
         }
+        # This is the case for all not pre-encrypted credentials
+        if self.client_key is not None:
+            encrypted_key = self._kv_encrypt_key(self.client_key)
+            del self.client_key
+            creds_config["azure_key_vault"]["encrypted_client_key"] = encrypted_key
+        return creds_config
