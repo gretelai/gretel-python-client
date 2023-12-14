@@ -33,19 +33,15 @@ class ActivityEvent(BaseModel):
     occurred_at: datetime = Field(...)
     occured_at: datetime = Field(...)
     subject: EventComponent = Field(...)
-    subject_corrected: EventComponent = Field(...)
     predicate: StrictStr = Field(...)
     object: EventComponent = Field(...)
-    object_corrected: EventComponent = Field(...)
     status: StrictStr = Field(...)
     __properties = [
         "occurred_at",
         "occured_at",
         "subject",
-        "subject_corrected",
         "predicate",
         "object",
-        "object_corrected",
         "status",
     ]
 
@@ -81,15 +77,9 @@ class ActivityEvent(BaseModel):
         # override the default output from pydantic by calling `to_dict()` of subject
         if self.subject:
             _dict["subject"] = self.subject.to_dict()
-        # override the default output from pydantic by calling `to_dict()` of subject_corrected
-        if self.subject_corrected:
-            _dict["subject_corrected"] = self.subject_corrected.to_dict()
         # override the default output from pydantic by calling `to_dict()` of object
         if self.object:
             _dict["object"] = self.object.to_dict()
-        # override the default output from pydantic by calling `to_dict()` of object_corrected
-        if self.object_corrected:
-            _dict["object_corrected"] = self.object_corrected.to_dict()
         return _dict
 
     @classmethod
@@ -108,19 +98,9 @@ class ActivityEvent(BaseModel):
                 "subject": EventComponent.from_dict(obj.get("subject"))
                 if obj.get("subject") is not None
                 else None,
-                "subject_corrected": EventComponent.from_dict(
-                    obj.get("subject_corrected")
-                )
-                if obj.get("subject_corrected") is not None
-                else None,
                 "predicate": obj.get("predicate"),
                 "object": EventComponent.from_dict(obj.get("object"))
                 if obj.get("object") is not None
-                else None,
-                "object_corrected": EventComponent.from_dict(
-                    obj.get("object_corrected")
-                )
-                if obj.get("object_corrected") is not None
                 else None,
                 "status": obj.get("status"),
             }
