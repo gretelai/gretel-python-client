@@ -21,10 +21,7 @@ from gretel_client.rest_v1.models import (
 )
 
 
-@click.group(
-    help="Commands for working with Gretel connections.",
-    hidden=not get_session_config().preview_features_enabled,
-)
+@click.group(help="Commands for working with Gretel connections.")
 def connections():
     ...
 
