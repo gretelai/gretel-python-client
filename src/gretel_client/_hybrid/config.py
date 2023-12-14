@@ -1,4 +1,4 @@
-from typing import Any, Optional, Type, TypeVar
+from typing import Optional, Type, TypeVar
 
 from gretel_client._hybrid.connections_api import HybridConnectionsApi
 from gretel_client._hybrid.creds_encryption import CredentialsEncryption
@@ -129,7 +129,6 @@ class _HybridSessionConfig(ClientConfig):
         return api
 
     def get_v1_api(self, api_interface: Type[T]) -> T:
-
         api = super().get_v1_api(api_interface)
         if api_interface == WorkflowsApi:
             return HybridWorkflowsApi(api)
