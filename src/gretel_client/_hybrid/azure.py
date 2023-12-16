@@ -3,10 +3,6 @@ import re
 
 from typing import Optional, TYPE_CHECKING
 
-from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
-from Crypto.Util.Padding import pad
-
 if TYPE_CHECKING:
     from azure.identity import DefaultAzureCredential
     from azure.keyvault.keys import KeyClient
@@ -14,6 +10,9 @@ if TYPE_CHECKING:
         CryptographyClient,
         EncryptionAlgorithm,
     )
+    from Crypto.Cipher import AES
+    from Crypto.Random import get_random_bytes
+    from Crypto.Util.Padding import pad
 
 from gretel_client._hybrid.creds_encryption import CredentialsEncryption
 
@@ -69,6 +68,17 @@ class KeyVaultEncryption(CredentialsEncryption):
         self._encryption_algorithm = EncryptionAlgorithm(encryption_algorithm)
 
     def _encrypt_payload(self, payload: bytes) -> bytes:
+        try:
+            from Crypto.Cipher import AES
+            from Crypto.Random import get_random_bytes
+            from Crypto.Util.Padding import pad
+        except ImportError as e:
+            raise Exception(
+                "You are trying to encrypt connection credentials with an Azure Keyvault key, "
+                "but pycryptodome is required for creating the data key. If you want to use this "
+                "feature, please re-install the Gretel CLI with the [azure] option.",
+            ) from e
+
         self.client_key = get_random_bytes(32)
         cipher = AES.new(self.client_key, AES.MODE_CBC)
 
