@@ -52,11 +52,18 @@ COMMON_ENV_SECRET_NAME_ENV_NAME = "GRETEL_COMMON_ENV_SECRET_NAME"
 COMMON_DATA_SECRET_NAME_ENV_NAME = "GRETEL_COMMON_DATA_SECRET_NAME"
 COMMON_DATA_MOUNT_PATH_ENV_NAME = "GRETEL_COMMON_DATA_MOUNT_PATH"
 LIVENESS_FILE_ENV_NAME = "LIVENESS_FILE"
+GPU_SEC_CONTEXT_ENV_NAME = "GPU_WORKER_SECURITY_CONTEXT"
+CPU_SEC_CONTEXT_ENV_NAME = "CPU_WORKER_SECURITY_CONTEXT"
 
 LAST_UPDATED_ANNOTATION = "lastUpdated"
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 if TYPE_CHECKING:
     from gretel_client.agents.agent import AgentConfig, Job
+
+
+class FakeKubeResponse:
+    def __init__(self, obj):
+        self.data = json.dumps(obj)
 
 
 def _base64_str(my_str: str) -> str:
@@ -195,6 +202,12 @@ class Kubernetes(Driver):
         self._gretel_worker_sa = os.getenv("GRETEL_WORKER_SA") or "gretel-agent"
         self._gretel_worker_secret_name = (
             os.getenv("GRETEL_WORKER_SECRET_NAME") or "gretel-worker-secret"
+        )
+        self._gpu_security_context = self._parse_kube_env_var(
+            GPU_SEC_CONTEXT_ENV_NAME, dict
+        )
+        self._cpu_security_context = self._parse_kube_env_var(
+            CPU_SEC_CONTEXT_ENV_NAME, dict
         )
         self._gretel_worker_namespace = (
             os.getenv(WORKER_NAMESPACE_ENV_NAME) or "gretel-workers"
@@ -417,10 +430,12 @@ class Kubernetes(Driver):
             self._add_selector_if_present(template, self._gpu_node_selector)
             self._add_tolerations_if_present(template, self._gpu_tolerations)
             self._add_affinity_if_present(template, self._gpu_affinity)
+            self._add_security_context_if_present(template, self._gpu_security_context)
         else:
             self._add_selector_if_present(template, self._cpu_node_selector)
             self._add_tolerations_if_present(template, self._cpu_tolerations)
             self._add_affinity_if_present(template, self._cpu_affinity)
+            self._add_security_context_if_present(template, self._cpu_security_context)
 
         spec = client.V1JobSpec(
             template=template, backoff_limit=0, ttl_seconds_after_finished=86400
@@ -541,6 +556,13 @@ class Kubernetes(Driver):
         if tolerations_list:
             pod_spec: client.V1PodSpec = template.spec
             pod_spec.tolerations = tolerations_list
+
+    def _add_security_context_if_present(
+        self, template: client.V1PodTemplateSpec, security_context: dict
+    ) -> None:
+        if security_context:
+            pod_spec: client.V1PodSpec = template.spec
+            pod_spec.security_context = security_context
 
     def _delete_kubernetes_job(self, job: Optional[client.V1Job]):
         """Deletes the input V1Job in the cluster pointed to by the input Api Client."""

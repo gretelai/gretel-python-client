@@ -11,6 +11,7 @@ from unittest import main, TestCase
 from unittest.mock import Mock, patch
 
 from kubernetes.client import (
+    ApiClient,
     ApiException,
     BatchV1Api,
     CoreV1Api,
@@ -21,8 +22,8 @@ from kubernetes.client import (
     V1JobSpec,
     V1JobStatus,
     V1LocalObjectReference,
-    V1ManagedFieldsEntry,
     V1ObjectMeta,
+    V1PodSecurityContext,
     V1PodSpec,
     V1PodTemplateSpec,
     V1Secret,
@@ -36,10 +37,12 @@ from gretel_client.agents.drivers.k8s import (
     CPU_AFFINITY_ENV_NAME,
     CPU_COUNT_ENV_NAME,
     CPU_NODE_SELECTOR_ENV_NAME,
+    CPU_SEC_CONTEXT_ENV_NAME,
     CPU_TOLERATIONS_ENV_NAME,
     DATETIME_FORMAT,
     GPU_AFFINITY_ENV_NAME,
     GPU_NODE_SELECTOR_ENV_NAME,
+    GPU_SEC_CONTEXT_ENV_NAME,
     GPU_TOLERATIONS_ENV_NAME,
     IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME,
     Kubernetes,
@@ -192,7 +195,9 @@ class TestKubernetesDriver(TestCase):
             metadata=V1ObjectMeta(name="johnny", namespace="gretel-workers")
         )
         self.driver = Kubernetes(
-            self.config, batch_api=self.batch_api, core_api=self.core_api
+            self.config,
+            batch_api=self.batch_api,
+            core_api=self.core_api,
         )
 
     def reload_env_and_build_job(self, job: Job, restart_worker: bool = False) -> V1Job:
@@ -394,14 +399,57 @@ class TestKubernetesDriver(TestCase):
         with patch_gpu_environ("{"):
             with self.assertRaisesRegex(KubernetesError, "Could not deserialize JSON"):
                 Kubernetes(
-                    self.config, batch_api=self.batch_api, core_api=self.core_api
+                    self.config,
+                    batch_api=self.batch_api,
+                    core_api=self.core_api,
                 )
+
+    def test_build_job_set_security_context(self):
+        with patch.dict(
+            os.environ,
+            {
+                GPU_SEC_CONTEXT_ENV_NAME: json.dumps(
+                    {"runAsNonRoot": True, "runAsUser": 1001}
+                )
+            },
+        ):
+            job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
+            k8s_job = self.reload_env_and_build_job(job)
+            job_spec: V1JobSpec = k8s_job.spec
+            job_template: V1PodTemplateSpec = job_spec.template
+            pod_spec: V1PodSpec = job_template.spec
+            security_context: dict = pod_spec.security_context
+            assert security_context.get("runAsNonRoot") is True
+            assert security_context.get("runAsUser") == 1001
+
+    def test_build_job_cpu_set_security_context(self):
+        with patch.dict(
+            os.environ,
+            {
+                CPU_SEC_CONTEXT_ENV_NAME: json.dumps(
+                    {"runAsNonRoot": False, "runAsUser": 1003}
+                ),
+                GPU_SEC_CONTEXT_ENV_NAME: json.dumps(
+                    {"runAsNonRoot": False, "runAsUser": 1002}
+                ),
+            },
+        ):
+            job = Job.from_dict(get_mock_job("cpu-standard"), self.config)
+            k8s_job = self.reload_env_and_build_job(job)
+            job_spec: V1JobSpec = k8s_job.spec
+            job_template: V1PodTemplateSpec = job_spec.template
+            pod_spec: V1PodSpec = job_template.spec
+            security_context: V1PodSecurityContext = pod_spec.security_context
+            assert security_context.get("runAsNonRoot") is False
+            assert security_context.get("runAsUser") == 1003
 
     def test_build_job_node_toleration_set_invalid(self):
         with patch_cpu_toleration_environ("{"):
             with self.assertRaisesRegex(KubernetesError, "Could not deserialize JSON"):
                 Kubernetes(
-                    self.config, batch_api=self.batch_api, core_api=self.core_api
+                    self.config,
+                    batch_api=self.batch_api,
+                    core_api=self.core_api,
                 )
 
     def test_build_job_gpu_req_node_selector_set_not_dictionary(self):
