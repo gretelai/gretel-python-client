@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field, StrictStr
 
 class UpdateConnectionRequest(BaseModel):
     """
-    Request message for `UpdateConnection` Next Tag: 7
+    Request message for `UpdateConnection` Next Tag: 8
     """
 
     name: Optional[StrictStr] = None
@@ -38,7 +38,14 @@ class UpdateConnectionRequest(BaseModel):
         description="Pre-encrypted credentials for the connection, encrypted by a customer-managed key. This field may only be set if the existing connection's credentials are encrypted with a user-managed key.",
     )
     config: Optional[Dict[str, Any]] = None
-    __properties = ["name", "credentials", "encrypted_credentials", "config"]
+    connection_target_type: Optional[StrictStr] = None
+    __properties = [
+        "name",
+        "credentials",
+        "encrypted_credentials",
+        "config",
+        "connection_target_type",
+    ]
 
     class Config:
         """Pydantic configuration"""
@@ -79,6 +86,7 @@ class UpdateConnectionRequest(BaseModel):
                 "credentials": obj.get("credentials"),
                 "encrypted_credentials": obj.get("encrypted_credentials"),
                 "config": obj.get("config"),
+                "connection_target_type": obj.get("connection_target_type"),
             }
         )
         return _obj

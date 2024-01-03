@@ -26,7 +26,7 @@ from pydantic import BaseModel, Field, StrictBool, StrictStr, validator
 
 class Connection(BaseModel):
     """
-    Next available tag: 12
+    Next available tag: 13
     """
 
     id: StrictStr = Field(
@@ -61,6 +61,10 @@ class Connection(BaseModel):
     created_by: StrictStr = Field(
         ..., description="ID of the User who created this connection"
     )
+    connection_target_type: Optional[StrictStr] = Field(
+        None,
+        description="Explicitly declare this as `source`, `destination` or `unspecified`.  If unspecified or empty, no target enforcement.",
+    )
     __properties = [
         "id",
         "type",
@@ -73,6 +77,7 @@ class Connection(BaseModel):
         "created_at",
         "project_id",
         "created_by",
+        "connection_target_type",
     ]
 
     @validator("validation_status")
@@ -137,6 +142,7 @@ class Connection(BaseModel):
                 "created_at": obj.get("created_at"),
                 "project_id": obj.get("project_id"),
                 "created_by": obj.get("created_by"),
+                "connection_target_type": obj.get("connection_target_type"),
             }
         )
         return _obj
