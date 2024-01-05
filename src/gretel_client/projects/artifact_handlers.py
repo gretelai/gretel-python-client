@@ -8,7 +8,7 @@ import uuid
 
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, BinaryIO, Dict, List, Optional, Protocol, Tuple, Union
+from typing import Any, BinaryIO, Dict, IO, List, Optional, Protocol, Tuple, Union
 from urllib.parse import urlparse
 
 import requests
@@ -38,7 +38,7 @@ except ImportError:  # pragma: no cover
 HYBRID_ARTIFACT_ENDPOINT_PREFIXES = ["azure://", "gs://", "s3://"]
 
 
-def _get_azure_blob_srv_client(endpoint: str) -> Optional[BlobServiceClient]:
+def _get_azure_blob_srv_client() -> Optional[BlobServiceClient]:
     for env_var_name in ("AZURE_STORAGE_ACCOUNT_NAME", "OAUTH_STORAGE_ACCOUNT_NAME"):
         if (storage_account := os.getenv(env_var_name)) is not None:
             oauth_url = f"https://{storage_account}.blob.core.windows.net"
@@ -61,14 +61,23 @@ def _get_azure_blob_srv_client(endpoint: str) -> Optional[BlobServiceClient]:
     )
 
 
-def _get_transport_params(endpoint: str) -> dict:
+def get_transport_params(endpoint: Union[str, Path]) -> dict:
     """Returns a set of transport params that are suitable for passing
     into calls to ``smart_open.open``.
     """
     client = None
-    if endpoint and endpoint.startswith("azure"):
-        client = _get_azure_blob_srv_client(endpoint)
+    if endpoint and str(endpoint).startswith("azure"):
+        client = _get_azure_blob_srv_client()
     return {"client": client} if client else {}
+
+
+def open_artifact(uri: Union[str, Path], mode: str = "r", **kwargs) -> IO:
+    """
+    Inserts transport params if necessary before calling smart_open.open
+    """
+    return smart_open.open(
+        uri, mode=mode, transport_params=get_transport_params(uri), **kwargs
+    )
 
 
 class ArtifactsException(Exception):
@@ -231,8 +240,7 @@ class CloudArtifactsHandler:
     @contextmanager
     def get_project_artifact_handle(self, key: str) -> BinaryIO:
         link = self.get_project_artifact_link(key)
-        transport_params = _get_transport_params(link)
-        with smart_open.open(link, "rb", transport_params=transport_params) as handle:
+        with open_artifact(link, "rb") as handle:
             yield handle
 
     # The server side API will return manifests with PENDING status if artifact processing has not completed
@@ -337,14 +345,11 @@ class HybridArtifactsHandler:
             data_source_file_name = f"gretel_{uuid.uuid4().hex}_{file_name}"
             target_out = f"{self.data_sources_dir}/{data_source_file_name}"
 
-            with smart_open.open(
+            with open_artifact(
                 artifact_path,
                 "rb",
                 ignore_ext=True,
-                transport_params=_get_transport_params(self.endpoint),
-            ) as in_stream, smart_open.open(
-                target_out, "wb", transport_params=_get_transport_params(self.endpoint)
-            ) as out_stream:
+            ) as in_stream, open_artifact(target_out, "wb") as out_stream:
                 shutil.copyfileobj(in_stream, out_stream)
 
             return target_out
@@ -376,8 +381,7 @@ class HybridArtifactsHandler:
     @contextmanager
     def get_project_artifact_handle(self, key: str) -> BinaryIO:
         link = self.get_project_artifact_link(key)
-        transport_params = _get_transport_params(link)
-        with smart_open.open(link, "rb", transport_params=transport_params) as handle:
+        with open_artifact(link, "rb") as handle:
             yield handle
 
     def get_project_artifact_manifest(
@@ -419,7 +423,7 @@ class HybridArtifactsHandler:
             output_path,
             artifact_type,
             log,
-            _get_transport_params(self.endpoint),
+            get_transport_params(self.endpoint),
         )
 
 
@@ -480,10 +484,8 @@ def _download(
 ) -> None:
     target_out = output_path / Path(urlparse(download_link).path).name
     try:
-        with smart_open.open(
-            download_link, "rb", ignore_ext=True, transport_params=transport_params
-        ) as src, smart_open.open(
-            target_out, "wb", ignore_ext=True, transport_params=transport_params
+        with open_artifact(download_link, "rb", ignore_ext=True) as src, open_artifact(
+            target_out, "wb", ignore_ext=True
         ) as dest:
             shutil.copyfileobj(src, dest)
     except:

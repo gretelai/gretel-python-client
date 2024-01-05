@@ -12,8 +12,8 @@ from azure.storage.blob import BlobServiceClient
 from gretel_client.config import DEFAULT_GRETEL_ARTIFACT_ENDPOINT
 from gretel_client.projects.artifact_handlers import (
     _get_artifact_path_and_file_name,
-    _get_transport_params,
     ArtifactsException,
+    get_transport_params,
     hybrid_handler,
     HybridArtifactsHandler,
 )
@@ -93,7 +93,7 @@ def test_hybrid_created_with_azure_artifact_endpoint(key: str, value: str):
         )
 
         assert isinstance(hybrid_handler(project), HybridArtifactsHandler)
-        transport_params = _get_transport_params(artifact_endpoint)
+        transport_params = get_transport_params(artifact_endpoint)
 
         assert transport_params is not None
         assert isinstance(transport_params.get("client"), BlobServiceClient)
@@ -103,7 +103,7 @@ def test_missing_environment_variable_error_with_azure_hybrid():
     with pytest.raises(
         ArtifactsException, match="Could not find Azure storage account credentials."
     ):
-        _get_transport_params("azure://my-bucket")
+        get_transport_params("azure://my-bucket")
 
 
 def test_get_artifact_path_and_file_name():

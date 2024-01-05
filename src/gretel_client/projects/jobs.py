@@ -30,9 +30,9 @@ from gretel_client.config import get_logger, get_session_config, RunnerMode
 from gretel_client.dataframe import _DataFrameT
 from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.artifact_handlers import (
-    _get_transport_params,
     ArtifactsHandler,
     CloudArtifactsHandler,
+    get_transport_params,
     HybridArtifactsHandler,
 )
 from gretel_client.projects.common import f, ModelArtifact, WAIT_UNTIL_DONE
@@ -375,7 +375,7 @@ class Job(ABC):
             a file like object
         """
         link = self.get_artifact_link(artifact_key)
-        transport_params = _get_transport_params(link)
+        transport_params = get_transport_params(link)
         with smart_open.open(link, "rb", transport_params=transport_params) as handle:
             yield handle
 
@@ -414,7 +414,7 @@ class Job(ABC):
         report_contents = None
         if report_path:
             try:
-                transport_params = _get_transport_params(report_path)
+                transport_params = get_transport_params(report_path)
                 with smart_open.open(
                     report_path, "rb", transport_params=transport_params
                 ) as rh:  # type:ignore
