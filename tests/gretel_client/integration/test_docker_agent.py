@@ -33,6 +33,8 @@ def test_docker_agent(agent_config: AgentConfig, request):
     model.submit_manual()
     request.addfinalizer(model.cancel)
 
+    print(f"launched model {model.id}")
+
     def start():
         agent.start()
 

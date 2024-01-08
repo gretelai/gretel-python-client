@@ -161,6 +161,8 @@ def start(
         runner_modes_as_enum = [
             RunnerMode.parse(runner_mode_str) for runner_mode_str in runner_modes
         ]
+        if RunnerMode.CLOUD in runner_modes_as_enum:
+            raise ValueError("'cloud' is not a legal runner mode for the agent")
 
     projects = []
     if project:

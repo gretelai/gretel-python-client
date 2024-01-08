@@ -96,10 +96,12 @@ def create(
             "--runner is set to local, but --output is not set. Please specify an output directory for --output.",
         )
 
-    if runner == RunnerMode.MANUAL.value and (output or upload_model):
+    if runner in (RunnerMode.MANUAL.value, RunnerMode.HYBRID.value) and (
+        output or upload_model
+    ):
         raise click.BadOptionUsage(
             "--runner",
-            "--runner manual cannot be used together with any of --output, --upload-model.",
+            f"--runner {runner} cannot be used together with any of --output, --upload-model.",
         )
 
     ref_data_obj = ref_data_factory(ref_data)
