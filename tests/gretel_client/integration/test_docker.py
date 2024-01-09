@@ -28,7 +28,7 @@ def model(get_fixture: Callable, request):
 
 @pytest_skip_on_windows
 def test_does_start_local_container(model: Model):
-    model.submit()
+    model.submit_local()
     run = ContainerRun.from_job(model)
     run.enable_cloud_uploads()
     run.start()
@@ -42,7 +42,7 @@ def test_does_start_local_container(model: Model):
 
 @pytest_skip_on_windows
 def test_does_cleanup(model: Model, get_fixture: Callable):
-    model.submit()
+    model.submit_local()
     run = ContainerRun.from_job(model)
     run.enable_cloud_uploads()
     run.configure_input_data(get_fixture("account-balances.csv"))
