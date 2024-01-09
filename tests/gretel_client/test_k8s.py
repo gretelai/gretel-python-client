@@ -11,7 +11,6 @@ from unittest import main, TestCase
 from unittest.mock import Mock, patch
 
 from kubernetes.client import (
-    ApiClient,
     ApiException,
     BatchV1Api,
     CoreV1Api,
@@ -51,6 +50,7 @@ from gretel_client.agents.drivers.k8s import (
     LAST_UPDATED_ANNOTATION,
     OVERRIDE_CERT_NAME,
     PREVENT_AUTOSCALER_EVICTION_ENV_NAME,
+    PULL_SECRETS_ENV_NAME,
     PullSecretError,
     StopThread,
     WORKER_MEMORY_GB_ENV_NAME,
@@ -344,7 +344,7 @@ class TestKubernetesDriver(TestCase):
         GPU_AFFINITY_ENV_NAME,
         '{"nodeAffinity": {"requiredDuringSchedulingIgnoredDuringExecution": {"nodeSelectorTerms":[{"matchExpressions":[{"key":"gretel.ai/node-type","operator":"In","values":["gpu-standard"]}]}]}}}',
     )
-    def test_build_job_tolerations_set(self):
+    def test_build_job_tolerations_set_2(self):
         for job_type in ["cpu-standard", "gpu-standard"]:
             with self.subTest(job_type):
                 job_data = get_mock_job(job_type)
@@ -805,6 +805,10 @@ class TestKubernetesDriver(TestCase):
 
     @patch_image_registry("shiny-new-reg.example.ai")
     @patch_auth
+    @patch_env(
+        PULL_SECRETS_ENV_NAME,
+        json.dumps(["personal-secret", "gretel-pull-secret"]),
+    )
     def test_build_job_image_url_override(self):
         job = Job.from_dict(get_mock_job(), self.config)
         k8s_job = self.reload_env_and_build_job(job, restart_worker=True)
@@ -816,7 +820,8 @@ class TestKubernetesDriver(TestCase):
 
         assert container.image == "shiny-new-reg.example.ai/gretelai/transforms"
         assert pod_spec.image_pull_secrets == [
-            V1LocalObjectReference(name="gretel-pull-secret")
+            {"name": "personal-secret"},
+            {"name": "gretel-pull-secret"},
         ]
 
     @patch_image_registry("shiny-new-reg.example.ai")
@@ -838,6 +843,18 @@ class TestKubernetesDriver(TestCase):
         dockerconfig_json = json.loads(decoded_str)
         assert "auths" in dockerconfig_json
         assert list(dockerconfig_json["auths"].keys())[0] == "shiny-new-reg.example.ai"
+
+    @patch_auth
+    @patch_image_registry("shiny-new-reg.example.ai/gretelai")
+    def test_special_case_gretelai(self):
+        job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
+        original_image = "gcc/my-workflow-image:latest"
+        job.container_image = original_image
+        daemon = KubernetesDriverDaemon(self.config, self.core_api)
+        self.driver._worker = daemon
+        image = self.driver._resolve_image(job)
+
+        assert image == "shiny-new-reg.example.ai/gretelai/gcc-my-workflow-image:latest"
 
     @patch_autoscaler_env_var("true")
     def test_annotation_set_true(self):

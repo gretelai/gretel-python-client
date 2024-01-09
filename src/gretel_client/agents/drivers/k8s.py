@@ -36,6 +36,7 @@ WORKER_NAMESPACE_ENV_NAME = "GRETEL_WORKER_NAMESPACE"
 WORKER_RESOURCES_ENV_NAME = "GRETEL_WORKER_RESOURCES"
 WORKER_MEMORY_GB_ENV_NAME = "MEMORY_LIMIT_IN_GB"
 PULL_SECRET_ENV_NAME = "GRETEL_PULL_SECRET"
+PULL_SECRETS_ENV_NAME = "GRETEL_PULL_SECRETS"
 GPU_NODE_SELECTOR_ENV_NAME = "GPU_NODE_SELECTOR"
 CPU_NODE_SELECTOR_ENV_NAME = "CPU_NODE_SELECTOR"
 GPU_TOLERATIONS_ENV_NAME = "GPU_TOLERATIONS"
@@ -215,6 +216,10 @@ class Kubernetes(Driver):
         self._gretel_pull_secret = (
             os.getenv(PULL_SECRET_ENV_NAME) or "gretel-pull-secret"
         )
+        pull_secrets_list = self._parse_kube_env_var(PULL_SECRETS_ENV_NAME, list) or []
+        self._gretel_pull_secrets = [
+            {"name": secret_name} for secret_name in pull_secrets_list
+        ] or [{"name": self._gretel_pull_secret}]
 
         self._worker_pod_labels = (
             self._parse_kube_env_var(WORKER_POD_LABELS_ENV_NAME, dict) or {}
@@ -417,9 +422,7 @@ class Kubernetes(Driver):
                 containers=[container],
                 service_account_name=self._gretel_worker_sa,
                 automount_service_account_token=False,
-                image_pull_secrets=[
-                    client.V1LocalObjectReference(name=self._gretel_pull_secret)
-                ],
+                image_pull_secrets=self._gretel_pull_secrets,
                 volumes=volumes,
             ),
         )
@@ -511,7 +514,16 @@ class Kubernetes(Driver):
         image = job_config.container_image
         if registry_host := self._worker.get_registry_host():
             image_parts = image.split("/")
-            if len(image_parts) > 1:
+            # Special case for pull through cache registries,
+            # which are mirrored from DockerHub. DockerHub doesn't allow slashes in the name
+            # We'll instead release the images with gretelai/image-separated-by-dashes
+            if registry_host and registry_host.endswith("/gretelai"):
+                start_index = 0
+                if "." in image_parts[0] or ":" in image_parts[0]:
+                    start_index = 1
+                image_name_with_dashes = "-".join(image_parts[start_index:])
+                image = f"{registry_host}/{image_name_with_dashes}"
+            elif len(image_parts) > 1:
                 image_parts[0] = registry_host
                 image = "/".join(image_parts)
         return image
