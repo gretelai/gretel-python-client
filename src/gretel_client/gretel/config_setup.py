@@ -22,7 +22,14 @@ SYNTHETICS_BLUEPRINT_REPO = (
 )
 
 
-class ModelName(str, Enum):
+@dataclass(frozen=True)
+class TabLLMDefaultParams:
+    temperature: float = 0.7
+    top_k: int = 40
+    top_p: float = 0.95
+
+
+class ModelType(str, Enum):
     """Name of the model parameter dict in the config.
 
     Note: The values are the names used in the model configs.
@@ -61,21 +68,21 @@ class ModelConfigSections:
 
 
 CONFIG_SETUP_DICT = {
-    ModelName.ACTGAN: ModelConfigSections(
+    ModelType.ACTGAN: ModelConfigSections(
         model_name="actgan",
         config_sections=["params", "generate", "privacy_filters", "evaluate"],
         data_source_optional=False,
         report_type=ReportType.SQS,
         extra_kwargs=["ref_data"],
     ),
-    ModelName.AMPLIFY: ModelConfigSections(
+    ModelType.AMPLIFY: ModelConfigSections(
         model_name="amplify",
         config_sections=["params", "evaluate"],
         data_source_optional=False,
         report_type=ReportType.SQS,
         extra_kwargs=["ref_data"],
     ),
-    ModelName.LSTM: ModelConfigSections(
+    ModelType.LSTM: ModelConfigSections(
         model_name="lstm",
         config_sections=[
             "params",
@@ -90,14 +97,14 @@ CONFIG_SETUP_DICT = {
         report_type=ReportType.SQS,
         extra_kwargs=["ref_data"],
     ),
-    ModelName.TABULAR_DP: ModelConfigSections(
+    ModelType.TABULAR_DP: ModelConfigSections(
         model_name="tabular_dp",
         config_sections=["params", "generate", "evaluate"],
         data_source_optional=False,
         report_type=ReportType.SQS,
         extra_kwargs=["ref_data"],
     ),
-    ModelName.GPT_X: ModelConfigSections(
+    ModelType.GPT_X: ModelConfigSections(
         model_name="gpt",
         config_sections=["params", "generate"],
         data_source_optional=True,
@@ -110,7 +117,7 @@ CONFIG_SETUP_DICT = {
             "ref_data",
         ],
     ),
-    ModelName.DGAN: ModelConfigSections(
+    ModelType.DGAN: ModelConfigSections(
         model_name="dgan",
         config_sections=["params", "generate"],
         data_source_optional=False,
@@ -137,7 +144,7 @@ def _backwards_compat_transform_config(
     """
     model_type, model_config_section = extract_model_config_section(config)
     if (
-        model_type == ModelName.GPT_X.value
+        model_type == ModelType.GPT_X.value
         and "params" in non_default_settings
         and "params" not in model_config_section
     ):
@@ -192,7 +199,7 @@ def create_model_config_from_base(
     """
     config = smart_read_model_config(base_config)
     model_type, model_config_section = extract_model_config_section(config)
-    setup = CONFIG_SETUP_DICT[ModelName(model_type)]
+    setup = CONFIG_SETUP_DICT[ModelType(model_type)]
 
     config = _backwards_compat_transform_config(config, non_default_settings)
 

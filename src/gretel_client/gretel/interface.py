@@ -7,6 +7,7 @@ from typing import Optional, Union
 
 from gretel_client.config import configure_session
 from gretel_client.dataframe import _DataFrameT
+from gretel_client.factories import GretelFactories
 from gretel_client.gretel.artifact_fetching import (
     fetch_final_model_config,
     fetch_model_logs,
@@ -95,8 +96,9 @@ class Gretel:
     ):
         configure_session(**session_kwargs)
 
-        self._project: Optional[Project] = None
         self._user_id: str = get_me()["_id"][9:]
+        self._project: Optional[Project] = None
+        self._factories: Optional[GretelFactories] = None
 
         if project_name is not None:
             self.set_project(name=project_name, display_name=project_display_name)
@@ -105,18 +107,28 @@ class Gretel:
         """Raise an error if a project has not been set."""
         if self._project is None:
             raise GretelProjectNotSetError(
-                "A project must be set to fetch models and their artifacts. "
+                "A project must be set to run this method. "
                 "Use `set_project` to create or select an existing project."
             )
 
-    def get_project(self) -> Project:
+    def _generate_random_label(self) -> str:
+        return f"{uuid.uuid4().hex[:5]}-{self._user_id}"
+
+    @property
+    def factories(self) -> GretelFactories:
+        """Returns the GretelFactories object for creating new objects."""
+        if self._factories is None:
+            self._factories = GretelFactories()
+        return self._factories
+
+    def get_project(self, **kwargs) -> Project:
         """Returns the current Gretel project.
 
         If a project has not been set, a new one will be created.
         """
         if self._project is None:
             logger.info("No project set -> creating a new one...")
-            self.set_project()
+            self.set_project(**kwargs)
         return self._project
 
     def set_project(
@@ -138,7 +150,7 @@ class Gretel:
         Raises:
             ApiException: If an error occurs while creating the project.
         """
-        name = name or f"gretel-sdk-{uuid.uuid4().hex[:5]}-{self._user_id}"
+        name = name or f"gretel-sdk-{self._generate_random_label()}"
 
         try:
             project = get_project(

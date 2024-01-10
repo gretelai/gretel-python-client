@@ -11,7 +11,7 @@ from gretel_client.gretel.artifact_fetching import fetch_synthetic_data
 from gretel_client.gretel.config_setup import (
     CONFIG_SETUP_DICT,
     extract_model_config_section,
-    ModelName,
+    ModelType,
 )
 from gretel_client.gretel.exceptions import GretelJobSubmissionError
 from gretel_client.helpers import poll
@@ -27,14 +27,14 @@ class GretelMetricName(str, Enum):
     TEXT_SEMANTIC = "text_semantic_similarity"
 
     @property
-    def compatible_models(self) -> List[ModelName]:
+    def compatible_models(self) -> List[ModelType]:
         if self == GretelMetricName.SQS:
             return [
-                ModelName.ACTGAN,
-                ModelName.AMPLIFY,
-                ModelName.LSTM,
-                ModelName.TABULAR_DP,
-                ModelName.GPT_X,
+                ModelType.ACTGAN,
+                ModelType.AMPLIFY,
+                ModelType.LSTM,
+                ModelType.TABULAR_DP,
+                ModelType.GPT_X,
             ]
         elif self in [
             GretelMetricName.FCS,
@@ -42,16 +42,16 @@ class GretelMetricName(str, Enum):
             GretelMetricName.FDS,
         ]:
             return [
-                ModelName.ACTGAN,
-                ModelName.AMPLIFY,
-                ModelName.LSTM,
-                ModelName.TABULAR_DP,
+                ModelType.ACTGAN,
+                ModelType.AMPLIFY,
+                ModelType.LSTM,
+                ModelType.TABULAR_DP,
             ]
         elif self in [
             GretelMetricName.TEXT_STRUCTURE,
             GretelMetricName.TEXT_SEMANTIC,
         ]:
-            return [ModelName.GPT_X]
+            return [ModelType.GPT_X]
 
 
 class MetricDirection(str, Enum):

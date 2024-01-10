@@ -52,10 +52,6 @@ class GretelJobResults(ABC):
     def model_url(self) -> str:
         ...
 
-    @abstractproperty
-    def job_status(self) -> Status:
-        ...
-
 
 @dataclass
 class TrainJobResults(GretelJobResults):
