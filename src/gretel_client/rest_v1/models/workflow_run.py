@@ -39,6 +39,7 @@ class WorkflowRun(BaseModel):
     workflow_id: StrictStr = Field(...)
     project_id: StrictStr = Field(...)
     project: Optional[Project] = None
+    cluster_guid: Optional[StrictStr] = None
     config: Optional[Dict[str, Any]] = None
     config_text: Optional[StrictStr] = None
     runner_mode: StrictStr = Field(...)
@@ -59,6 +60,7 @@ class WorkflowRun(BaseModel):
         "workflow_id",
         "project_id",
         "project",
+        "cluster_guid",
         "config",
         "config_text",
         "runner_mode",
@@ -159,6 +161,7 @@ class WorkflowRun(BaseModel):
                 "project": Project.from_dict(obj.get("project"))
                 if obj.get("project") is not None
                 else None,
+                "cluster_guid": obj.get("cluster_guid"),
                 "config": obj.get("config"),
                 "config_text": obj.get("config_text"),
                 "runner_mode": obj.get("runner_mode"),

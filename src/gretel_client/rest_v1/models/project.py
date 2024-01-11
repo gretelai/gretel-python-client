@@ -39,6 +39,7 @@ class Project(BaseModel):
     color: Optional[StrictStr] = None
     public: Optional[StrictBool] = None
     runner_mode: Optional[StrictStr] = None
+    cluster_guid: Optional[StrictStr] = None
     modified: Optional[datetime] = None
     created: Optional[datetime] = None
     __properties = [
@@ -52,6 +53,7 @@ class Project(BaseModel):
         "color",
         "public",
         "runner_mode",
+        "cluster_guid",
         "modified",
         "created",
     ]
@@ -118,6 +120,7 @@ class Project(BaseModel):
                 "color": obj.get("color"),
                 "public": obj.get("public"),
                 "runner_mode": obj.get("runner_mode"),
+                "cluster_guid": obj.get("cluster_guid"),
                 "modified": obj.get("modified"),
                 "created": obj.get("created"),
             }
