@@ -110,23 +110,29 @@ def build_logger(job_id: str) -> Callable:
     help="Enable the prometheus metrics endpoint on port 8080",
     default=False,
 )
+@click.option(
+    "--cluster-id",
+    help="Hybrid Cluster ID to operate on",
+    envvar="GRETEL_CLUSTER_ID",
+)
 @pass_session
 def start(
     sc: SessionContext,
     driver: str,
     max_workers: int,
-    project: str = None,
+    project: Optional[str] = None,
     same_org_only: bool = False,
     auto_accept_project_invites: bool = False,
-    aws_cred_path: str = None,
-    artifact_endpoint: str = None,
-    env: List[str] = None,
-    volume: List[str] = None,
+    aws_cred_path: Optional[str] = None,
+    artifact_endpoint: Optional[str] = None,
+    env: Optional[List[str]] = None,
+    volume: Optional[List[str]] = None,
     ca_bundle: Optional[str] = None,
     disable_cloud_logging: bool = False,
     disable_cloud_report_scores: bool = False,
     enable_prometheus: bool = False,
-    runner_modes: List[str] = None,
+    runner_modes: Optional[List[str]] = None,
+    cluster_id: Optional[str] = None,
 ):
     sc.log.info(f"Starting Gretel agent using driver {driver}.")
     creds = []
@@ -184,6 +190,7 @@ def start(
         capabilities=capabilities,
         enable_prometheus=enable_prometheus,
         runner_modes=runner_modes_as_enum,
+        cluster_guid=cluster_id,
     )
     agent = get_agent(config)
     sc.register_cleanup(lambda: agent.interrupt())

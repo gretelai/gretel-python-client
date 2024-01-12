@@ -5,6 +5,7 @@ Support for running local docker workers.
 from __future__ import annotations
 
 import base64
+import contextlib
 import datetime
 import itertools
 import json
@@ -12,6 +13,7 @@ import math
 import os
 import traceback
 
+from _thread import interrupt_main
 from copy import deepcopy
 from pathlib import Path
 from threading import Condition, Thread
@@ -19,8 +21,9 @@ from time import sleep
 from typing import List, Optional, Tuple, Type, TYPE_CHECKING, TypeVar
 
 from kubernetes import client, config
-from kubernetes.client import ApiClient, BatchV1Api, CoreV1Api
+from kubernetes.client import ApiClient, ApiException, BatchV1Api, CoreV1Api
 from kubernetes.utils.quantity import parse_quantity
+from kubernetes.watch.watch import Watch
 
 from gretel_client.agents.drivers.driver import Driver
 from gretel_client.config import get_logger
@@ -55,6 +58,9 @@ COMMON_DATA_MOUNT_PATH_ENV_NAME = "GRETEL_COMMON_DATA_MOUNT_PATH"
 LIVENESS_FILE_ENV_NAME = "LIVENESS_FILE"
 GPU_SEC_CONTEXT_ENV_NAME = "GPU_WORKER_SECURITY_CONTEXT"
 CPU_SEC_CONTEXT_ENV_NAME = "CPU_WORKER_SECURITY_CONTEXT"
+
+GRETEL_CLUSTER_SECRET_NAME_ENV_NAME = "GRETEL_CLUSTER_SECRET_NAME"
+GRETEL_CLUSTER_ID_KEY = "GRETEL_CLUSTER_ID"
 
 LAST_UPDATED_ANNOTATION = "lastUpdated"
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -680,6 +686,18 @@ class KubernetesDriverDaemon:
 
         self._minutes_stale = 11 * 60  # 11 hours
 
+        self._cluster_id = agent_config.cluster_guid
+        self._cluster_secret_name = os.getenv(GRETEL_CLUSTER_SECRET_NAME_ENV_NAME)
+        if self._cluster_secret_name and not self._cluster_id:
+            raise ValueError(
+                "a cluster secret name is configured, but no cluster ID was specified in the environment"
+            )
+
+        self._monitor_cluster_secret_thread = Thread(
+            target=self._run_monitor_cluster_secret_thread,
+            daemon=True,
+        )
+
     def stop(self):
         with self._stop_cond:
             self._stop = True
@@ -710,6 +728,7 @@ class KubernetesDriverDaemon:
     def start_update_pull_secret_thread(self) -> None:
         healthcheck_thread = Thread(target=self._run_healthcheck_thread, daemon=True)
         self._pull_secret_thread.start()
+        self._monitor_cluster_secret_thread.start()
         healthcheck_thread.start()
         with self._stop_cond:
             self._stop = False
@@ -825,12 +844,85 @@ class KubernetesDriverDaemon:
     def _update_liveness_file(self):
         self._liveness_file_path.touch()
 
+    def _run_monitor_cluster_secret_thread(self):
+        if not self._cluster_secret_name:
+            return
+        while not self._should_stop():
+            try:
+                self._monitor_cluster_secret()
+            except ClusterSecretError:
+                interrupt_main()
+                raise
+            except ApiException as ex:
+                if ex.status == 410:
+                    # This can happen on every watch, it just means we need to restart
+                    # the watch.
+                    continue
+                logger.exception("Error monitoring cluster secret, trying again")
+            except:
+                logger.exception("Error monitoring cluster secret, trying again")
+
+            self._sleep(10)
+
+    def _check_cluster_secret(self, cluster_secret: client.V1Secret):
+        cluster_id_b64 = cluster_secret.data.get(GRETEL_CLUSTER_ID_KEY) or ""
+        cluster_id = base64.b64decode(cluster_id_b64).decode("ascii")
+        if cluster_id != self._cluster_id:
+            raise ClusterSecretError(
+                f"cluster ID in cluster secret has changed from '{self._cluster_id}' to '{cluster_id}'"
+            )
+
+    def _monitor_cluster_secret(self):
+        list_kwargs = {
+            "namespace": self._gretel_worker_namespace,
+            "field_selector": f"metadata.name={self._cluster_secret_name}",
+        }
+
+        secrets_list: client.V1SecretList = self._core_api.list_namespaced_secret(
+            **list_kwargs
+        )
+        cluster_secrets = [
+            s
+            for s in secrets_list.items
+            if s.metadata.name == self._cluster_secret_name
+        ]
+        if not cluster_secrets:
+            raise ClusterSecretError(
+                f"cluster secret {self._cluster_secret_name} not found"
+            )
+        cluster_secret = cluster_secrets[0]
+        self._check_cluster_secret(cluster_secret)
+
+        w = Watch()
+        with contextlib.closing(
+            w.stream(
+                self._core_api.list_namespaced_secret,
+                resource_version=secrets_list.metadata.resource_version,
+                **list_kwargs,
+            )
+        ) as events_stream:
+            for event in events_stream:
+                object: client.V1Secret = event["object"]
+                if object.metadata.name != self._cluster_secret_name:
+                    continue
+
+                if event["type"] == "DELETED":
+                    raise ClusterSecretError(
+                        f"cluster secret {self._cluster_secret_name} was deleted"
+                    )
+
+                self._check_cluster_secret(object)
+
 
 class KubernetesError(Exception):
     ...
 
 
 class PullSecretError(Exception):
+    ...
+
+
+class ClusterSecretError(Exception):
     ...
 
 

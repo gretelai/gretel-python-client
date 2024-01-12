@@ -107,6 +107,8 @@ class AgentConfig:
 
     runner_modes: Optional[List[RunnerMode]] = None
 
+    cluster_guid: Optional[str] = None
+
     _project_ids: Optional[List[str]] = None
     """Cached project ID."""
 
@@ -441,6 +443,8 @@ class Poller(Iterator):
             api_kwargs["runner_modes"] = [
                 runner_mode.value for runner_mode in self._runner_modes
             ]
+        if self._agent_config.cluster_guid:
+            api_kwargs["cluster_guid"] = self._agent_config.cluster_guid
         next_job = self._jobs_api.receive_one(**api_kwargs)
         if next_job["data"]["job"] is not None:
             return Job.from_dict(next_job["data"]["job"], self._agent_config)
@@ -534,6 +538,8 @@ class Agent:
                 max_workers=self._config.max_workers,
             )
         self._logger.info("Agent started, waiting for work to arrive")
+        if self._config.cluster_guid:
+            self._logger.info("Cluster ID is %s", self._config.cluster_guid)
 
         thread = Thread(
             target=self._rate_limiter.update_max_active_jobs_loop, daemon=True
