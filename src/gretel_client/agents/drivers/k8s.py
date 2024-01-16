@@ -403,6 +403,20 @@ class Kubernetes(Driver):
                     mount_path=self._common_data_mount_path,
                 )
             )
+        run_path = "/run"
+        for name, path in [("tmp", "/tmp"), ("run", run_path)]:
+            volumes.append(
+                client.V1Volume(
+                    name=name,
+                    empty_dir=client.V1EmptyDirVolumeSource(),
+                )
+            )
+            volume_mounts.append(
+                client.V1VolumeMount(
+                    name=name,
+                    mount_path=path,
+                )
+            )
 
         container = client.V1Container(
             name=job_config.uid,
@@ -439,12 +453,16 @@ class Kubernetes(Driver):
             self._add_selector_if_present(template, self._gpu_node_selector)
             self._add_tolerations_if_present(template, self._gpu_tolerations)
             self._add_affinity_if_present(template, self._gpu_affinity)
-            self._add_security_context_if_present(template, self._gpu_security_context)
+            self._add_security_context_if_present(
+                template, self._gpu_security_context, run_path
+            )
         else:
             self._add_selector_if_present(template, self._cpu_node_selector)
             self._add_tolerations_if_present(template, self._cpu_tolerations)
             self._add_affinity_if_present(template, self._cpu_affinity)
-            self._add_security_context_if_present(template, self._cpu_security_context)
+            self._add_security_context_if_present(
+                template, self._cpu_security_context, run_path
+            )
 
         spec = client.V1JobSpec(
             template=template, backoff_limit=0, ttl_seconds_after_finished=86400
@@ -576,11 +594,19 @@ class Kubernetes(Driver):
             pod_spec.tolerations = tolerations_list
 
     def _add_security_context_if_present(
-        self, template: client.V1PodTemplateSpec, security_context: dict
+        self,
+        template: client.V1PodTemplateSpec,
+        security_context: dict,
+        running_path: str,
     ) -> None:
         if security_context:
             pod_spec: client.V1PodSpec = template.spec
-            pod_spec.security_context = security_context
+            container: client.V1Container = pod_spec.containers[0]
+            container.security_context = security_context
+            # We need to run from a /run emptydir if we are not running as root
+            # or readOnlyRootFileSystem is true, but older containers won't
+            # necessarily have this set
+            container.working_dir = running_path
 
     def _delete_kubernetes_job(self, job: Optional[client.V1Job]):
         """Deletes the input V1Job in the cluster pointed to by the input Api Client."""

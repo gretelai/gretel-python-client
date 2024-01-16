@@ -418,7 +418,8 @@ class TestKubernetesDriver(TestCase):
             job_spec: V1JobSpec = k8s_job.spec
             job_template: V1PodTemplateSpec = job_spec.template
             pod_spec: V1PodSpec = job_template.spec
-            security_context: dict = pod_spec.security_context
+            container: V1Container = pod_spec.containers[0]
+            security_context: dict = container.security_context
             assert security_context.get("runAsNonRoot") is True
             assert security_context.get("runAsUser") == 1001
 
@@ -439,7 +440,8 @@ class TestKubernetesDriver(TestCase):
             job_spec: V1JobSpec = k8s_job.spec
             job_template: V1PodTemplateSpec = job_spec.template
             pod_spec: V1PodSpec = job_template.spec
-            security_context: V1PodSecurityContext = pod_spec.security_context
+            container: V1Container = pod_spec.containers[0]
+            security_context: dict = container.security_context
             assert security_context.get("runAsNonRoot") is False
             assert security_context.get("runAsUser") == 1003
 
@@ -790,13 +792,13 @@ class TestKubernetesDriver(TestCase):
         pod_spec: V1PodSpec = pod_template.spec
         container: V1Container = pod_spec.containers[0]
 
-        assert len(container.volume_mounts) == 1
-        mount: V1VolumeMount = container.volume_mounts[0]
+        assert len(container.volume_mounts) == 3
+        mount: V1VolumeMount = container.volume_mounts[-1]
         assert mount.name == OVERRIDE_CERT_NAME
         assert mount.mount_path == "/usr/local/share/ca-certificates/"
 
-        assert len(pod_spec.volumes) == 1
-        volume: V1Volume = pod_spec.volumes[0]
+        assert len(pod_spec.volumes) == 3
+        volume: V1Volume = pod_spec.volumes[-1]
         assert volume.name == OVERRIDE_CERT_NAME
         config_map: V1ConfigMapVolumeSource = volume.config_map
         assert config_map.optional
