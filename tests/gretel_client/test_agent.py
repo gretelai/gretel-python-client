@@ -86,10 +86,14 @@ def test_agent_server_does_start(
     jobs_api = MagicMock()
     project_api = MagicMock()
 
-    get_session_config.return_value.get_api.side_effect = {
-        JobsApi: jobs_api,
-        ProjectsApi: project_api,
-    }.get
+    def get_api(api, *args, **kwargs):
+        if api == JobsApi:
+            return jobs_api
+        if api == ProjectsApi:
+            return project_api
+        assert False, "unexpected API requested"
+
+    get_session_config.return_value.get_api.side_effect = get_api
 
     jobs_api.receive_one.side_effect = [
         {"data": {"job": get_mock_job()}},

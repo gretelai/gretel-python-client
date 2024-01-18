@@ -7,7 +7,7 @@ import os
 from enum import Enum
 from getpass import getpass
 from pathlib import Path
-from typing import Optional, Type, TypeVar, Union
+from typing import Dict, Optional, Type, TypeVar, Union
 
 import certifi
 
@@ -291,6 +291,8 @@ class ClientConfig:
         config_cls: Type[ConfigT],
         max_retry_attempts: int = 3,
         backoff_factor: float = 1,
+        *,
+        default_headers: Optional[Dict[str, str]] = None,
     ) -> ClientT:
         # disable log warnings when the retry kicks in
         logging.getLogger("urllib3.connectionpool").setLevel(logging.ERROR)
@@ -321,7 +323,10 @@ class ClientConfig:
             max_retry_attempts=max_retry_attempts,
             backoff_factor=backoff_factor,
         )
-        return client_cls(configuration, **client_kwargs)
+        client = client_cls(configuration, **client_kwargs)
+        if default_headers:
+            client.default_headers.update(default_headers)
+        return client
 
     def _get_api_client(self, *args, **kwargs) -> ApiClient:
         return self._get_api_client_generic(ApiClient, Configuration, *args, **kwargs)
@@ -346,6 +351,8 @@ class ClientConfig:
         api_interface: Type[T],
         max_retry_attempts: int = 5,
         backoff_factor: float = 1,
+        *,
+        default_headers: Optional[Dict[str, str]] = None,
     ) -> T:
         """Instantiates and configures an api client for a given
         component interface.
@@ -358,16 +365,24 @@ class ClientConfig:
                 attempts. A base factor of 2 will applied to this value
                 to determine the time between attempts.
         """
-        return api_interface(self._get_api_client(max_retry_attempts, backoff_factor))
+        return api_interface(
+            self._get_api_client(
+                max_retry_attempts, backoff_factor, default_headers=default_headers
+            )
+        )
 
     def get_v1_api(
         self,
         api_interface: Type[T],
         max_retry_attempts: int = 5,
         backoff_factor: float = 1,
+        *,
+        default_headers: Optional[Dict[str, str]] = None,
     ) -> T:
         return api_interface(
-            self._get_v1_api_client(max_retry_attempts, backoff_factor)
+            self._get_v1_api_client(
+                max_retry_attempts, backoff_factor, default_headers=default_headers
+            )
         )
 
     def _check_project(self, project_name: str = None) -> Optional[str]:

@@ -33,6 +33,9 @@ from gretel_client.rest.apis import JobsApi, ProjectsApi
 configure_logging()
 
 
+_CLUSTERID_HEADER_KEY = "X-Gretel-Clusterid"
+
+
 class AgentError(Exception):
     ...
 
@@ -520,8 +523,16 @@ class Agent:
         self._driver = get_driver(config)
         self._jobs_manager = JobManager(self._driver)
         self._rate_limiter = RateLimiter(config.max_workers, self._jobs_manager, config)
-        self._jobs_api = self._client_config.get_api(JobsApi)
-        self._projects_api = self._client_config.get_api(ProjectsApi)
+
+        default_headers = None
+        if config.cluster_guid:
+            default_headers = {_CLUSTERID_HEADER_KEY: config.cluster_guid}
+        self._jobs_api = self._client_config.get_api(
+            JobsApi, default_headers=default_headers
+        )
+        self._projects_api = self._client_config.get_api(
+            ProjectsApi, default_headers=default_headers
+        )
         self._jobs = Poller(
             self._jobs_api,
             self._rate_limiter,
@@ -573,6 +584,8 @@ class Agent:
             worker_json = base64.standard_b64decode(job.worker_token).decode("ascii")
             worker_key = json.loads(worker_json)["model_key"]
             headers = {"Authorization": worker_key}
+            if self._config.cluster_guid:
+                headers[_CLUSTERID_HEADER_KEY] = self._config.cluster_guid
             url = f"{job.gretel_endpoint}/projects/models"
             params = {"uid": job.uid, "type": job.job_type}
             data = {"uid": job.uid, "status": "pending"}
