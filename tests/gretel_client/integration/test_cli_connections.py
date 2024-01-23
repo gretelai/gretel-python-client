@@ -321,6 +321,44 @@ def test_hybrid_connection_crud_from_cli(
     assert "Created connection:" in cmd.output
     assert cmd.exit_code == 0
 
+    # Bad azure key vault string throws error.
+    cmd = runner.invoke(
+        cli,
+        [
+            "connections",
+            "create",
+            "--project",
+            project.project_guid,  # type: ignore
+            "--from-file",
+            get_fixture("connections/test_connection.json"),
+            "--azure-key-vault-url",
+            "bad-vault-string",
+            "--azure-key-id",
+            "gretel-key",
+        ],
+    )
+    assert "The keyvault URL must match the format" in cmd.output
+    assert cmd.exit_code != 0
+
+    # Bad azure key id string throws error.
+    cmd = runner.invoke(
+        cli,
+        [
+            "connections",
+            "create",
+            "--project",
+            project.project_guid,  # type: ignore
+            "--from-file",
+            get_fixture("connections/test_connection.json"),
+            "--azure-key-vault-url",
+            "https://gretelkeyvault.vault.azure.net/",
+            "--azure-key-id",
+            "malformed-key-id/keys/gretel-key",
+        ],
+    )
+    assert "The key ID did not match the expected format" in cmd.output
+    assert cmd.exit_code != 0
+
 
 def test_read_yaml(get_fixture: Callable):
     json_conn = _read_connection_file(get_fixture("connections/test_connection.json"))

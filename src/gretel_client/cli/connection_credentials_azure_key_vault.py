@@ -13,7 +13,13 @@ from gretel_client.cli.connection_credentials import (
     CredentialsEncryptionFlagsBase,
 )
 
-VALID_VAULT_URL = re.compile(r"https://[A-Za-z0-9_-]+\.vault\.azure\.net/?")
+# Format: https://myvaultname.vault.azure.net
+VALID_VAULT_URL = re.compile(r"^https://[A-Za-z0-9_-]+\.vault\.azure\.net/?$")
+# Format: https://myvaultname.vault.azure.net/keys/my-key-name
+VALID_QUALIFIED_KEY_ID = re.compile(
+    r"^https://[A-Za-z0-9_-]+\.vault\.azure\.net/keys/[A-Za-z0-9_-]+$"
+)
+VALID_KEY_ID = re.compile(r"^[A-Za-z0-9_-]+$")
 
 
 class AzureKeyVaultEncryption(CredentialsEncryptionFlagsBase):
@@ -22,7 +28,7 @@ class AzureKeyVaultEncryption(CredentialsEncryptionFlagsBase):
         @click.option(
             "--azure-key-vault-url",
             metavar="AZURE_KEY_VAULT_URL",
-            help="Key Vault URL for Customer-managed credentials encryption",
+            help="Key Vault URL for Customer-managed credentials encryption. eg. https://myvault.vault.azure.net",
             required=False,
         )
         @click.option(
@@ -34,7 +40,7 @@ class AzureKeyVaultEncryption(CredentialsEncryptionFlagsBase):
         @click.option(
             "--azure-key-id",
             metavar="AZURE_KEY_ID",
-            help="Key Id from key vault to use during encryption",
+            help="Key Id to use during encryption. This is the same as the key name. eg. my-key-name",
             required=False,
         )
         @click.option(
@@ -92,6 +98,11 @@ class AzureKeyVaultEncryption(CredentialsEncryptionFlagsBase):
             raise click.UsageError(
                 "The keyvault URL must match the format 'https://{vault-name}.vault.azure.net'"
             )
+        if re.match(VALID_QUALIFIED_KEY_ID, azure_key_id):
+            # Format: https://gretelkeyvault.vault.azure.net/keys/gretel-key
+            azure_key_id = azure_key_id.split("/")[-1]
+        if not re.match(VALID_KEY_ID, azure_key_id):
+            raise click.UsageError("The key ID did not match the expected format.")
 
         if not azure_encryption_algorithm and azure_encrypted_credentials:
             raise click.UsageError(

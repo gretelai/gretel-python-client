@@ -16,7 +16,13 @@ if TYPE_CHECKING:
 
 from gretel_client._hybrid.creds_encryption import CredentialsEncryption
 
+# Format: https://myvaultname.vault.azure.net/
 _VALID_VAULT_URL = re.compile(r"https://[A-Za-z0-9_-]+\.vault\.azure\.net/?")
+# Format: https://myvaultname.vault.azure.net/keys/my-key-name
+_VALID_QUALIFIED_KEY_ID = re.compile(
+    r"^https://[A-Za-z0-9_-]+\.vault\.azure\.net/keys/[A-Za-z0-9_-]+$"
+)
+_VALID_KEY_ID = re.compile(r"^[A-Za-z0-9_-]+$")
 
 
 class KeyVaultEncryption(CredentialsEncryption):
@@ -32,6 +38,10 @@ class KeyVaultEncryption(CredentialsEncryption):
     ):
         if not _VALID_VAULT_URL.match(vault_url):
             raise ValueError(f"Malformed Azure Key Vault URL {vault_url}")
+        if _VALID_QUALIFIED_KEY_ID.match(key_id):
+            key_id = key_id.split("/")[-1]
+        if not _VALID_KEY_ID.match(key_id):
+            raise ValueError(f"Malformed Azure Key Vault Key ID {key_id}")
 
         if not encryption_algorithm:
             encryption_algorithm = "RSA-OAEP"
