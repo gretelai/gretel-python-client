@@ -308,7 +308,7 @@ class Gretel:
 
         logger.info(
             f"Submitting {model_name.upper()} training job...\n"
-            f"Model Docs:{get_model_docs_url(model_type)}\n"
+            f"Model Docs:{get_model_docs_url(model_type)}"
         )
 
         model.submit()

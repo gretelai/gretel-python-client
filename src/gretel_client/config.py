@@ -597,7 +597,7 @@ def configure_session(
             api_key = config.api_key
             print("Found cached Gretel credentials")
         else:
-            api_key = getpass("Gretel Api Key")
+            api_key = getpass("Gretel API Key: ")
 
     if api_key and api_key.startswith("grt") or endpoint:
         endpoint = endpoint or config.endpoint
