@@ -69,6 +69,8 @@ class Project:
         display_name: The main display name used in the Gretel Console for your project
     """
 
+    runner_mode: Optional[RunnerMode]
+
     def __init__(
         self,
         *,
@@ -77,6 +79,7 @@ class Project:
         project_guid: Optional[str] = None,
         desc: Optional[str] = None,
         display_name: Optional[str] = None,
+        runner_mode: Optional[Union[RunnerMode, str]] = None,
     ):
         self.client_config = get_session_config()
         self.projects_api = self.client_config.get_api(ProjectsApi)
@@ -85,19 +88,22 @@ class Project:
         self.project_guid = project_guid
         self.description = desc
         self.display_name = display_name
+        self.runner_mode = RunnerMode.parse_optional(runner_mode)
         self._deleted = False
 
     @cached_property
     def default_artifacts_handler(self) -> ArtifactsHandler:
-        default_runner = self.client_config.default_runner
+        runner = self.runner_mode or RunnerMode.parse_optional(
+            self.client_config.default_runner
+        )
 
-        if default_runner == RunnerMode.HYBRID:
+        if runner == RunnerMode.HYBRID:
             return self.hybrid_artifacts_handler
-        elif default_runner == RunnerMode.CLOUD:
+        elif runner == RunnerMode.CLOUD:
             return self.cloud_artifacts_handler
         else:
             raise GretelProjectError(
-                f"Artifact handling is not supported under {default_runner} runner mode. "
+                f"Artifact handling is not supported under {runner.value} runner mode. "
                 "Please update the default runner in your configuration to `cloud` or `hybrid` to work with artifacts."
             )
 
@@ -136,13 +142,16 @@ class Project:
     @property
     def as_dict(self) -> dict:
         """Returns a dictionary representation of the project."""
-        return {
+        dict_data = {
             "name": self.name,
             "project_id": self.project_id,
             "display_name": self.display_name,
             "desc": self.description,
             "console_url": self.get_console_url(),
         }
+        if self.runner_mode is not None:
+            dict_data["runner_mode"] = self.runner_mode.value
+        return dict_data
 
     @check_not_deleted
     def info(self) -> dict:
@@ -358,6 +367,7 @@ def get_project(
     create: bool = False,
     desc: Optional[str] = None,
     display_name: Optional[str] = None,
+    runner_mode: Optional[Union[RunnerMode, str]] = None,
 ) -> Project:
     """Used to get or create a Gretel project.
 
@@ -376,6 +386,8 @@ def get_project(
     if not name and not create:
         raise ValueError("Must provide a name or create flag!")
 
+    runner_mode = RunnerMode.parse_optional(runner_mode)
+
     api = get_session_config().get_api(ProjectsApi)
     project = None
 
@@ -385,6 +397,8 @@ def get_project(
             project_args["description"] = desc
         if display_name:
             project_args["display_name"] = display_name
+        if runner_mode:
+            project_args["runner_mode"] = runner_mode.value
 
     if not name and create:
         resp = api.create_project(project=models.Project(**project_args))
@@ -406,12 +420,19 @@ def get_project(
 
     p = project.get(DATA).get(PROJECT)
 
+    proj_runner_mode = RunnerMode.parse_optional(p.get("runner_mode"))
+    if runner_mode and runner_mode != proj_runner_mode:
+        raise GretelProjectError(
+            f"Project '{name}' exists, but it is not a {runner_mode.value} project"
+        )
+
     return Project(
         name=p.get("name"),
         project_id=p.get("_id"),
         project_guid=p.get("guid"),
         desc=p.get("description"),
         display_name=p.get("display_name"),
+        runner_mode=proj_runner_mode,
     )
 
 

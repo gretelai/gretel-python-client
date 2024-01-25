@@ -8,7 +8,7 @@ import uuid
 
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, BinaryIO, Dict, IO, List, Optional, Protocol, Tuple, Union
+from typing import Any, BinaryIO, Dict, IO, List, Optional, Protocol, Tuple, Type, Union
 from urllib.parse import urlparse
 
 import requests
@@ -124,15 +124,14 @@ def cloud_handler(project: _Project) -> CloudArtifactsHandler:
     )
 
 
-def hybrid_handler(project: _Project) -> HybridArtifactsHandler:
+def hybrid_handler(project: _Project) -> ArtifactsHandler:
     endpoint = project.client_config.artifact_endpoint
 
-    if endpoint == DEFAULT_GRETEL_ARTIFACT_ENDPOINT:
-        raise ArtifactsException(
-            "Cannot manage artifacts with hybrid strategy without custom artifact endpoint."
+    if endpoint == DEFAULT_GRETEL_ARTIFACT_ENDPOINT or endpoint == "none":
+        return ErrorArtifactsHandler(
+            ArtifactsException,
+            "In hybrid mode, an object store URL has to be specified as artifact endpoint in order to manage artifacts",
         )
-    if endpoint == "none":
-        return NoneArtifactsHandler()
 
     return HybridArtifactsHandler(endpoint=endpoint, project_id=project.project_id)
 
@@ -427,24 +426,37 @@ class HybridArtifactsHandler:
         )
 
 
-class NoneArtifactsHandler:
+class ErrorArtifactsHandler:
+
+    _error_type: Type[BaseException]
+    _error_args: list
+    _error_kwargs: dict
+
+    def __init__(self, error_type: Type[BaseException], *error_args, **error_kwargs):
+        self._error_type = error_type
+        self._error_args = list(error_args)
+        self._error_kwargs = dict(error_kwargs)
+
+    def _raise(self):
+        raise self._error_type(*self._error_args, **self._error_kwargs)
+
     def upload_project_artifact(
         self,
         artifact_path: Union[Path, str, _DataFrameT],
     ) -> str:
-        raise NotImplementedError("no artifact endpoint is configured")
+        self._raise()
 
     def delete_project_artifact(self, key: str) -> None:
-        raise NotImplementedError("no artifact endpoint is configured")
+        self._raise()
 
     def list_project_artifacts(self) -> List[dict]:
-        raise NotImplementedError("no artifact endpoint is configured")
+        self._raise()
 
     def get_project_artifact_link(self, key: str) -> str:
-        raise NotImplementedError("no artifact endpoint is configured")
+        self._raise()
 
     def get_project_artifact_handle(self, key: str) -> BinaryIO:
-        raise NotImplementedError("no artifact endpoint is configured")
+        self._raise()
 
     def get_project_artifact_manifest(
         self,
@@ -452,10 +464,10 @@ class NoneArtifactsHandler:
         retry_on_not_found: bool = True,
         retry_on_pending: bool = True,
     ) -> Dict[str, Any]:
-        raise NotImplementedError("no artifact endpoint is configured")
+        self._raise()
 
     def get_model_artifact_link(self, model_id: str, artifact_type: str) -> str:
-        raise NotImplementedError("no artifact endpoint is configured")
+        self._raise()
 
     def get_record_handler_artifact_link(
         self,
@@ -463,7 +475,7 @@ class NoneArtifactsHandler:
         record_handler_id: str,
         artifact_type: str,
     ) -> str:
-        raise NotImplementedError("no artifact endpoint is configured")
+        self._raise()
 
     def download(
         self,
@@ -472,7 +484,7 @@ class NoneArtifactsHandler:
         artifact_type: str,
         log: logging.Logger,
     ) -> None:
-        raise NotImplementedError("no artifact endpoint is configured")
+        self._raise()
 
 
 def _download(

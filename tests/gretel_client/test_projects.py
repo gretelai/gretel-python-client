@@ -21,8 +21,11 @@ def test_hybrid_artifacts_handler_requires_custom_endpoint(get_session_config):
     config.get_api.return_value = MagicMock()
     get_session_config.return_value = config
 
+    # Merely obtaining the artifacts handler should not raise, only performing
+    # an operation such as listing artifacts.
+    handler = Project(name="proj", project_id="123").hybrid_artifacts_handler
     with pytest.raises(ArtifactsException):
-        Project(name="proj", project_id="123").hybrid_artifacts_handler
+        handler.list_project_artifacts()
 
     config.artifact_endpoint = "s3://my-bucket"
 

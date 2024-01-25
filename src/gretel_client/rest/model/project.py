@@ -51,7 +51,13 @@ class Project(ModelNormal):
           as additional properties values.
     """
 
-    allowed_values = {}
+    allowed_values = {
+        ("runner_mode",): {
+            "None": None,
+            "CLOUD": "cloud",
+            "HYBRID": "hybrid",
+        },
+    }
 
     validations = {}
 
@@ -82,6 +88,10 @@ class Project(ModelNormal):
                 str,
                 none_type,
             ),  # noqa: E501
+            "runner_mode": (
+                str,
+                none_type,
+            ),  # noqa: E501
         }
 
     @cached_property
@@ -92,6 +102,7 @@ class Project(ModelNormal):
         "name": "name",  # noqa: E501
         "display_name": "display_name",  # noqa: E501
         "description": "description",  # noqa: E501
+        "runner_mode": "runner_mode",  # noqa: E501
     }
 
     _composed_schemas = {}
@@ -145,6 +156,7 @@ class Project(ModelNormal):
             name (str, none_type): [optional]  # noqa: E501
             display_name (str, none_type): [optional]  # noqa: E501
             description (str, none_type): [optional]  # noqa: E501
+            runner_mode (str, none_type): [optional]  # noqa: E501
         """
 
         _check_type = kwargs.pop("_check_type", True)

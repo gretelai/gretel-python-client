@@ -50,8 +50,12 @@ def test_cannot_make_hybrid_handler_with_default_artifact_endpoint():
         client_config=config,
     )
 
+    # Creating a handler (w/o performing any artifact operations) should
+    # not raise an exception.
+    handler = hybrid_handler(project)
+
     with pytest.raises(ArtifactsException):
-        hybrid_handler(project)
+        handler.list_project_artifacts()
 
 
 def test_hybrid_created_with_custom_artifact_endpoint():

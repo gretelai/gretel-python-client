@@ -105,6 +105,15 @@ class RunnerMode(str, Enum):
                 raise ValueError(f"Invalid runner_mode: {runner_mode}")
         return runner_mode
 
+    @classmethod
+    def parse_optional(
+        cls, runner_mode: Optional[Union[str, RunnerMode]]
+    ) -> Optional[RunnerMode]:
+        if not runner_mode:
+            return None
+
+        return cls.parse(runner_mode)
+
     @property
     def api_value(self) -> str:
         if self == RunnerMode.CLOUD:

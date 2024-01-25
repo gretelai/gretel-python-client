@@ -136,6 +136,7 @@ def m(
     projects_api.get_record_handler.return_value = get_record_handler_resp
     project = MagicMock()
     project.projects_api = projects_api
+    project.runner_mode = None
     m = Model(project=project, model_config=transform_model_path)
     return m
 

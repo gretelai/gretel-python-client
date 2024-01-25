@@ -107,14 +107,21 @@ class Job(ABC):
         """Submit this Job to the Gretel Cloud API.
 
         Args:
-            runner_mode: Determines where to run the model. If not specified, the default
-                runner configured on the session is used.
+            runner_mode: Determines where to run the model. If not specified, the
+                runner mode of the project (if configured) is used, otherwise
+                the default runner mode of the session is used.
             dry_run: If set to True the model config will be submitted for
                 validation, but won't be run. Ignored for record handlers.
         """
         if runner_mode is None:
-            runner_mode = get_session_config().default_runner
+            runner_mode = (
+                self.project.runner_mode or get_session_config().default_runner
+            )
         runner_mode = RunnerMode.parse(runner_mode)
+        if self.project.runner_mode and runner_mode != self.project.runner_mode:
+            raise ValueError(
+                f"Specified runner mode '{runner_mode.value}' is different from project runner mode '{self.project.runner_mode.value}'"
+            )
 
         if runner_mode == RunnerMode.CLOUD:
             return self.submit_cloud(dry_run)
