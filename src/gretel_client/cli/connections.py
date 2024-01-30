@@ -7,7 +7,7 @@ from typing import Optional
 import click
 import yaml
 
-from gretel_client.cli.common import pass_session, SessionContext
+from gretel_client.cli.common import pass_session, project_option, SessionContext
 from gretel_client.cli.connection_credentials_aws_kms import AWSKMSEncryption
 from gretel_client.cli.connection_credentials_azure_key_vault import (
     AzureKeyVaultEncryption,
@@ -47,16 +47,11 @@ def _read_connection_file(file: str) -> dict:
     help="Path to the file containing Gretel connection.",
     required=True,
 )
-@click.option(
-    "--project",
-    metavar="PROJECT-ID",
-    help="Specify the project to create the connection in.",
-    required=False,
-)
 @AWSKMSEncryption.options("aws_kms")
 @GCPKMSEncryption.options("gcp_kms")
 @AzureKeyVaultEncryption.options("azure_key_vault")
 @pass_session
+@project_option
 def create(
     sc: SessionContext,
     from_file: str,
@@ -71,26 +66,19 @@ def create(
 
     # we try and configure a project in the following order
     #
-    #  1. the project passed via `--project`.
-    #  2. the project configured from the connection file.
-    #  3. the default configured project from the system environment.
+    #  1. the project passed via `--project` or from the system environment (CLI takes precedence)
+    #  2. the default configured project from the system environment.
     #
-    project_id = conn.get("project_id")
+    project_guid = conn.get("project_id")
 
-    # `project` is set if `--project` is passed.
-    if project:
-        if project_id and project_id != project:
+    if project or not project_guid:
+        if project_guid is not None and sc.project.project_guid != project_guid:
             sc.log.warning(
-                f"Overriding project {project_id} in connections config file with project {project} specified on the command line",
+                f"Overriding project {project_guid} in connections config file with project {sc.project.project_guid}.",
             )
-        project_id = project
+        project_guid = sc.project.project_guid
 
-    # `project_id` is unset at this point if no project flag is passed, and no
-    # project id is configured on the connection file.
-    if not project_id:
-        project_id = sc.project.project_guid
-
-    conn["project_id"] = project_id
+    conn["project_id"] = project_guid
 
     # Add more supported encryption providers here, if applicable
     encryption_providers = [

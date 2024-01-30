@@ -145,6 +145,7 @@ class Project:
         dict_data = {
             "name": self.name,
             "project_id": self.project_id,
+            "project_guid": self.project_guid,
             "display_name": self.display_name,
             "desc": self.description,
             "console_url": self.get_console_url(),

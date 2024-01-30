@@ -45,8 +45,8 @@ def create(
 @click.option("--query", help="Filter project names by a query string.", default=None)
 @pass_session
 def search(sc: SessionContext, limit: int, query: str):
-    projects = search_projects(limit=limit, query=query)
-    projects_table = [p.as_dict for p in projects]
+    project_objs = search_projects(limit=limit, query=query)
+    projects_table = [p.as_dict for p in project_objs]
     sc.print(data=projects_table)
 
 
