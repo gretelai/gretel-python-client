@@ -23,13 +23,7 @@ from gretel_client.cli.utils.parser_utils import (
 from gretel_client.config import get_logger, RunnerMode
 from gretel_client.dataframe import _DataFrameT
 from gretel_client.models.config import get_model_type_config
-from gretel_client.projects.common import (
-    f,
-    ModelArtifact,
-    NO,
-    validate_data_source,
-    YES,
-)
+from gretel_client.projects.common import f, ModelArtifact, NO, YES
 from gretel_client.projects.exceptions import (
     GretelJobNotFound,
     ModelConfigError,
@@ -361,7 +355,8 @@ class Model(Job):
     def validate_data_source(self):
         """Tests that the attached data source is a valid
         CSV or JSON file. If the data source is a Gretel
-        cloud artifact data validation will be skipped.
+        cloud artifact OR a hybrid artifact and the runner mode is hybrid,
+        data validation will be skipped.
 
         Raises:
             :class:`~gretel_client.projects.exceptions.DataSourceError` if the
@@ -375,14 +370,14 @@ class Model(Job):
         if not self.external_data_source:
             return
 
-        validate_data_source(self.data_source)
+        self.project.default_artifacts_handler.validate_data_source(self.data_source)
 
     def validate_ref_data(self):
         if not self.external_ref_data:
             return
         ref_data = self.ref_data
         for data_source in ref_data.values:
-            validate_data_source(data_source)
+            self.project.default_artifacts_handler.validate_data_source(data_source)
 
     def __repr__(self) -> str:
         return f"Model(id={self.model_id}, project={self.project.name})"

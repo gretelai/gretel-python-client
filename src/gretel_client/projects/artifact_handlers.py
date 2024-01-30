@@ -137,6 +137,12 @@ def hybrid_handler(project: _Project) -> ArtifactsHandler:
 
 
 class ArtifactsHandler(Protocol):
+    def validate_data_source(
+        self,
+        artifact_path: Pathlike,
+    ) -> bool:
+        ...
+
     def upload_project_artifact(
         self,
         artifact_path: Union[Path, str, _DataFrameT],
@@ -427,7 +433,6 @@ class HybridArtifactsHandler:
 
 
 class ErrorArtifactsHandler:
-
     _error_type: Type[BaseException]
     _error_args: list
     _error_kwargs: dict
@@ -439,6 +444,12 @@ class ErrorArtifactsHandler:
 
     def _raise(self):
         raise self._error_type(*self._error_args, **self._error_kwargs)
+
+    def validate_data_source(
+        self,
+        artifact_path: Pathlike,
+    ) -> bool:
+        self._raise()
 
     def upload_project_artifact(
         self,

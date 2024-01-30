@@ -137,6 +137,9 @@ def m(
     project = MagicMock()
     project.projects_api = projects_api
     project.runner_mode = None
+    project.default_artifacts_handler = CloudArtifactsHandler(
+        projects_api, "proj_123", "project-name"
+    )
     m = Model(project=project, model_config=transform_model_path)
     return m
 
@@ -355,9 +358,6 @@ def test_does_write_artifacts_to_disk(tmpdir: Path, m: Model):
     )
     files = ["account-balances.csv", "report_json.json.gz", "model.tar.gz"]
     keys = ["data_preview", "report_json", "model"]
-    m.project.default_artifacts_handler = CloudArtifactsHandler(
-        MagicMock(), m.project.project_id, m.project.project_name
-    )
     m.get_artifacts = MagicMock(
         return_value=iter(zip(keys, [base_endpoint + f for f in files]))
     )
