@@ -360,7 +360,13 @@ class Kubernetes(Driver):
 
         env = self._setup_environment_variables(job_config, resources)
 
-        args = list(itertools.chain.from_iterable(job_config.params.items()))
+        # K8s agent supports secret environment via creating an ephemeral secret, so
+        # no need for the insecure --worker_token argument.
+        # This breaks compatibility with very old (pre-2023) images, but this seems
+        # tolerable, especially for hybrid users.
+        job_params = dict(job_config.params)
+        job_params.pop("--worker_token", None)
+        args = list(itertools.chain.from_iterable(job_params.items()))
 
         image = self._resolve_image(job_config)
 
