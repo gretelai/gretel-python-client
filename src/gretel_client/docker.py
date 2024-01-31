@@ -27,7 +27,7 @@ from docker.types.containers import DeviceRequest
 from tqdm import tqdm
 from tqdm.asyncio import tqdm as asyncio_tqdm
 
-from gretel_client.config import get_logger, get_session_config
+from gretel_client.config import ClientConfig, get_logger, get_session_config
 from gretel_client.rest.api.opt_api import OptApi
 
 DEFAULT_GPU_CONFIG = DeviceRequest(count=-1, capabilities=[["gpu"]])
@@ -133,15 +133,18 @@ class PullProgressPrinter:
             yield _PullUpdate.from_dict(raw_update)
 
 
-def get_container_auth() -> Tuple[dict, str]:
+def get_container_auth(*, session: Optional[ClientConfig] = None) -> Tuple[dict, str]:
     """Exchanges a Gretel Api Key for container registry credentials.
 
+    Args:
+        session: The client session to use, or ``None`` to use the default session.
     Returns:
         An authentication object and registry endpoint. The authentication
         object may be passed into the docker sdk.
     """
-    config = get_session_config()
-    opt_api = config.get_api(OptApi)
+    if session is None:
+        session = get_session_config()
+    opt_api = session.get_api(OptApi)
     cred_resp = opt_api.get_container_login()
     return cred_resp.get("data").get("auth"), cred_resp.get("data").get("registry")
 
@@ -250,10 +253,16 @@ class DataVolume:
             copy_stream.seek(0)
             volume_container.put_archive(data=copy_stream, path=self.target_dir)
 
-    def prepare_volume(self) -> dict:
+    def prepare_volume(self, *, session: Optional[ClientConfig] = None) -> dict:
+        if session is None:
+            session = get_session_config()
+
         self.volume = self.docker_client.volumes.create(name=self.name)  # type:ignore
         image = pull_image(
-            self.volume_image, self.docker_client, AuthStrategy.AUTH_AND_RESOLVE
+            self.volume_image,
+            self.docker_client,
+            AuthStrategy.AUTH_AND_RESOLVE,
+            session=session,
         )
         self.volume_container = self.docker_client.containers.create(  # type:ignore
             image=image,
@@ -280,13 +289,18 @@ def pull_image(
     image: str,
     docker_client: docker.DockerClient,
     auth_strategy: Optional[AuthStrategy],
+    *,
+    session: Optional[ClientConfig] = None,
 ) -> str:
+    if session is None:
+        session = get_session_config()
+
     logger = get_logger(__name__)
     logger.debug("Authenticating image pull")
 
     auth = None
     if auth_strategy is not None:
-        auth, registry = get_container_auth()
+        auth, registry = get_container_auth(session=session)
         if auth_strategy == AuthStrategy.AUTH_AND_RESOLVE:
             image = f"{registry}/{image}"
         elif auth_strategy == AuthStrategy.AUTH:
@@ -358,7 +372,9 @@ class Container:
         if params is None:
             return []
 
-    def _prepare_volumes(self, volumes: Union[dict, List[DataVolumeDef]]):
+    def _prepare_volumes(
+        self, volumes: Union[dict, List[DataVolumeDef]], *, session: ClientConfig
+    ):
         if isinstance(volumes, dict):
             return volumes
         mounts = {}
@@ -366,7 +382,7 @@ class Container:
             build = DataVolume(vol_def.target_dir, self._docker_client)
             for host_file, target_file in vol_def.host_files:
                 build.add_file(host_file, target_file)
-            mounts.update(build.prepare_volume())
+            mounts.update(build.prepare_volume(session=session))
         self._logger.debug(f"mounts {mounts}")
         return mounts
 
@@ -410,11 +426,15 @@ class Container:
             raise DockerError("Container not running")
         return self._run
 
-    def start(self, entrypoint: str = None):
+    def start(self, entrypoint: str = None, session: Optional[ClientConfig] = None):
         """Start the container"""
+        if session is None:
+            session = get_session_config()
         check_docker_env()
-        image = pull_image(self.image, self._docker_client, self._auth_strategy)
-        volumes = self._prepare_volumes(self._volumes)
+        image = pull_image(
+            self.image, self._docker_client, self._auth_strategy, session=session
+        )
+        volumes = self._prepare_volumes(self._volumes, session=session)
         self._run = self._start(image, entrypoint, volumes)  # type:ignore
 
     def stop(self, force: bool = False):

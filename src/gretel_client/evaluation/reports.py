@@ -13,7 +13,12 @@ from xmlrpc.client import boolean
 
 import smart_open
 
-from gretel_client.config import get_logger, RunnerMode
+from gretel_client.config import (
+    ClientConfig,
+    get_logger,
+    get_session_config,
+    RunnerMode,
+)
 from gretel_client.helpers import submit_docker_local
 from gretel_client.projects.common import DataSourceTypes, RefDataTypes
 from gretel_client.projects.jobs import END_STATES, Job, Status
@@ -66,6 +71,8 @@ class BaseReport(ABC):
     runner_mode: RunnerMode
     """Determines where to run the model. See ``RunnerMode`` for a list of valid modes. Manual mode is not explicitly supported."""
 
+    session: ClientConfig
+
     _report_dict: ReportDictType
     """Dictionary containing results of job run."""
 
@@ -82,7 +89,11 @@ class BaseReport(ABC):
         output_dir: Optional[Union[str, Path]],
         runner_mode: RunnerMode,
         test_data: Optional[RefDataTypes] = None,
+        *,
+        session: Optional[ClientConfig] = None,
     ):
+        project, session = BaseReport.resolve_session(project, session)
+        self.session = session
         self.project = project
         self.data_source = (
             str(data_source) if isinstance(data_source, Path) else data_source
@@ -91,6 +102,21 @@ class BaseReport(ABC):
         self.test_data = str(test_data) if isinstance(test_data, Path) else test_data
         self.output_dir = Path(output_dir) if output_dir else os.getcwd()
         self.runner_mode = runner_mode
+
+    @staticmethod
+    def resolve_session(
+        project: Optional[Project], session: Optional[ClientConfig]
+    ) -> tuple[Optional[Project], ClientConfig]:
+        if session is None:
+            if project is None:
+                session = get_session_config()
+            else:
+                session = project.session
+        elif project is not None:
+            # If a session is explicitly specified, the project's session
+            # should match it.
+            project = project.with_session(session)
+        return project, session
 
     def _run_model(self, model: Model):
         if self.runner_mode == RunnerMode.CLOUD:
@@ -176,7 +202,7 @@ class BaseReport(ABC):
 
     def _run(self):
         if not self.project:
-            with tmp_project() as proj:
+            with tmp_project(session=self.session) as proj:
                 self._run_in_project(proj)
         else:
             self._run_in_project(self.project)

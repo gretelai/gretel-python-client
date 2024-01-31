@@ -8,7 +8,7 @@ from contextlib import contextmanager
 from functools import wraps
 from typing import Callable
 from unittest import main, TestCase
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 from kubernetes.client import (
     ApiException,
@@ -75,15 +75,7 @@ def patch_auth(func: Callable):
     def inner_func(*args, **kwargs):
         with patch("kubernetes.config.load_incluster_config", lambda: None), patch(
             "gretel_client.agents.agent.AgentConfig._lookup_max_jobs_active"
-        ) as lookup_max_jobs_active_mock, patch(
-            "gretel_client.docker.get_session_config"
-        ) as driver_get_session_mock:
-            driver_get_session_mock.return_value.get_api.return_value.get_container_login.return_value = {
-                "data": {
-                    "auth": {"username": "abc", "password": "efg"},
-                    "registry": "123",
-                }
-            }
+        ) as lookup_max_jobs_active_mock:
             lookup_max_jobs_active_mock.return_value = 1
             return func(*args, **kwargs)
 
@@ -183,10 +175,19 @@ def patch_autoscaler_env_var(annotation_val: str):
 class TestKubernetesDriver(TestCase):
     @patch_auth
     def setUp(self) -> None:
+        session = MagicMock()
+        # Fake container auth return.
+        session.get_api.return_value.get_container_login.return_value = {
+            "data": {
+                "auth": {"username": "abc", "password": "efg"},
+                "registry": "123",
+            }
+        }
         self.config = AgentConfig(
             driver="k8s",
             creds=[],
             env_vars={"MY_KEY": "MY_VALUE", "OTHER_KEY": "OTHER_VALUE"},
+            session=session,
         )
         self.batch_api = Mock()
         self.core_api = Mock()

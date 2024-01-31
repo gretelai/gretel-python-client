@@ -8,7 +8,7 @@ import click
 import yaml
 
 from gretel_client.cli.common import pass_session, project_option, SessionContext
-from gretel_client.config import get_session_config
+from gretel_client.config import ClientConfig, get_session_config
 from gretel_client.projects.common import WAIT_UNTIL_DONE
 from gretel_client.rest_v1.api.workflows_api import WorkflowsApi
 from gretel_client.rest_v1.models import (
@@ -28,11 +28,11 @@ def workflows():
     ...
 
 
-def get_workflows_api() -> WorkflowsApi:
-    return get_session_config().get_v1_api(WorkflowsApi)
+def _get_workflows_api(*, session: ClientConfig) -> WorkflowsApi:
+    return session.get_v1_api(WorkflowsApi)
 
 
-def determine_runner_mode() -> str:
+def _determine_runner_mode() -> str:
     default_runner = get_session_config().default_runner
     if not default_runner:
         return RunnerMode.RUNNER_MODE_CLOUD
@@ -52,7 +52,7 @@ def determine_runner_mode() -> str:
     "--runner_mode",
     metavar="NAME",
     help="The RunnerMode to use by default when running this workflow.",
-    default=determine_runner_mode,
+    default=_determine_runner_mode,
 )
 @pass_session
 def create(
@@ -78,7 +78,7 @@ def create(
         runner_mode=runner_mode,
     )
 
-    workflow_api = get_workflows_api()
+    workflow_api = _get_workflows_api(session=sc.session)
     workflow = workflow_api.create_workflow(wfl)
 
     sc.log.info("Created workflow:")
@@ -88,7 +88,7 @@ def create(
 @workflows.command(help="List workflows.")
 @pass_session
 def list(sc: SessionContext):
-    workflow_api = get_workflows_api()
+    workflow_api = _get_workflows_api(session=sc.session)
     wfls = workflow_api.get_workflows().workflows
     if not wfls:
         sc.log.info("No workflows found.")
@@ -107,7 +107,7 @@ def list(sc: SessionContext):
 )
 @pass_session
 def get(sc: SessionContext, id: str):
-    workflow_api = get_workflows_api()
+    workflow_api = _get_workflows_api(session=sc.session)
     workflow: Workflow = workflow_api.get_workflow(workflow_id=id)
     sc.log.info("Workflow:")
     sc.print(data=workflow.to_dict())
@@ -131,7 +131,7 @@ def update(sc: SessionContext, workflow_id: str, config: str):
     with open(config, encoding="utf-8") as file:
         # Temporarily load the yaml into a json string and upload that, we can upload raw yaml once the api changes land. -md
         workflow_config = json.dumps(yaml.safe_load(file))
-    workflow_api = get_workflows_api()
+    workflow_api = _get_workflows_api(session=sc.session)
     updated_workflow = workflow_api.update_workflow_config(
         workflow_id=workflow_id, body=workflow_config, _content_type="text/yaml"
     )
@@ -154,7 +154,7 @@ def update(sc: SessionContext, workflow_id: str, config: str):
 )
 @pass_session
 def run(sc: SessionContext, workflow_id: str, wait: int):
-    workflow_api = get_workflows_api()
+    workflow_api = _get_workflows_api(session=sc.session)
     workflow_run: WorkflowRun = workflow_api.create_workflow_run(
         CreateWorkflowRunRequest(workflow_id=workflow_id)
     )
@@ -197,7 +197,7 @@ def run(sc: SessionContext, workflow_id: str, wait: int):
 def _wait_for_workflow_completion(
     sc: SessionContext, workflow_run_id: str, wait: int
 ) -> Optional[bool]:
-    workflow_api = get_workflows_api()
+    workflow_api = _get_workflows_api(session=sc.session)
 
     start = time.time()
     i = 0

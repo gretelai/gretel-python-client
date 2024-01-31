@@ -99,7 +99,7 @@ def configure(
     # swap the api key back to the original if one was
     # already read in from the config and not updated
     if api_key.endswith("****"):
-        api_key = get_session_config().api_key
+        api_key = sc.session.api_key
     config = ClientConfig(
         endpoint=endpoint,
         artifact_endpoint=artifact_endpoint,
@@ -118,7 +118,7 @@ def configure(
 @cli.command(help="Check account, user and configuration details.")
 @pass_session
 def whoami(sc: SessionContext):
-    me = users.get_me()
+    me = users.get_me(session=sc.session)
     sc.print(data={f.EMAIL: me[f.EMAIL], "config": sc.config.masked})
 
 

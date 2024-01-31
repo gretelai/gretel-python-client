@@ -13,7 +13,7 @@ import docker.errors
 import docker.models.containers
 
 from gretel_client.cli.utils.parser_utils import ref_data_factory
-from gretel_client.config import get_logger, get_session_config
+from gretel_client.config import ClientConfig, get_logger
 from gretel_client.docker import (
     build_container,
     check_docker_env,
@@ -63,6 +63,10 @@ class ContainerRun:
     def from_job(cls, job: Job) -> ContainerRun:
         job._poll_job_endpoint()
         return cls(job)
+
+    @property
+    def session(self) -> ClientConfig:
+        return self.job.session
 
     def start(self):
         """Run job via a local container. This method
@@ -144,21 +148,21 @@ class ContainerRun:
             device_requests=[DEFAULT_GPU_CONFIG],
             params=["-c", "nvidia-smi"],
             remove=True,
-        ).start(entrypoint="bash")
+        ).start(entrypoint="bash", session=self.session)
 
     def _run(self):
         self.logger.debug("Preparing input data volume")
-        volumes = self.input_volume.prepare_volume()
+        volumes = self.input_volume.prepare_volume(session=self.session)
         self._container = build_container(
             image=self.image,
             params=self.run_params,
             detach=True,
             volumes=volumes,
             remove=False,
-            env={"GRETEL_STAGE": get_session_config().stage},
+            env={"GRETEL_STAGE": self.session.stage},
             device_requests=self.device_requests,
         )
-        self._container.start()
+        self._container.start(session=self.session)
 
     @property
     def container(self) -> Container:

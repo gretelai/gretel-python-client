@@ -1,6 +1,7 @@
 """
 High level API for interacting with a Gretel Project
 """
+from __future__ import annotations
 
 from contextlib import contextmanager
 from functools import wraps
@@ -14,7 +15,12 @@ from gretel_client.cli.utils.parser_utils import (
     ref_data_factory,
     RefDataTypes,
 )
-from gretel_client.config import get_logger, get_session_config, RunnerMode
+from gretel_client.config import (
+    ClientConfig,
+    get_logger,
+    get_session_config,
+    RunnerMode,
+)
 from gretel_client.dataframe import _DataFrameT
 from gretel_client.projects.artifact_handlers import (
     ArtifactsHandler,
@@ -56,9 +62,10 @@ MT = TypeVar("MT", dict, Model)
 
 
 class Project:
-    """Represents Gretel project. In general you should not have
-    to init this class directly, but can make use of the factory
-    method from ``get_project``.
+    """Represents a Gretel project. In general you should not init
+    this class directly, but always make use of the factory methods
+    ``get_project``, ``create_project``, ``get_or_create_project``
+    etc.
 
     Args:
         name: The unique name of the project. This is either set by you or auto
@@ -67,6 +74,8 @@ class Project:
             gretel and never changes.
         desc: A short description of the project
         display_name: The main display name used in the Gretel Console for your project
+        session: The client session to use for API interactions, or ``None`` to use the
+            default session.
     """
 
     runner_mode: Optional[RunnerMode]
@@ -80,8 +89,9 @@ class Project:
         desc: Optional[str] = None,
         display_name: Optional[str] = None,
         runner_mode: Optional[Union[RunnerMode, str]] = None,
+        session: Optional[ClientConfig] = None,
     ):
-        self.client_config = get_session_config()
+        self.client_config = session or get_session_config()
         self.projects_api = self.client_config.get_api(ProjectsApi)
         self.name = name
         self.project_id = project_id
@@ -90,6 +100,32 @@ class Project:
         self.display_name = display_name
         self.runner_mode = RunnerMode.parse_optional(runner_mode)
         self._deleted = False
+
+    @property
+    def session(self) -> Optional[ClientConfig]:
+        return self.client_config
+
+    @check_not_deleted
+    def with_session(self, session: ClientConfig) -> Project:
+        if self.session is session:
+            return self
+        if (
+            session.endpoint != self.session.endpoint
+            or session.api_key != self.session.api_key
+        ):
+            raise ValueError(
+                "new session must match API endpoint and API key of existing one"
+            )
+
+        return Project(
+            name=self.name,
+            project_id=self.project_id,
+            project_guid=self.project_guid,
+            desc=self.description,
+            display_name=self.display_name,
+            runner_mode=self.runner_mode,
+            session=session,
+        )
 
     @cached_property
     def default_artifacts_handler(self) -> ArtifactsHandler:
@@ -300,18 +336,25 @@ class Project:
         )
 
 
-def search_projects(limit: int = 200, query: Optional[str] = None) -> List[Project]:
+def search_projects(
+    limit: int = 200,
+    query: Optional[str] = None,
+    *,
+    session: Optional[ClientConfig] = None,
+) -> List[Project]:
     """Searches for project.
 
     Args:
         limit: The max number of projects to return.
         query: String filter applied to project names.
-        client_config: Can be used to override local Gretel config.
+        session: Can be used to override local Gretel config.
 
     Returns:
         A list of projects.
     """
-    api = get_session_config().get_api(ProjectsApi)
+    if session is None:
+        session = get_session_config()
+    api = session.get_api(ProjectsApi)
     params: Dict[str, Any] = {"limit": limit}
     if query:
         params["query"] = query
@@ -323,6 +366,7 @@ def search_projects(limit: int = 200, query: Optional[str] = None) -> List[Proje
             project_guid=p.get("guid"),
             desc=p.get("description"),
             display_name=p.get("display_name"),
+            session=session,
         )
         for p in projects.get(DATA).get(PROJECTS)
     ]
@@ -333,12 +377,15 @@ def create_project(
     name: Optional[str] = None,
     desc: Optional[str] = None,
     display_name: Optional[str] = None,
+    session: Optional[ClientConfig] = None,
 ) -> Project:
     """
     Excplit project creation. This function will simply call
     the API endpoint and will raise any HTTP exceptions upstream.
     """
-    api = get_session_config().get_api(ProjectsApi)
+    if session is None:
+        session = get_session_config()
+    api = session.get_api(ProjectsApi)
 
     payload = {}
     if name:
@@ -359,6 +406,7 @@ def create_project(
         project_guid=proj.get("guid"),
         desc=proj.get("description"),
         display_name=proj.get("display_name"),
+        session=session,
     )
 
 
@@ -369,6 +417,7 @@ def get_project(
     desc: Optional[str] = None,
     display_name: Optional[str] = None,
     runner_mode: Optional[Union[RunnerMode, str]] = None,
+    session: Optional[ClientConfig] = None,
 ) -> Project:
     """Used to get or create a Gretel project.
 
@@ -381,15 +430,18 @@ def get_project(
             gretel and never changes.
         desc: A short description of the project
         display_name: The main display name used in the Gretel Console for your project
+        session: the client session to use, or ``None`` to use the default session.
     Returns:
         A project instance.
     """
+    if session is None:
+        session = get_session_config()
     if not name and not create:
         raise ValueError("Must provide a name or create flag!")
 
     runner_mode = RunnerMode.parse_optional(runner_mode)
 
-    api = get_session_config().get_api(ProjectsApi)
+    api = session.get_api(ProjectsApi)
     project = None
 
     project_args = {}
@@ -434,21 +486,27 @@ def get_project(
         desc=p.get("description"),
         display_name=p.get("display_name"),
         runner_mode=proj_runner_mode,
+        session=session,
     )
 
 
 @contextmanager
-def tmp_project():
+def tmp_project(*, session: Optional[ClientConfig] = None):
     """A temporary project context manager.  Create a new project
     that can be used inside of a "with" statement for temporary purposes.
     The project will be deleted from Gretel Cloud when the scope is exited.
+
+    Args:
+        session: the client session to use, or ``None`` to use the default session.
 
     Example::
 
         with tmp_project() as proj:
             model = proj.create_model_obj()
     """
-    project = get_project(create=True)
+    if session is None:
+        session = get_session_config()
+    project = get_project(create=True, session=session)
     try:
         yield project
     finally:
@@ -456,7 +514,11 @@ def tmp_project():
 
 
 def create_or_get_unique_project(
-    *, name: str, desc: Optional[str] = None, display_name: Optional[str] = None
+    *,
+    name: str,
+    desc: Optional[str] = None,
+    display_name: Optional[str] = None,
+    session: Optional[ClientConfig] = None,
 ) -> Project:
     """
     Helper function that provides a consistent experience for creating
@@ -472,18 +534,22 @@ def create_or_get_unique_project(
         desc: Description of the project.
         display_name: If None, the display name will be set equal to the value
             of ``name`` _before_ the user ID is appended.
+        session: The client session to use, or ``None`` to use the default client
+            session.
 
     NOTE:
         The ``desc`` and ``display_name`` parameters will only be used when
         the project is first created. If the project already exists, these
         params will have no affect.
     """
-    current_user_dict = get_me()
+    if session is None:
+        session = get_session_config()
+    current_user_dict = get_me(session=session)
     unique_suffix = current_user_dict["_id"][9:]
     target_name = f"{name}-{unique_suffix}"
 
     try:
-        project = get_project(name=target_name)
+        project = get_project(name=target_name, session=session)
         return project
     except GretelProjectError:
         # Project name not found
@@ -494,6 +560,9 @@ def create_or_get_unique_project(
     # Try and create the project if we coud not find it
     # originally
     project = create_project(
-        name=target_name, display_name=display_name or name, desc=desc
+        name=target_name,
+        display_name=display_name or name,
+        desc=desc,
+        session=session,
     )
     return project

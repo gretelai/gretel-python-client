@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Union
 
-from gretel_client.config import get_session_config, RunnerMode
+from gretel_client.config import ClientConfig, get_session_config, RunnerMode
 from gretel_client.evaluation.reports import (
     BaseReport,
     DEFAULT_TEXT_RECORD_COUNT,
@@ -26,6 +26,8 @@ class TextQualityReport(BaseReport):
         record_count: Number of rows to use from the data sets, 80 by default.  A value of 0 means "use as many rows/columns
             as possible."  We still attempt to maintain parity between the data sets for "fair" comparisons,
             i.e. we will use min(len(train), len(synth)), e.g.
+        session: The client session to use, or ``None`` to use the session associated with the project
+            (if any), or the default session otherwise.
     """
 
     _model_dict: dict = {
@@ -63,8 +65,10 @@ class TextQualityReport(BaseReport):
         output_dir: Optional[Union[str, Path]] = None,
         runner_mode: Optional[RunnerMode] = None,
         record_count: Optional[int] = DEFAULT_TEXT_RECORD_COUNT,
+        session: Optional[ClientConfig] = None,
     ):
-        runner_mode = runner_mode or get_session_config().default_runner
+        project, session = BaseReport.resolve_session(project, session)
+        runner_mode = runner_mode or session.default_runner
 
         if runner_mode == RunnerMode.MANUAL:
             raise ValueError(
@@ -83,7 +87,9 @@ class TextQualityReport(BaseReport):
         # Update row count
         params["sqs_report_rows"] = record_count
 
-        super().__init__(project, data_source, ref_data, output_dir, runner_mode)
+        super().__init__(
+            project, data_source, ref_data, output_dir, runner_mode, session=session
+        )
 
     def peek(self) -> Optional[ReportDictType]:
         super()._check_model_run()

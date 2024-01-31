@@ -4,6 +4,7 @@ import json
 from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Iterator
+from unittest import mock
 from unittest.mock import call, MagicMock, patch
 
 import pytest
@@ -244,9 +245,9 @@ def test_get_project_ids(get_project: MagicMock):
     assert config.project_ids == ["p1id", "p3id"]
     get_project.assert_has_calls(
         [
-            call(name="p1"),
-            call(name="p2"),
-            call(name="p3"),
+            call(name="p1", session=mock.ANY),
+            call(name="p2", session=mock.ANY),
+            call(name="p3", session=mock.ANY),
         ]
     )
 
@@ -257,7 +258,7 @@ def test_get_project_ids(get_project: MagicMock):
     assert config.project_ids == ["p1id", "p3id", "p2id"]
     get_project.assert_has_calls(
         [
-            call(name="p2"),
+            call(name="p2", session=mock.ANY),
         ]
     )
 
@@ -275,9 +276,9 @@ def test_get_project_ids(get_project: MagicMock):
     assert config.project_ids == ["p1id", "p3id"]
     get_project.assert_has_calls(
         [
-            call(name="p1"),
-            call(name="p2"),
-            call(name="p3"),
+            call(name="p1", session=mock.ANY),
+            call(name="p2", session=mock.ANY),
+            call(name="p3", session=mock.ANY),
         ]
     )
 
@@ -289,7 +290,7 @@ def test_get_project_ids(get_project: MagicMock):
         assert config.project_ids == ["p1id", "p3id"]
     get_project.assert_has_calls(
         [
-            call(name="p2"),
+            call(name="p2", session=mock.ANY),
         ]
     )
 

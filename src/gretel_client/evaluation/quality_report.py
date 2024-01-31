@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional, Union
 
-from gretel_client.config import get_session_config, RunnerMode
+from gretel_client.config import ClientConfig, get_session_config, RunnerMode
 from gretel_client.evaluation.reports import (
     BaseReport,
     DEFAULT_CORRELATION_COLUMNS,
@@ -31,6 +31,8 @@ class QualityReport(BaseReport):
         column_count: Similar to record_count, but for number of columns used for all other calculations.
         mandatory_columns: Use in conjuction with correlation_column_count and column_count.  The columns listed will be included
             in the sample of columns.  Any additional requested columns will be selected randomly.
+        session: The client session to use, or ``None`` to use the session associated with the project
+            (if any), or the default session otherwise.
     """
 
     _model_dict: dict = {
@@ -66,8 +68,10 @@ class QualityReport(BaseReport):
         correlation_column_count: Optional[int] = DEFAULT_CORRELATION_COLUMNS,
         column_count: Optional[int] = DEFAULT_SQS_REPORT_COLUMNS,
         mandatory_columns: Optional[List[str]] = [],
+        session: Optional[ClientConfig] = None,
     ):
-        runner_mode = runner_mode or get_session_config().default_runner
+        project, session = BaseReport.resolve_session(project, session)
+        runner_mode = runner_mode or session.default_runner
 
         if runner_mode == RunnerMode.MANUAL:
             raise ValueError(
@@ -85,7 +89,9 @@ class QualityReport(BaseReport):
         params["sqs_report_columns"] = column_count
         params["mandatory_columns"] = mandatory_columns
 
-        super().__init__(project, data_source, ref_data, output_dir, runner_mode)
+        super().__init__(
+            project, data_source, ref_data, output_dir, runner_mode, session=session
+        )
 
     def peek(self) -> Optional[ReportDictType]:
         super()._check_model_run()

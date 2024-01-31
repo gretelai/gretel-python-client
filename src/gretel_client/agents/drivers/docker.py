@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 import docker
 
 from gretel_client.agents.drivers.driver import Driver, GPU
-from gretel_client.config import get_logger
+from gretel_client.config import ClientConfig, get_logger
 from gretel_client.docker import build_container, Container, DEFAULT_GPU_CONFIG
 
 if TYPE_CHECKING:
@@ -32,6 +32,10 @@ class Docker(Driver):
     @classmethod
     def from_config(cls, agent_config: AgentConfig) -> Docker:
         return cls(agent_config)
+
+    @property
+    def session(self) -> ClientConfig:
+        return self._agent_config.session
 
     def schedule(self, job: Job) -> Container:
         volumes = []
@@ -61,7 +65,7 @@ class Docker(Driver):
             device_requests=device_requests,
             detach=True,
         )
-        container_run.start()
+        container_run.start(session=self.session)
         if job.log:
 
             def print_logs():

@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Callable, Dict, Optional, Tuple, Union
 
 from gretel_client.cli.utils.parser_utils import ref_data_factory
-from gretel_client.config import get_logger, get_session_config
+from gretel_client.config import ClientConfig, get_logger, get_session_config
 from gretel_client.models.config import (
     get_model_type_config,
     get_status_description,
@@ -259,6 +259,8 @@ def do_api_call(
     query_params: Optional[dict] = None,
     body: Optional[dict] = None,
     headers: Optional[dict] = None,
+    *,
+    session: Optional[ClientConfig] = None,
 ) -> dict:
     """
     Make a direct API call to Gretel Cloud.
@@ -270,11 +272,15 @@ def do_api_call(
         query_params: Optional URL based query parameters
         body: An optional JSON payload to send
         headers: Any custom headers that need to bet set.
+        session: the session to use, or ``None`` to use the default session.
 
     NOTE:
         This function will automatically inject the appropriate API hostname and
         authentication from the Gretel configuration.
     """
+    if session is None:
+        session = get_session_config()
+
     if headers is None:
         headers = {}
 
@@ -283,7 +289,7 @@ def do_api_call(
     if not path.startswith("/"):
         path = "/" + path
 
-    api = get_session_config()._get_api_client()
+    api = session._get_api_client()
 
     # Utilize the ApiClient method to inject the proper authentication
     # into our headers, since Gretel only uses header-based auth we don't

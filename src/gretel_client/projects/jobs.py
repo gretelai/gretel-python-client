@@ -26,7 +26,7 @@ import smart_open
 import gretel_client.rest.exceptions
 
 from gretel_client.cli.utils.parser_utils import RefData
-from gretel_client.config import get_logger, get_session_config, RunnerMode
+from gretel_client.config import ClientConfig, get_logger, RunnerMode
 from gretel_client.dataframe import _DataFrameT
 from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.artifact_handlers import (
@@ -99,6 +99,10 @@ class Job(ABC):
             self._poll_job_endpoint()
         self._logs_iter_index = 0
 
+    @property
+    def session(self) -> ClientConfig:
+        return self.project.session
+
     def submit(
         self,
         runner_mode: Optional[Union[str, RunnerMode]] = None,
@@ -114,9 +118,7 @@ class Job(ABC):
                 validation, but won't be run. Ignored for record handlers.
         """
         if runner_mode is None:
-            runner_mode = (
-                self.project.runner_mode or get_session_config().default_runner
-            )
+            runner_mode = self.project.runner_mode or self.session.default_runner
         runner_mode = RunnerMode.parse(runner_mode)
         if self.project.runner_mode and runner_mode != self.project.runner_mode:
             raise ValueError(

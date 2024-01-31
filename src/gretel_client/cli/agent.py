@@ -191,6 +191,7 @@ def start(
         enable_prometheus=enable_prometheus,
         runner_modes=runner_modes_as_enum,
         cluster_guid=cluster_id,
+        session=sc.session,
     )
     agent = get_agent(config)
     sc.register_cleanup(lambda: agent.interrupt())

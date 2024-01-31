@@ -27,7 +27,9 @@ def projects():
 def create(
     sc: SessionContext, name: str, desc: str, display_name: str, set_default: bool
 ):
-    project = create_project(name=name, desc=desc, display_name=display_name)
+    project = create_project(
+        name=name, desc=desc, display_name=display_name, session=sc.session
+    )
 
     sc.log.info(f"Created project {project.name}.")
     sc.log.info(f"Console link: {project.get_console_url()}.")
@@ -45,7 +47,7 @@ def create(
 @click.option("--query", help="Filter project names by a query string.", default=None)
 @pass_session
 def search(sc: SessionContext, limit: int, query: str):
-    project_objs = search_projects(limit=limit, query=query)
+    project_objs = search_projects(limit=limit, query=query, session=sc.session)
     projects_table = [p.as_dict for p in project_objs]
     sc.print(data=projects_table)
 
@@ -86,7 +88,7 @@ def delete(sc: SessionContext, name: str, uid: str):
             f"Cannot pass both --uid and --name. Please use --name or --uid option.",
         )
     if name or uid:
-        project = get_project(name=name or uid)
+        project = get_project(name=name or uid, session=sc.session)
     else:
         raise click.BadOptionUsage("--name", "Please use --name or --uid option.")
     sc.print(data=project.as_dict)

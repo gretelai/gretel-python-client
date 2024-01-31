@@ -7,7 +7,12 @@ from typing import Any, Callable, Optional, Tuple, Union
 import click
 
 from gretel_client.cli.utils.parser_utils import RefData
-from gretel_client.config import configure_custom_logger, get_session_config, RunnerMode
+from gretel_client.config import (
+    ClientConfig,
+    configure_custom_logger,
+    get_session_config,
+    RunnerMode,
+)
 from gretel_client.models.config import get_status_description, StatusDescriptions
 from gretel_client.projects.common import WAIT_UNTIL_DONE
 from gretel_client.projects.docker import check_docker_env
@@ -164,11 +169,18 @@ class SessionContext(object):
 
     model_id: Optional[str] = None
 
-    def __init__(self, ctx: click.Context, output_fmt: str, debug: bool = False):
+    def __init__(
+        self,
+        ctx: click.Context,
+        output_fmt: str,
+        debug: bool = False,
+        *,
+        session: Optional[ClientConfig] = None,
+    ):
         self.debug = debug
         self.verbosity = 0
         self.output_fmt = output_fmt
-        self.config = get_session_config()
+        self.config = session or get_session_config()
         self.log = Logger(self.debug)
         configure_custom_logger(self.log)
         self.ctx = ctx
@@ -184,6 +196,10 @@ class SessionContext(object):
         signal.signal(signal.SIGINT, self._cleanup)
 
         self._print_copyright()
+
+    @property
+    def session(self) -> ClientConfig:
+        return self.config
 
     def exit(self, exit_code: int = 0):
         self.ctx.exit(exit_code)
@@ -230,7 +246,7 @@ class SessionContext(object):
             return self._project
         if not self._project_id:
             raise click.BadArgumentUsage("A project must be specified.")
-        self._project = get_project(name=self._project_id)
+        self._project = get_project(name=self._project_id, session=self.session)
         return self._project
 
     def ensure_project(self):

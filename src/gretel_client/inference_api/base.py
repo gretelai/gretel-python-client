@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Any, Dict, Optional
 
 from gretel_client import analysis_utils
-from gretel_client.config import configure_session, get_session_config
+from gretel_client.config import ClientConfig, configure_session, get_session_config
 from gretel_client.dataframe import _DataFrameT
 
 MODELS_API_PATH = "/v1/inference/models"
@@ -22,18 +22,22 @@ class InferenceAPIModelType(str, Enum):
 class BaseInferenceAPI(ABC):
     """Base class for Gretel Inference API objects."""
 
-    def __init__(self, **session_kwargs):
-        if len(session_kwargs) > 0:
-            configure_session(**session_kwargs)
-        session_config = get_session_config()
-        if session_config.default_runner != "cloud":
+    def __init__(self, *, session: Optional[ClientConfig] = None, **session_kwargs):
+        if session is None:
+            if len(session_kwargs) > 0:
+                configure_session(**session_kwargs)
+            session = get_session_config()
+        elif len(session_kwargs) > 0:
+            raise ValueError("cannot specify session arguments when passing a session")
+
+        if session.default_runner != "cloud":
             raise GretelInferenceAPIError(
                 "Gretel's Inference API is currently only "
                 "available within Gretel Cloud. Your current runner "
-                f"is configured to: {session_config.default_runner}"
+                f"is configured to: {session.default_runner}"
             )
-        self._api_client = session_config._get_api_client()
-        self.endpoint = session_config.endpoint
+        self._api_client = session._get_api_client()
+        self.endpoint = session.endpoint
         self._available_backend_models = [
             m for m in self._call_api("get", self.models_api_path).get("models", [])
         ]

@@ -22,7 +22,12 @@ import gretel_client.agents.agent_telemetry as telemetry
 from gretel_client.agents.drivers.driver import ComputeUnit, Driver
 from gretel_client.agents.drivers.registry import get_driver
 from gretel_client.agents.logger import configure_logging
-from gretel_client.config import configure_custom_logger, get_session_config, RunnerMode
+from gretel_client.config import (
+    ClientConfig,
+    configure_custom_logger,
+    get_session_config,
+    RunnerMode,
+)
 from gretel_client.docker import CloudCreds, DataVolumeDef
 from gretel_client.helpers import do_api_call
 from gretel_client.projects import get_project
@@ -112,6 +117,8 @@ class AgentConfig:
 
     cluster_guid: Optional[str] = None
 
+    session: Optional[ClientConfig] = None
+
     _project_ids: Optional[List[str]] = None
     """Cached project ID."""
 
@@ -119,6 +126,8 @@ class AgentConfig:
     """Projects that we have failed to resolve."""
 
     def __post_init__(self):
+        if self.session is None:
+            self.session = get_session_config()
         self._logger = logging.getLogger(__name__)
         self._max_workers_from_config = self.max_workers
         self._update_max_workers()
@@ -157,7 +166,7 @@ class AgentConfig:
 
     def _lookup_max_jobs_active(self) -> int:
         try:
-            resp = do_api_call("GET", "/users/me/billing")
+            resp = do_api_call("GET", "/users/me/billing", session=self.session)
             return (
                 resp.get("billing")
                 .get("me")
@@ -232,7 +241,7 @@ class AgentConfig:
         resolved = []
         for project_name in projects_to_resolve:
             try:
-                project = get_project(name=project_name)
+                project = get_project(name=project_name, session=self.session)
                 resolved.append((project_name, project.project_id))
             except GretelProjectError:
                 resolved.append((project_name, None))
@@ -259,6 +268,7 @@ class Job:
     disable_cloud_logging: bool = False
     disable_cloud_report_scores: bool = False
     env_vars: Optional[dict] = None
+    session: Optional[ClientConfig] = None
 
     @classmethod
     def from_dict(cls, source: dict, agent_config: AgentConfig) -> Job:
@@ -276,6 +286,7 @@ class Job:
             disable_cloud_logging=agent_config.disable_cloud_logging,
             disable_cloud_report_scores=agent_config.disable_cloud_report_scores,
             env_vars=agent_config.env_vars,
+            session=agent_config.session,
         )
 
     @property
@@ -309,11 +320,11 @@ class Job:
 
     @property
     def gretel_stage(self) -> str:
-        return get_session_config().stage
+        return self.session.stage
 
     @property
     def gretel_endpoint(self) -> str:
-        return get_session_config().endpoint
+        return self.session.endpoint
 
     @property
     def needs_gpu(self) -> bool:
@@ -432,6 +443,10 @@ class Poller(Iterator):
     def __iter__(self):
         return self
 
+    @property
+    def session(self) -> ClientConfig:
+        return self._agent_config.session
+
     def interrupt(self):
         return self._interrupt.set()
 
@@ -483,7 +498,7 @@ class Poller(Iterator):
                 wait_secs += wait_secs**2
 
     def _check_project_invites(self):
-        users_api = get_session_config().get_api(UsersApi)
+        users_api = self.session.get_api(UsersApi)
 
         kwargs = {
             "invite_types": ["project"],
@@ -519,7 +534,7 @@ class Agent:
         self._logger = logging.getLogger(__name__)
         configure_custom_logger(self._logger)
         self._config = config
-        self._client_config = get_session_config()
+        self._client_config = config.session
         self._driver = get_driver(config)
         self._jobs_manager = JobManager(self._driver)
         self._rate_limiter = RateLimiter(config.max_workers, self._jobs_manager, config)

@@ -1,11 +1,13 @@
 """
 High level API for interacting with the Gretel Users API
 """
-from gretel_client.config import get_session_config
+from typing import Optional
+
+from gretel_client.config import ClientConfig, get_session_config
 from gretel_client.rest.api.users_api import UsersApi
 
 
-def get_me(as_dict: bool = True) -> dict:
+def get_me(as_dict: bool = True, *, session: Optional[ClientConfig] = None) -> dict:
     """
     Retrieve current user's profile from Gretel Cloud.
 
@@ -15,8 +17,12 @@ def get_me(as_dict: bool = True) -> dict:
     Params:
         as_dict: If true, will return a raw dictionary of the user's data. This is currently
             the only option available.
+        session: The client session to use, or ``None`` to use the default client
+            session.
     """
-    api = get_session_config().get_api(UsersApi)
+    if session is None:
+        session = get_session_config()
+    api = session.get_api(UsersApi)
     resp = api.users_me()
     if as_dict:
         return resp.get("data", {}).get("me")

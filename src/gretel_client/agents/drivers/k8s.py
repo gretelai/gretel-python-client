@@ -26,7 +26,7 @@ from kubernetes.utils.quantity import parse_quantity
 from kubernetes.watch.watch import Watch
 
 from gretel_client.agents.drivers.driver import Driver
-from gretel_client.config import get_logger
+from gretel_client.config import ClientConfig, get_logger
 from gretel_client.docker import get_container_auth
 
 logger = get_logger(__name__)
@@ -730,6 +730,10 @@ class KubernetesDriverDaemon:
             daemon=True,
         )
 
+    @property
+    def session(self) -> ClientConfig:
+        return self._agent_config.session
+
     def stop(self):
         with self._stop_cond:
             self._stop = True
@@ -782,7 +786,7 @@ class KubernetesDriverDaemon:
             self._sleep(sleep_length)
 
     def _create_secret_body(self) -> client.V1Secret:
-        auth, server = get_container_auth()
+        auth, server = get_container_auth(session=self.session)
         if self._override_host:  # We need to authenticate to the appropriate registry
             server = self._override_host
         with self._registry_host_available:

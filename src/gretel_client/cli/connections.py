@@ -13,7 +13,7 @@ from gretel_client.cli.connection_credentials_azure_key_vault import (
     AzureKeyVaultEncryption,
 )
 from gretel_client.cli.connection_credentials_gcp_kms import GCPKMSEncryption
-from gretel_client.config import get_session_config
+from gretel_client.config import ClientConfig, get_session_config
 from gretel_client.rest_v1.api.connections_api import ConnectionsApi
 from gretel_client.rest_v1.models import (
     CreateConnectionRequest,
@@ -26,8 +26,8 @@ def connections():
     ...
 
 
-def get_connections_api() -> ConnectionsApi:
-    return get_session_config().get_v1_api(ConnectionsApi)
+def _get_connections_api(*, session: ClientConfig) -> ConnectionsApi:
+    return session.get_v1_api(ConnectionsApi)
 
 
 def _read_connection_file(file: str) -> dict:
@@ -60,7 +60,7 @@ def create(
     gcp_kms: Optional[GCPKMSEncryption],
     azure_key_vault: Optional[AzureKeyVaultEncryption],
 ):
-    connection_api = get_connections_api()
+    connection_api = _get_connections_api(session=sc.session)
 
     conn = _read_connection_file(from_file)
 
@@ -125,7 +125,7 @@ def create(
 )
 @pass_session
 def update(sc: SessionContext, id: str, from_file: str):
-    connection_api = get_connections_api()
+    connection_api = _get_connections_api(session=sc.session)
     conn = _read_connection_file(from_file)
     existing_connection = connection_api.get_connection(connection_id=id)
     if existing_connection.type.lower() != conn["type"].lower():
@@ -148,7 +148,7 @@ def update(sc: SessionContext, id: str, from_file: str):
 @pass_session
 def delete(sc: SessionContext, id: str):
     sc.log.info(f"Deleting connection {id}.")
-    connection_api = get_connections_api()
+    connection_api = _get_connections_api(session=sc.session)
     connection_api.delete_connection(connection_id=id)
 
     sc.log.info(f"Deleted connection {id}.")
@@ -157,7 +157,7 @@ def delete(sc: SessionContext, id: str):
 @connections.command(help="List connections.")
 @pass_session
 def list(sc: SessionContext):
-    connection_api = get_connections_api()
+    connection_api = _get_connections_api(session=sc.session)
     conns = connection_api.list_connections().data
     if not conns:
         sc.log.info("No connections found.")
@@ -173,7 +173,7 @@ def list(sc: SessionContext):
 )
 @pass_session
 def get(sc: SessionContext, id: str):
-    connection_api = get_connections_api()
+    connection_api = _get_connections_api(session=sc.session)
     connection = connection_api.get_connection(connection_id=id)
     sc.log.info("Connection:")
     sc.print(data=connection.to_dict())

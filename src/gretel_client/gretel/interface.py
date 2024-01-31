@@ -5,7 +5,7 @@ import uuid
 from pathlib import Path
 from typing import Optional, Union
 
-from gretel_client.config import configure_session
+from gretel_client.config import ClientConfig, configure_session, get_session_config
 from gretel_client.dataframe import _DataFrameT
 from gretel_client.factories import GretelFactories
 from gretel_client.gretel.artifact_fetching import (
@@ -66,6 +66,8 @@ class Gretel:
             randomly-named project will be created with the first job submission.
         project_display_name (str): Project display name. If `None`, will use the
             project name. This argument is only used when creating a new project.
+        session (ClientConfig): Client session to use. If set, no ``session_kwargs``
+            may be specified.
         **session_kwargs: kwargs for your Gretel session. See options below.
 
     Keyword Args:
@@ -88,18 +90,27 @@ class Gretel:
             The default is `False.`
     """
 
+    _session: ClientConfig
+
     def __init__(
         self,
         *,
         project_name: Optional[str] = None,
         project_display_name: Optional[str] = None,
+        session: Optional[ClientConfig] = None,
         **session_kwargs,
     ):
-        configure_session(**session_kwargs)
+        if session is None:
+            if len(session_kwargs) > 0:
+                configure_session(**session_kwargs)
+            session = get_session_config()
+        elif len(session_kwargs) > 0:
+            raise ValueError("cannot specify session arguments when passing a session")
 
-        self._user_id: str = get_me()["_id"][9:]
+        self._session = session
+        self._user_id: str = get_me(session=session)["_id"][9:]
         self._project: Optional[Project] = None
-        self.factories = GretelFactories()
+        self.factories = GretelFactories(session=session)
 
         if project_name is not None:
             self.set_project(name=project_name, display_name=project_display_name)
@@ -149,7 +160,11 @@ class Gretel:
 
         try:
             project = get_project(
-                name=name, display_name=display_name or name, desc=desc, create=True
+                name=name,
+                display_name=display_name or name,
+                desc=desc,
+                create=True,
+                session=self._session,
             )
         except ApiException as exception:
             if "Project name not available" not in exception.body:
@@ -164,6 +179,7 @@ class Gretel:
                 display_name=display_name or name,
                 desc=desc,
                 create=True,
+                session=self._session,
             )
 
         self._last_model = None
@@ -530,6 +546,7 @@ class Gretel:
             n_trials=n_trials,
             study=study,
             verbose_logging=verbose_logging,
+            session=self._session,
         )
 
         return results

@@ -33,7 +33,7 @@ def runner() -> CliRunner:
 
 
 @pytest.mark.parametrize("project", [PROJ_GUID, "my-project", "abc"])
-@patch("gretel_client.cli.connections.get_connections_api")
+@patch("gretel_client.cli.connections._get_connections_api")
 def test_create_connection_project_guid(
     get_connections_api: MagicMock,
     get_project: MagicMock,
@@ -55,7 +55,7 @@ def test_create_connection_project_guid(
     )
     assert "Created connection" in cmd.output
     assert cmd.exit_code == 0
-    get_project.assert_called_once_with(name=project)
+    get_project.assert_called_once_with(name=project, session=ANY)
     get_connections_api.return_value.create_connection.assert_called_with(
         CreateConnectionRequest(
             project_id=PROJ_GUID,
