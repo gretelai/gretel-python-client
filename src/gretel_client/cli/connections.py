@@ -72,7 +72,7 @@ def create(
     project_guid = conn.get("project_id")
 
     if project or not project_guid:
-        if project_guid is not None and sc.project.project_guid != project_guid:
+        if project_guid and sc.project.project_guid != project_guid:
             sc.log.warning(
                 f"Overriding project {project_guid} in connections config file with project {sc.project.project_guid}.",
             )

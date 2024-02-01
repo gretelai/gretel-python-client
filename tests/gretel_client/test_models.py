@@ -10,7 +10,10 @@ import yaml
 
 from gretel_client.cli.utils.parser_utils import RefData
 from gretel_client.config import RunnerMode
-from gretel_client.projects.artifact_handlers import CloudArtifactsHandler
+from gretel_client.projects.artifact_handlers import (
+    CloudArtifactsHandler,
+    HybridArtifactsHandler,
+)
 from gretel_client.projects.exceptions import DataSourceError
 from gretel_client.projects.models import Model, ModelConfigError, read_model_config
 
@@ -361,6 +364,28 @@ def test_does_write_artifacts_to_disk(tmpdir: Path, m: Model):
     m.get_artifacts = MagicMock(
         return_value=iter(zip(keys, [base_endpoint + f for f in files]))
     )
+    m.submit(runner_mode="cloud")
+    m.download_artifacts(str(tmpdir))
+    for file in files:
+        if file == "model.tar.gz":
+            assert not (tmpdir / file).exists()
+        else:
+            assert (tmpdir / file).exists()
+
+
+def test_does_write_artifacts_to_disk_hybrid(tmpdir: Path, m: Model):
+    base_endpoint = (
+        "https://gretel-public-website.s3.us-west-2.amazonaws.com/tests/client/"
+    )
+    files = ["account-balances.csv", "report_json.json.gz", "model.tar.gz"]
+    keys = ["data_preview", "report_json", "model"]
+    m.project.default_artifacts_handler = HybridArtifactsHandler(
+        MagicMock(), m.project.project_id
+    )
+    m.get_artifacts = MagicMock(
+        return_value=iter(zip(keys, [base_endpoint + f for f in files]))
+    )
+    m.submit(runner_mode="hybrid")
     m.download_artifacts(str(tmpdir))
     for file in files:
         if file == "model.tar.gz":

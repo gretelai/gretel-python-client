@@ -141,16 +141,19 @@ class RecordHandler(Job):
     def _get_config_field_from_data(self, field: str) -> Optional[Any]:
         return self._data.get(f.HANDLER, {}).get("config", {}).get(field)
 
-    def _do_get_job_details(self):
+    def _do_get_job_details(self, extra_expand: Optional[list[str]] = None):
         if not self.record_id:
             raise RecordHandlerError(
                 "Record handler does not exist. Try calling create first."
             )
+        expand = [f.LOGS]
+        if extra_expand:
+            expand.extend(extra_expand)
         return self._projects_api.get_record_handler(
             project_id=self.project.name,
             model_id=self.model.model_id,
             record_handler_id=self.record_id,
-            expand=[f.LOGS],
+            expand=expand,
         )
 
     def _do_cancel_job(self):

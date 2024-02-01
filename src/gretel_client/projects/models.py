@@ -382,9 +382,12 @@ class Model(Job):
     def __repr__(self) -> str:
         return f"Model(id={self.model_id}, project={self.project.name})"
 
-    def _do_get_job_details(self):
+    def _do_get_job_details(self, extra_expand: Optional[list[str]] = None):
+        expand = [f.LOGS]
+        if extra_expand:
+            expand.extend(extra_expand)
         return self._projects_api.get_model(
-            project_id=self.project.name, model_id=self.model_id, expand=[f.LOGS]
+            project_id=self.project.name, model_id=self.model_id, expand=expand
         )
 
     def create_record_handler_obj(

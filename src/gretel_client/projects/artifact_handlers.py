@@ -313,7 +313,7 @@ class CloudArtifactsHandler:
         artifact_type: str,
         log: logging.Logger,
     ) -> None:
-        _download(download_link, output_path, artifact_type, log)
+        _download(download_link, output_path, artifact_type, log, is_hybrid=False)
 
 
 class HybridArtifactsHandler:
@@ -423,13 +423,7 @@ class HybridArtifactsHandler:
         artifact_type: str,
         log: logging.Logger,
     ) -> None:
-        _download(
-            download_link,
-            output_path,
-            artifact_type,
-            log,
-            get_transport_params(self.endpoint),
-        )
+        _download(download_link, output_path, artifact_type, log, is_hybrid=True)
 
 
 class ErrorArtifactsHandler:
@@ -503,7 +497,7 @@ def _download(
     output_path: Path,
     artifact_type: str,
     log: logging.Logger,
-    transport_params: Optional[dict] = None,
+    is_hybrid: bool = False,
 ) -> None:
     target_out = output_path / Path(urlparse(download_link).path).name
     try:
@@ -511,11 +505,19 @@ def _download(
             target_out, "wb", ignore_ext=True
         ) as dest:
             shutil.copyfileobj(src, dest)
-    except:
-        log.error(
-            f"Could not download {artifact_type}. The file may not exist, or you may not have access to it. You might "
-            f"retry this request."
-        )
+        log.info(f"Downloaded '{artifact_type}' artifact")
+    except Exception:
+        if is_hybrid:
+            log.warn(
+                f"Could not download '{download_link}'. "
+                "The file either does not exist or you cannot access your hybrid artifacts."
+            )
+        else:
+            log.error(
+                f"Could not download '{artifact_type}'. "
+                "The file may not exist, or you may not have access to it, "
+                "you might retry this request."
+            )
 
 
 @contextmanager

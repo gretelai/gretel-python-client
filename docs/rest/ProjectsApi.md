@@ -1024,7 +1024,7 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
     model_id = "model_id_example" # str | Model id
     logs = "yes" # str | Deprecated, use `expand` parameter instead. (optional)
     expand = [
-        "logs",
+        "artifacts",
     ] # [str] |  (optional)
 
     # example passing only required values which don't have defaults set

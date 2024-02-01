@@ -203,7 +203,7 @@ class Job(ABC):
         ...
 
     @abstractmethod
-    def _do_get_job_details(self) -> dict:
+    def _do_get_job_details(self, extra_expand: Optional[list[str]] = None) -> dict:
         ...
 
     @abstractmethod
@@ -249,7 +249,7 @@ class Job(ABC):
 
     @property
     def runner_mode(self) -> str:
-        """Returns the runner_mode of the job. May be one of ``manual`` or ``cloud``."""
+        """Returns the runner_mode of the job. May be one of ``hybrid``, ``manual`` or ``cloud``."""
         return self._data[self.job_type][f.RUNNER_MODE]
 
     @property
@@ -356,6 +356,13 @@ class Job(ABC):
         for artifact_type in self.artifact_types:
             yield artifact_type, self.get_artifact_link(artifact_type)
 
+    def get_artifacts_by_artifact_types(
+        self, artifact_types: List[str]
+    ) -> Iterator[Tuple[str, str]]:
+        """List artifact links for all known artifact types."""
+        for artifact_type in artifact_types:
+            yield artifact_type, self.get_artifact_link(artifact_type)
+
     def get_artifact_link(self, artifact_key: str) -> str:
         """Retrieves a signed S3 link that will download the specified
         artifact type.
@@ -400,13 +407,22 @@ class Job(ABC):
         output_path = Path(target_dir)
         output_path.mkdir(exist_ok=True, parents=True)
         log.info(f"Downloading model artifacts to {output_path.resolve()}")
-        for artifact_type, download_link in self.get_artifacts():
+        for artifact_type, download_link in self._get_artifacts_to_download():
             # we don't need to download cloud model artifacts
             if artifact_type == ModelArtifact.MODEL.value:
                 continue
             self.project.default_artifacts_handler.download(
                 download_link, output_path, artifact_type, log
             )
+
+    def _get_artifacts_to_download(self) -> Iterator[Tuple[str, str]]:
+        if self.runner_mode == "cloud":
+            resp = self._do_get_job_details([f.ARTIFACTS])
+            artifact_types = [
+                a.get("name") for a in resp.get(f.DATA).get(f.ARTIFACTS, [])
+            ]
+            return self.get_artifacts_by_artifact_types(artifact_types)
+        return self.get_artifacts()
 
     def _get_report_contents(
         self, report_path: Optional[str] = None, artifact_type: Optional[str] = None

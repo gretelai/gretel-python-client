@@ -1544,7 +1544,11 @@ class ProjectsApi(object):
                 "validations": {},
                 "allowed_values": {
                     ("logs",): {"YES": "yes", "NO": "no"},
-                    ("expand",): {"LOGS": "logs", "REPORT": "report"},
+                    ("expand",): {
+                        "ARTIFACTS": "artifacts",
+                        "LOGS": "logs",
+                        "REPORT": "report",
+                    },
                 },
                 "openapi_types": {
                     "project_id": (str,),
