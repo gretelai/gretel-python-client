@@ -2,7 +2,7 @@ import json
 
 from json import JSONDecodeError
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 import click
 import yaml
@@ -30,7 +30,7 @@ def _get_connections_api(*, session: ClientConfig) -> ConnectionsApi:
     return session.get_v1_api(ConnectionsApi)
 
 
-def _read_connection_file(file: str) -> dict:
+def _read_connection_file(file: Union[Path, str]) -> dict:
     fp = Path(file).resolve()
     try:
         with open(fp) as fd:
@@ -45,6 +45,9 @@ def _read_connection_file(file: str) -> dict:
     "--from-file",
     metavar="PATH",
     help="Path to the file containing Gretel connection.",
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=False, readable=True, path_type=Path
+    ),
     required=True,
 )
 @AWSKMSEncryption.options("aws_kms")
@@ -54,7 +57,7 @@ def _read_connection_file(file: str) -> dict:
 @project_option
 def create(
     sc: SessionContext,
-    from_file: str,
+    from_file: Path,
     project: Optional[str],
     aws_kms: Optional[AWSKMSEncryption],
     gcp_kms: Optional[GCPKMSEncryption],
@@ -118,13 +121,19 @@ def create(
 
 @connections.command(help="Update a connection.")
 @click.option(
-    "--from-file", metavar="PATH", help="Path to the file containing Gretel connection."
+    "--from-file",
+    metavar="PATH",
+    help="Path to the file containing Gretel connection.",
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=False, readable=True, path_type=Path
+    ),
+    required=True,
 )
 @click.option(
     "--id", metavar="CONNECTION-ID", help="Gretel connection id.", required=True
 )
 @pass_session
-def update(sc: SessionContext, id: str, from_file: str):
+def update(sc: SessionContext, id: str, from_file: Path):
     connection_api = _get_connections_api(session=sc.session)
     conn = _read_connection_file(from_file)
     existing_connection = connection_api.get_connection(connection_id=id)

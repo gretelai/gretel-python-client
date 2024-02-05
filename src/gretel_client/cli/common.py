@@ -164,9 +164,6 @@ class SessionContext(object):
 
     runner: Optional[str] = None
 
-    data_source: Optional[str] = None
-    ref_data: Optional[RefData] = None
-
     model_id: Optional[str] = None
 
     def __init__(
@@ -357,15 +354,10 @@ def record_handler_option(fn):
 
 
 def ref_data_option(fn):
-    def callback(ctx, param: click.Option, value: Union[RefData, Tuple[str]]):
-        gc: SessionContext = ctx.ensure_object(SessionContext)
-        return value or gc.ref_data
-
     return click.option(
         "--ref-data",
         metavar="PATH",
         multiple=True,
-        callback=callback,
         help="Specify additional model or record handler reference data.",
     )(fn)
 

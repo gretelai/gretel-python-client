@@ -121,23 +121,20 @@ def ref_data_factory(
     ref_data: Optional[Union[RefDataTypes, RefData]] = None
 ) -> RefData:
     if ref_data is None:
-        ref_data_obj = RefData()
-    elif isinstance(ref_data, RefData):
-        ref_data_obj = ref_data
-    elif isinstance(ref_data, dict):
-        ref_data_obj = RefData(ref_data)
-    elif isinstance(ref_data, _DataFrameT):
-        ref_data_obj = RefData.from_dataframes([ref_data])
-    elif isinstance(ref_data, str):
-        ref_data_obj = RefData.from_list([ref_data])
-    elif isinstance(ref_data, (list, tuple)):
+        return RefData()
+    if isinstance(ref_data, RefData):
+        return ref_data
+    if isinstance(ref_data, dict):
+        return RefData(ref_data)
+    if isinstance(ref_data, _DataFrameT):
+        return RefData.from_dataframes([ref_data])
+    if isinstance(ref_data, str):
+        return RefData.from_list([ref_data])
+    if isinstance(ref_data, (list, tuple)):
         if len(ref_data) == 0:
-            ref_data_obj = RefData()
+            return RefData()
         elif isinstance(ref_data[0], _DataFrameT):
-            ref_data_obj = RefData.from_dataframes(ref_data)
-        else:
-            ref_data_obj = RefData.from_list(list(ref_data))
-    else:
-        raise ValueError("ref_data is not a valid str, dataframe, dict, or list.")
+            return RefData.from_dataframes(ref_data)
+        return RefData.from_list(list(ref_data))
 
-    return ref_data_obj
+    raise ValueError("ref_data is not a valid str, dataframe, dict, or list.")

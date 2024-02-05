@@ -2,6 +2,7 @@ import json
 import sys
 import time
 
+from pathlib import Path
 from typing import Optional
 
 import click
@@ -47,6 +48,9 @@ def _determine_runner_mode() -> str:
     metavar="PATH",
     help="Path to the file containing Gretel workflow config.",
     required=True,
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=False, readable=True, path_type=Path
+    ),
 )
 @click.option(
     "--runner_mode",
@@ -57,7 +61,7 @@ def _determine_runner_mode() -> str:
 @pass_session
 def create(
     sc: SessionContext,
-    config: str,
+    config: Path,
     name: str,
     project: str,
     runner_mode: str = RunnerMode.RUNNER_MODE_CLOUD.value,
@@ -125,9 +129,12 @@ def get(sc: SessionContext, id: str):
     metavar="PATH",
     help="Path to the file containing Gretel workflow config.",
     required=True,
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=False, readable=True, path_type=Path
+    ),
 )
 @pass_session
-def update(sc: SessionContext, workflow_id: str, config: str):
+def update(sc: SessionContext, workflow_id: str, config: Path):
     with open(config, encoding="utf-8") as file:
         # Temporarily load the yaml into a json string and upload that, we can upload raw yaml once the api changes land. -md
         workflow_config = json.dumps(yaml.safe_load(file))

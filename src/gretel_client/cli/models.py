@@ -75,7 +75,7 @@ def create(
     config: str,
     wait: int,
     in_data: str,
-    ref_data: Union[RefData, Tuple[str]],
+    ref_data: tuple[str, ...],
     output: str,
     runner: str,
     upload_model: bool,

@@ -342,6 +342,7 @@ def test_get_agent_env_var_passing_fails(
 def test_workflows_read_from_env_manual(
     get_session_config: MagicMock,
     get_project: MagicMock,
+    get_fixture: Callable,
     runner: CliRunner,
 ):
     client_config = ClientConfig()
@@ -353,7 +354,7 @@ def test_workflows_read_from_env_manual(
             "workflows",
             "create",
             "--config",
-            "not-there",
+            get_fixture("workflows/workflow.yaml"),
         ],
     )
 

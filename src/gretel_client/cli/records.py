@@ -44,14 +44,9 @@ def model_path_option(fn):
 
 
 def input_data_option(fn):
-    def callback(ctx, param: click.Option, value: str):
-        gc: SessionContext = ctx.ensure_object(SessionContext)
-        return value or gc.data_source
-
     return click.option(  # type: ignore
         "--in-data",
         metavar="PATH",
-        callback=callback,
         help="Specify the model input data.",
     )(fn)
 
@@ -377,7 +372,9 @@ def classify(
 )
 @click.option(
     "--params-file",
-    type=Path,
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=False, readable=True, path_type=Path
+    ),
     help="Specify a file (YAML or JSON) with all parameters to pass into the record handler.",
 )
 def run(
@@ -385,11 +382,11 @@ def run(
     project: str,
     model_id: str,
     in_data: Optional[str],
-    ref_data: Tuple[str],
+    ref_data: tuple[str, ...],
     output: str,
     runner: str,
     model_path: str,
-    param: List[Tuple[str, str]],
+    param: tuple[tuple[str, str], ...],
     params_file: Optional[Path],
 ):
     """
