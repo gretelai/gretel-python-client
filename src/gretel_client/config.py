@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import platform
 
 from enum import Enum
 from getpass import getpass
@@ -492,6 +493,9 @@ def _load_config(config_path: Path = None) -> ClientConfig:
 
 
 def _check_config_perms(config_path: Path):
+    if platform.system() == "Windows":
+        # Windows permissioning is different
+        return
     if not config_path.exists():
         return
     mode = config_path.stat().st_mode
