@@ -164,7 +164,26 @@ def get_hint_for_error(ex: ExT) -> Optional[str]:
             pass
 
 
-class SessionContext(object):
+def _json_default_handler(obj: Any) -> Any:
+    # Figure out if the object is a MagicMock. If it is, calling to_dict()
+    # would result in an infinite recursion.
+    # We need to check the __module__ and __qualname__ properties of the type,
+    # as we don't want to create an import dependency.
+    try:
+        if (type(obj).__module__, type(obj).__qualname__) == (
+            "unittest.mock",
+            "MagicMock",
+        ):
+            return str(obj)
+    except:
+        pass
+
+    if hasattr(obj, "to_dict"):
+        return obj.to_dict()
+    return str(obj)
+
+
+class SessionContext(object):  #
 
     _project: Optional[Project] = None
     """The project to use for this command (explicitly specified)."""
@@ -223,13 +242,24 @@ class SessionContext(object):
             click.echo(_copyright_data + "\n\n", err=True)
 
     def print(
-        self, *, ok: bool = True, message: str = None, data: Union[list, dict, str]
+        self,
+        *,
+        ok: bool = True,
+        message: str = None,
+        data: Union[list, dict, str],
+        auto_printer: Optional[Callable[[Any], None]] = None,
     ):
-        if self.output_fmt == "json":
+        output_fmt = self.output_fmt
+        if output_fmt == "auto" and not auto_printer:
+            output_fmt = "json"
+
+        if output_fmt == "auto":
+            auto_printer(data)
+        elif output_fmt == "json":
             if isinstance(data, str):
                 click.echo(data)
             else:
-                click.echo(json.dumps(data, indent=4, default=str))
+                click.echo(json.dumps(data, indent=4, default=_json_default_handler))
         else:
             raise click.UsageError("Invalid output format.", ctx=self.ctx)
         if not ok:

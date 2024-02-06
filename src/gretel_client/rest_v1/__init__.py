@@ -18,6 +18,7 @@ __version__ = "1.0.0"
 
 # import apis into sdk package
 from gretel_client.rest_v1.api.activity_api import ActivityApi
+from gretel_client.rest_v1.api.clusters_api import ClustersApi
 from gretel_client.rest_v1.api.connections_api import ConnectionsApi
 from gretel_client.rest_v1.api.logs_api import LogsApi
 from gretel_client.rest_v1.api.projects_api import ProjectsApi
@@ -38,6 +39,11 @@ from gretel_client.rest_v1.exceptions import (
 
 # import models into sdk package
 from gretel_client.rest_v1.models.activity_event import ActivityEvent
+from gretel_client.rest_v1.models.cluster import Cluster
+from gretel_client.rest_v1.models.cluster_cloud_provider_info import (
+    ClusterCloudProviderInfo,
+)
+from gretel_client.rest_v1.models.cluster_status import ClusterStatus
 from gretel_client.rest_v1.models.connection import Connection
 from gretel_client.rest_v1.models.create_connection_request import (
     CreateConnectionRequest,
@@ -47,12 +53,14 @@ from gretel_client.rest_v1.models.create_workflow_run_request import (
     CreateWorkflowRunRequest,
 )
 from gretel_client.rest_v1.models.event_component import EventComponent
+from gretel_client.rest_v1.models.get_cluster_response import GetClusterResponse
 from gretel_client.rest_v1.models.get_log_response import GetLogResponse
 from gretel_client.rest_v1.models.get_log_upload_url_response import (
     GetLogUploadURLResponse,
 )
 from gretel_client.rest_v1.models.get_workflows_response import GetWorkflowsResponse
 from gretel_client.rest_v1.models.google_protobuf_any import GoogleProtobufAny
+from gretel_client.rest_v1.models.list_clusters_response import ListClustersResponse
 from gretel_client.rest_v1.models.list_connections_response import (
     ListConnectionsResponse,
 )
