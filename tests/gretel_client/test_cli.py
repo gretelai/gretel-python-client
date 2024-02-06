@@ -1,14 +1,13 @@
 import os
 
 from typing import Callable
-from unittest.mock import ANY, MagicMock, patch
+from unittest.mock import ANY, call, MagicMock, patch
 
 import pytest
 
 from click.testing import CliRunner
 
 from gretel_client.cli.cli import cli
-from gretel_client.cli.common import ModelObjectReader
 from gretel_client.cli.utils.parser_utils import RefData
 from gretel_client.config import (
     ClientConfig,
@@ -140,31 +139,196 @@ def test_local_model_upload_disabled_by_default(
     assert container_run.from_job.return_value.enable_cloud_uploads.call_count == 0
 
 
-def test_does_read_model_json(runner: CliRunner, get_fixture: Callable):
-    output = get_fixture("xf_model_create_output.json")
-    sc = MagicMock()
-    sc.model.data_source = "test.csv"
-    model_obj = ModelObjectReader(output)
-    model_obj.apply(sc)
-    sc.in_data == "test.csv"
-    sc.runner == "local"
-    sc.set_project.assert_called_once_with("60b9a37000f67523d00b944c")
-    sc.set_model.assert_called_once_with("60dca3d09c03f7c6edadee91")
+def test_does_read_model_json(
+    runner: CliRunner, get_fixture: Callable, get_project: MagicMock
+):
+    get_model = get_project.return_value.get_model
+    cmd = runner.invoke(
+        cli,
+        [
+            "models",
+            "run",
+            "--runner",
+            "manual",
+            "--model-id",
+            get_fixture("xf_model_create_output.json"),
+        ],
+    )
+    assert cmd.exit_code == 0
+    get_project.assert_called_once_with(name="60b9a37000f67523d00b944c", session=ANY)
+    get_model.assert_called_once_with("60dca3d09c03f7c6edadee91")
 
 
-def test_does_read_model_object_id():
-    sc = MagicMock()
-    model_obj = ModelObjectReader("test_id")
-    model_obj.apply(sc)
-    sc.set_model.assert_called_once_with("test_id")
-    sc.data_source = None
-    sc.runner = None
+def test_does_read_model_object_id(runner: CliRunner, get_project: MagicMock):
+    get_model = get_project.return_value.get_model
+    cmd = runner.invoke(
+        cli,
+        [
+            "models",
+            "run",
+            "--project",
+            "my-project",
+            "--model-id",
+            "60dca3d09c03f7c6edadee91",
+        ],
+    )
+    assert cmd.exit_code == 0
+    get_project.assert_called_once_with(name="my-project", session=ANY)
+    get_model.assert_called_once_with("60dca3d09c03f7c6edadee91")
 
 
-def test_does_read_model_object_str(get_fixture: Callable):
-    output = get_fixture("xf_model_create_output.json")
-    model_obj = ModelObjectReader(output.read_text())
-    assert model_obj.model.get("uid") == "60dca3d09c03f7c6edadee91"
+def test_project_flag_and_model_id_file_same_project(
+    runner: CliRunner, get_fixture: Callable, get_project: MagicMock
+):
+    mock_project = MagicMock()
+    mock_project.project_guid = "proj_123456789abcdef"
+
+    get_project.return_value = mock_project
+    get_model = mock_project.get_model
+
+    cmd = runner.invoke(
+        cli,
+        [
+            "models",
+            "run",
+            "--runner",
+            "manual",
+            "--model-id",
+            get_fixture("xf_model_create_output.json"),
+            "--project",
+            "my-project",
+        ],
+    )
+    assert cmd.exit_code == 0
+
+    assert get_project.call_count == 2
+    get_project.assert_has_calls(
+        [
+            call(name="my-project", session=ANY),
+            call(name="60b9a37000f67523d00b944c", session=ANY),
+        ],
+        any_order=True,
+    )
+    get_model.assert_called_once_with("60dca3d09c03f7c6edadee91")
+
+
+def test_project_flag_and_model_id_file_different_projects(
+    runner: CliRunner, get_fixture: Callable, get_project: MagicMock
+):
+    def mock_get_project(name: str, **kwargs):
+        if name == "my-project":
+            proj = MagicMock(project_guid="proj_123456")
+            proj.name = "my-project"
+            return proj
+        if name == "60b9a37000f67523d00b944c":
+            proj = MagicMock(project_guid="proj_abcdef")
+            proj.name = "my-other-project"
+            return proj
+        assert False, "unexpected argument"
+
+    get_project.side_effect = mock_get_project
+
+    cmd = runner.invoke(
+        cli,
+        [
+            "models",
+            "run",
+            "--runner",
+            "manual",
+            "--model-id",
+            get_fixture("xf_model_create_output.json"),
+            "--project",
+            "my-project",
+        ],
+    )
+    assert cmd.exit_code != 0
+
+    assert get_project.call_count == 2
+    get_project.assert_has_calls(
+        [
+            call(name="my-project", session=ANY),
+            call(name="60b9a37000f67523d00b944c", session=ANY),
+        ],
+        any_order=True,
+    )
+
+    assert "project 'my-project' specified via --project flag" in cmd.output.lower()
+    assert (
+        "project 'my-other-project' specified via --model-id file" in cmd.output.lower()
+    )
+
+
+@patch.dict(os.environ, {"GRETEL_DEFAULT_PROJECT": "default-project-from-env"})
+def test_prefers_project_from_model_file(
+    runner: CliRunner, get_fixture: Callable, get_project: MagicMock
+):
+    cmd = runner.invoke(
+        cli,
+        [
+            "models",
+            "run",
+            "--runner",
+            "manual",
+            "--model-id",
+            get_fixture("xf_model_create_output.json"),
+        ],
+    )
+    assert cmd.exit_code == 0
+    get_project.assert_called_once_with(name="60b9a37000f67523d00b944c", session=ANY)
+
+
+@patch.dict(os.environ, {"GRETEL_DEFAULT_PROJECT": "default-project-from-env"})
+def test_prefers_project_from_project_flag(runner: CliRunner, get_project: MagicMock):
+    cmd = runner.invoke(
+        cli,
+        [
+            "models",
+            "run",
+            "--model-id",
+            "60dca3d09c03f7c6edadee91",
+            "--project",
+            "my-project",
+        ],
+    )
+    assert cmd.exit_code == 0
+    get_project.assert_called_once_with(name="my-project", session=ANY)
+
+
+@patch.dict(os.environ, {"GRETEL_DEFAULT_PROJECT": "project-from-env"})
+def test_prefers_project_from_env(runner: CliRunner, get_project: MagicMock):
+    cmd = runner.invoke(
+        cli,
+        [
+            "models",
+            "run",
+            "--model-id",
+            "60dca3d09c03f7c6edadee91",
+        ],
+    )
+    assert cmd.exit_code == 0
+    get_project.assert_called_once_with(name="project-from-env", session=ANY)
+
+
+@patch.dict(os.environ, {"GRETEL_DEFAULT_PROJECT": ""})
+@patch("gretel_client.cli.common.get_session_config")
+def test_default_session_project(
+    get_session_config: MagicMock,
+    runner: CliRunner,
+    get_project: MagicMock,
+):
+    get_session_config.return_value.default_runner = "manual"
+    get_session_config.return_value.default_project_name = "default-session-project"
+    cmd = runner.invoke(
+        cli,
+        [
+            "models",
+            "run",
+            "--model-id",
+            "60dca3d09c03f7c6edadee91",
+        ],
+    )
+    assert cmd.exit_code == 0
+    get_project.assert_called_once_with(name="default-session-project", session=ANY)
 
 
 @patch("gretel_client.cli.common.check_docker_env")
@@ -218,7 +382,7 @@ def test_does_pass_through_manual_artifacts(
             "records",
             "transform",
             "--model-id",
-            "test_model_id",
+            "60dca3d09c03f7c6edadee91",
             "--in-data",
             "s3://test/object.csv",
             "--runner",
@@ -249,7 +413,7 @@ def test_does_run_manual_artifacts(
             "models",
             "run",
             "--model-id",
-            "test_model_id",
+            "60dca3d09c03f7c6edadee91",
             "--in-data",
             "s3://test/object.csv",
             "--ref-data",

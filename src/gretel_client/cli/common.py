@@ -1,6 +1,10 @@
+import functools
 import json
+import os
+import re
 import signal
 
+from functools import cached_property
 from pathlib import Path
 from typing import Any, Callable, Optional, Tuple, Union
 
@@ -162,9 +166,16 @@ def get_hint_for_error(ex: ExT) -> Optional[str]:
 
 class SessionContext(object):
 
-    runner: Optional[str] = None
+    _project: Optional[Project] = None
+    """The project to use for this command (explicitly specified)."""
 
-    model_id: Optional[str] = None
+    _model_ref: Optional[dict] = None
+    """Dictionary with a model reference (UID + potentially other coordinates)."""
+
+    _model: Optional[Model] = None
+    """Model resolved from _model_ref, if specified."""
+
+    runner: Optional[str] = None
 
     def __init__(
         self,
@@ -181,18 +192,21 @@ class SessionContext(object):
         self.log = Logger(self.debug)
         configure_custom_logger(self.log)
         self.ctx = ctx
-        self._model = None
-
-        self._project = None
-        self._project_id = None
-        if self.config.default_project_name:
-            self._project_id = self.config.default_project_name
 
         self.cleanup_methods = []
         self._shutting_down = False
         signal.signal(signal.SIGINT, self._cleanup)
 
         self._print_copyright()
+
+    def validate(self):
+        """
+        This method is invoked after all options are parsed and their callbacks
+        have been invoked, but before the actual command function begins.
+        """
+        # If a model reference was specified, resolve it now.
+        if self._model_ref:
+            self._model = self.project.get_model(self._model_ref["uid"])
 
     @property
     def session(self) -> ClientConfig:
@@ -217,40 +231,53 @@ class SessionContext(object):
             else:
                 click.echo(json.dumps(data, indent=4, default=str))
         else:
-            click.UsageError("Invalid output format.", ctx=self.ctx)
+            raise click.UsageError("Invalid output format.", ctx=self.ctx)
         if not ok:
             self.exit(1)
 
-    def set_project(self, project_name: str):
-        self._project_id = project_name
+    def set_project(self, project_name: str, *, source: str = "unknown"):
+        project = get_project(name=project_name, session=self.session)
+        if not self._project:
+            self._project = project
+            self._project_source = source
+            self.log.debug(
+                f"using project '{project.name}' ({project.project_guid}) from {source}"
+            )
+        elif self._project.project_guid != project.project_guid:
+            raise click.Abort(
+                f"Project '{project_name}' specified via {source} differs from project '{self._project.name}' specified via {self._project_source}"
+            )
 
-    def set_model(self, model_id: str):
-        self.model_id = model_id
+    def set_model_ref(self, model_ref: dict):
+        if self._model_ref:
+            raise click.BadOptionUsage(
+                "--model-id", "Cannot specify multiple model IDs."
+            )
+        self._model_ref = model_ref
 
-    def set_record_handler(self, record_handler_id: str):
-        self.record_handler_id = record_handler_id
-
-    @property
+    @cached_property
     def model(self) -> Model:
-        if self._model:
-            return self._model
-        self._model = self.project.get_model(self.model_id)
+        if not self._model:
+            raise click.BadOptionUsage(
+                "--model-id", "No model was specified on the command line."
+            )
         return self._model
 
-    @property
+    @cached_property
     def project(self) -> Project:
         if self._project:
             return self._project
-        if not self._project_id:
-            raise click.BadArgumentUsage("A project must be specified.")
-        self._project = get_project(name=self._project_id, session=self.session)
-        return self._project
 
-    def ensure_project(self):
-        if not self.project:
-            raise click.UsageError(
-                "A project must be specified since no default was found.", ctx=self.ctx
+        if project_from_env := os.getenv("GRETEL_DEFAULT_PROJECT"):
+            self.set_project(
+                project_from_env, source="GRETEL_DEFAULT_PROJECT environment variable"
             )
+        elif session_default_project := self.session.default_project_name:
+            self.set_project(session_default_project, source="session configuration")
+        else:
+            raise click.BadArgumentUsage("A project must be specified.")
+
+        return self._project
 
     def _cleanup(self, sig, frame):
         if self._shutting_down:
@@ -274,21 +301,28 @@ class SessionContext(object):
         self.cleanup_methods.append(method)
 
 
-pass_session = click.make_pass_decorator(SessionContext, ensure=True)
+_pass_session = click.make_pass_decorator(SessionContext, ensure=True)
+
+
+def pass_session(fn):
+    @_pass_session
+    @functools.wraps(fn)
+    def wrapped(sc: SessionContext, *args, **kwargs):
+        sc.validate()
+        fn(sc, *args, **kwargs)
+
+    return wrapped
 
 
 def project_option(fn):
     def callback(ctx, param: click.Option, value: str):
         sc: SessionContext = ctx.ensure_object(SessionContext)
         if value is not None:
-            sc.set_project(value)
-        sc.ensure_project()
-        return sc._project_id or value
+            sc.set_project(value, source="--project flag")
+        return value
 
     return click.option(  # type:ignore
         "--project",
-        allow_from_autoenv=True,
-        envvar="GRETEL_DEFAULT_PROJECT",
         help="Gretel project to execute command from.",
         metavar="NAME",
         callback=callback,
@@ -319,35 +353,47 @@ def runner_option(fn):
     )(fn)
 
 
-def get_model(ctx, param: click.Option, value: str):
-    model_obj = ModelObjectReader(value)
-    sc: SessionContext = ctx.ensure_object(SessionContext)
-    if not sc.model_id:
-        model_obj.apply(sc)
-    return sc.model_id or value
-
-
 def model_option(fn):
+    def callback(ctx, param: click.Option, value: Optional[dict]):
+        if value is None:
+            return None
+        sc: SessionContext = ctx.ensure_object(SessionContext)
+        if project_id := value.get("project_id"):
+            sc.set_project(project_id, source="--model-id file")
+        if runner := value.get("runner_mode"):
+            sc.runner = (
+                RunnerMode.CLOUD.value if runner == "cloud" else RunnerMode.LOCAL.value
+            )
+        sc.set_model_ref(value)
+        return value
+
     return click.option(  # type:ignore
         "--model-id",
         metavar="UID",
         help="Specify the model.",
-        callback=get_model,
+        type=JobRefDictParamType("model"),
+        callback=callback,
         required=True,
     )(fn)
 
 
 def record_handler_option(fn):
-    def callback(ctx, param: click.Option, value: str):
-        record_handler_obj = JobObjectReader(value)
+    def callback(ctx, param: click.Option, value: Optional[dict]):
+        if value is None:
+            return None
         sc: SessionContext = ctx.ensure_object(SessionContext)
-        record_handler_obj.apply(sc)
-        return sc.record_handler_id or value
+        if project_id := value.get("project_id"):
+            sc.set_project(project_id, source="--record-handler-id file")
+        # The runner mode isn't interesting here, as if we already specify
+        # a record handler via the command line, we're not running anything
+        # new.
+        return value
 
     return click.option(  # type:ignore
         "--record-handler-id",
         metavar="UID",
         help="Specify the record handler id.",
+        type=JobRefDictParamType("record handler"),
         callback=callback,
         required=True,
     )(fn)
@@ -362,74 +408,50 @@ def ref_data_option(fn):
     )(fn)
 
 
-def parse_file(val: str) -> dict:
-    contents = val
-    obj = {}
-    try:
-        if Path(val).is_file():
-            contents = Path(val).read_text()
-    except OSError:
-        pass
-    try:
-        obj = json.loads(contents)
-    except Exception:
-        pass
-    return obj
+class JobRefDictParamType(click.ParamType):
+    """
+    Command-line parameter that can either be a job UID or a JSON file
+    produced by the CLI, containing at minimum a "uid" field, and possibly
+    also other fields that may be taken into account, such as "project_id"
+    and "runner_mode".
 
-
-class ModelObjectReader:
-    """Reads a model config and configures the ``SessionContext`` based
-    on the contents of the model.
+    The parsed value is always a dict, even if a single UID is given (in that
+    case, the dict will contain a single "uid" entry).
     """
 
-    def __init__(self, input: str):
-        self.input = input
-        self.model = parse_file(input)
+    _UID_REGEX = re.compile(r"^[a-fA-F0-9]{24}$")
 
-    def apply(self, sc: SessionContext):
-        model_id = self.model.get("uid")
-        project_id = self.model.get("project_id")
-        runner = self.model.get("runner_mode")
-        if project_id:
-            sc.set_project(project_id)
-        if model_id:
-            sc.set_model(model_id)
-        else:
-            # if there isn't a model id, then we implicitly assume
-            # the original input was a model id rather than a model
-            # object.
-            sc.set_model(self.input)
-        if runner:
-            sc.runner = (
-                RunnerMode.CLOUD.value if runner == "cloud" else RunnerMode.LOCAL.value
-            )
+    def __init__(self, name):
+        self.name = name
 
+    def convert(self, value, param, ctx):
+        if isinstance(value, dict):
+            return value
 
-class JobObjectReader:
-    """Reads a record handler config and configures the ``SessionContext`` based
-    on the contents of the record handler."""
+        if isinstance(value, str):
+            value = value.strip()
+            if JobRefDictParamType._UID_REGEX.match(value):
+                # If this looks like a job UID, we prioritize this
+                # interpretation (in the unlikely event that this shadows
+                # a file name, this can be fixed by prefixing the file name
+                # with ``./``).
+                return {"uid": value}
 
-    def __init__(self, input: str):
-        self.input = input
-        self.record_handler = parse_file(input)
+        # Attempt to parse the parameter as a JSON file path
+        try:
+            if Path(value).is_file():
+                with open(value, "r") as f:
+                    obj = json.load(f)
 
-    def apply(self, sc: SessionContext):
-        record_handler_id = self.record_handler.get("uid")
-        model_id = self.record_handler.get("model_id")
-        project_id = self.record_handler.get("project_id")
-        runner = self.record_handler.get("runner_mode")
-        if record_handler_id:
-            sc.set_record_handler(record_handler_id)
-        else:
-            sc.set_record_handler(self.input)
-        if project_id:
-            sc.set_project(project_id)
-        if model_id:
-            sc.set_model(model_id)
-        if runner:
-            sc.runner = (
-                RunnerMode.CLOUD.value if runner == "cloud" else RunnerMode.LOCAL.value
-            )
+                if not isinstance(obj, dict):
+                    self.fail(f"file {value} does not contain a JSON object")
+                if not obj.get("uid"):
+                    self.fail(
+                        f"JSON object in file {value} does not contain a 'uid' field"
+                    )
+                return obj
+        except Exception as ex:
+            self.fail(f"error reading file '{value}': {str(ex)}")
 
 
 def poll_and_print(

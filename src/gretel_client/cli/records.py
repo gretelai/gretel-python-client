@@ -8,7 +8,6 @@ import click
 import yaml
 
 from gretel_client.cli.common import (
-    get_model,
     model_option,
     pass_session,
     poll_and_print,
@@ -25,6 +24,7 @@ from gretel_client.config import RunnerMode
 from gretel_client.models.config import get_model_type_config, GPU
 from gretel_client.projects.docker import ContainerRun, ContainerRunError
 from gretel_client.projects.jobs import Status
+from gretel_client.projects.models import Model
 from gretel_client.projects.records import RecordHandler
 
 LOCAL = "__local__"
@@ -261,10 +261,11 @@ def generate(
     output: str,
     in_data: str,
     model_path: str,
-    model_id: str,
+    model_id: dict,
     num_records: int,
     max_invalid: int,
 ):
+    model = sc.project.get_model(model_id["uid"])
     runner = _check_model_and_runner(sc, runner)
     _validate_params(sc, runner, output, model_path, in_data)
 
@@ -444,20 +445,29 @@ def run(
     metavar="ID",
     help="Specify the model.",
     required=False,
-    callback=get_model,
-    default="None",
 )
 @record_handler_option
 @pass_session
 def get(
-    sc: SessionContext, record_handler_id: str, model_id: str, project: str, output: str
+    sc: SessionContext,
+    record_handler_id: dict,
+    model_id: Optional[str],
+    project: str,
+    output: str,
 ):
-    if model_id == "None":
+    rh_model_id = record_handler_id.get("model_id")
+    if not rh_model_id and not model_id:
+        raise click.BadOptionUsage("--model-id", "Please specify a model ID")
+    if rh_model_id and model_id and rh_model_id != model_id:
         raise click.BadOptionUsage(
-            "--model-id", "Please specify the option '--model-id'."
+            "--model-id",
+            "Explicitly specified model ID does not match model ID found in record handler JSON file",
         )
+
+    model_id = model_id or rh_model_id
+
     record_handler: RecordHandler = sc.project.get_model(model_id).get_record_handler(
-        record_handler_id
+        record_handler_id["uid"]
     )
     if record_handler.status != "completed":
         sc.log.error(

@@ -287,8 +287,8 @@ def create(
 )
 @project_option
 @pass_session
-def get(sc: SessionContext, project: str, model_id: str, output: str):
-    model: Model = sc.project.get_model(model_id)
+def get(sc: SessionContext, project: str, model_id: dict, output: str):
+    model: Model = sc.project.get_model(model_id["uid"])
     sc.print(data=model.print_obj)
     if output:
         if model.status != "completed":
@@ -319,8 +319,8 @@ def search(sc: SessionContext, project: str, limit: int, model_name: str):
 @model_option
 @project_option
 @pass_session
-def delete(sc: SessionContext, project: str, model_id: str):
-    sc.log.info(f"Deleting model {model_id}.")
-    model: Model = sc.project.get_model(model_id)
+def delete(sc: SessionContext, project: str, model_id: dict):
+    sc.log.info(f"Deleting model {model_id['uid']}.")
+    model: Model = sc.project.get_model(model_id["uid"])
     model.delete()
     sc.log.info("Model deleted.")

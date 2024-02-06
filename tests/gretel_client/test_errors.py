@@ -148,7 +148,7 @@ def test_model_not_found(get_project: MagicMock, runner: CliRunner):
                 "records",
                 "generate",
                 "--model-id",
-                "not-found",
+                "60dca3d09c03f7c6edadee91",
                 "--project",
                 "not-found",
             ],
