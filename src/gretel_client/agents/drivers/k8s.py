@@ -49,6 +49,8 @@ CPU_AFFINITY_ENV_NAME = "CPU_AFFINITY"
 CPU_COUNT_ENV_NAME = "GRETEL_CPU_COUNT"
 CA_CERT_CONFIGMAP_ENV_NAME = "GRETEL_CA_CERT_CONFIGMAP_NAME"
 IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME = "IMAGE_REGISTRY_OVERRIDE_HOST"
+IMAGE_REGISTRY_OVERRIDE_TAG_ENV_NAME = "IMAGE_REGISTRY_OVERRIDE_TAG"
+USES_DOCKERHUB_IMAGE_FORMAT_ENV_NAME = "USES_DOCKERHUB_IMAGE_FORMAT"
 PREVENT_AUTOSCALER_EVICTION_ENV_NAME = "PREVENT_AUTOSCALER_EVICTION"
 WORKER_POD_LABELS_ENV_NAME = "WORKER_POD_LABELS"
 WORKER_POD_ANNOTATIONS_ENV_NAME = "WORKER_POD_ANNOTATIONS"
@@ -547,15 +549,28 @@ class Kubernetes(Driver):
             # Special case for pull through cache registries,
             # which are mirrored from DockerHub. DockerHub doesn't allow slashes in the name
             # We'll instead release the images with gretelai/image-separated-by-dashes
-            if registry_host and registry_host.endswith("/gretelai"):
+            if registry_host and self._worker.uses_dockerhub_format:
                 start_index = 0
                 if "." in image_parts[0] or ":" in image_parts[0]:
                     start_index = 1
                 image_name_with_dashes = "-".join(image_parts[start_index:])
                 image = f"{registry_host}/{image_name_with_dashes}"
+
             elif len(image_parts) > 1:
                 image_parts[0] = registry_host
                 image = "/".join(image_parts)
+            # The override_tag will take precedence over a sha256 value if specified, or
+            # over the original tag
+            # Matches image_name:latest@sha256:abc12345
+            if self._worker.override_tag and image.count(":") == 2:
+                image = image.split(":")[0] + ":" + self._worker.override_tag
+            # Matches image_name@sha256:abc12345
+            elif self._worker.override_tag and "@sha256" in image:
+                image = image.split("@sha256")[0] + ":" + self._worker.override_tag
+            # Matches image_name:abc12345
+            elif self._worker.override_tag and image.count(":") == 1:
+                image = image.split(":")[0] + ":" + self._worker.override_tag
+
         return image
 
     def _build_secret(self, job_config: Job, k8s_job: client.V1Job) -> client.V1Secret:
@@ -701,6 +716,10 @@ class KubernetesDriverDaemon:
             os.getenv(PULL_SECRET_ENV_NAME) or "gretel-pull-secret"
         )
         self._override_host = os.getenv(IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME)
+        self.override_tag = os.getenv(IMAGE_REGISTRY_OVERRIDE_TAG_ENV_NAME)
+        self.uses_dockerhub_format = (
+            os.getenv(USES_DOCKERHUB_IMAGE_FORMAT_ENV_NAME) == "true"
+        )
 
         self._registry_host = ""
         self._registry_host_available = Condition()

@@ -20,9 +20,7 @@ from kubernetes.client import (
     V1JobCondition,
     V1JobSpec,
     V1JobStatus,
-    V1LocalObjectReference,
     V1ObjectMeta,
-    V1PodSecurityContext,
     V1PodSpec,
     V1PodTemplateSpec,
     V1Secret,
@@ -44,6 +42,7 @@ from gretel_client.agents.drivers.k8s import (
     GPU_SEC_CONTEXT_ENV_NAME,
     GPU_TOLERATIONS_ENV_NAME,
     IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME,
+    IMAGE_REGISTRY_OVERRIDE_TAG_ENV_NAME,
     Kubernetes,
     KubernetesDriverDaemon,
     KubernetesError,
@@ -53,6 +52,7 @@ from gretel_client.agents.drivers.k8s import (
     PULL_SECRETS_ENV_NAME,
     PullSecretError,
     StopThread,
+    USES_DOCKERHUB_IMAGE_FORMAT_ENV_NAME,
     WORKER_MEMORY_GB_ENV_NAME,
     WORKER_POD_ANNOTATIONS_ENV_NAME,
     WORKER_POD_LABELS_ENV_NAME,
@@ -73,9 +73,12 @@ def get_mock_job(instance_type: str = "cpu-standard") -> dict:
 def patch_auth(func: Callable):
     @wraps(func)
     def inner_func(*args, **kwargs):
-        with patch("kubernetes.config.load_incluster_config", lambda: None), patch(
-            "gretel_client.agents.agent.AgentConfig._lookup_max_jobs_active"
-        ) as lookup_max_jobs_active_mock:
+        with (
+            patch("kubernetes.config.load_incluster_config", lambda: None),
+            patch(
+                "gretel_client.agents.agent.AgentConfig._lookup_max_jobs_active"
+            ) as lookup_max_jobs_active_mock,
+        ):
             lookup_max_jobs_active_mock.return_value = 1
             return func(*args, **kwargs)
 
@@ -151,11 +154,13 @@ def patch_cert_env(configmap_name: str):
 
 
 @contextmanager
-def patch_image_registry(override_url: str):
+def patch_image_registry(override_url: str, override_tag: str = ""):
     with patch.dict(
         os.environ,
         {
             IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME: override_url,
+            IMAGE_REGISTRY_OVERRIDE_TAG_ENV_NAME: override_tag,
+            USES_DOCKERHUB_IMAGE_FORMAT_ENV_NAME: "true",
         },
     ):
         yield
@@ -557,9 +562,13 @@ class TestKubernetesDriver(TestCase):
                 self.driver._load_env_and_set_vars()
 
     def test_worker_resources_set_ignores_legacy_settings(self):
-        with patch_worker_resources(
-            json.dumps({"requests": {"cpu": "3.5", "memory": "12Gi"}, "limits": {}})
-        ), patch_cpu_count_environ("2"), patch_worker_memory_gb_environ("14"):
+        with (
+            patch_worker_resources(
+                json.dumps({"requests": {"cpu": "3.5", "memory": "12Gi"}, "limits": {}})
+            ),
+            patch_cpu_count_environ("2"),
+            patch_worker_memory_gb_environ("14"),
+        ):
             job = Job.from_dict(get_mock_job(), self.config)
             k8s_job = self.reload_env_and_build_job(job)
 
@@ -612,9 +621,13 @@ class TestKubernetesDriver(TestCase):
             )
 
     def test_worker_resources_partially_set_uses_legacy_cpu(self):
-        with patch_worker_resources(
-            json.dumps({"requests": {"memory": "12Gi"}, "limits": {}})
-        ), patch_cpu_count_environ("2"), patch_worker_memory_gb_environ("14"):
+        with (
+            patch_worker_resources(
+                json.dumps({"requests": {"memory": "12Gi"}, "limits": {}})
+            ),
+            patch_cpu_count_environ("2"),
+            patch_worker_memory_gb_environ("14"),
+        ):
             job = Job.from_dict(get_mock_job(), self.config)
             k8s_job = self.reload_env_and_build_job(job)
 
@@ -640,9 +653,13 @@ class TestKubernetesDriver(TestCase):
             )
 
     def test_worker_resources_partially_set_uses_legacy_memory(self):
-        with patch_worker_resources(
-            json.dumps({"requests": {"cpu": "3.5"}, "limits": {}})
-        ), patch_cpu_count_environ("2"), patch_worker_memory_gb_environ("14"):
+        with (
+            patch_worker_resources(
+                json.dumps({"requests": {"cpu": "3.5"}, "limits": {}})
+            ),
+            patch_cpu_count_environ("2"),
+            patch_worker_memory_gb_environ("14"),
+        ):
             job = Job.from_dict(get_mock_job(), self.config)
             k8s_job = self.reload_env_and_build_job(job)
 
@@ -806,7 +823,7 @@ class TestKubernetesDriver(TestCase):
         assert config_map.name == "my-cert-configmap"
         assert config_map.default_mode == 0o0644
 
-    @patch_image_registry("shiny-new-reg.example.ai")
+    @patch_image_registry("shiny-new-reg.example.ai/gretelai123")
     @patch_auth
     @patch_env(
         PULL_SECRETS_ENV_NAME,
@@ -821,21 +838,66 @@ class TestKubernetesDriver(TestCase):
         pod_spec: V1PodSpec = pod_template.spec
         container: V1Container = pod_spec.containers[0]
 
-        assert container.image == "shiny-new-reg.example.ai/gretelai/transforms"
+        assert (
+            container.image
+            == "shiny-new-reg.example.ai/gretelai123/gretelai-transforms"
+        )
         assert pod_spec.image_pull_secrets == [
             {"name": "personal-secret"},
             {"name": "gretel-pull-secret"},
         ]
 
     @patch_image_registry("shiny-new-reg.example.ai")
+    @patch_auth
+    @patch_env(
+        PULL_SECRETS_ENV_NAME,
+        json.dumps(["personal-secret", "gretel-pull-secret"]),
+    )
     def test_resolve_image_only_one_part(self):
         job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
-        original_image = "busybox:latest"
+        original_image = "my.ecr/busybox:latest"
         job.container_image = original_image
+        self.reload_env_and_build_job(job, restart_worker=True)
 
         image = self.driver._resolve_image(job)
 
-        assert image == original_image
+        assert image == "shiny-new-reg.example.ai/busybox:latest"
+
+    @patch_image_registry("shiny-new-reg.example.ai", override_tag="dev")
+    @patch_auth
+    def test_resolve_image_dont_malform_with_sha(self):
+        job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
+        original_image = "my.ecr/busybox:latest@sha256:abc12345"
+        job.container_image = original_image
+        self.reload_env_and_build_job(job, restart_worker=True)
+
+        image = self.driver._resolve_image(job)
+
+        assert image == "shiny-new-reg.example.ai/busybox:dev"
+
+    @patch_image_registry("shiny-new-reg.example.ai", override_tag="dev")
+    @patch_auth
+    def test_resolve_image_dont_malform_with_sha_and_no_tag(self):
+        job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
+        original_image = "my.ecr/busybox@sha256:abc12345"
+        job.container_image = original_image
+        self.reload_env_and_build_job(job, restart_worker=True)
+
+        image = self.driver._resolve_image(job)
+
+        assert image == "shiny-new-reg.example.ai/busybox:dev"
+
+    @patch_image_registry("shiny-new-reg.example.ai", override_tag="latest")
+    @patch_auth
+    def test_resolve_image_dont_malform_with_only_tag(self):
+        job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
+        original_image = "my.ecr/busybox:dev"
+        job.container_image = original_image
+        self.reload_env_and_build_job(job, restart_worker=True)
+
+        image = self.driver._resolve_image(job)
+
+        assert image == "shiny-new-reg.example.ai/busybox:latest"
 
     @patch_auth
     @patch_image_registry("shiny-new-reg.example.ai")
