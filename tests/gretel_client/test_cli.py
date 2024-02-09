@@ -72,6 +72,8 @@ def test_configure_env(write_config: MagicMock, runner: CliRunner):
 @pytest.fixture
 def get_project() -> MagicMock:
     with patch("gretel_client.cli.common.get_project") as get_project:
+        get_project.return_value.runner_mode = None
+
         get_project_mock = get_project.return_value.create_model_obj.return_value
         get_project_mock._submit.return_value = {"model_key": ""}
         get_project_mock.print_obj = {}
@@ -111,6 +113,7 @@ def test_local_model_upload_flag(
             "mocked",
         ],
     )
+    print(cmd.output)
     assert cmd.exit_code == 0
     assert container_run.from_job.return_value.start.call_count == 1
     assert container_run.from_job.return_value.enable_cloud_uploads.call_count == 1
@@ -180,8 +183,7 @@ def test_does_read_model_object_id(runner: CliRunner, get_project: MagicMock):
 def test_project_flag_and_model_id_file_same_project(
     runner: CliRunner, get_fixture: Callable, get_project: MagicMock
 ):
-    mock_project = MagicMock()
-    mock_project.project_guid = "proj_123456789abcdef"
+    mock_project = MagicMock(project_guid="proj_123456789abcdef", runner_mode=None)
 
     get_project.return_value = mock_project
     get_model = mock_project.get_model
@@ -217,11 +219,11 @@ def test_project_flag_and_model_id_file_different_projects(
 ):
     def mock_get_project(name: str, **kwargs):
         if name == "my-project":
-            proj = MagicMock(project_guid="proj_123456")
+            proj = MagicMock(project_guid="proj_123456", runner_mode=None)
             proj.name = "my-project"
             return proj
         if name == "60b9a37000f67523d00b944c":
-            proj = MagicMock(project_guid="proj_abcdef")
+            proj = MagicMock(project_guid="proj_abcdef", runner_mode=None)
             proj.name = "my-other-project"
             return proj
         assert False, "unexpected argument"
@@ -332,8 +334,10 @@ def test_default_session_project(
 
 
 @patch("gretel_client.cli.common.check_docker_env")
-def test_does_gracefully_handler_docker_errors(
-    check_docker_env: MagicMock, runner: CliRunner
+def test_does_gracefully_handle_docker_errors(
+    check_docker_env: MagicMock,
+    runner: CliRunner,
+    get_project: MagicMock,
 ):
     check_docker_env.side_effect = DockerEnvironmentError()
     cmd = runner.invoke(

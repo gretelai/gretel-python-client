@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import functools
 import json
 import os
@@ -6,11 +8,10 @@ import signal
 
 from functools import cached_property
 from pathlib import Path
-from typing import Any, Callable, Optional, Tuple, Union
+from typing import Any, Callable, Optional, Union
 
 import click
 
-from gretel_client.cli.utils.parser_utils import RefData
 from gretel_client.config import (
     ClientConfig,
     configure_custom_logger,
@@ -183,7 +184,140 @@ def _json_default_handler(obj: Any) -> Any:
     return str(obj)
 
 
-class SessionContext(object):  #
+def _model_runner_modes(
+    model: Model,
+) -> list[str]:
+    """
+    Returns a list of compatible runner modes for a given model.
+
+    If there are multiple compatible runner modes, the first element
+    in the list should be the preferred runner mode for this model.
+
+    Args:
+        model: the model.
+
+    Returns:
+        the list of compatible runner modes for the given model.
+    """
+    if model.runner_mode == RunnerMode.HYBRID:
+        return [RunnerMode.HYBRID]
+    if model.is_cloud_model:
+        return [RunnerMode.LOCAL, RunnerMode.CLOUD, RunnerMode.MANUAL]
+    return [RunnerMode.LOCAL, RunnerMode.MANUAL]
+
+
+def _select_runner_mode(
+    runner_arg: Optional[str],
+    session_runner_mode: str,
+    project: Project,
+    model: Optional[Model],
+    model_json: Optional[dict],
+) -> tuple[str, str, bool]:
+    """
+    Selects the effective runner mode from various sources.
+
+    The runner mode selection follows the following rules (in order of priority):
+    - An explicit --runner argument will always be respected.
+    - The runner mode found in a --model-id JSON file will be used ("manual" being mapped to "local")
+    - The project-wide setting will be respected.
+    - The session default will be used whenever it is compatible with the model configuration (or when there is no model)
+    - Otherwise, the preferred runner mode for the model will be used.
+
+    The return value indicates how the runner mode was determined, and whether it
+    came from an explicit setting (flag).
+
+    Args:
+        runner_arg: the explicit --runner argument.
+        session_runner_mode: default runner mode configured for the session.
+        project: the project context.
+        model: the model from the context (if any).
+        model_json: the parsed JSON file specified as the model reference (if any).
+
+    Returns:
+        tuple[str, str, bool], where the first element is the chosen runner mode,
+            the second identifies the source from which this runner mode was
+            determined, and the third indicates if the choice was due to an explicitly
+            provided flag.
+    """
+
+    if runner_arg:
+        return runner_arg, "--runner flag", True
+
+    if model_json_runner_mode := (model_json or {}).get("runner_mode"):
+        runner_mode = (
+            RunnerMode.LOCAL
+            if model_json_runner_mode == RunnerMode.MANUAL
+            else model_json_runner_mode
+        )
+        return runner_mode, "--model-id JSON file", True
+
+    if project.runner_mode:
+        return project.runner_mode, "project setting", False
+
+    if not model:
+        return session_runner_mode, "session default", False
+
+    allowed_runner_modes = _model_runner_modes(model)
+    if session_runner_mode in allowed_runner_modes:
+        return session_runner_mode, "session default", False
+
+    return allowed_runner_modes[0], f"model configuration", False
+
+
+def _determine_runner_mode(
+    sc: SessionContext,
+    runner_arg: str,
+    project: Project,
+    model: Optional[Model],
+    model_json: Optional[dict],
+):
+    runner_mode, runner_mode_source, explicit = _select_runner_mode(
+        runner_arg,
+        sc.session.default_runner,
+        project,
+        model,
+        model_json,
+    )
+
+    if project.runner_mode and runner_mode != project.runner_mode:
+        raise click.Abort(
+            f"Runner mode '{runner_mode}' from {runner_mode_source} is incompatible with project setting '{project.runner_mode}'."
+        )
+
+    if model:
+        allowed_runner_modes = _model_runner_modes(model)
+        if runner_mode not in allowed_runner_modes:
+            raise click.Abort(
+                f"Runner mode '{runner_mode}' from {runner_mode_source} is not valid for model {model.id}, model only allows the following runner modes: {allowed_runner_modes}"
+            )
+
+    # If the runner mode was chosen explicitly (or matches the configured session
+    # default), all is well. Otherwise, we need to inform the user, and in some
+    # cases require explicit consent for deviating from the session default.
+    if not explicit and runner_mode != sc.session.default_runner:
+        if runner_mode == RunnerMode.CLOUD:
+            # Do not switch to cloud implicitly, require explicit consent.
+            raise click.Abort(
+                f"{runner_mode_source} prescribes 'cloud' runner mode, but your configured default "
+                f"runner mode is '{sc.session.default_runner}'. Please specify '--runner cloud' "
+                "explicitly to confirm using cloud runner mode (note that this will upload any "
+                "input data to Gretel Cloud)."
+            )
+
+        # For all other runner modes, switch the runner mode implicitly, but inform the
+        # user of the switch.
+        sc.log.info(
+            (
+                f"{runner_mode_source} requires runner mode '{runner_mode}', "
+                f"but your configured default runner mode is '{sc.session.default_runner}'."
+            )
+        )
+        sc.log.info(f"Using '{runner_mode}' to conform to project configuration.")
+
+    return runner_mode
+
+
+class SessionContext(object):
 
     _project: Optional[Project] = None
     """The project to use for this command (explicitly specified)."""
@@ -194,7 +328,7 @@ class SessionContext(object):  #
     _model: Optional[Model] = None
     """Model resolved from _model_ref, if specified."""
 
-    runner: Optional[str] = None
+    _runner: Optional[str] = None
 
     def __init__(
         self,
@@ -226,6 +360,30 @@ class SessionContext(object):  #
         # If a model reference was specified, resolve it now.
         if self._model_ref:
             self._model = self.project.get_model(self._model_ref["uid"])
+
+        # If this command takes a --runner argument, validate the runner eagerly.
+        if "runner" in self.ctx.params or self._runner:
+            # Runner mode is determined as follows:
+            # 1. Explicitly specified runner mode or project runner mode
+            #    (if both are specified, they must match).
+            # 2. Model runner mode (if the command runs in the context of a model,
+            #    i.e., `gretel models run`).
+            # 3. Configured session runner mode.
+            self._runner = _determine_runner_mode(
+                self,
+                self._runner,
+                self.project,
+                self.model if self._model_ref else None,
+                self._model_ref,
+            )
+
+            if self._runner == RunnerMode.LOCAL:
+                try:
+                    check_docker_env()
+                except DockerEnvironmentError as ex:
+                    raise DockerEnvironmentError(
+                        "Runner is local, but docker is not running. Please check that docker is installed and running."
+                    ) from ex
 
     @property
     def session(self) -> ClientConfig:
@@ -285,6 +443,14 @@ class SessionContext(object):  #
             )
         self._model_ref = model_ref
 
+    def set_runner(self, runner: str):
+        if self._runner and self._runner != runner:
+            raise click.BadOptionUsage(
+                "--runner",
+                f"specified conflicting values '{runner}' and '{self._runner}'",
+            )
+        self._runner = runner
+
     @cached_property
     def model(self) -> Model:
         if not self._model:
@@ -309,6 +475,12 @@ class SessionContext(object):  #
 
         return self._project
 
+    @cached_property
+    def runner(self) -> str:
+        if not self._runner:
+            raise click.BadOptionUsage("--runner", "no runner mode was specified")
+        return self._runner
+
     def _cleanup(self, sig, frame):
         if self._shutting_down:
             self.log.warn("Got a second interrupt. Shutting down.")
@@ -331,17 +503,19 @@ class SessionContext(object):  #
         self.cleanup_methods.append(method)
 
 
-_pass_session = click.make_pass_decorator(SessionContext, ensure=True)
-
-
 def pass_session(fn):
-    @_pass_session
-    @functools.wraps(fn)
-    def wrapped(sc: SessionContext, *args, **kwargs):
+    # We're not using the make_pass_decorator, because the context of the
+    # session context needs to be adjusted manually (because `ensure_object`
+    # is called from flag callbacks, it may be initially constructed with
+    # the parent context, rather than the context of the leaf command).
+    @click.pass_context
+    def wrapper(ctx: click.Context, *args, **kwargs):
+        sc = ctx.ensure_object(SessionContext)
+        sc.ctx = ctx
         sc.validate()
         fn(sc, *args, **kwargs)
 
-    return wrapped
+    return functools.update_wrapper(wrapper, fn)
 
 
 def project_option(fn):
@@ -360,25 +534,19 @@ def project_option(fn):
 
 
 def runner_option(fn):
-    def callback(ctx, param: click.Option, value: str):
+    def callback(ctx, param: click.Option, value: Optional[str]):
+        if value is None:
+            return None
         sc: SessionContext = ctx.ensure_object(SessionContext)
-        selected_runner = sc.runner or value
-        if selected_runner == RunnerMode.LOCAL.value:
-            try:
-                check_docker_env()
-            except DockerEnvironmentError as ex:
-                raise DockerEnvironmentError(
-                    "Runner is local, but docker is not running. Please check that docker is installed and running."
-                ) from ex
-        return selected_runner
+        sc.set_runner(value)
+        return value
 
     return click.option(  # type: ignore
         "--runner",
         metavar="TYPE",
         type=click.Choice([m.value for m in RunnerMode], case_sensitive=False),
-        default=lambda: get_session_config().default_runner,
         callback=callback,
-        show_default="from ~/.gretel/config.json",
+        show_default="project setting, or setting from ~/.gretel/config.json",
         help="Determines where to schedule the model run.",
     )(fn)
 
@@ -390,10 +558,6 @@ def model_option(fn):
         sc: SessionContext = ctx.ensure_object(SessionContext)
         if project_id := value.get("project_id"):
             sc.set_project(project_id, source="--model-id file")
-        if runner := value.get("runner_mode"):
-            sc.runner = (
-                RunnerMode.CLOUD.value if runner == "cloud" else RunnerMode.LOCAL.value
-            )
         sc.set_model_ref(value)
         return value
 

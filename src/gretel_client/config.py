@@ -115,13 +115,18 @@ class RunnerMode(str, Enum):
 
         return cls.parse(runner_mode)
 
+    def __str__(self) -> str:
+        return self.value
+
+    @property
+    def api_mode(self) -> RunnerMode:
+        if self == RunnerMode.LOCAL:
+            return RunnerMode.MANUAL
+        return self
+
     @property
     def api_value(self) -> str:
-        if self == RunnerMode.CLOUD:
-            return "cloud"
-        elif self == RunnerMode.HYBRID:
-            return "hybrid"
-        return "manual"
+        return self.api_mode.value
 
 
 DEFAULT_RUNNER = RunnerMode.CLOUD

@@ -90,6 +90,7 @@ def create(
             "Please re-run without --wait argument (will wait until the job is done).",
         )
 
+    runner = sc.runner
     if runner == RunnerMode.LOCAL.value and not output:
         raise click.BadOptionUsage(
             "--output",

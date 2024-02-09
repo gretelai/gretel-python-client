@@ -85,24 +85,13 @@ def _validate_params(
             "--model-path", "Cannot specify the local model path for cloud models."
         )
 
-    if runner == RunnerMode.MANUAL.value and (output or model_path):
+    if runner in (RunnerMode.MANUAL.value, RunnerMode.HYBRID.value) and (
+        output or model_path
+    ):
         raise click.BadOptionUsage(
             "--runner",
-            "--runner manual cannot be used together with any of --output, --model-path.",
+            f"--runner {runner} cannot be used together with any of --output, --model-path.",
         )
-
-
-def _check_model_and_runner(sc: SessionContext, runner) -> str:
-    if not sc.model.is_cloud_model and runner is RunnerMode.CLOUD.value:
-        sc.log.info(
-            (
-                f"The model {sc.model.model_id} is configured for local runs, "
-                f"but runner_mode is {runner}."
-            )
-        )
-        sc.log.info("Setting runner_mode to local and running the model.")
-        return RunnerMode.LOCAL.value
-    return runner
 
 
 def _configure_data_source(
@@ -265,8 +254,7 @@ def generate(
     num_records: int,
     max_invalid: int,
 ):
-    model = sc.project.get_model(model_id["uid"])
-    runner = _check_model_and_runner(sc, runner)
+    runner = sc.runner
     _validate_params(sc, runner, output, model_path, in_data)
 
     data_source = _configure_data_source(sc, in_data, runner)
@@ -305,7 +293,7 @@ def transform(
     runner: str,
     model_id: str,
 ):
-    runner = _check_model_and_runner(sc, runner)
+    runner = sc.runner
     _validate_params(sc, runner, output, model_path, in_data)
 
     data_source = _configure_data_source(sc, in_data, runner)
@@ -339,7 +327,7 @@ def classify(
     model_id: str,
     model_path: str,
 ):
-    runner = _check_model_and_runner(sc, runner)
+    runner = sc.runner
     _validate_params(sc, runner, output, model_path, in_data)
 
     data_source = _configure_data_source(sc, in_data, runner)
@@ -406,7 +394,7 @@ def run(
             )
         extra_params = {key: value for key, value in param}
 
-    runner = _check_model_and_runner(sc, runner)
+    runner = sc.runner
     _validate_params(sc, runner, output, model_path, None)
 
     # The idea here:
