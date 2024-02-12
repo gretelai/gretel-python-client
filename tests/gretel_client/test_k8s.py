@@ -33,11 +33,13 @@ from gretel_client.agents.drivers.k8s import (
     CA_CERT_CONFIGMAP_ENV_NAME,
     CPU_AFFINITY_ENV_NAME,
     CPU_COUNT_ENV_NAME,
+    CPU_MODEL_WORKER_RESOURCES_ENV_NAME,
     CPU_NODE_SELECTOR_ENV_NAME,
     CPU_SEC_CONTEXT_ENV_NAME,
     CPU_TOLERATIONS_ENV_NAME,
     DATETIME_FORMAT,
     GPU_AFFINITY_ENV_NAME,
+    GPU_MODEL_WORKER_RESOURCES_ENV_NAME,
     GPU_NODE_SELECTOR_ENV_NAME,
     GPU_SEC_CONTEXT_ENV_NAME,
     GPU_TOLERATIONS_ENV_NAME,
@@ -100,6 +102,18 @@ def patch_cpu_environ(var_value: str):
 @contextmanager
 def patch_worker_resources(var_value: str):
     with patch.dict(os.environ, {WORKER_RESOURCES_ENV_NAME: var_value}):
+        yield
+
+
+@contextmanager
+def patch_cpu_worker_resources(var_value: str):
+    with patch.dict(os.environ, {CPU_MODEL_WORKER_RESOURCES_ENV_NAME: var_value}):
+        yield
+
+
+@contextmanager
+def patch_gpu_worker_resources(var_value: str):
+    with patch.dict(os.environ, {GPU_MODEL_WORKER_RESOURCES_ENV_NAME: var_value}):
         yield
 
 
@@ -547,7 +561,7 @@ class TestKubernetesDriver(TestCase):
         ):
             with self.assertRaisesRegex(
                 KubernetesError,
-                "worker resources specified via 'GRETEL_WORKER_RESOURCES' invalid:.*more",
+                "resources specified via 'GRETEL_WORKER_RESOURCES' invalid:.*more",
             ):
                 self.driver._load_env_and_set_vars()
 
@@ -676,6 +690,122 @@ class TestKubernetesDriver(TestCase):
             self.assertNotIn(
                 CPU_COUNT_ENV_NAME,
                 (v.name for v in job_template.spec.containers[0].env),
+            )
+
+    def test_worker_resources_granular_cpu(self):
+        with (
+            patch_cpu_worker_resources(
+                json.dumps(
+                    {
+                        "requests": {"cpu": "3", "memory": "8Gi"},
+                        "limits": {"cpu": "3", "memory": "8Gi"},
+                    }
+                )
+            ),
+        ):
+            job = Job.from_dict(get_mock_job(), self.config)
+            k8s_job = self.reload_env_and_build_job(job)
+
+            job_spec: V1JobSpec = k8s_job.spec
+            job_template: V1PodTemplateSpec = job_spec.template
+            self.assertEqual(
+                {"memory": "8Gi", "cpu": "3"},
+                job_template.spec.containers[0].resources.requests,
+            )
+            self.assertEqual(
+                {"memory": "8Gi", "cpu": "3"},
+                job_template.spec.containers[0].resources.limits,
+            )
+
+    def test_worker_resources_granular_gpu(self):
+        with (
+            patch_gpu_worker_resources(
+                json.dumps(
+                    {
+                        "requests": {"cpu": "3", "memory": "8Gi"},
+                        "limits": {"cpu": "3", "memory": "8Gi"},
+                    }
+                )
+            ),
+        ):
+            job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
+            k8s_job = self.reload_env_and_build_job(job)
+
+            job_spec: V1JobSpec = k8s_job.spec
+            job_template: V1PodTemplateSpec = job_spec.template
+            self.assertEqual(
+                {"memory": "8Gi", "cpu": "3", "nvidia.com/gpu": "1"},
+                job_template.spec.containers[0].resources.requests,
+            )
+            self.assertEqual(
+                {"memory": "8Gi", "cpu": "3", "nvidia.com/gpu": "1"},
+                job_template.spec.containers[0].resources.limits,
+            )
+
+    def test_worker_resources_granular_cpu_override(self):
+        with (
+            patch_worker_resources(
+                json.dumps(
+                    {
+                        "requests": {"cpu": "6", "memory": "16Gi"},
+                        "limits": {"cpu": "6", "memory": "16Gi"},
+                    }
+                )
+            ),
+            patch_cpu_worker_resources(
+                json.dumps(
+                    {
+                        "requests": {"cpu": "3", "memory": "8Gi"},
+                        "limits": {"cpu": "3", "memory": "8Gi"},
+                    }
+                )
+            ),
+        ):
+            job = Job.from_dict(get_mock_job(), self.config)
+            k8s_job = self.reload_env_and_build_job(job)
+
+            job_spec: V1JobSpec = k8s_job.spec
+            job_template: V1PodTemplateSpec = job_spec.template
+            self.assertEqual(
+                {"memory": "8Gi", "cpu": "3"},
+                job_template.spec.containers[0].resources.requests,
+            )
+            self.assertEqual(
+                {"memory": "8Gi", "cpu": "3"},
+                job_template.spec.containers[0].resources.limits,
+            )
+
+    def test_worker_resources_granular_gpu_override(self):
+        with (
+            patch_worker_resources(
+                json.dumps(
+                    {
+                        "requests": {"cpu": "6", "memory": "16Gi"},
+                        "limits": {"cpu": "6", "memory": "16Gi"},
+                    }
+                )
+            ),
+            patch_gpu_worker_resources(
+                json.dumps(
+                    {
+                        "requests": {"cpu": "3", "memory": "8Gi"},
+                        "limits": {"cpu": "3", "memory": "8Gi"},
+                    }
+                )
+            ),
+        ):
+            job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
+            k8s_job = self.reload_env_and_build_job(job)
+
+            job_spec: V1JobSpec = k8s_job.spec
+            job_template: V1PodTemplateSpec = job_spec.template
+            self.assertEqual(
+                {"memory": "8Gi", "cpu": "3", "nvidia.com/gpu": "1"},
+                job_template.spec.containers[0].resources.requests,
+            )
+            self.assertEqual(
+                {"memory": "8Gi", "cpu": "3", "nvidia.com/gpu": "1"},
+                job_template.spec.containers[0].resources.limits,
             )
 
     def test_is_job_active_true_then_false(self):

@@ -15,6 +15,7 @@ import traceback
 
 from _thread import interrupt_main
 from copy import deepcopy
+from operator import itemgetter
 from pathlib import Path
 from threading import Condition, Thread
 from time import sleep
@@ -37,6 +38,8 @@ OVERRIDE_CERT_NAME = "override-cert"
 
 WORKER_NAMESPACE_ENV_NAME = "GRETEL_WORKER_NAMESPACE"
 WORKER_RESOURCES_ENV_NAME = "GRETEL_WORKER_RESOURCES"
+CPU_MODEL_WORKER_RESOURCES_ENV_NAME = "GRETEL_MODEL_WORKER_CPU_RESOURCES"
+GPU_MODEL_WORKER_RESOURCES_ENV_NAME = "GRETEL_MODEL_WORKER_GPU_RESOURCES"
 WORKER_MEMORY_GB_ENV_NAME = "MEMORY_LIMIT_IN_GB"
 PULL_SECRET_ENV_NAME = "GRETEL_PULL_SECRET"
 PULL_SECRETS_ENV_NAME = "GRETEL_PULL_SECRETS"
@@ -103,6 +106,16 @@ def _ensure_valid_quantity(qstr: str, label: str):
         raise KubernetesError(f"{label} must be a valid quantity, got: {qstr}") from ex
 
 
+def _set_default_resources(resources: dict) -> dict:
+    resources["requests"].setdefault("cpu", "1")
+    # Memory request default should be 14Gi, but if a limit is specified, use that.
+    resources["requests"].setdefault(
+        "memory", resources["limits"].get("memory", "14Gi")
+    )
+    resources["limits"].setdefault("memory", resources["requests"].get("memory"))
+    return resources
+
+
 class Kubernetes(Driver):
     """Run a worker using a Kubernetes daemon.
 
@@ -123,28 +136,9 @@ class Kubernetes(Driver):
         self._load_env_and_set_vars()
 
     def _load_and_setup_worker_resources(self):
-        requests, limits = {}, {}
-
-        if env_resources := self._parse_kube_env_var(WORKER_RESOURCES_ENV_NAME, dict):
-            requests.update(
-                **{k: str(v) for k, v in env_resources.pop("requests", {}).items()}
-            )
-            limits.update(
-                **{k: str(v) for k, v in env_resources.pop("limits", {}).items()}
-            )
-            if env_resources:
-                raise KubernetesError(
-                    f"worker resources specified via '{WORKER_RESOURCES_ENV_NAME}' invalid: only 'requests' and 'limits' are allowed, extra keys: {','.join(env_resources.keys())}"
-                )
-            # Ensure that quantities supplied via env resources are valid
-            for k, v in requests.items():
-                _ensure_valid_quantity(
-                    v, f"requests.{k} in '{WORKER_RESOURCES_ENV_NAME}' value"
-                )
-            for k, v in limits.items():
-                _ensure_valid_quantity(
-                    v, f"limits.{k} in '{WORKER_RESOURCES_ENV_NAME}' value"
-                )
+        requests, limits = itemgetter("requests", "limits")(
+            self._load_resources_from_env_var(WORKER_RESOURCES_ENV_NAME)
+        )
 
         if env_mem_limit := os.getenv(WORKER_MEMORY_GB_ENV_NAME, "").strip():
             try:
@@ -181,13 +175,51 @@ class Kubernetes(Driver):
                 requests["cpu"] = env_cpu_count
                 limits["cpu"] = env_cpu_count
 
-        # Apply defaults
-        requests.setdefault("cpu", "1")
-        # Memory request default should be 14Gi, but if a limit is specified, use that.
-        requests.setdefault("memory", limits.get("memory", "14Gi"))
-        limits.setdefault("memory", requests.get("memory"))
+        self._cpu_worker_resources = {"requests": requests, "limits": limits}
+        self._gpu_worker_resources = {"requests": requests, "limits": limits}
 
-        self._worker_resources = {"requests": requests, "limits": limits}
+        # Override top level resources (or defaults) with granular values
+        cpu_worker_requests, cpu_worker_limits = itemgetter("requests", "limits")(
+            self._load_resources_from_env_var(CPU_MODEL_WORKER_RESOURCES_ENV_NAME)
+        )
+        if cpu_worker_requests or cpu_worker_limits:
+            self._cpu_worker_resources = {
+                "requests": cpu_worker_requests,
+                "limits": cpu_worker_limits,
+            }
+        gpu_worker_requests, gpu_worker_limits = itemgetter("requests", "limits")(
+            self._load_resources_from_env_var(GPU_MODEL_WORKER_RESOURCES_ENV_NAME)
+        )
+        if gpu_worker_requests or gpu_worker_limits:
+            self._gpu_worker_resources = {
+                "requests": gpu_worker_requests,
+                "limits": gpu_worker_limits,
+            }
+
+        self._cpu_worker_resources = _set_default_resources(self._cpu_worker_resources)
+        self._gpu_worker_resources = _set_default_resources(self._gpu_worker_resources)
+
+    def _load_resources_from_env_var(self, env_var_name: str) -> dict:
+        requests, limits = {}, {}
+
+        if env_resources := self._parse_kube_env_var(env_var_name, dict):
+            requests.update(
+                **{k: str(v) for k, v in env_resources.pop("requests", {}).items()}
+            )
+            limits.update(
+                **{k: str(v) for k, v in env_resources.pop("limits", {}).items()}
+            )
+            if env_resources:
+                raise KubernetesError(
+                    f"resources specified via '{env_var_name}' invalid: only 'requests' and 'limits' are allowed, extra keys: {','.join(env_resources.keys())}"
+                )
+            # Ensure that quantities supplied via env resources are valid
+            for k, v in requests.items():
+                _ensure_valid_quantity(v, f"requests.{k} in '{env_var_name}' value")
+            for k, v in limits.items():
+                _ensure_valid_quantity(v, f"limits.{k} in '{env_var_name}' value")
+
+        return {"requests": requests, "limits": limits}
 
     def _load_env_and_set_vars(self, restart_worker: bool = False):
         self._load_and_setup_worker_resources()
@@ -486,8 +518,9 @@ class Kubernetes(Driver):
         return job
 
     def _setup_resources(self, job_config: Job) -> Tuple[dict, dict]:
-        worker_resources = deepcopy(self._worker_resources)
+        worker_resources = deepcopy(self._cpu_worker_resources)
         if job_config.needs_gpu:
+            worker_resources = deepcopy(self._gpu_worker_resources)
             worker_resources["requests"]["nvidia.com/gpu"] = "1"
             worker_resources["limits"]["nvidia.com/gpu"] = "1"
 
