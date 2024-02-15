@@ -81,12 +81,6 @@ from gretel_client.rest_v1.models.status import Status
 from gretel_client.rest_v1.models.update_connection_request import (
     UpdateConnectionRequest,
 )
-from gretel_client.rest_v1.models.update_workflow_run_status_request import (
-    UpdateWorkflowRunStatusRequest,
-)
-from gretel_client.rest_v1.models.update_workflow_task_request import (
-    UpdateWorkflowTaskRequest,
-)
 from gretel_client.rest_v1.models.user_profile import UserProfile
 from gretel_client.rest_v1.models.user_profile_image import UserProfileImage
 from gretel_client.rest_v1.models.validate_connection_credentials_response import (
