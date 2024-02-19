@@ -22,6 +22,8 @@ class InferenceAPIModelType(str, Enum):
 class BaseInferenceAPI(ABC):
     """Base class for Gretel Inference API objects."""
 
+    _available_backend_models: list[str]
+
     def __init__(self, *, session: Optional[ClientConfig] = None, **session_kwargs):
         if session is None:
             if len(session_kwargs) > 0:

@@ -57,6 +57,8 @@ SIMPSONS_TABLE = [
     },
 ]
 
+SIMPSONS_TABLE_DF = pd.DataFrame(SIMPSONS_TABLE)
+
 
 @pytest.fixture(scope="module")
 def tabllm():
@@ -79,23 +81,54 @@ def test_tabllm_inference_api_generate_stream(tabllm):
     assert len(record_list) == NUM_RECORDS
 
 
-def test_tabllm_inference_api_edit(tabllm):
+@pytest.mark.parametrize(
+    "chunk_size,seed_data", [(10, SIMPSONS_TABLE), (1, SIMPSONS_TABLE_DF)]
+)
+def test_tabllm_inference_api_edit(chunk_size, seed_data, tabllm):
+    """
+    We test a chunk size that fits the entire table and a chunks size
+    that requires multiple upstream calls to process the table and we
+    also alternate between dict and DF as seed data
+
+    NOTE: The prompt is very strict about the colummn name because
+    when we make multiple upstream requests there is a chance that
+    different inferences will add slightly different column names
+    each time.
+    """
     df = tabllm.edit(
-        prompt="Please add a column that describes the character's personality.",
-        seed_data=SIMPSONS_TABLE,
+        prompt="Please add exactly one and only one column called 'personality' that describes the character's personality.",
+        seed_data=seed_data,
+        chunk_size=chunk_size,
     )
     assert isinstance(df, pd.DataFrame)
+    assert len(df) == len(SIMPSONS_TABLE)
     assert len(df.columns) == 6
+
+
+def test_tabllm_inference_api_edit_stream(tabllm):
+    """
+    We test a chunk size that fits the entire table and a chunks size
+    that requires multiple upstream calls to process the table
+    """
+    results = list(
+        tabllm.edit(
+            prompt="Please add a column that describes the character's personality.",
+            seed_data=SIMPSONS_TABLE,
+            stream=True,
+        )
+    )
+    assert len(results) == len(SIMPSONS_TABLE)
+    assert len(results[0].keys()) == 6
 
 
 def test_tabllm_inference_api_invalid_backend_model():
     with pytest.raises(GretelInferenceAPIError):
-        _ = TabularLLMInferenceAPI(backend_model="invalid_model")
+        TabularLLMInferenceAPI(backend_model="invalid_model")
 
 
 def test_tabllm_inference_api_edit_invalid_seed_data_type(tabllm):
     with pytest.raises(GretelInferenceAPIError):
-        _ = tabllm.edit(
+        tabllm.edit(
             prompt="Please add a column that describes the character's personality.",
             seed_data=["Eat my shorts!"],
         )

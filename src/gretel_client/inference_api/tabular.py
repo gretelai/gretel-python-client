@@ -1,3 +1,5 @@
+import copy
+import json
 import logging
 import sys
 import time
@@ -21,6 +23,7 @@ logger.setLevel(logging.INFO)
 
 STREAM_SLEEP_TIME = 0.5
 MAX_ROWS_PER_STREAM = 50
+REQUEST_TIMEOUT_SEC = 60
 TABULAR_API_PATH = "/v1/inference/tabular/"
 TABLLM_DEFAULT_MODEL = "gretelai/tabular-v0"
 
@@ -40,6 +43,17 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
 
     Raises:
         GretelInferenceAPIError: If the specified backend model is not valid.
+    """
+
+    _curr_stream_id: Optional[str]
+    _last_stream_read: Optional[float]
+    _next_iter: Optional[str]
+    _generated_count: int
+
+    request_timeout_sec: int = REQUEST_TIMEOUT_SEC
+    """
+    When generating data, if a request does not return data records in N seconds
+    a new request will automatically be made to continue record generation.
     """
 
     def __init__(self, backend_model: str = "gretelai/tabular-v0", **session_kwargs):
@@ -94,6 +108,7 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
     def _reset_stream(self) -> None:
         """Reset the stream state."""
         self._curr_stream_id = None
+        self._last_stream_read = None
         self._next_iter = None
         self._generated_count = 0
 
@@ -128,6 +143,7 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
                 method="post", path=self.stream_api_path, body=payload
             )
             self._curr_stream_id = resp.get("stream_id")
+            self._last_stream_read = time.time()
             self._next_iter = None
 
     def _stream(
@@ -137,6 +153,7 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
         num_records: int,
         params: dict,
         ref_data: Optional[dict] = None,
+        sample_buffer_size: int = 0,
     ) -> Iterator[dict[str, Any]]:
         """Stream data generation with tabular LLM.
 
@@ -145,6 +162,8 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
             num_records: The number of records to generate.
             params: Additional parameters for the model's generation method.
             ref_data: Flexible option for passing additional data sources.
+            sample_buffer_size: How many of the last N generated records that should be provided
+                as sample data to subsequent generation requests.
 
         Raises
             GretelInferenceAPIError: If the stream is closed with an error.
@@ -152,13 +171,29 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
         Yields:
             The generated data records.
         """
+        # stores the last N records generated, only for generate mode
+        history_buffer: list[dict] = []
+
+        # references to ref data should only use our deep copied var
+        this_ref_data = copy.deepcopy(ref_data) if ref_data else {}
+
+        if sample_buffer_size > 0 and this_ref_data.get("data") is not None:
+            raise ValueError("Cannot use a history buffer with data editing mode")
+
         self._reset_stream()
+        done_generation = False
+
         while self._generated_count < num_records:
+            if history_buffer:
+                this_ref_data["sample_data"] = {
+                    "table_headers": list(history_buffer[0].keys()),
+                    "table_data": copy.deepcopy(history_buffer),
+                }
             self._create_stream_if_needed(
                 prompt=prompt,
                 num_records=num_records,
                 params=params,
-                ref_data=ref_data,
+                ref_data=this_ref_data,
             )
 
             # Poll the stream for new records.
@@ -185,8 +220,13 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
                     row_data = record["data"]["table_data"]
                     for row in row_data:
                         self._generated_count += 1
+                        self._last_stream_read = time.time()
+                        if sample_buffer_size > 0:
+                            history_buffer.append(row)
+                            history_buffer = history_buffer[-sample_buffer_size:]
                         yield row
                     if self._generated_count >= num_records:
+                        done_generation = True
                         break
                 elif record["data_type"] == "logger.error":
                     raise GretelInferenceAPIError(record["data"])
@@ -196,6 +236,20 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
                 self._curr_stream_id = None
             else:
                 self._next_iter = resp.get("next_iterator")
+
+            # If we're not done generating and we hit our timeout, we'll
+            # bail on using this stream.
+            if (
+                not done_generation
+                and self._last_stream_read
+                and (time.time() - self._last_stream_read) > self.request_timeout_sec
+            ):
+                logger.warning(
+                    "Stream %s timed out after %d seconds, another stream will be used.",
+                    self._curr_stream_id,
+                    self.request_timeout_sec,
+                )
+                self._curr_stream_id = None
 
             time.sleep(STREAM_SLEEP_TIME)
 
@@ -225,7 +279,9 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
             return stream_iterator
 
         generated_records = []
-        with tqdm(total=num_records, desc=pbar_desc, disable=disable_pbar) as pbar:
+        with tqdm(
+            total=num_records, desc=pbar_desc, disable=disable_pbar, initial=1
+        ) as pbar:
             for record in stream_iterator:
                 generated_records.append(record)
                 pbar.update(1)
@@ -245,6 +301,7 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
         prompt: str,
         *,
         seed_data: Union[_DataFrameT, List[dict[str, Any]]],
+        chunk_size: int = 25,
         temperature: float = TabLLMDefaultParams.temperature,
         top_k: int = TabLLMDefaultParams.top_k,
         top_p: float = TabLLMDefaultParams.top_p,
@@ -254,10 +311,13 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
     ) -> StreamReturnType:
         """Edit the seed data according to the given prompt.
 
+
         Args:
             prompt: A prompt specifying how to edit the seed data.
             seed_data: The seed data to edit. Must be a `pandas` DataFrame or a
                 list of dicts (see format in the example below).
+            chunk_size: The seed data will be divided up into chunks of this size. Each
+                chunk will receive its own upstream request to be edited.
             temperature: Sampling temperature. Higher values make output more random.
             top_k: Number of highest probability tokens to keep for top-k filtering.
             top_p: The cumulative probability cutoff for sampling tokens.
@@ -266,6 +326,7 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
                 parameter is ignored if `stream` is True.
             disable_progress_bar: If True, disable progress bar.
                 Ignored if `stream` is True.
+
 
         Raises:
             GretelInferenceAPIError: If the seed data is an invalid type.
@@ -305,33 +366,56 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
             table_data = seed_data
         elif PANDAS_IS_INSTALLED and isinstance(seed_data, pd.DataFrame):
             table_headers = list(seed_data.columns)
-            table_data = seed_data.to_dict(orient="records")
+            # By using `to_json()` we serialize out any Pandas specific data types
+            # to scalar values first
+            table_data = json.loads(seed_data.to_json(orient="records"))
         else:
             raise GretelInferenceAPIError(
                 "Seed data must be a `pandas` DataFrame or a list of dicts."
             )
 
-        ref_data = {
-            "data": {
-                "table_headers": table_headers,
-                "table_data": table_data,
-            }
-        }
+        total_record_count = len(table_data)
 
-        stream_iterator = self._stream(
-            prompt=prompt,
-            num_records=len(seed_data),
-            params={
-                "temperature": temperature,
-                "top_k": top_k,
-                "top_p": top_p,
-            },
-            ref_data=ref_data,
-        )
+        # Replace our list of records to edit with a list of lists
+        # Each inner list will get its own upstream API call
+        table_data_chunks: list[list[dict]] = [
+            table_data[i : i + chunk_size]
+            for i in range(0, total_record_count, chunk_size)
+        ]
+        table_data = []  # GC it, we don't need it anymore
+
+        def _build_edit_iterator() -> Iterator[dict]:
+            for chunk in table_data_chunks:
+                ref_data = {
+                    "data": {
+                        "table_headers": table_headers,
+                        "table_data": chunk,
+                    }
+                }
+
+                stream_iterator = self._stream(
+                    prompt=prompt,
+                    num_records=len(chunk),
+                    params={
+                        "temperature": temperature,
+                        "top_k": top_k,
+                        "top_p": top_p,
+                    },
+                    ref_data=ref_data,
+                )
+
+                for record in stream_iterator:
+                    yield record
+
+        # because we process the seed data in chunks,
+        # each chunk will get its own upstream request
+        # and consequently its own iterator so we wrap
+        # each of these calls in one big iterator
+        data_iterator = _build_edit_iterator()
 
         return self._get_stream_results(
-            stream_iterator=stream_iterator,
-            num_records=len(seed_data),
+            stream_iterator=data_iterator,
+            num_records=total_record_count,
             is_streaming=stream,
             as_dataframe=as_dataframe,
             pbar_desc="Editing records",
@@ -349,8 +433,24 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
         stream: bool = False,
         as_dataframe: bool = True,
         disable_progress_bar: bool = False,
+        sample_buffer_size: int = 0,
     ) -> StreamReturnType:
         """Generate synthetic data.
+
+        Each request to Gretel will generate at most 50 records at a time. This
+        method will make multiple requests, as needed, to fulfill the
+        desired `num_records` provided. If a request does not produce
+        records within the `self.request_timeout_sec` limit, that request
+        will be dropped and new requests will be made automatically.
+
+        When multiple requests are made to fulfill the `num_records` provided
+        you may optionally pass the "last N" records generated to subsequent
+        requests by setting `sample_buffer_size` to something like 5.
+        When sample records are passed to subsequent requests the
+        LLM will use that as context for record generation. This is useful
+        for keeping continuity in fields between requests (such as monotonic values, etc).
+
+
 
         Args:
             prompt: The prompt for generating synthetic tabular data.
@@ -363,6 +463,9 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
                 parameter is ignored if `stream` is True.
             disable_progress_bar: If True, disable progress bar.
                 Ignored if `stream` is True.
+            sample_buffer_size: How many of the last N generated records that should be provided
+                as sample data to subsequent generation requests.
+
 
         Returns:
             The stream iterator or the generated data records.
@@ -389,6 +492,7 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
                 "top_k": top_k,
                 "top_p": top_p,
             },
+            sample_buffer_size=sample_buffer_size,
         )
 
         return self._get_stream_results(
