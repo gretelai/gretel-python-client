@@ -70,7 +70,7 @@ class _PullUpdate:
     def from_dict(cls, source: dict) -> _PullUpdate:
         return cls(
             id=source.get("id", source.get("status")),
-            status=source["status"],
+            status=source.get("status"),
             current=source.get("progressDetail", {}).get("current"),
             total=source.get("progressDetail", {}).get("total"),
         )
