@@ -5,7 +5,7 @@ import uuid
 from pathlib import Path
 from typing import Optional, Union
 
-from gretel_client.config import ClientConfig, configure_session, get_session_config
+from gretel_client.config import add_session_context, ClientConfig, configure_session
 from gretel_client.dataframe import _DataFrameT
 from gretel_client.factories import GretelFactories
 from gretel_client.gretel.artifact_fetching import (
@@ -43,6 +43,8 @@ logger = logging.getLogger(__name__)
 logger.propagate = False
 logger.addHandler(logging.StreamHandler(sys.stdout))
 logger.setLevel(logging.INFO)
+
+HIGH_LEVEL_SESSION_METADATA = {"high_level_interface": "1"}
 
 
 def _convert_to_valid_data_source(
@@ -103,14 +105,15 @@ class Gretel:
         if session is None:
             if len(session_kwargs) > 0:
                 configure_session(**session_kwargs)
-            session = get_session_config()
         elif len(session_kwargs) > 0:
             raise ValueError("cannot specify session arguments when passing a session")
 
-        self._session = session
-        self._user_id: str = get_me(session=session)["_id"][9:]
+        self._session = add_session_context(
+            session=session, client_metrics=HIGH_LEVEL_SESSION_METADATA
+        )
+        self._user_id: str = get_me(session=self._session)["_id"][9:]
         self._project: Optional[Project] = None
-        self.factories = GretelFactories(session=session)
+        self.factories = GretelFactories(session=self._session)
 
         if project_name is not None:
             self.set_project(name=project_name, display_name=project_display_name)

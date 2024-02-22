@@ -10,6 +10,7 @@ from click.testing import CliRunner
 from gretel_client.cli.cli import cli
 from gretel_client.cli.utils.parser_utils import RefData
 from gretel_client.config import (
+    add_session_context,
     ClientConfig,
     configure_session,
     get_session_config,
@@ -312,14 +313,11 @@ def test_prefers_project_from_env(runner: CliRunner, get_project: MagicMock):
 
 
 @patch.dict(os.environ, {"GRETEL_DEFAULT_PROJECT": ""})
-@patch("gretel_client.cli.common.get_session_config")
 def test_default_session_project(
-    get_session_config: MagicMock,
     runner: CliRunner,
     get_project: MagicMock,
 ):
-    get_session_config.return_value.default_runner = "manual"
-    get_session_config.return_value.default_project_name = "default-session-project"
+    get_session_config().update_default_project("default-session-project")
     cmd = runner.invoke(
         cli,
         [

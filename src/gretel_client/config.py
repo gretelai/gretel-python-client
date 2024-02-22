@@ -5,10 +5,15 @@ import logging
 import os
 import platform
 
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from enum import Enum
+from functools import cached_property
 from getpass import getpass
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
-from typing import Dict, Optional, Type, TypeVar, Union
+from typing import Optional, Type, TypeVar, Union
+from urllib.parse import quote_plus
 
 import certifi
 
@@ -59,6 +64,8 @@ GRETEL_PREVIEW_FEATURES = "GRETEL_PREVIEW_FEATURES"
 
 GRETEL_ENVS = [GRETEL_API_KEY, GRETEL_PROJECT]
 
+CLIENT_METRICS_HEADER_KEY = "x-gretel-client-metrics"
+
 
 _custom_logger = None
 
@@ -73,6 +80,28 @@ def configure_custom_logger(logger):
 
 
 log = get_logger(__name__)
+
+
+@dataclass
+class Context:
+    client_metrics: dict[str, str]
+
+
+def _get_client_version() -> str:
+    try:
+        return version("gretel_client")
+    except PackageNotFoundError:
+        return "undefined"
+
+
+def _metrics_headers(context: Optional[Context] = None) -> dict[str, str]:
+    metadata = {"python_sdk_version": _get_client_version()}
+    if context:
+        metadata |= context.client_metrics
+
+    stringified = ";".join((f"{k}={v}" for k, v in metadata.items()))
+
+    return {CLIENT_METRICS_HEADER_KEY: quote_plus(stringified)}
 
 
 class PreviewFeatures(Enum):
@@ -188,15 +217,146 @@ class GretelApiRetry(Retry):
         return not was_rate_limited
 
 
-class ClientConfig:
+class ClientConfig(ABC):
+    def __new__(cls, *args, **kwargs):
+        if cls == ClientConfig:
+            _cls = DefaultClientConfig
+        else:
+            _cls = cls
+        return super().__new__(_cls)
+
+    @classmethod
+    def from_file(cls, file_path: Path) -> ClientConfig:
+        _check_config_perms(file_path)
+        config = json.loads(file_path.read_bytes())
+        return cls.from_dict(config)
+
+    @classmethod
+    def from_env(cls) -> ClientConfig:
+        return cls()
+
+    @classmethod
+    def from_dict(cls, source: dict) -> ClientConfig:
+        return cls(
+            **{
+                k: v
+                for k, v in source.items()
+                if k in DefaultClientConfig.__annotations__.keys()
+            }
+        )
+
+    @property
+    @abstractmethod
+    def endpoint(self) -> str:
+        ...
+
+    @property
+    @abstractmethod
+    def artifact_endpoint(self) -> str:
+        ...
+
+    @property
+    @abstractmethod
+    def api_key(self) -> Optional[str]:
+        ...
+
+    @property
+    @abstractmethod
+    def default_project_name(self) -> Optional[str]:
+        ...
+
+    @property
+    @abstractmethod
+    def default_runner(self) -> Optional[str]:
+        ...
+
+    @property
+    @abstractmethod
+    def preview_features(self) -> str:
+        ...
+
+    @cached_property
+    def email(self) -> str:
+        return self.get_api(UsersApi).users_me()["data"]["me"]["email"]
+
+    @property
+    def stage(self) -> str:
+        if "https://api-dev.gretel.cloud" in self.endpoint:
+            return "dev"
+        return "prod"
+
+    @abstractmethod
+    def get_api(
+        self,
+        api_interface: Type[T],
+        max_retry_attempts: int = 5,
+        backoff_factor: float = 1,
+        *,
+        default_headers: Optional[dict[str, str]] = None,
+    ) -> T:
+        """Instantiates and configures an api client for a given
+        component interface.
+        Args:
+            api_interface: The api interface to instantiate
+            max_retry_attempts: The number of times to retry a failed
+                api request.
+            backoff_factor: A back factor to apply between retry
+                attempts. A base factor of 2 will applied to this value
+                to determine the time between attempts.
+        """
+        ...
+
+    @abstractmethod
+    def get_v1_api(
+        self,
+        api_interface: Type[T],
+        max_retry_attempts: int = 5,
+        backoff_factor: float = 1,
+        *,
+        default_headers: Optional[dict[str, str]] = None,
+    ) -> T:
+        ...
+
+    @abstractmethod
+    def update_default_project(self, project_id: str):
+        ...
+
+    @property
+    @abstractmethod
+    def as_dict(self) -> dict:
+        ...
+
+    def __eq__(self, other: ClientConfig) -> bool:
+        return self.as_dict == other.as_dict
+
+    @property
+    def masked(self) -> dict:
+        """Returns a masked representation of the config object."""
+        c = self.as_dict
+        c["api_key"] = self.masked_api_key
+        return c
+
+    @property
+    def masked_api_key(self) -> str:
+        if not self.api_key:
+            return "None"
+
+        return self.api_key[:8] + "****"
+
+    @property
+    def preview_features_enabled(self) -> bool:
+        return self.preview_features == PreviewFeatures.ENABLED.value
+
+
+class DefaultClientConfig(ClientConfig):
     """Holds Gretel client configuration details. This can be instantiated from
     a file or environment.
     """
 
-    endpoint: str
+    endpoint: str = ""
     """Gretel API endpoint."""
 
-    artifact_endpoint: str
+    artifact_endpoint: str = ""
     """Artifact endpoint."""
 
     api_key: Optional[str] = None
@@ -217,8 +377,8 @@ class ClientConfig:
         artifact_endpoint: Optional[str] = None,
         api_key: Optional[str] = None,
         default_project_name: Optional[str] = None,
-        default_runner: Union[str, RunnerMode] = DEFAULT_RUNNER.value,
-        preview_features: str = PreviewFeatures.DISABLED.value,
+        default_runner: Optional[Union[str, RunnerMode]] = None,
+        preview_features: Optional[str] = None,
     ):
         self.endpoint = (
             endpoint or os.getenv(GRETEL_ENDPOINT) or DEFAULT_GRETEL_ENDPOINT
@@ -230,29 +390,15 @@ class ClientConfig:
         ).removesuffix("/")
         self.api_key = api_key or os.getenv(GRETEL_API_KEY)
         self.default_runner = RunnerMode.parse(
-            os.getenv(GRETEL_RUNNER_MODE) or default_runner
+            default_runner or os.getenv(GRETEL_RUNNER_MODE) or DEFAULT_RUNNER
         )
-        self.default_project_name = (
-            default_project_name or os.getenv(GRETEL_PROJECT) or default_project_name
+        self.default_project_name = default_project_name or os.getenv(GRETEL_PROJECT)
+        self.preview_features = (
+            preview_features
+            or os.getenv(GRETEL_PREVIEW_FEATURES)
+            or PreviewFeatures.DISABLED.value
         )
-        self.preview_features = os.getenv(GRETEL_PREVIEW_FEATURES) or preview_features
         self._validate()
-
-    @classmethod
-    def from_file(cls, file_path: Path) -> ClientConfig:
-        _check_config_perms(file_path)
-        config = json.loads(file_path.read_bytes())
-        return cls.from_dict(config)
-
-    @classmethod
-    def from_env(cls) -> ClientConfig:
-        return cls()
-
-    @classmethod
-    def from_dict(cls, source: dict) -> ClientConfig:
-        return cls(
-            **{k: v for k, v in source.items() if k in cls.__annotations__.keys()}
-        )
 
     def _validate(self) -> None:
         if (
@@ -307,7 +453,7 @@ class ClientConfig:
         max_retry_attempts: int = 3,
         backoff_factor: float = 1,
         *,
-        default_headers: Optional[Dict[str, str]] = None,
+        default_headers: Optional[dict[str, str]] = None,
     ) -> ClientT:
         # disable log warnings when the retry kicks in
         logging.getLogger("urllib3.connectionpool").setLevel(logging.ERROR)
@@ -339,8 +485,7 @@ class ClientConfig:
             backoff_factor=backoff_factor,
         )
         client = client_cls(configuration, **client_kwargs)
-        if default_headers:
-            client.default_headers.update(default_headers)
+        client.default_headers.update(_metrics_headers() | (default_headers or {}))
         return client
 
     def _get_api_client(self, *args, **kwargs) -> ApiClient:
@@ -351,23 +496,13 @@ class ClientConfig:
             V1ApiClient, V1Configuration, *args, **kwargs
         )
 
-    @property
-    def email(self) -> str:
-        return self.get_api(UsersApi).users_me()["data"]["me"]["email"]
-
-    @property
-    def stage(self) -> str:
-        if "https://api-dev.gretel.cloud" in self.endpoint:
-            return "dev"
-        return "prod"
-
     def get_api(
         self,
         api_interface: Type[T],
         max_retry_attempts: int = 5,
         backoff_factor: float = 1,
         *,
-        default_headers: Optional[Dict[str, str]] = None,
+        default_headers: Optional[dict[str, str]] = None,
     ) -> T:
         """Instantiates and configures an api client for a given
         component interface.
@@ -392,7 +527,7 @@ class ClientConfig:
         max_retry_attempts: int = 5,
         backoff_factor: float = 1,
         *,
-        default_headers: Optional[Dict[str, str]] = None,
+        default_headers: Optional[dict[str, str]] = None,
     ) -> T:
         return api_interface(
             self._get_v1_api_client(
@@ -423,26 +558,132 @@ class ClientConfig:
             if not prop.startswith("_")
         }
 
-    def __eq__(self, other: ClientConfig) -> bool:
-        return self.as_dict == other.as_dict
+
+class DelegatingClientConfig(ClientConfig):
+    _delegate: ClientConfig
+
+    def __init__(self, delegate: ClientConfig):
+        self._delegate = delegate
 
     @property
-    def masked(self) -> dict:
-        """Returns a masked representation of the config object."""
-        c = self.as_dict
-        c["api_key"] = self.masked_api_key
-        return c
+    def endpoint(self) -> str:
+        return self._delegate.endpoint
 
     @property
-    def masked_api_key(self) -> str:
-        if not self.api_key:
-            return "None"
-
-        return self.api_key[:8] + "****"
+    def artifact_endpoint(self) -> str:
+        return self._delegate.artifact_endpoint
 
     @property
-    def preview_features_enabled(self) -> bool:
-        return self.preview_features == PreviewFeatures.ENABLED.value
+    def api_key(self) -> Optional[str]:
+        return self._delegate.api_key
+
+    @property
+    def default_project_name(self) -> Optional[str]:
+        return self._delegate.default_project_name
+
+    @property
+    def default_runner(self) -> Optional[str]:
+        return self._delegate.default_runner
+
+    @property
+    def preview_features(self) -> str:
+        return self._delegate.preview_features
+
+    def get_api(
+        self,
+        api_interface: Type[T],
+        max_retry_attempts: int = 5,
+        backoff_factor: float = 1,
+        *,
+        default_headers: Optional[dict[str, str]] = None,
+    ) -> T:
+        return self._delegate.get_api(
+            api_interface,
+            max_retry_attempts,
+            backoff_factor,
+            default_headers=default_headers,
+        )
+
+    def get_v1_api(
+        self,
+        api_interface: Type[T],
+        max_retry_attempts: int = 5,
+        backoff_factor: float = 1,
+        *,
+        default_headers: Optional[dict[str, str]] = None,
+    ) -> T:
+        return self._delegate.get_v1_api(
+            api_interface,
+            max_retry_attempts,
+            backoff_factor,
+            default_headers=default_headers,
+        )
+
+    def update_default_project(self, project_id: str):
+        self._delegate.update_default_project(project_id)
+
+    @property
+    def as_dict(self) -> dict:
+        return self._delegate.as_dict
+
+
+class TaggedClientConfig(DelegatingClientConfig):
+
+    _context: Context
+
+    def __init__(self, delegate: ClientConfig, context: Context):
+        super().__init__(delegate)
+        self._context = context
+
+    def get_api(
+        self,
+        api_interface: Type[T],
+        max_retry_attempts: int = 5,
+        backoff_factor: float = 1,
+        *,
+        default_headers: Optional[dict[str, str]] = None,
+    ) -> T:
+        all_headers = _metrics_headers(self._context)
+        if default_headers:
+            all_headers |= default_headers
+        return super().get_api(
+            api_interface,
+            max_retry_attempts,
+            backoff_factor,
+            default_headers=all_headers,
+        )
+
+    def get_v1_api(
+        self,
+        api_interface: Type[T],
+        max_retry_attempts: int = 5,
+        backoff_factor: float = 1,
+        *,
+        default_headers: Optional[dict[str, str]] = None,
+    ) -> T:
+        all_headers = _metrics_headers(self._context)
+        if default_headers:
+            all_headers |= default_headers
+        return super().get_v1_api(
+            api_interface,
+            max_retry_attempts,
+            backoff_factor,
+            default_headers=all_headers,
+        )
+
+
+def add_session_context(
+    *,
+    session: Optional[ClientConfig] = None,
+    client_metrics: Optional[dict[str, str]] = None,
+) -> TaggedClientConfig:
+    delegate = session or get_session_config()
+
+    context = Context(
+        client_metrics=client_metrics or {},
+    )
+
+    return TaggedClientConfig(context=context, delegate=delegate)
 
 
 _DEFAULT_CONFIG_PATH = Path().home() / f".{GRETEL}" / "config.json"  # noqa

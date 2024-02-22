@@ -13,9 +13,9 @@ from typing import Any, Callable, Optional, Union
 import click
 
 from gretel_client.config import (
+    add_session_context,
     ClientConfig,
     configure_custom_logger,
-    get_session_config,
     RunnerMode,
 )
 from gretel_client.models.config import get_status_description, StatusDescriptions
@@ -28,6 +28,8 @@ from gretel_client.projects.projects import get_project, Project
 from gretel_client.rest.exceptions import ApiException
 
 ExT = Union[str, Exception]
+
+CLI_SESSION_METADATA = {"cli": "1"}
 
 
 _copyright_data = """
@@ -341,7 +343,9 @@ class SessionContext(object):
         self.debug = debug
         self.verbosity = 0
         self.output_fmt = output_fmt
-        self.config = session or get_session_config()
+        self.config = add_session_context(
+            session=session, client_metrics=CLI_SESSION_METADATA
+        )
         self.log = Logger(self.debug)
         configure_custom_logger(self.log)
         self.ctx = ctx

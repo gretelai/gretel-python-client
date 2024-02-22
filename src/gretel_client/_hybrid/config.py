@@ -7,6 +7,7 @@ from gretel_client._hybrid.workflows_api import HybridWorkflowsApi
 from gretel_client.config import (
     ClientConfig,
     configure_session,
+    DelegatingClientConfig,
     get_session_config,
     RunnerMode,
     set_session_config,
@@ -97,16 +98,13 @@ def configure_hybrid_session(
     )
 
 
-class _HybridSessionConfig(ClientConfig):
+class _HybridSessionConfig(DelegatingClientConfig):
     """
     Client configuration with hybrid settings.
 
     This class can be used as a drop-in replacement of ``ClientConfig`` for all means
     and purposes.
     """
-
-    # Annotations must be inherited from the parent, in order for ``as_dict`` to work.
-    __annotations__ = ClientConfig.__annotations__
 
     _creds_encryption: CredentialsEncryption
     _deployment_user: Optional[str]
@@ -117,8 +115,7 @@ class _HybridSessionConfig(ClientConfig):
         creds_encryption: CredentialsEncryption,
         deployment_user: Optional[str] = None,
     ):
-        settings = session.as_dict
-        super().__init__(**settings)
+        super().__init__(session)
         self._creds_encryption = creds_encryption
         self._deployment_user = deployment_user
 

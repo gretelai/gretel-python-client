@@ -9,7 +9,7 @@ from typing import Optional, Union
 import optuna
 import pandas as pd
 
-from gretel_client.config import ClientConfig, get_session_config
+from gretel_client.config import add_session_context, ClientConfig
 from gretel_client.gretel.config_setup import (
     CONFIG_SETUP_DICT,
     get_model_docs_url,
@@ -30,6 +30,8 @@ logger = logging.getLogger(__name__)
 logger.propagate = False
 logger.addHandler(logging.StreamHandler(sys.stdout))
 logger.setLevel(logging.INFO)
+
+TUNER_SESSION_METADATA = {"tuner": "1"}
 
 
 @dataclass(frozen=True)
@@ -168,21 +170,23 @@ class GretelTuner:
             project: Gretel project. If None, a temp project used. Defaults to None.
             study: Optuna study. If None, new study is created. Defaults to None.
             verbose_logging: If True, print all logs from the submitted Gretel jobs.
-            session: The client configuration to use. Only relevant when no project is
-                specified.
+            session: The client configuration to use. Takes precedence over project
+                session (if provided).
 
         Returns:
             Results dataclass with the best config, study object, and
             trial data as attributes.
         """
 
-        if session is None:
-            if project is None:
-                session = get_session_config()
-            else:
-                session = project.session
-        elif project is not None:
-            # An explicitly passed session should take precedence.
+        # Create tagged session based on highest-priority provided session (if any)
+        if session is None and project is not None:
+            session = project.session
+        session = add_session_context(
+            session=session, client_metrics=TUNER_SESSION_METADATA
+        )
+
+        # Update the project with the tagged session
+        if project is not None:
             project = project.with_session(session)
 
         self.data_source = (
@@ -193,7 +197,7 @@ class GretelTuner:
         optuna_user_logging_level = optuna.logging.get_verbosity()
         optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-        with tmp_project(session=session) if project is None else nullcontext(
+        with tmp_project(session=session) if is_temp_project else nullcontext(
             project
         ) as project:
             self.project = project

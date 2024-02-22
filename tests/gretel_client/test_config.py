@@ -5,6 +5,7 @@ import tempfile
 from pathlib import Path
 from unittest import mock
 from unittest.mock import MagicMock, patch
+from urllib.parse import unquote_plus
 
 import certifi
 import pytest
@@ -14,6 +15,8 @@ from urllib3.exceptions import MaxRetryError
 
 from gretel_client.config import (
     _load_config,
+    add_session_context,
+    CLIENT_METRICS_HEADER_KEY,
     ClientConfig,
     configure_session,
     get_session_config,
@@ -275,11 +278,41 @@ def test_configure_session_cached_values_plus_invalid_overrides(
         os.unlink(tmp.name)
 
 
+def test_metrics_headers(dev_ep):
+    def _get_headers(api):
+        return api.api_client.default_headers
+
+    def get_metrics_header(session):
+        api = session.get_api(ProjectsApi)
+        return unquote_plus(_get_headers(api)[CLIENT_METRICS_HEADER_KEY])
+
+    configure_session(api_key="grtu...")
+
+    common = "python_sdk_version=undefined"
+
+    # Always include the sdk version
+    assert get_metrics_header(get_session_config()) == common
+
+    # Tagged sessions append extra metadata
+    tagged = add_session_context(session=None, client_metrics={"hello": "world"})
+    assert get_metrics_header(tagged) == f"{common};hello=world"
+
+    # Tagged sessions can be composed
+    multi_tagged = add_session_context(
+        session=tagged, client_metrics={"hello": "WORLD", "foo": "bar"}
+    )
+    assert get_metrics_header(multi_tagged) == f"{common};hello=WORLD;foo=bar"
+
+    # add_session_context and resultant Tagged sessions are None-safe
+    no_extra_metrics = add_session_context()
+    assert get_metrics_header(no_extra_metrics) == common
+
+
 @patch("urllib3.PoolManager")
 @patch.dict(os.environ, {"GRETEL_API_KEY": "grtutest"})
 def test_defaults_to_certifi_certs(pool_manager: MagicMock):
     config = ClientConfig.from_env()
-    client = config.get_api(ProjectsApi)
+    config.get_api(ProjectsApi)
 
     _, kwargs = pool_manager.call_args
     assert kwargs.get("ca_certs") == certifi.where()
