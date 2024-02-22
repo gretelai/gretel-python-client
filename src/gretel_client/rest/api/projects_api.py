@@ -1743,6 +1743,7 @@ class ProjectsApi(object):
             Keyword Args:
                 limit (int): Limit number of models to return. [optional]
                 model_name (str): Model name to match on. [optional]
+                workflow_run_id (str): WorkflowRun ID to match on. [optional]
                 sort_by (str): Direction to sort by. Defaults to \"asc\". [optional]
                 sort_field (str): field to sort on. Defaults to \"last_modified\". [optional]
                 _return_http_data_only (bool): response data without head status
@@ -1810,6 +1811,7 @@ class ProjectsApi(object):
                     "project_id",
                     "limit",
                     "model_name",
+                    "workflow_run_id",
                     "sort_by",
                     "sort_field",
                 ],
@@ -1837,6 +1839,7 @@ class ProjectsApi(object):
                     "project_id": (str,),
                     "limit": (int,),
                     "model_name": (str,),
+                    "workflow_run_id": (str,),
                     "sort_by": (str,),
                     "sort_field": (str,),
                 },
@@ -1844,6 +1847,7 @@ class ProjectsApi(object):
                     "project_id": "project_id",
                     "limit": "limit",
                     "model_name": "model_name",
+                    "workflow_run_id": "workflow_run_id",
                     "sort_by": "sort_by",
                     "sort_field": "sort_field",
                 },
@@ -1851,6 +1855,7 @@ class ProjectsApi(object):
                     "project_id": "path",
                     "limit": "query",
                     "model_name": "query",
+                    "workflow_run_id": "query",
                     "sort_by": "query",
                     "sort_field": "query",
                 },
