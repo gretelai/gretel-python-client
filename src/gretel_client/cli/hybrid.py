@@ -1,11 +1,17 @@
+import re
+
 from typing import Optional
 
 import click
 
 from gretel_client.cli.common import pass_session, SessionContext
-from gretel_client.config import get_session_config
+from gretel_client.config import ClientConfig
 from gretel_client.rest_v1.api.clusters_api import ClustersApi
 from gretel_client.rest_v1.models import Cluster
+
+
+class ClusterError(Exception):
+    pass
 
 
 @click.group(
@@ -20,8 +26,8 @@ def environments():
     ...
 
 
-def get_clusters_api() -> ClustersApi:
-    return get_session_config().get_v1_api(ClustersApi)
+def get_clusters_api(*, session: ClientConfig) -> ClustersApi:
+    return session.get_v1_api(ClustersApi)
 
 
 def _format_clusters(clusters: list[Cluster], echo=click.echo):
@@ -29,9 +35,22 @@ def _format_clusters(clusters: list[Cluster], echo=click.echo):
         _format_cluster(cluster, echo=echo)
 
 
+_HEALTH_STATUS_COLORS = {
+    "HEALTH_STATUS_HEALTHY": "green",
+    "HEALTH_STATUS_DEGRADED": "yellow",
+    "HEALTH_STATUS_UNHEALTHY": "red",
+}
+
+
 def _format_cluster(cluster: Cluster, echo=click.echo):
     echo(f"{click.style(cluster.name, bold=True)} ({cluster.owner_profile.email})")
     echo(f"    ID:                    {cluster.guid}")
+
+    health_status = cluster.status.health_status or "HEALTH_STATUS_UNKNOWN"
+    echo(
+        f"    Status:                {click.style(health_status, fg=_HEALTH_STATUS_COLORS.get(health_status, 'red'))}"
+    )
+
     cp_info = click.style("Unknown", fg="red")
     if cluster.cloud_provider:
         cp_type = None
@@ -67,7 +86,7 @@ def list(
     sc: SessionContext,
     owned_only: Optional[bool] = None,
 ):
-    clusters_api = get_clusters_api()
+    clusters_api = get_clusters_api(session=sc.session)
     clusters = clusters_api.list_clusters(
         owned_only=owned_only, expand=["owner"]
     ).clusters
@@ -87,21 +106,51 @@ def get(
     sc: SessionContext,
     environment_name_or_id: str,
 ):
-    clusters_api = get_clusters_api()
-    clusters = [
-        c
-        for c in clusters_api.list_clusters(owned_only=False, expand=["owner"]).clusters
-        if environment_name_or_id in (c.name, c.guid)
-    ]
-    if len(clusters) == 0:
-        sc.log.error(f"No such hybrid environment: '{environment_name_or_id}'")
-        sc.exit(1)
-    if len(clusters) > 1:
-        sc.log.error(f"The name '{environment_name_or_id}' is ambiguous:")
-        sc.log.error(" ")
-        _format_clusters(clusters, echo=sc.log.error)
-        sc.log.error(" ")
-        sc.log.error("Please specify the hybrid environment ID")
-        sc.exit(1)
+    cluster = resolve_hybrid_environment(sc, environment_name_or_id)
+    sc.print(data=cluster, auto_printer=_format_cluster)
 
-    sc.print(data=clusters[0], auto_printer=_format_cluster)
+
+def resolve_hybrid_environment(
+    sc: SessionContext,
+    name_or_id: Optional[str],
+    *,
+    allow_auto_select: bool = False,
+    require: bool = True,
+) -> Optional[Cluster]:
+    name_or_id = (name_or_id or "").strip()
+
+    if not name_or_id and not allow_auto_select:
+        raise ValueError("Hybrid environment name or ID must not be empty")
+
+    clusters_api = get_clusters_api(session=sc.session)
+
+    all_clusters = clusters_api.list_clusters(owned_only=False, expand=["owner"])
+    if not name_or_id and allow_auto_select:
+        if not all_clusters.clusters:
+            raise ClusterError(
+                "No hybrid environments are available. Please consult the documentation "
+                "at https://docs.gretel.ai/operate-and-manage-gretel/gretel-hybrid for "
+                "instructions on setting up a hybrid environment."
+            )
+        if len(all_clusters.clusters) > 1:
+            raise ClusterError(
+                "Multiple hybrid environments are available, but none was specified. Please "
+                "run 'gretel hybrid environments list' to see a list of all available hybrid "
+                "environments, and specify the name or ID of the one you wish to use."
+            )
+        return all_clusters.clusters[0]
+
+    # First see if there is a match by GUID. This always gets preference.
+    matching_by_id = [c for c in all_clusters.clusters if c.guid == name_or_id]
+    if matching_by_id:
+        return matching_by_id[0]
+    matching_by_name = [c for c in all_clusters.clusters if c.name == name_or_id]
+    if not matching_by_name:
+        raise ClusterError(f"No hybrid environment with name '{name_or_id}' exists")
+    if len(matching_by_name) > 1:
+        raise ClusterError(
+            f"Hybrid environment name '{name_or_id}' is ambiguous, run 'gretel hybrid "
+            "environments list' to see all available hybrid environments, then specify the unique ID of the desired cluster."
+        )
+
+    return matching_by_name[0]

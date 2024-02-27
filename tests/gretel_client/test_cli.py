@@ -8,6 +8,7 @@ import pytest
 from click.testing import CliRunner
 
 from gretel_client.cli.cli import cli
+from gretel_client.cli.hybrid import ClusterError
 from gretel_client.cli.utils.parser_utils import RefData
 from gretel_client.config import (
     add_session_context,
@@ -22,6 +23,9 @@ from gretel_client.config import (
 )
 from gretel_client.projects.exceptions import DockerEnvironmentError
 from gretel_client.projects.jobs import Status
+from gretel_client.projects.projects import Project
+from gretel_client.rest_v1.models.cluster import Cluster
+from gretel_client.rest_v1.models.user_profile import UserProfile
 
 
 @pytest.fixture
@@ -93,6 +97,352 @@ def get_project() -> MagicMock:
 def container_run() -> MagicMock:
     with patch("gretel_client.cli.models.ContainerRun") as container_run:
         yield container_run
+
+
+@patch("gretel_client.cli.projects.create_project")
+def test_create_nonhybrid_project_warn(create_project: MagicMock, runner: CliRunner):
+    mock_project = MagicMock()
+    mock_project.name = "my-project"
+    mock_project.runner_mode = None
+    create_project.return_value = mock_project
+
+    configure_session(
+        ClientConfig(default_runner="hybrid", artifact_endpoint="s3://my-artifacts")
+    )
+    cmd = runner.invoke(
+        cli,
+        [
+            "projects",
+            "create",
+            "--name",
+            "my-project",
+        ],
+    )
+    assert cmd.exit_code == 0
+    create_project.assert_called_once_with(
+        name="my-project",
+        desc=None,
+        display_name=None,
+        session=ANY,
+        runner_mode=None,
+        hybrid_environment_guid=None,
+    )
+    assert "'--project-type hybrid'" in cmd.stdout
+
+
+@patch("gretel_client.cli.projects.create_project")
+def test_create_nonhybrid_project_no_warn_if_not_hybrid_default_runner(
+    create_project: MagicMock, runner: CliRunner
+):
+    mock_project = MagicMock()
+    mock_project.name = "my-project"
+    mock_project.runner_mode = None
+    create_project.return_value = mock_project
+
+    configure_session(ClientConfig(default_runner="cloud"))
+    cmd = runner.invoke(
+        cli,
+        [
+            "projects",
+            "create",
+            "--name",
+            "my-project",
+        ],
+    )
+    assert cmd.exit_code == 0
+    create_project.assert_called_once_with(
+        name="my-project",
+        desc=None,
+        display_name=None,
+        session=ANY,
+        runner_mode=None,
+        hybrid_environment_guid=None,
+    )
+    assert "'--project-type hybrid'" not in cmd.stdout
+
+
+@patch("gretel_client.cli.projects.create_project")
+def test_create_nonhybrid_project_no_warn_if_explicit_project_type(
+    create_project: MagicMock, runner: CliRunner
+):
+    mock_project = MagicMock()
+    mock_project.name = "my-project"
+    mock_project.runner_mode = None
+    create_project.return_value = mock_project
+
+    configure_session(
+        ClientConfig(default_runner="hybrid", artifact_endpoint="s3://my-artifacts")
+    )
+    cmd = runner.invoke(
+        cli,
+        [
+            "projects",
+            "create",
+            "--name",
+            "my-project",
+            "--project-type",
+            "CLOUD",
+        ],
+    )
+    assert cmd.exit_code == 0
+    create_project.assert_called_once_with(
+        name="my-project",
+        desc=None,
+        display_name=None,
+        session=ANY,
+        runner_mode=RunnerMode.CLOUD,
+        hybrid_environment_guid=None,
+    )
+    assert "'--project-type hybrid'" not in cmd.stdout
+
+
+@patch("gretel_client.cli.projects.create_project")
+def test_create_hybrid_project_no_warn_if_implicit(
+    create_project: MagicMock, runner: CliRunner
+):
+    mock_project = MagicMock()
+    mock_project.name = "my-project"
+    mock_project.runner_mode = RunnerMode.HYBRID
+    create_project.return_value = mock_project
+
+    configure_session(
+        ClientConfig(default_runner="hybrid", artifact_endpoint="s3://my-artifacts")
+    )
+    cmd = runner.invoke(
+        cli,
+        [
+            "projects",
+            "create",
+            "--name",
+            "my-project",
+        ],
+    )
+    assert cmd.exit_code == 0
+    create_project.assert_called_once_with(
+        name="my-project",
+        desc=None,
+        display_name=None,
+        session=ANY,
+        runner_mode=None,
+        hybrid_environment_guid=None,
+    )
+    assert "'--project-type hybrid'" not in cmd.stdout
+
+
+@patch("gretel_client.cli.common.add_session_context")
+def test_create_cloud_project_with_hybrid_env_fails(
+    add_session_context: MagicMock, runner: CliRunner
+):
+    add_session_context.return_value.email = "user@example.com"
+    cmd = runner.invoke(
+        cli,
+        [
+            "projects",
+            "create",
+            "--project-type",
+            "cloud",
+            "--hybrid-environment",
+            "my-hybrid-env",
+        ],
+    )
+    assert cmd.exit_code != 0
+    assert (
+        "A hybrid environment can only be specified for hybrid, not cloud projects"
+        in cmd.output
+    )
+
+
+@patch("gretel_client.cli.common.add_session_context")
+@patch("gretel_client.cli.projects.resolve_hybrid_environment")
+@patch("gretel_client.cli.projects.create_project")
+def test_create_hybrid_project_without_hybrid_env_succeeds(
+    create_project: MagicMock,
+    resolve_hybrid_environment: MagicMock,
+    add_session_context: MagicMock,
+    runner: CliRunner,
+):
+    add_session_context.return_value.email = "user@example.com"
+
+    resolve_hybrid_environment.return_value = Cluster(
+        guid="cluster_1234",
+        name="my-hybrid-env",
+        owner_profile=UserProfile(email="foo@example.com"),
+    )
+
+    cmd = runner.invoke(
+        cli,
+        [
+            "projects",
+            "create",
+            "--project-type",
+            "hybrid",
+        ],
+    )
+    assert cmd.exit_code == 0
+    assert "Creating a hybrid project" not in cmd.output
+    assert (
+        "Automatically selected only available hybrid environment 'my-hybrid-env'"
+        in cmd.output
+    )
+    assert (
+        "The deployment user of the hybrid environment, foo@example.com," in cmd.output
+    )
+
+    resolve_hybrid_environment.assert_called_once_with(
+        ANY, None, allow_auto_select=True
+    )
+    create_project.assert_called_once_with(
+        name=None,
+        desc=None,
+        display_name=None,
+        session=ANY,
+        runner_mode=RunnerMode.HYBRID,
+        hybrid_environment_guid="cluster_1234",
+    )
+
+
+@patch("gretel_client.cli.common.add_session_context")
+@patch("gretel_client.cli.projects.resolve_hybrid_environment")
+@patch("gretel_client.cli.projects.create_project")
+def test_create_project_with_hybrid_env_succeeds(
+    create_project: MagicMock,
+    resolve_hybrid_environment: MagicMock,
+    add_session_context: MagicMock,
+    runner: CliRunner,
+):
+    add_session_context.return_value.email = "user@example.com"
+
+    resolve_hybrid_environment.return_value = Cluster(
+        guid="cluster_1234",
+        name="my-hybrid-env",
+        owner_profile=UserProfile(email="foo@example.com"),
+    )
+
+    cmd = runner.invoke(
+        cli,
+        [
+            "projects",
+            "create",
+            "--hybrid-environment",
+            "my-hybrid-env",
+        ],
+    )
+    assert cmd.exit_code == 0
+    assert "Creating a hybrid project" in cmd.output
+    assert (
+        "The deployment user of the hybrid environment, foo@example.com," in cmd.output
+    )
+
+    resolve_hybrid_environment.assert_called_once_with(
+        ANY, "my-hybrid-env", allow_auto_select=True
+    )
+    create_project.assert_called_once_with(
+        name=None,
+        desc=None,
+        display_name=None,
+        session=ANY,
+        runner_mode=RunnerMode.HYBRID,
+        hybrid_environment_guid="cluster_1234",
+    )
+
+
+@patch("gretel_client.cli.common.add_session_context")
+@patch("gretel_client.cli.projects.resolve_hybrid_environment")
+def test_create_project_with_no_available_hybrid_env_fails_with_none_hint(
+    resolve_hybrid_environment: MagicMock,
+    add_session_context: MagicMock,
+    runner: CliRunner,
+):
+    add_session_context.return_value.email = "user@example.com"
+
+    resolve_hybrid_environment.side_effect = ClusterError(
+        "no hybrid environments are available"
+    )
+
+    cmd = runner.invoke(
+        cli,
+        [
+            "projects",
+            "create",
+            "--project-type",
+            "hybrid",
+        ],
+    )
+    assert cmd.exit_code != 0
+    assert "no hybrid environments are available" in cmd.output
+    assert (
+        "If you wish to create a hybrid project not bound to any hybrid environment"
+        in cmd.output
+    )
+
+
+@patch("gretel_client.cli.common.add_session_context")
+@patch("gretel_client.cli.projects.resolve_hybrid_environment")
+def test_create_project_with_nonexistent_hybrid_env_fails_with_none_hint(
+    resolve_hybrid_environment: MagicMock,
+    add_session_context: MagicMock,
+    runner: CliRunner,
+):
+    add_session_context.return_value.email = "user@example.com"
+
+    resolve_hybrid_environment.side_effect = ClusterError(
+        "no such hybrid environment 'foo'"
+    )
+
+    cmd = runner.invoke(
+        cli,
+        [
+            "projects",
+            "create",
+            "--hybrid-environment",
+            "foo",
+        ],
+    )
+    assert cmd.exit_code != 0
+    assert "Creating a hybrid project" in cmd.output
+    assert "no such hybrid environment 'foo'" in cmd.output
+    assert (
+        "If you wish to create a hybrid project not bound to any hybrid environment"
+        not in cmd.output
+    )
+
+
+@patch("gretel_client.cli.common.add_session_context")
+@patch("gretel_client.cli.projects.create_project")
+@patch("gretel_client.cli.projects.resolve_hybrid_environment")
+def test_create_project_with_none_hybrid_env_succeeds(
+    resolve_hybrid_environment: MagicMock,
+    create_project: MagicMock,
+    add_session_context: MagicMock,
+    runner: CliRunner,
+):
+    add_session_context.return_value.email = "user@example.com"
+
+    create_project.return_value.runner_mode = RunnerMode.HYBRID
+    create_project.return_value.cluster_guid = None
+
+    cmd = runner.invoke(
+        cli,
+        [
+            "projects",
+            "create",
+            "--hybrid-environment",
+            "none",
+        ],
+    )
+    assert cmd.exit_code == 0
+    assert "Creating a hybrid project" in cmd.output
+    assert "for instructions on setting up a hybrid environment." in cmd.output
+
+    resolve_hybrid_environment.assert_not_called()
+    create_project.assert_called_once_with(
+        name=None,
+        desc=None,
+        display_name=None,
+        session=ANY,
+        runner_mode=RunnerMode.HYBRID,
+        hybrid_environment_guid=None,
+    )
 
 
 def test_local_model_upload_flag(

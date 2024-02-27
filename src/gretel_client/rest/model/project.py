@@ -92,6 +92,10 @@ class Project(ModelNormal):
                 str,
                 none_type,
             ),  # noqa: E501
+            "cluster_guid": (
+                str,
+                none_type,
+            ),  # noqa: E501
         }
 
     @cached_property
@@ -103,6 +107,7 @@ class Project(ModelNormal):
         "display_name": "display_name",  # noqa: E501
         "description": "description",  # noqa: E501
         "runner_mode": "runner_mode",  # noqa: E501
+        "cluster_guid": "cluster_guid",  # noqa: E501
     }
 
     _composed_schemas = {}
@@ -157,6 +162,7 @@ class Project(ModelNormal):
             display_name (str, none_type): [optional]  # noqa: E501
             description (str, none_type): [optional]  # noqa: E501
             runner_mode (str, none_type): [optional]  # noqa: E501
+            cluster_guid (str, none_type): [optional]  # noqa: E501
         """
 
         _check_type = kwargs.pop("_check_type", True)

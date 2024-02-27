@@ -313,6 +313,7 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
         display_name="display_name_example",
         description="description_example",
         runner_mode="cloud",
+        cluster_guid="cluster_guid_example",
     ) # Project |  (optional)
 
     # example passing only required values which don't have defaults set

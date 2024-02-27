@@ -366,6 +366,7 @@ def search_projects(
             project_guid=p.get("guid"),
             desc=p.get("description"),
             display_name=p.get("display_name"),
+            runner_mode=p.get("runner_mode"),
             session=session,
         )
         for p in projects.get(DATA).get(PROJECTS)
@@ -378,6 +379,8 @@ def create_project(
     desc: Optional[str] = None,
     display_name: Optional[str] = None,
     session: Optional[ClientConfig] = None,
+    runner_mode: Optional[Union[RunnerMode, str]] = None,
+    hybrid_environment_guid: Optional[str] = None,
 ) -> Project:
     """
     Excplit project creation. This function will simply call
@@ -394,6 +397,14 @@ def create_project(
         payload["description"] = desc
     if display_name:
         payload["display_name"] = display_name
+    if runner_mode := RunnerMode.parse_optional(runner_mode):
+        payload["runner_mode"] = runner_mode.value
+    if hybrid_environment_guid:
+        if runner_mode != RunnerMode.HYBRID:
+            raise ValueError(
+                "cannot specify a hybrid environment for non-hybrid projects"
+            )
+        payload["cluster_guid"] = hybrid_environment_guid
 
     resp = api.create_project(project=models.Project(**payload))
     project = api.get_project(project_id=resp.get(DATA).get("id"))
@@ -406,6 +417,7 @@ def create_project(
         project_guid=proj.get("guid"),
         desc=proj.get("description"),
         display_name=proj.get("display_name"),
+        runner_mode=proj.get("runner_mode"),
         session=session,
     )
 
