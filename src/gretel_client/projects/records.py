@@ -8,7 +8,7 @@ from gretel_client.cli.utils.parser_utils import (
     RefData,
     RefDataTypes,
 )
-from gretel_client.config import DEFAULT_RUNNER, RunnerMode
+from gretel_client.config import RunnerMode
 from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.common import f, ModelRunArtifact
 from gretel_client.projects.exceptions import RecordHandlerError, RecordHandlerNotFound
@@ -57,6 +57,9 @@ class RecordHandler(Job):
             "ref_data": self.ref_data.ref_dict,
         }
         body = {key: value for key, value in body.items() if value is not None}
+        provenance = self.project.session.context.job_provenance
+        if len(provenance) > 0:
+            body["provenance"] = self.provenance
 
         handler = self.model._projects_api.create_record_handler(
             project_id=self.model.project.project_guid,

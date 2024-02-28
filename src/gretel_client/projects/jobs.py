@@ -26,7 +26,7 @@ import smart_open
 import gretel_client.rest.exceptions
 
 from gretel_client.cli.utils.parser_utils import RefData
-from gretel_client.config import ClientConfig, get_logger, RunnerMode
+from gretel_client.config import ClientConfig, Context, get_logger, RunnerMode
 from gretel_client.dataframe import _DataFrameT
 from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.artifact_handlers import (

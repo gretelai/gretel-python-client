@@ -6,7 +6,7 @@ import os
 import platform
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from functools import cached_property
 from getpass import getpass
@@ -85,6 +85,20 @@ log = get_logger(__name__)
 @dataclass
 class Context:
     client_metrics: dict[str, str]
+    job_provenance: dict[str, str]
+
+    @classmethod
+    def empty(cls) -> Context:
+        return Context(client_metrics={}, job_provenance={})
+
+    def update(
+        self, client_metrics: dict[str, str], job_provenance: dict[str, str]
+    ) -> Context:
+        return replace(
+            self,
+            client_metrics=self.client_metrics | client_metrics,
+            job_provenance=self.job_provenance | job_provenance,
+        )
 
 
 def _get_client_version() -> str:
@@ -244,6 +258,11 @@ class ClientConfig(ABC):
                 if k in DefaultClientConfig.__annotations__.keys()
             }
         )
+
+    @property
+    @abstractmethod
+    def context(self) -> Context:
+        ...
 
     @property
     @abstractmethod
@@ -417,6 +436,10 @@ class DefaultClientConfig(ClientConfig):
                 "Hybrid runner requires a custom artifact endpoint. Please reconfigure your session."
             )
 
+    @property
+    def context(self) -> Context:
+        return Context.empty()
+
     def _cert_file(self) -> str:
         ssl_cert_file = os.getenv("SSL_CERT_FILE")
         requests_ca_bundle = os.getenv("REQUESTS_CA_BUNDLE")
@@ -566,6 +589,10 @@ class DelegatingClientConfig(ClientConfig):
         self._delegate = delegate
 
     @property
+    def context(self) -> Context:
+        return self._delegate.context
+
+    @property
     def endpoint(self) -> str:
         return self._delegate.endpoint
 
@@ -635,6 +662,10 @@ class TaggedClientConfig(DelegatingClientConfig):
         super().__init__(delegate)
         self._context = context
 
+    @property
+    def context(self) -> Context:
+        return self._context
+
     def get_api(
         self,
         api_interface: Type[T],
@@ -643,7 +674,7 @@ class TaggedClientConfig(DelegatingClientConfig):
         *,
         default_headers: Optional[dict[str, str]] = None,
     ) -> T:
-        all_headers = _metrics_headers(self._context)
+        all_headers = _metrics_headers(self.context)
         if default_headers:
             all_headers |= default_headers
         return super().get_api(
@@ -661,7 +692,7 @@ class TaggedClientConfig(DelegatingClientConfig):
         *,
         default_headers: Optional[dict[str, str]] = None,
     ) -> T:
-        all_headers = _metrics_headers(self._context)
+        all_headers = _metrics_headers(self.context)
         if default_headers:
             all_headers |= default_headers
         return super().get_v1_api(
@@ -676,14 +707,17 @@ def add_session_context(
     *,
     session: Optional[ClientConfig] = None,
     client_metrics: Optional[dict[str, str]] = None,
+    job_provenance: Optional[dict[str, str]] = None,
 ) -> TaggedClientConfig:
     delegate = session or get_session_config()
 
-    context = Context(
+    curr_context = delegate.context or Context.empty()
+    new_context = curr_context.update(
         client_metrics=client_metrics or {},
+        job_provenance=job_provenance or {},
     )
 
-    return TaggedClientConfig(context=context, delegate=delegate)
+    return TaggedClientConfig(context=new_context, delegate=delegate)
 
 
 _DEFAULT_CONFIG_PATH = Path().home() / f".{GRETEL}" / "config.json"  # noqa

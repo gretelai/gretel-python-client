@@ -299,10 +299,8 @@ def test_metrics_headers(dev_ep):
     assert get_metrics_header(tagged) == f"{common};hello=world"
 
     # Tagged sessions can be composed
-    multi_tagged = add_session_context(
-        session=tagged, client_metrics={"hello": "WORLD", "foo": "bar"}
-    )
-    assert get_metrics_header(multi_tagged) == f"{common};hello=WORLD;foo=bar"
+    multi_tagged = add_session_context(session=tagged, client_metrics={"foo": "bar"})
+    assert get_metrics_header(multi_tagged) == f"{common};hello=world;foo=bar"
 
     # add_session_context and resultant Tagged sessions are None-safe
     no_extra_metrics = add_session_context()

@@ -193,9 +193,17 @@ class Model(Job):
         if self.model_id:
             raise RuntimeError("This model was already submitted.")
 
+        body = self._local_model_config
+        provenance = self.project.session.context.job_provenance
+        if len(provenance) > 0:
+            body = {
+                "config": body,
+                "provenance": provenance,
+            }
+
         resp = self._projects_api.create_model(
             project_id=self.project.project_guid,
-            body=self._local_model_config,
+            body=body,
             dry_run=YES if dry_run else NO,
             runner_mode=runner_mode.api_value,
         )

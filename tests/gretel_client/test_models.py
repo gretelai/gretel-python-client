@@ -9,7 +9,7 @@ import pytest
 import yaml
 
 from gretel_client.cli.utils.parser_utils import RefData
-from gretel_client.config import RunnerMode
+from gretel_client.config import add_session_context, RunnerMode
 from gretel_client.projects.artifact_handlers import (
     CloudArtifactsHandler,
     HybridArtifactsHandler,
@@ -185,6 +185,24 @@ def test_does_poll_status_and_logs(
     ]
     updates = list(m.poll_logs_status())
     assert len(updates) == 8
+
+
+def test_provenance(m: Model, transform_model_path):
+    # When job provenance data is present, the body of the API request nests
+    # the model config under "config" and the provenance data under "provenance"
+    job_provenance = {
+        "workflow_run_id": "wr_123",
+        "workflow_action_name": "synthesize",
+    }
+    session = add_session_context(job_provenance=job_provenance)
+    m.project.session = session
+
+    m.submit(runner_mode=RunnerMode.CLOUD)
+
+    body = m._projects_api.create_model.call_args.kwargs["body"]
+    assert "schema_version" in body["config"].keys()
+    assert "models" in body["config"].keys()
+    assert body["provenance"] == job_provenance
 
 
 def test_does_read_remote_model():
