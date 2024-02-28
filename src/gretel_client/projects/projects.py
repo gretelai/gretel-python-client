@@ -164,7 +164,7 @@ class Project:
             logger.warning(
                 "``include_models`` is deprecated and will be removed in the 0.9 release."
             )
-        self.projects_api.delete_project(project_id=self.project_id)
+        self.projects_api.delete_project(project_id=self.project_guid)
         self._deleted = True
 
     @check_not_deleted

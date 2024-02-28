@@ -119,7 +119,7 @@ class _Project(Protocol):
 def cloud_handler(project: _Project) -> CloudArtifactsHandler:
     return CloudArtifactsHandler(
         projects_api=project.projects_api,
-        project_id=project.project_id,
+        project_guid=project.project_guid,
         project_name=project.name,
     )
 
@@ -191,9 +191,9 @@ class ArtifactsHandler(Protocol):
 
 
 class CloudArtifactsHandler:
-    def __init__(self, projects_api: ProjectsApi, project_id: str, project_name: str):
+    def __init__(self, projects_api: ProjectsApi, project_guid: str, project_name: str):
         self.projects_api = projects_api
-        self.project_id = project_id
+        self.project_guid = project_guid
         self.project_name = project_name
 
     def validate_data_source(
@@ -213,7 +213,7 @@ class CloudArtifactsHandler:
             artifact_path, file_name = art_path_and_file
             with smart_open.open(artifact_path, "rb", ignore_ext=True) as src:
                 art_resp = self.projects_api.create_artifact(
-                    project_id=self.project_name, artifact=Artifact(filename=file_name)
+                    project_id=self.project_guid, artifact=Artifact(filename=file_name)
                 )
                 artifact_key = art_resp[f.DATA][f.KEY]
                 url = art_resp[f.DATA][f.URL]
@@ -227,18 +227,18 @@ class CloudArtifactsHandler:
         return isinstance(artifact_path, str) and artifact_path.startswith("gretel_")
 
     def delete_project_artifact(self, key: str) -> None:
-        return self.projects_api.delete_artifact(project_id=self.project_name, key=key)
+        return self.projects_api.delete_artifact(project_id=self.project_guid, key=key)
 
     def list_project_artifacts(self) -> List[dict]:
         return (
-            self.projects_api.get_artifacts(project_id=self.project_name)
+            self.projects_api.get_artifacts(project_id=self.project_guid)
             .get(f.DATA)
             .get(f.ARTIFACTS)
         )
 
     def get_project_artifact_link(self, key: str) -> str:
         resp = self.projects_api.download_artifact(
-            project_id=self.project_name, key=key
+            project_id=self.project_guid, key=key
         )
         return resp[f.DATA][f.DATA][f.URL]
 
@@ -276,7 +276,7 @@ class CloudArtifactsHandler:
         resp = None
         try:
             resp = self.projects_api.get_artifact_manifest(
-                project_id=self.project_name, key=key
+                project_id=self.project_guid, key=key
             )
         except NotFoundException:
             raise ManifestNotFoundException()
@@ -288,7 +288,7 @@ class CloudArtifactsHandler:
 
     def get_model_artifact_link(self, model_id: str, artifact_type: str) -> str:
         art_resp = self.projects_api.get_model_artifact(
-            project_id=self.project_name, model_id=model_id, type=artifact_type
+            project_id=self.project_guid, model_id=model_id, type=artifact_type
         )
         return art_resp[f.DATA][f.URL]
 
@@ -299,7 +299,7 @@ class CloudArtifactsHandler:
         artifact_type: str,
     ) -> str:
         resp = self.projects_api.get_record_handler_artifact(
-            project_id=self.project_name,
+            project_id=self.project_guid,
             model_id=model_id,
             record_handler_id=record_handler_id,
             type=artifact_type,

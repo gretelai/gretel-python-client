@@ -59,7 +59,7 @@ class RecordHandler(Job):
         body = {key: value for key, value in body.items() if value is not None}
 
         handler = self.model._projects_api.create_record_handler(
-            project_id=self.model.project.project_id,
+            project_id=self.model.project.project_guid,
             model_id=self.model.model_id,
             body=body,
             runner_mode=runner_mode.api_value,
@@ -150,7 +150,7 @@ class RecordHandler(Job):
         if extra_expand:
             expand.extend(extra_expand)
         return self._projects_api.get_record_handler(
-            project_id=self.project.name,
+            project_id=self.project.project_guid,
             model_id=self.model.model_id,
             record_handler_id=self.record_id,
             expand=expand,
@@ -158,7 +158,7 @@ class RecordHandler(Job):
 
     def _do_cancel_job(self):
         self._projects_api.update_record_handler(
-            project_id=self.project.project_id,
+            project_id=self.project.project_guid,
             model_id=self.model.model_id,
             record_handler_id=self.record_id,
             body={f.STATUS: Status.CANCELLED.value},
@@ -174,7 +174,7 @@ class RecordHandler(Job):
     def delete(self):
         """Deletes the record handler."""
         self._projects_api.delete_record_handler(
-            project_id=self.project.project_id,
+            project_id=self.project.project_guid,
             model_id=self.model.model_id,
             record_handler_id=self.record_id,
         )

@@ -194,7 +194,7 @@ class Model(Job):
             raise RuntimeError("This model was already submitted.")
 
         resp = self._projects_api.create_model(
-            project_id=self.project.name,
+            project_id=self.project.project_guid,
             body=self._local_model_config,
             dry_run=YES if dry_run else NO,
             runner_mode=runner_mode.api_value,
@@ -349,7 +349,7 @@ class Model(Job):
         """Deletes the remote model."""
         if self.model_id:
             return self._projects_api.delete_model(
-                project_id=self.project.name, model_id=self.model_id
+                project_id=self.project.project_guid, model_id=self.model_id
             )
 
     def validate_data_source(self):
@@ -380,14 +380,14 @@ class Model(Job):
             self.project.default_artifacts_handler.validate_data_source(data_source)
 
     def __repr__(self) -> str:
-        return f"Model(id={self.model_id}, project={self.project.name})"
+        return f"Model(id={self.model_id}, project={self.project.project_guid})"
 
     def _do_get_job_details(self, extra_expand: Optional[list[str]] = None):
         expand = [f.LOGS]
         if extra_expand:
             expand.extend(extra_expand)
         return self._projects_api.get_model(
-            project_id=self.project.name, model_id=self.model_id, expand=expand
+            project_id=self.project.project_guid, model_id=self.model_id, expand=expand
         )
 
     def create_record_handler_obj(
