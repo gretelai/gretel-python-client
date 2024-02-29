@@ -305,6 +305,25 @@ class ClientConfig(ABC):
         return "prod"
 
     @abstractmethod
+    def _get_api_client_generic(
+        self,
+        client_cls: Type[ClientT],
+        config_cls: Type[ConfigT],
+        max_retry_attempts: int = 3,
+        backoff_factor: float = 1,
+        *,
+        default_headers: Optional[dict[str, str]] = None,
+    ) -> ClientT:
+        ...
+
+    def _get_api_client(self, *args, **kwargs) -> ApiClient:
+        return self._get_api_client_generic(ApiClient, Configuration, *args, **kwargs)
+
+    def _get_v1_api_client(self, *args, **kwargs) -> V1ApiClient:
+        return self._get_api_client_generic(
+            V1ApiClient, V1Configuration, *args, **kwargs
+        )
+
     def get_api(
         self,
         api_interface: Type[T],
@@ -315,6 +334,7 @@ class ClientConfig(ABC):
     ) -> T:
         """Instantiates and configures an api client for a given
         component interface.
+
         Args:
             api_interface: The api interface to instantiate
             max_retry_attempts: The number of times to retry a failed
@@ -323,9 +343,12 @@ class ClientConfig(ABC):
                 attempts. A base factor of 2 will applied to this value
                 to determine the time between attempts.
         """
-        ...
+        return api_interface(
+            self._get_api_client(
+                max_retry_attempts, backoff_factor, default_headers=default_headers
+            )
+        )
 
-    @abstractmethod
     def get_v1_api(
         self,
         api_interface: Type[T],
@@ -334,7 +357,11 @@ class ClientConfig(ABC):
         *,
         default_headers: Optional[dict[str, str]] = None,
     ) -> T:
-        ...
+        return api_interface(
+            self._get_v1_api_client(
+                max_retry_attempts, backoff_factor, default_headers=default_headers
+            )
+        )
 
     @abstractmethod
     def update_default_project(self, project_id: str):
@@ -511,53 +538,6 @@ class DefaultClientConfig(ClientConfig):
         client.default_headers.update(_metrics_headers() | (default_headers or {}))
         return client
 
-    def _get_api_client(self, *args, **kwargs) -> ApiClient:
-        return self._get_api_client_generic(ApiClient, Configuration, *args, **kwargs)
-
-    def _get_v1_api_client(self, *args, **kwargs) -> V1ApiClient:
-        return self._get_api_client_generic(
-            V1ApiClient, V1Configuration, *args, **kwargs
-        )
-
-    def get_api(
-        self,
-        api_interface: Type[T],
-        max_retry_attempts: int = 5,
-        backoff_factor: float = 1,
-        *,
-        default_headers: Optional[dict[str, str]] = None,
-    ) -> T:
-        """Instantiates and configures an api client for a given
-        component interface.
-
-        Args:
-            api_interface: The api interface to instantiate
-            max_retry_attempts: The number of times to retry a failed
-                api request.
-            backoff_factor: A back factor to apply between retry
-                attempts. A base factor of 2 will applied to this value
-                to determine the time between attempts.
-        """
-        return api_interface(
-            self._get_api_client(
-                max_retry_attempts, backoff_factor, default_headers=default_headers
-            )
-        )
-
-    def get_v1_api(
-        self,
-        api_interface: Type[T],
-        max_retry_attempts: int = 5,
-        backoff_factor: float = 1,
-        *,
-        default_headers: Optional[dict[str, str]] = None,
-    ) -> T:
-        return api_interface(
-            self._get_v1_api_client(
-                max_retry_attempts, backoff_factor, default_headers=default_headers
-            )
-        )
-
     def _check_project(self, project_name: str = None) -> Optional[str]:
         if not project_name:
             return None
@@ -616,33 +596,20 @@ class DelegatingClientConfig(ClientConfig):
     def preview_features(self) -> str:
         return self._delegate.preview_features
 
-    def get_api(
+    def _get_api_client_generic(
         self,
-        api_interface: Type[T],
-        max_retry_attempts: int = 5,
+        client_cls: Type[ClientT],
+        config_cls: Type[ConfigT],
+        max_retry_attempts: int = 3,
         backoff_factor: float = 1,
         *,
         default_headers: Optional[dict[str, str]] = None,
-    ) -> T:
-        return self._delegate.get_api(
-            api_interface,
-            max_retry_attempts,
-            backoff_factor,
-            default_headers=default_headers,
-        )
-
-    def get_v1_api(
-        self,
-        api_interface: Type[T],
-        max_retry_attempts: int = 5,
-        backoff_factor: float = 1,
-        *,
-        default_headers: Optional[dict[str, str]] = None,
-    ) -> T:
-        return self._delegate.get_v1_api(
-            api_interface,
-            max_retry_attempts,
-            backoff_factor,
+    ) -> ClientT:
+        return self._delegate._get_api_client_generic(
+            client_cls=client_cls,
+            config_cls=config_cls,
+            max_retry_attempts=max_retry_attempts,
+            backoff_factor=backoff_factor,
             default_headers=default_headers,
         )
 
@@ -665,6 +632,24 @@ class TaggedClientConfig(DelegatingClientConfig):
     @property
     def context(self) -> Context:
         return self._context
+
+    def _get_api_client_generic(
+        self,
+        client_cls: Type[ClientT],
+        config_cls: Type[ConfigT],
+        max_retry_attempts: int = 3,
+        backoff_factor: float = 1,
+        *,
+        default_headers: Optional[dict[str, str]] = None,
+    ) -> ClientT:
+        all_headers = _metrics_headers(self.context) | (default_headers or {})
+        return super()._get_api_client_generic(
+            client_cls=client_cls,
+            config_cls=config_cls,
+            max_retry_attempts=max_retry_attempts,
+            backoff_factor=backoff_factor,
+            default_headers=all_headers,
+        )
 
     def get_api(
         self,
