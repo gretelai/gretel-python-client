@@ -64,7 +64,7 @@ class RecordHandler(Job):
         body = {key: value for key, value in body.items() if value is not None}
         provenance = self.project.session.context.job_provenance
         if len(provenance) > 0:
-            body["provenance"] = self.provenance
+            body["provenance"] = provenance
 
         try:
             handler = self.model._projects_api.create_record_handler(
