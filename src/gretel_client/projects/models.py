@@ -26,11 +26,13 @@ from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.common import f, ModelArtifact, NO, YES
 from gretel_client.projects.exceptions import (
     GretelJobNotFound,
+    MaxConcurrentJobsException,
     ModelConfigError,
     ModelNotFoundError,
 )
 from gretel_client.projects.jobs import Job, Status
 from gretel_client.projects.records import RecordHandler
+from gretel_client.rest.exceptions import ApiException
 
 if TYPE_CHECKING:
     from gretel_client.projects import Project
@@ -185,7 +187,8 @@ class Model(Job):
             - ``ModelConfigError`` if the specified model config is invalid.
             - ``RuntimeError`` if the model is submitted more than once.
             - ``ApiException`` if there is a problem submitting the model to
-                Gretel's api.
+                Gretel's api. If the problem was due specifically to reaching the.
+                limit on concurrent jobs, raises ``MaxConcurrentJobsException`` subclass
         """
         if not self._local_model_config:
             raise ModelConfigError("No model config exists to submit.")
@@ -201,12 +204,15 @@ class Model(Job):
                 "provenance": provenance,
             }
 
-        resp = self._projects_api.create_model(
-            project_id=self.project.project_guid,
-            body=body,
-            dry_run=YES if dry_run else NO,
-            runner_mode=runner_mode.api_value,
-        )
+        try:
+            resp = self._projects_api.create_model(
+                project_id=self.project.project_guid,
+                body=body,
+                dry_run=YES if dry_run else NO,
+                runner_mode=runner_mode.api_value,
+            )
+        except ApiException as ex:
+            self._handle_submit_error(ex)
 
         self._data: dict = resp[f.DATA]
         self.worker_key = resp[f.WORKER_KEY]

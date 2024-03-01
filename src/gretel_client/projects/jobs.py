@@ -26,7 +26,7 @@ import smart_open
 import gretel_client.rest.exceptions
 
 from gretel_client.cli.utils.parser_utils import RefData
-from gretel_client.config import ClientConfig, Context, get_logger, RunnerMode
+from gretel_client.config import ClientConfig, get_logger, RunnerMode
 from gretel_client.dataframe import _DataFrameT
 from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.artifact_handlers import (
@@ -36,8 +36,13 @@ from gretel_client.projects.artifact_handlers import (
     HybridArtifactsHandler,
 )
 from gretel_client.projects.common import f, ModelArtifact, WAIT_UNTIL_DONE
-from gretel_client.projects.exceptions import GretelJobNotFound, WaitTimeExceeded
+from gretel_client.projects.exceptions import (
+    GretelJobNotFound,
+    MaxConcurrentJobsException,
+    WaitTimeExceeded,
+)
 from gretel_client.rest.api.projects_api import ProjectsApi
+from gretel_client.rest.exceptions import ApiException
 
 if TYPE_CHECKING:
     from gretel_client.projects import Project
@@ -608,3 +613,10 @@ class Job(ABC):
     def container_image(self) -> str:
         """Return the container image for the job."""
         ...
+
+    def _handle_submit_error(self, apix: ApiException) -> None:
+        if "Maximum number of" in str(apix):
+            raise MaxConcurrentJobsException(
+                status=apix.status, reason=apix.reason
+            ) from apix
+        raise apix

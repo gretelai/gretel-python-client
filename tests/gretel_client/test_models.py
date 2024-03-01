@@ -14,8 +14,12 @@ from gretel_client.projects.artifact_handlers import (
     CloudArtifactsHandler,
     HybridArtifactsHandler,
 )
-from gretel_client.projects.exceptions import DataSourceError
+from gretel_client.projects.exceptions import (
+    DataSourceError,
+    MaxConcurrentJobsException,
+)
 from gretel_client.projects.models import Model, ModelConfigError, read_model_config
+from gretel_client.rest.exceptions import ApiException
 
 
 @pytest.fixture
@@ -166,6 +170,31 @@ def test_model_submit_bad_runner_modes(m: Model):
     with pytest.raises(ValueError) as err:
         m.submit(runner_mode=123)
     assert "Invalid runner_mode: 123" in str(err)
+
+
+def test_model_submit_max_jobs_limit(m: Model):
+    # If the ApiException from the api client is specifically due to max jobs,
+    # we return a specific error type (MaxConcurrentJobsException)
+    max_jobs_reason = "Maximum number of jobs created!"
+    m.project.projects_api.create_model.side_effect = ApiException(
+        status=400, reason=max_jobs_reason
+    )
+    with pytest.raises(MaxConcurrentJobsException) as err:
+        m.submit(runner_mode="cloud")
+    assert max_jobs_reason in str(err.value)
+    assert err.value.reason == max_jobs_reason
+    assert err.value.status == 400
+
+    # All other exceptions from the api client are raised "as-is"
+    other_reason = "Some other problem"
+    m.project.projects_api.create_model.side_effect = ApiException(
+        status=400, reason=other_reason
+    )
+    with pytest.raises(ApiException) as err:
+        m.submit(runner_mode="cloud")
+    assert other_reason in str(err.value)
+    assert err.value.reason == other_reason
+    assert err.value.status == 400
 
 
 @patch("time.sleep")

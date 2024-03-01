@@ -11,8 +11,13 @@ from gretel_client.cli.utils.parser_utils import (
 from gretel_client.config import RunnerMode
 from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.common import f, ModelRunArtifact
-from gretel_client.projects.exceptions import RecordHandlerError, RecordHandlerNotFound
+from gretel_client.projects.exceptions import (
+    MaxConcurrentJobsException,
+    RecordHandlerError,
+    RecordHandlerNotFound,
+)
 from gretel_client.projects.jobs import GretelJobNotFound, Job, Status
+from gretel_client.rest.exceptions import ApiException
 
 if TYPE_CHECKING:
     from gretel_client.projects.models import Model
@@ -61,12 +66,15 @@ class RecordHandler(Job):
         if len(provenance) > 0:
             body["provenance"] = self.provenance
 
-        handler = self.model._projects_api.create_record_handler(
-            project_id=self.model.project.project_guid,
-            model_id=self.model.model_id,
-            body=body,
-            runner_mode=runner_mode.api_value,
-        )
+        try:
+            handler = self.model._projects_api.create_record_handler(
+                project_id=self.model.project.project_guid,
+                model_id=self.model.model_id,
+                body=body,
+                runner_mode=runner_mode.api_value,
+            )
+        except ApiException as ex:
+            self._handle_submit_error(ex)
 
         self._data: dict = handler[f.DATA]
         self.record_id = self._data[self.job_type][f.UID]
