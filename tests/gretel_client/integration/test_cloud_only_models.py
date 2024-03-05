@@ -11,20 +11,18 @@ from gretel_client.projects.models import Model
 from .conftest import pytest_skip_on_windows
 
 
-@pytest.mark.skip("Update and enable after PR#3072 gets merged")
-def test_cannot_run_tabllm_locally(project: Project, get_fixture: Callable):
-    model: Model = project.create_model_obj(get_fixture("tabllm_config.yml"))
+def test_cannot_run_navigator_locally(project: Project, get_fixture: Callable):
+    model: Model = project.create_model_obj(get_fixture("navigator_config.yml"))
     with pytest.raises(Exception):
         model.submit(runner_mode=RunnerMode.LOCAL)
 
 
-@pytest.mark.skip("Update and enable after PR#3072 gets merged")
 @pytest_skip_on_windows
-def test_cannot_download_tabllm_image():
+def test_cannot_download_navigator_image():
     docker_client = docker.from_env()
     with pytest.raises(DockerError) as e:
         pull_image(
-            "074762682575.dkr.ecr.us-east-2.amazonaws.com/cloud-only-models/tabllm:dev",
+            "074762682575.dkr.ecr.us-east-2.amazonaws.com/cloud-only-models/navigator:dev",
             docker_client,
             auth_strategy=AuthStrategy.AUTH,
         )

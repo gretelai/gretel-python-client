@@ -1,4 +1,0 @@
-schema_version: 1.0
-models:
-  - tabllm:
-        model_id: "gretelai/tabllm"
