@@ -61,7 +61,7 @@ def test_task_manager(
         created_at=datetime.datetime.now(),
     )
     workflows_api.search_workflow_tasks.return_value = SearchWorkflowTasksResponse(
-        tasks=[wt_1]
+        tasks=[wt_1], total=1
     )
 
     workflows_api.get_workflow_run.side_effect = [

@@ -20,7 +20,7 @@ import re  # noqa: F401
 
 from typing import List, Optional
 
-from pydantic import BaseModel, conlist
+from pydantic import BaseModel, conlist, Field, StrictInt
 
 from gretel_client.rest_v1.models.workflow import Workflow
 
@@ -31,7 +31,8 @@ class SearchWorkflowsResponse(BaseModel):
     """
 
     workflows: Optional[conlist(Workflow)] = None
-    __properties = ["workflows"]
+    total: StrictInt = Field(...)
+    __properties = ["workflows", "total"]
 
     class Config:
         """Pydantic configuration"""
@@ -79,7 +80,8 @@ class SearchWorkflowsResponse(BaseModel):
                     Workflow.from_dict(_item) for _item in obj.get("workflows")
                 ]
                 if obj.get("workflows") is not None
-                else None
+                else None,
+                "total": obj.get("total"),
             }
         )
         return _obj

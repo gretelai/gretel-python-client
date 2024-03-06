@@ -20,7 +20,7 @@ import re  # noqa: F401
 
 from typing import List, Optional
 
-from pydantic import BaseModel, conlist
+from pydantic import BaseModel, conlist, Field, StrictInt
 
 from gretel_client.rest_v1.models.workflow_run import WorkflowRun
 
@@ -31,7 +31,8 @@ class SearchWorkflowRunsResponse(BaseModel):
     """
 
     runs: Optional[conlist(WorkflowRun)] = None
-    __properties = ["runs"]
+    total: StrictInt = Field(...)
+    __properties = ["runs", "total"]
 
     class Config:
         """Pydantic configuration"""
@@ -77,7 +78,8 @@ class SearchWorkflowRunsResponse(BaseModel):
             {
                 "runs": [WorkflowRun.from_dict(_item) for _item in obj.get("runs")]
                 if obj.get("runs") is not None
-                else None
+                else None,
+                "total": obj.get("total"),
             }
         )
         return _obj
