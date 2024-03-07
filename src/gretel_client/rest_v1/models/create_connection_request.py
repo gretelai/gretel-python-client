@@ -41,6 +41,7 @@ class CreateConnectionRequest(BaseModel):
     )
     config: Optional[Dict[str, Any]] = None
     connection_target_type: Optional[StrictStr] = None
+    auth_strategy: Optional[StrictStr] = None
     __properties = [
         "project_id",
         "name",
@@ -49,6 +50,7 @@ class CreateConnectionRequest(BaseModel):
         "encrypted_credentials",
         "config",
         "connection_target_type",
+        "auth_strategy",
     ]
 
     class Config:
@@ -93,6 +95,7 @@ class CreateConnectionRequest(BaseModel):
                 "encrypted_credentials": obj.get("encrypted_credentials"),
                 "config": obj.get("config"),
                 "connection_target_type": obj.get("connection_target_type"),
+                "auth_strategy": obj.get("auth_strategy"),
             }
         )
         return _obj

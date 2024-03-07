@@ -26,7 +26,7 @@ from pydantic import BaseModel, Field, StrictBool, StrictStr, validator
 
 class Connection(BaseModel):
     """
-    Next available tag: 13
+    Next available tag: 14
     """
 
     id: StrictStr = Field(
@@ -65,6 +65,10 @@ class Connection(BaseModel):
         None,
         description="Explicitly declare this as `source`, `destination` or `unspecified`.  If unspecified or empty, no target enforcement.",
     )
+    auth_strategy: Optional[StrictStr] = Field(
+        None,
+        description="This field is used to configure a specific auth strategy for connections that might support multiple strategies such as role or access key based auth.",
+    )
     __properties = [
         "id",
         "type",
@@ -78,6 +82,7 @@ class Connection(BaseModel):
         "project_id",
         "created_by",
         "connection_target_type",
+        "auth_strategy",
     ]
 
     @validator("validation_status")
@@ -143,6 +148,7 @@ class Connection(BaseModel):
                 "project_id": obj.get("project_id"),
                 "created_by": obj.get("created_by"),
                 "connection_target_type": obj.get("connection_target_type"),
+                "auth_strategy": obj.get("auth_strategy"),
             }
         )
         return _obj
