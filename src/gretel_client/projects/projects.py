@@ -1,6 +1,7 @@
 """
 High level API for interacting with a Gretel Project
 """
+
 from __future__ import annotations
 
 from contextlib import contextmanager
@@ -90,6 +91,7 @@ class Project:
         display_name: Optional[str] = None,
         runner_mode: Optional[Union[RunnerMode, str]] = None,
         session: Optional[ClientConfig] = None,
+        cluster_guid: Optional[str] = None,
     ):
         self.client_config = session or get_session_config()
         self.projects_api = self.client_config.get_api(ProjectsApi)
@@ -100,6 +102,7 @@ class Project:
         self.display_name = display_name
         self.runner_mode = RunnerMode.parse_optional(runner_mode)
         self._deleted = False
+        self.cluster_guid = cluster_guid
 
     @property
     def session(self) -> Optional[ClientConfig]:
@@ -125,6 +128,7 @@ class Project:
             display_name=self.display_name,
             runner_mode=self.runner_mode,
             session=session,
+            cluster_guid=self.cluster_guid,
         )
 
     @cached_property
@@ -418,6 +422,7 @@ def create_project(
         desc=proj.get("description"),
         display_name=proj.get("display_name"),
         runner_mode=proj.get("runner_mode"),
+        cluster_guid=proj.get("cluster_guid"),
         session=session,
     )
 

@@ -13,7 +13,7 @@ from gretel_client.cli.connection_credentials_azure_key_vault import (
     AzureKeyVaultEncryption,
 )
 from gretel_client.cli.connection_credentials_gcp_kms import GCPKMSEncryption
-from gretel_client.config import ClientConfig, get_session_config
+from gretel_client.config import ClientConfig
 from gretel_client.rest_v1.api.connections_api import ConnectionsApi
 from gretel_client.rest_v1.models import (
     CreateConnectionRequest,
@@ -107,7 +107,7 @@ def create(
         conn["encrypted_credentials"] = encryption_provider.apply(
             conn.pop("credentials", None)
         )
-    elif "credentials" not in conn:
+    elif "credentials" not in conn and not conn.get("config"):
         raise ValueError(
             "connection config contains neither plaintext nor encrypted credentials, "
             "and you have not specified pre-encrypted credentials either."
