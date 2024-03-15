@@ -56,6 +56,12 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
     a new request will automatically be made to continue record generation.
     """
 
+    max_retry_count: int = 3
+    """
+    How many errors or timeouts should be tolerated before the generation
+    process raises a user-facing error.
+    """
+
     def __init__(self, backend_model: str = "gretelai/tabular-v0", **session_kwargs):
         super().__init__(**session_kwargs)
         self.backend_model = backend_model
@@ -183,6 +189,8 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
         self._reset_stream()
         done_generation = False
 
+        attempt_count = 0
+
         while self._generated_count < num_records:
             if history_buffer:
                 this_ref_data["sample_data"] = {
@@ -229,7 +237,18 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
                         done_generation = True
                         break
                 elif record["data_type"] == "logger.error":
-                    raise GretelInferenceAPIError(record["data"])
+                    attempt_count += 1
+                    err_string = record["data"]
+                    if attempt_count >= self.max_retry_count:
+                        raise GretelInferenceAPIError(
+                            f"Failed to generate data after {attempt_count} attempts, error from API: {err_string}"
+                        )
+                    else:
+                        logger.warning(
+                            "Received error during generation: '%s'. Retrying.",
+                            err_string,
+                        )
+                        self._curr_stream_id = None
 
             # The stream is exhausted when the state is closed and there's no more data.
             if resp.get("stream_state", {}).get("status") == "closed" and not data_list:
@@ -249,6 +268,11 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
                     self._curr_stream_id,
                     self.request_timeout_sec,
                 )
+                attempt_count += 1
+                if attempt_count >= self.max_retry_count:
+                    raise GretelInferenceAPIError(
+                        f"Failed to generate data after {attempt_count} attempts."
+                    )
                 self._curr_stream_id = None
 
             time.sleep(STREAM_SLEEP_TIME)
