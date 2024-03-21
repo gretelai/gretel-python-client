@@ -1,6 +1,7 @@
 """
 Classes responsible for running local Gretel worker agents.
 """
+
 from __future__ import annotations
 
 import base64
@@ -100,6 +101,9 @@ class AgentConfig:
 
     disable_cloud_report_scores: bool = False
     """Disable sending model quality report scores to the cloud"""
+
+    disable_job_cleanup: bool = False
+    """Disable the automatic cleanup of jobs that are finished"""
 
     volumes: Optional[List[DataVolumeDef]] = None
     """A list of volumes to mount into the worker container"""
@@ -250,7 +254,6 @@ class AgentConfig:
 
 @dataclass
 class Job:
-
     """Job container class.
 
     Contains various Gretel Job properties that are used by each
@@ -372,10 +375,11 @@ class JobManager(Generic[ComputeUnit]):
 
     """
 
-    def __init__(self, driver: Driver):
+    def __init__(self, driver: Driver, disable_job_cleanup: bool = False):
         self._active_jobs: Dict[str, ComputeUnit] = {}
         self._driver = driver
         self._logger = logging.getLogger(__name__)
+        self._disable_cleanup = disable_job_cleanup
 
     def add_job(self, job: Job, unit: ComputeUnit) -> None:
         self._active_jobs[job.uid] = unit
@@ -388,6 +392,10 @@ class JobManager(Generic[ComputeUnit]):
             if self._driver.has_errored(job):
                 self._logger.error("Job %s errored out", job_name)
                 # Intentionally leave Job object for debugging, will eventually be garbage collected
+            elif self._disable_cleanup:
+                self._logger.info(
+                    "Job %s completed/ended, but job cleanup disabled", job_name
+                )
             else:
                 self._logger.info("Job %s completed/ended", job_name)
                 self._driver.clean(job)
@@ -536,7 +544,7 @@ class Agent:
         self._config = config
         self._client_config = config.session
         self._driver = get_driver(config)
-        self._jobs_manager = JobManager(self._driver)
+        self._jobs_manager = JobManager(self._driver, config.disable_job_cleanup)
         self._rate_limiter = RateLimiter(config.max_workers, self._jobs_manager, config)
 
         default_headers = None

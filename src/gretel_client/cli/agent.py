@@ -115,6 +115,11 @@ def build_logger(job_id: str) -> Callable:
     help="Hybrid Cluster ID to operate on",
     envvar="GRETEL_CLUSTER_ID",
 )
+@click.option(
+    "--disable-job-cleanup",
+    help="Disables the cleanup of jobs to help debugging",
+    envvar="GRETEL_DISABLE_JOB_CLEANUP",
+)
 @pass_session
 def start(
     sc: SessionContext,
@@ -133,6 +138,7 @@ def start(
     enable_prometheus: bool = False,
     runner_modes: Optional[List[str]] = None,
     cluster_id: Optional[str] = None,
+    disable_job_cleanup: bool = False,
 ):
     sc.log.info(f"Starting Gretel agent using driver {driver}.")
     creds = []
@@ -192,6 +198,7 @@ def start(
         runner_modes=runner_modes_as_enum,
         cluster_guid=cluster_id,
         session=sc.session,
+        disable_job_cleanup=disable_job_cleanup,
     )
     agent = get_agent(config)
     sc.register_cleanup(lambda: agent.interrupt())
