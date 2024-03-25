@@ -67,6 +67,9 @@ from gretel_client.rest_v1.models.list_connections_response import (
 from gretel_client.rest_v1.models.log_envelope import LogEnvelope
 from gretel_client.rest_v1.models.project import Project
 from gretel_client.rest_v1.models.search_activity_response import SearchActivityResponse
+from gretel_client.rest_v1.models.search_connections_response import (
+    SearchConnectionsResponse,
+)
 from gretel_client.rest_v1.models.search_projects_response import SearchProjectsResponse
 from gretel_client.rest_v1.models.search_workflow_runs_response import (
     SearchWorkflowRunsResponse,
