@@ -86,9 +86,10 @@ class GretelTuner:
     def _add_gretel_metrics_to_trial(self, model: Model, trial: optuna.Trial):
         """Add Gretel's quality metrics to the Trial object as user attributes."""
         gretel_report = self.metric.get_gretel_report(model)
-        scores = {d["field"]: d["value"] for d in gretel_report["summary"]}
-        for k, v in scores.items():
-            trial.set_user_attr(k, v)
+        if "summary" in gretel_report:
+            scores = {d["field"]: d["value"] for d in gretel_report["summary"]}
+            for k, v in scores.items():
+                trial.set_user_attr(k, v)
 
     def _rename_trial_data_columns(self, trial_data: pd.DataFrame) -> pd.DataFrame:
         """Rename columns in the trial data to be more readable."""
@@ -197,8 +198,8 @@ class GretelTuner:
         optuna_user_logging_level = optuna.logging.get_verbosity()
         optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-        with tmp_project(session=session) if is_temp_project else nullcontext(
-            project
+        with (
+            tmp_project(session=session) if is_temp_project else nullcontext(project)
         ) as project:
             self.project = project
             self._artifact_path = self.project.upload_artifact(self.data_source)

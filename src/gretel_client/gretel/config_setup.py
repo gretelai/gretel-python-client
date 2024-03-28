@@ -37,6 +37,7 @@ class ModelType(str, Enum):
 
     # tabular
     ACTGAN = "actgan"
+    ATLAS = "atlas"
     AMPLIFY = "amplify"
     LSTM = "synthetics"
     TABULAR_DP = "tabular_dp"
@@ -74,6 +75,20 @@ CONFIG_SETUP_DICT = {
         data_source_optional=False,
         report_type=ReportType.SQS,
         extra_kwargs=["ref_data"],
+    ),
+    ModelType.ATLAS: ModelConfigSections(
+        model_name="atlas",
+        config_sections=["params", "generate", "evaluate"],
+        data_source_optional=False,
+        report_type=ReportType.SQS,
+        extra_kwargs=[
+            "do_validation_stopping",
+            "group_training_examples_by",
+            "order_training_examples_by",
+            "pretrained_model",
+            "ref_data",
+            "test_set_size",
+        ],
     ),
     ModelType.AMPLIFY: ModelConfigSections(
         model_name="amplify",

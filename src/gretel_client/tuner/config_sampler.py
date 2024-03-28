@@ -39,6 +39,10 @@ class TunableSection(_TunerEnum):
     PARAMS = "params"
     PRIVACY_FILTERS = "privacy_filters"
 
+    # Atlas top-level sections
+    GROUP_TRAINING_EXAMPLES_BY = "group_training_examples_by"
+    ORDER_TRAINING_EXAMPLES_BY = "order_training_examples_by"
+
     # GPT-X top-level sections (i.e., params that are not nested)
     PRETRAINED_MODEL = "pretrained_model"
     PROMPT_TEMPLATE = "prompt_template"

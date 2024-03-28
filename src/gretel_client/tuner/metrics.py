@@ -31,6 +31,7 @@ class GretelMetricName(str, Enum):
         if self == GretelMetricName.SQS:
             return [
                 ModelType.ACTGAN,
+                ModelType.ATLAS,
                 ModelType.AMPLIFY,
                 ModelType.LSTM,
                 ModelType.TABULAR_DP,
@@ -43,6 +44,7 @@ class GretelMetricName(str, Enum):
         ]:
             return [
                 ModelType.ACTGAN,
+                ModelType.ATLAS,
                 ModelType.AMPLIFY,
                 ModelType.LSTM,
                 ModelType.TABULAR_DP,
