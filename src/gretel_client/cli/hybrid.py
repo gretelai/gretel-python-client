@@ -17,13 +17,11 @@ class ClusterError(Exception):
 @click.group(
     help="Commands for working with Gretel Hybrid features.",
 )
-def hybrid():
-    ...
+def hybrid(): ...
 
 
 @hybrid.group(help="Commands for working with Gretel Hybrid environments.")
-def environments():
-    ...
+def environments(): ...
 
 
 def get_clusters_api(*, session: ClientConfig) -> ClustersApi:

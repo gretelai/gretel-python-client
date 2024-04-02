@@ -76,11 +76,11 @@ class SearchConnectionsResponse(BaseModel):
 
         _obj = SearchConnectionsResponse.parse_obj(
             {
-                "connections": [
-                    Connection.from_dict(_item) for _item in obj.get("connections")
-                ]
-                if obj.get("connections") is not None
-                else None,
+                "connections": (
+                    [Connection.from_dict(_item) for _item in obj.get("connections")]
+                    if obj.get("connections") is not None
+                    else None
+                ),
                 "total": obj.get("total"),
             }
         )

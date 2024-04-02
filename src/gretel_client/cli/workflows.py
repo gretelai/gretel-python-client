@@ -25,8 +25,7 @@ from gretel_client.workflows.status import Status, TERMINAL_STATES
 @click.group(
     help="Commands for working with Gretel workflows.",
 )
-def workflows():
-    ...
+def workflows(): ...
 
 
 def _get_workflows_api(*, session: ClientConfig) -> WorkflowsApi:

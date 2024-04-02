@@ -95,13 +95,17 @@ class ActivityEvent(BaseModel):
             {
                 "occurred_at": obj.get("occurred_at"),
                 "occured_at": obj.get("occured_at"),
-                "subject": EventComponent.from_dict(obj.get("subject"))
-                if obj.get("subject") is not None
-                else None,
+                "subject": (
+                    EventComponent.from_dict(obj.get("subject"))
+                    if obj.get("subject") is not None
+                    else None
+                ),
                 "predicate": obj.get("predicate"),
-                "object": EventComponent.from_dict(obj.get("object"))
-                if obj.get("object") is not None
-                else None,
+                "object": (
+                    EventComponent.from_dict(obj.get("object"))
+                    if obj.get("object") is not None
+                    else None
+                ),
                 "status": obj.get("status"),
             }
         )

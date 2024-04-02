@@ -75,9 +75,11 @@ class ListConnectionsResponse(BaseModel):
 
         _obj = ListConnectionsResponse.parse_obj(
             {
-                "data": [Connection.from_dict(_item) for _item in obj.get("data")]
-                if obj.get("data") is not None
-                else None
+                "data": (
+                    [Connection.from_dict(_item) for _item in obj.get("data")]
+                    if obj.get("data") is not None
+                    else None
+                )
             }
         )
         return _obj

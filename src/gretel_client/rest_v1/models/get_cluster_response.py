@@ -71,9 +71,11 @@ class GetClusterResponse(BaseModel):
 
         _obj = GetClusterResponse.parse_obj(
             {
-                "cluster": Cluster.from_dict(obj.get("cluster"))
-                if obj.get("cluster") is not None
-                else None
+                "cluster": (
+                    Cluster.from_dict(obj.get("cluster"))
+                    if obj.get("cluster") is not None
+                    else None
+                )
             }
         )
         return _obj

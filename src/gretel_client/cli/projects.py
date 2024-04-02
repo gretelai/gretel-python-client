@@ -10,8 +10,7 @@ from gretel_client.projects.projects import get_project, search_projects
 
 
 @click.group(help="Commands for working with Gretel projects.")
-def projects():
-    ...
+def projects(): ...
 
 
 @projects.command(help="Create a new project.")

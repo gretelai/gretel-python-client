@@ -120,9 +120,11 @@ def _quiet_poll(
                         pr_bar = False
                     print(
                         log["msg"],
-                        ", ".join(f"{k} {v}" for k, v in log["ctx"].items())
-                        if log["ctx"]
-                        else "",
+                        (
+                            ", ".join(f"{k} {v}" for k, v in log["ctx"].items())
+                            if log["ctx"]
+                            else ""
+                        ),
                     )
                     if log["stage"] == "pre_run" and not num_records:
                         if "num_records" in log["ctx"]:

@@ -4,8 +4,7 @@ from gretel_client.cli.common import pass_session, project_option, SessionContex
 
 
 @click.group(help="Commands for interacting with Gretel Cloud artifacts.")
-def artifacts():
-    ...
+def artifacts(): ...
 
 
 @artifacts.command(help="List project or model artifacts.")

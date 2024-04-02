@@ -45,8 +45,7 @@ class BaseInferenceAPI(ABC):
         ]
 
     @abstractproperty
-    def api_path(self) -> str:
-        ...
+    def api_path(self) -> str: ...
 
     @property
     def models_api_path(self) -> str:

@@ -78,9 +78,11 @@ class UserProfile(BaseModel):
                 "id": obj.get("id"),
                 "firstname": obj.get("firstname"),
                 "lastname": obj.get("lastname"),
-                "image": UserProfileImage.from_dict(obj.get("image"))
-                if obj.get("image") is not None
-                else None,
+                "image": (
+                    UserProfileImage.from_dict(obj.get("image"))
+                    if obj.get("image") is not None
+                    else None
+                ),
                 "email": obj.get("email"),
             }
         )

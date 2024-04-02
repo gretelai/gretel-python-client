@@ -155,9 +155,11 @@ class WorkflowTask(BaseModel):
                 "id": obj.get("id"),
                 "workflow_run_id": obj.get("workflow_run_id"),
                 "project_id": obj.get("project_id"),
-                "project": Project.from_dict(obj.get("project"))
-                if obj.get("project") is not None
-                else None,
+                "project": (
+                    Project.from_dict(obj.get("project"))
+                    if obj.get("project") is not None
+                    else None
+                ),
                 "log_location": obj.get("log_location"),
                 "status": obj.get("status"),
                 "action_name": obj.get("action_name"),
@@ -166,11 +168,11 @@ class WorkflowTask(BaseModel):
                 "error_code": obj.get("error_code"),
                 "stack_trace": obj.get("stack_trace"),
                 "created_by": obj.get("created_by"),
-                "created_by_profile": UserProfile.from_dict(
-                    obj.get("created_by_profile")
-                )
-                if obj.get("created_by_profile") is not None
-                else None,
+                "created_by_profile": (
+                    UserProfile.from_dict(obj.get("created_by_profile"))
+                    if obj.get("created_by_profile") is not None
+                    else None
+                ),
                 "created_at": obj.get("created_at"),
                 "updated_at": obj.get("updated_at"),
                 "pending_at": obj.get("pending_at"),

@@ -49,8 +49,7 @@ class GretelJobResults(ABC):
         return self.project.get_console_url()
 
     @abstractproperty
-    def model_url(self) -> str:
-        ...
+    def model_url(self) -> str: ...
 
 
 @dataclass

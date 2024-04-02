@@ -21,8 +21,7 @@ from gretel_client.projects.common import f
 from gretel_client.users import users
 
 
-class GretelCliHandler(ExceptionHandler):
-    ...
+class GretelCliHandler(ExceptionHandler): ...
 
 
 @click.group(cls=GretelCliHandler)

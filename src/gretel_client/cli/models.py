@@ -23,8 +23,7 @@ from gretel_client.projects.models import Model, RunnerMode
 
 
 @click.group(help="Commands for training and working with models.")
-def models():
-    ...
+def models(): ...
 
 
 @models.command(help="Create a new model.")

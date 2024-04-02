@@ -125,8 +125,7 @@ class PreviewFeatures(Enum):
     DISABLED = "disabled"
 
 
-class GretelClientConfigurationError(Exception):
-    ...
+class GretelClientConfigurationError(Exception): ...
 
 
 T = TypeVar("T", bound=Type)
@@ -261,38 +260,31 @@ class ClientConfig(ABC):
 
     @property
     @abstractmethod
-    def context(self) -> Context:
-        ...
+    def context(self) -> Context: ...
 
     @property
     @abstractmethod
-    def endpoint(self) -> str:
-        ...
+    def endpoint(self) -> str: ...
 
     @property
     @abstractmethod
-    def artifact_endpoint(self) -> str:
-        ...
+    def artifact_endpoint(self) -> str: ...
 
     @property
     @abstractmethod
-    def api_key(self) -> Optional[str]:
-        ...
+    def api_key(self) -> Optional[str]: ...
 
     @property
     @abstractmethod
-    def default_project_name(self) -> Optional[str]:
-        ...
+    def default_project_name(self) -> Optional[str]: ...
 
     @property
     @abstractmethod
-    def default_runner(self) -> Optional[str]:
-        ...
+    def default_runner(self) -> Optional[str]: ...
 
     @property
     @abstractmethod
-    def preview_features(self) -> str:
-        ...
+    def preview_features(self) -> str: ...
 
     @cached_property
     def email(self) -> str:
@@ -313,8 +305,7 @@ class ClientConfig(ABC):
         backoff_factor: float = 1,
         *,
         default_headers: Optional[dict[str, str]] = None,
-    ) -> ClientT:
-        ...
+    ) -> ClientT: ...
 
     def _get_api_client(self, *args, **kwargs) -> ApiClient:
         return self._get_api_client_generic(ApiClient, Configuration, *args, **kwargs)
@@ -364,13 +355,11 @@ class ClientConfig(ABC):
         )
 
     @abstractmethod
-    def update_default_project(self, project_id: str):
-        ...
+    def update_default_project(self, project_id: str): ...
 
     @property
     @abstractmethod
-    def as_dict(self) -> dict:
-        ...
+    def as_dict(self) -> dict: ...
 
     def __eq__(self, other: ClientConfig) -> bool:
         return self.as_dict == other.as_dict

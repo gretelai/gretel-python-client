@@ -32,11 +32,11 @@ def get_mock_job(instance_type: str = "cpu-standard") -> dict:
 
 @contextmanager
 def patch_auth_api_calls_gen():
-    with patch("gretel_client.agents.agent.get_project") as get_project, patch(
-        "gretel_client.agents.agent.get_session_config"
-    ) as get_session_config, patch(
-        "gretel_client.agents.agent.do_api_call"
-    ) as do_api_call:
+    with (
+        patch("gretel_client.agents.agent.get_project") as get_project,
+        patch("gretel_client.agents.agent.get_session_config") as get_session_config,
+        patch("gretel_client.agents.agent.do_api_call") as do_api_call,
+    ):
         get_project.return_value.project_id = "project1234"
         do_api_call.side_effect = [
             {"billing": {"me": {"service_limits": {"max_jobs_active": 5}}}},

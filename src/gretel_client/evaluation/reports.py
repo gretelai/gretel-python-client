@@ -34,20 +34,17 @@ DEFAULT_RECORD_COUNT = 5000
 DEFAULT_TEXT_RECORD_COUNT = 80
 
 
-class ModelRunException(Exception):
-    ...
+class ModelRunException(Exception): ...
 
 
 class BaseReport(ABC):
     """Report that can be generated for data_source and ref_data."""
 
     @abstractproperty
-    def model_config(self) -> dict:
-        ...
+    def model_config(self) -> dict: ...
 
     @abstractproperty
-    def base_artifact_name(self) -> str:
-        ...
+    def base_artifact_name(self) -> str: ...
 
     """Specifies a model config. For more information
     about model configs, please refer to our doc site,

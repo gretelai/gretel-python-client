@@ -133,30 +133,34 @@ class Workflow(BaseModel):
                 "id": obj.get("id"),
                 "name": obj.get("name"),
                 "project_id": obj.get("project_id"),
-                "project": Project.from_dict(obj.get("project"))
-                if obj.get("project") is not None
-                else None,
+                "project": (
+                    Project.from_dict(obj.get("project"))
+                    if obj.get("project") is not None
+                    else None
+                ),
                 "config": obj.get("config"),
                 "config_text": obj.get("config_text"),
                 "runner_mode": obj.get("runner_mode"),
                 "next_scheduled_run": obj.get("next_scheduled_run"),
                 "created_by": obj.get("created_by"),
-                "created_by_profile": UserProfile.from_dict(
-                    obj.get("created_by_profile")
-                )
-                if obj.get("created_by_profile") is not None
-                else None,
+                "created_by_profile": (
+                    UserProfile.from_dict(obj.get("created_by_profile"))
+                    if obj.get("created_by_profile") is not None
+                    else None
+                ),
                 "updated_by": obj.get("updated_by"),
-                "updated_by_profile": UserProfile.from_dict(
-                    obj.get("updated_by_profile")
-                )
-                if obj.get("updated_by_profile") is not None
-                else None,
+                "updated_by_profile": (
+                    UserProfile.from_dict(obj.get("updated_by_profile"))
+                    if obj.get("updated_by_profile") is not None
+                    else None
+                ),
                 "created_at": obj.get("created_at"),
                 "updated_at": obj.get("updated_at"),
-                "latest_run": WorkflowRun.from_dict(obj.get("latest_run"))
-                if obj.get("latest_run") is not None
-                else None,
+                "latest_run": (
+                    WorkflowRun.from_dict(obj.get("latest_run"))
+                    if obj.get("latest_run") is not None
+                    else None
+                ),
             }
         )
         return _obj

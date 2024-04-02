@@ -29,8 +29,7 @@ class _ErrorHandler(ABC, Generic[E]):
         self.sc: SessionContext = self.ctx.obj  # type:ignore
 
     @abstractmethod
-    def handle(self):
-        ...
+    def handle(self): ...
 
 
 class HandleGretelResourceNotFoundError(_ErrorHandler, GretelResourceNotFound):

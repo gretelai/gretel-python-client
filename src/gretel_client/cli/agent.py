@@ -16,8 +16,7 @@ from gretel_client.docker import AwsCredFile, CaCertFile, check_gpu, DataVolumeD
     help="Connect Gretel with a data source.",
     hidden=not get_session_config().preview_features_enabled,
 )
-def agent():
-    ...
+def agent(): ...
 
 
 def build_logger(job_id: str) -> Callable:

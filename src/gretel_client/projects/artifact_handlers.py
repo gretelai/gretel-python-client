@@ -100,20 +100,16 @@ class ManifestPendingException(Exception):
 
 class _Project(Protocol):
     @property
-    def project_id(self) -> str:
-        ...
+    def project_id(self) -> str: ...
 
     @property
-    def name(self) -> str:
-        ...
+    def name(self) -> str: ...
 
     @property
-    def projects_api(self) -> ProjectsApi:
-        ...
+    def projects_api(self) -> ProjectsApi: ...
 
     @property
-    def client_config(self) -> ClientConfig:
-        ...
+    def client_config(self) -> ClientConfig: ...
 
 
 def cloud_handler(project: _Project) -> CloudArtifactsHandler:
@@ -140,45 +136,36 @@ class ArtifactsHandler(Protocol):
     def validate_data_source(
         self,
         artifact_path: Pathlike,
-    ) -> bool:
-        ...
+    ) -> bool: ...
 
     def upload_project_artifact(
         self,
         artifact_path: Union[Path, str, _DataFrameT],
-    ) -> str:
-        ...
+    ) -> str: ...
 
-    def delete_project_artifact(self, key: str) -> None:
-        ...
+    def delete_project_artifact(self, key: str) -> None: ...
 
-    def list_project_artifacts(self) -> List[dict]:
-        ...
+    def list_project_artifacts(self) -> List[dict]: ...
 
-    def get_project_artifact_link(self, key: str) -> str:
-        ...
+    def get_project_artifact_link(self, key: str) -> str: ...
 
-    def get_project_artifact_handle(self, key: str) -> BinaryIO:
-        ...
+    def get_project_artifact_handle(self, key: str) -> BinaryIO: ...
 
     def get_project_artifact_manifest(
         self,
         key: str,
         retry_on_not_found: bool = True,
         retry_on_pending: bool = True,
-    ) -> Dict[str, Any]:
-        ...
+    ) -> Dict[str, Any]: ...
 
-    def get_model_artifact_link(self, model_id: str, artifact_type: str) -> str:
-        ...
+    def get_model_artifact_link(self, model_id: str, artifact_type: str) -> str: ...
 
     def get_record_handler_artifact_link(
         self,
         model_id: str,
         record_handler_id: str,
         artifact_type: str,
-    ) -> str:
-        ...
+    ) -> str: ...
 
     def download(
         self,
@@ -186,8 +173,7 @@ class ArtifactsHandler(Protocol):
         output_path: Path,
         artifact_type: str,
         log: logging.Logger,
-    ) -> None:
-        ...
+    ) -> None: ...
 
 
 class CloudArtifactsHandler:
@@ -350,11 +336,14 @@ class HybridArtifactsHandler:
             data_source_file_name = f"gretel_{uuid.uuid4().hex}_{file_name}"
             target_out = f"{self.data_sources_dir}/{data_source_file_name}"
 
-            with open_artifact(
-                artifact_path,
-                "rb",
-                ignore_ext=True,
-            ) as in_stream, open_artifact(target_out, "wb") as out_stream:
+            with (
+                open_artifact(
+                    artifact_path,
+                    "rb",
+                    ignore_ext=True,
+                ) as in_stream,
+                open_artifact(target_out, "wb") as out_stream,
+            ):
                 shutil.copyfileobj(in_stream, out_stream)
 
             return target_out
@@ -501,9 +490,10 @@ def _download(
 ) -> None:
     target_out = output_path / Path(urlparse(download_link).path).name
     try:
-        with open_artifact(download_link, "rb", ignore_ext=True) as src, open_artifact(
-            target_out, "wb", ignore_ext=True
-        ) as dest:
+        with (
+            open_artifact(download_link, "rb", ignore_ext=True) as src,
+            open_artifact(target_out, "wb", ignore_ext=True) as dest,
+        ):
             shutil.copyfileobj(src, dest)
         log.info(f"Downloaded '{artifact_type}' artifact")
     except Exception:

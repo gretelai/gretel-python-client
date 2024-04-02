@@ -42,8 +42,7 @@ configure_logging()
 _CLUSTERID_HEADER_KEY = "X-Gretel-Clusterid"
 
 
-class AgentError(Exception):
-    ...
+class AgentError(Exception): ...
 
 
 @dataclass

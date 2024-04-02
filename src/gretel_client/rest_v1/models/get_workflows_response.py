@@ -75,11 +75,11 @@ class GetWorkflowsResponse(BaseModel):
 
         _obj = GetWorkflowsResponse.parse_obj(
             {
-                "workflows": [
-                    Workflow.from_dict(_item) for _item in obj.get("workflows")
-                ]
-                if obj.get("workflows") is not None
-                else None
+                "workflows": (
+                    [Workflow.from_dict(_item) for _item in obj.get("workflows")]
+                    if obj.get("workflows") is not None
+                    else None
+                )
             }
         )
         return _obj

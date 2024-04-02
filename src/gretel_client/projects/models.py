@@ -1,6 +1,7 @@
 """
 Classes and methods for working with Gretel Models
 """
+
 from __future__ import annotations
 
 import copy

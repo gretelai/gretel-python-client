@@ -1,6 +1,7 @@
 """
 High level API for interacting with the Gretel Users API
 """
+
 from typing import Optional
 
 from gretel_client.config import ClientConfig, get_session_config

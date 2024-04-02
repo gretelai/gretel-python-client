@@ -108,8 +108,7 @@ class CredentialsEncryptionAdapter:
 
 class CredentialsEncryptionFlagsBase(ABC):
     @abstractclassmethod
-    def _cli_decorate(cls, fn, param_name: str):
-        ...
+    def _cli_decorate(cls, fn, param_name: str): ...
 
     @classmethod
     def options(cls, param_name: str):

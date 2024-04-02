@@ -30,8 +30,7 @@ class ModelTypeConfig(ABC):
 
     @property
     @abstractmethod
-    def run_status_descriptions(self) -> StatusDescriptions:
-        ...
+    def run_status_descriptions(self) -> StatusDescriptions: ...
 
     @property
     def train_status_descriptions(self) -> StatusDescriptions:
@@ -50,8 +49,7 @@ class ModelTypeConfig(ABC):
         }
 
     @abstractmethod
-    def peek_report(self, report_contents: dict) -> Optional[dict]:
-        ...
+    def peek_report(self, report_contents: dict) -> Optional[dict]: ...
 
     def get_report_summary(self, report_contents: dict) -> dict:
         if "summary" in report_contents:

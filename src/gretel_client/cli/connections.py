@@ -22,8 +22,7 @@ from gretel_client.rest_v1.models import (
 
 
 @click.group(help="Commands for working with Gretel connections.")
-def connections():
-    ...
+def connections(): ...
 
 
 def _get_connections_api(*, session: ClientConfig) -> ConnectionsApi:

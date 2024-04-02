@@ -1,6 +1,7 @@
 """
 Helpers for parsing CLI inputs.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

@@ -31,8 +31,7 @@ LOCAL = "__local__"
 
 
 @click.group(help="Commands for working with records and running models.")
-def records():
-    ...
+def records(): ...
 
 
 def model_path_option(fn):

@@ -1,6 +1,7 @@
 """
 Helper classes for working with local docker containers
 """
+
 from __future__ import annotations
 
 import atexit
@@ -39,8 +40,7 @@ GPU_SYSTEM_CHECK = "gpu-system-check"
 VOLUME_BUILDER = "volume-builder"
 
 
-class DockerError(Exception):
-    ...
+class DockerError(Exception): ...
 
 
 @dataclass
@@ -187,7 +187,6 @@ class DataVolumeDef:
 
 
 class DataVolume:
-
     """Helper class for assembling a data volume.
 
     Using a data volume over a host mounted is preferable for a few reasons
@@ -506,13 +505,11 @@ class CloudCreds(ABC):
 
     @property
     @abstractmethod
-    def volume(self) -> DataVolumeDef:
-        ...
+    def volume(self) -> DataVolumeDef: ...
 
     @property
     @abstractmethod
-    def env(self) -> Dict[str, str]:
-        ...
+    def env(self) -> Dict[str, str]: ...
 
 
 class AwsCredFile(CloudCreds):

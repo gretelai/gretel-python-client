@@ -197,8 +197,8 @@ class GretelTuner:
         optuna_user_logging_level = optuna.logging.get_verbosity()
         optuna.logging.set_verbosity(optuna.logging.WARNING)
 
-        with tmp_project(session=session) if is_temp_project else nullcontext(
-            project
+        with (
+            tmp_project(session=session) if is_temp_project else nullcontext(project)
         ) as project:
             self.project = project
             self._artifact_path = self.project.upload_artifact(self.data_source)

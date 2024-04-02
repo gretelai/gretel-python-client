@@ -11,8 +11,7 @@ if TYPE_CHECKING:
     from gretel_client.agents.agent import AgentConfig, Job
 
 
-class DriverError(Exception):
-    ...
+class DriverError(Exception): ...
 
 
 GPU = "gpu"

@@ -75,9 +75,11 @@ class SearchProjectsResponse(BaseModel):
 
         _obj = SearchProjectsResponse.parse_obj(
             {
-                "projects": [Project.from_dict(_item) for _item in obj.get("projects")]
-                if obj.get("projects") is not None
-                else None
+                "projects": (
+                    [Project.from_dict(_item) for _item in obj.get("projects")]
+                    if obj.get("projects") is not None
+                    else None
+                )
             }
         )
         return _obj

@@ -75,9 +75,11 @@ class ListClustersResponse(BaseModel):
 
         _obj = ListClustersResponse.parse_obj(
             {
-                "clusters": [Cluster.from_dict(_item) for _item in obj.get("clusters")]
-                if obj.get("clusters") is not None
-                else None
+                "clusters": (
+                    [Cluster.from_dict(_item) for _item in obj.get("clusters")]
+                    if obj.get("clusters") is not None
+                    else None
+                )
             }
         )
         return _obj

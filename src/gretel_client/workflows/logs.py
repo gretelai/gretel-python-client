@@ -1,6 +1,7 @@
 """
 Various helpers for working with workflow related logs
 """
+
 from __future__ import annotations
 
 import datetime

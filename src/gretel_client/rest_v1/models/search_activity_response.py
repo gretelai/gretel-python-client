@@ -76,11 +76,11 @@ class SearchActivityResponse(BaseModel):
 
         _obj = SearchActivityResponse.parse_obj(
             {
-                "events": [
-                    ActivityEvent.from_dict(_item) for _item in obj.get("events")
-                ]
-                if obj.get("events") is not None
-                else None,
+                "events": (
+                    [ActivityEvent.from_dict(_item) for _item in obj.get("events")]
+                    if obj.get("events") is not None
+                    else None
+                ),
                 "total": obj.get("total"),
             }
         )

@@ -76,9 +76,11 @@ class GetLogResponse(BaseModel):
 
         _obj = GetLogResponse.parse_obj(
             {
-                "lines": [LogEnvelope.from_dict(_item) for _item in obj.get("lines")]
-                if obj.get("lines") is not None
-                else None,
+                "lines": (
+                    [LogEnvelope.from_dict(_item) for _item in obj.get("lines")]
+                    if obj.get("lines") is not None
+                    else None
+                ),
                 "next_page_token": obj.get("next_page_token"),
             }
         )

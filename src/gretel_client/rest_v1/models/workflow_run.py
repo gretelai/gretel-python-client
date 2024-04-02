@@ -158,9 +158,11 @@ class WorkflowRun(BaseModel):
                 "id": obj.get("id"),
                 "workflow_id": obj.get("workflow_id"),
                 "project_id": obj.get("project_id"),
-                "project": Project.from_dict(obj.get("project"))
-                if obj.get("project") is not None
-                else None,
+                "project": (
+                    Project.from_dict(obj.get("project"))
+                    if obj.get("project") is not None
+                    else None
+                ),
                 "cluster_guid": obj.get("cluster_guid"),
                 "config": obj.get("config"),
                 "config_text": obj.get("config_text"),
@@ -174,16 +176,18 @@ class WorkflowRun(BaseModel):
                 "error_at": obj.get("error_at"),
                 "lost_at": obj.get("lost_at"),
                 "cancelled_at": obj.get("cancelled_at"),
-                "cancellation_request": WorkflowRunCancellationRequest.from_dict(
-                    obj.get("cancellation_request")
-                )
-                if obj.get("cancellation_request") is not None
-                else None,
-                "created_by_profile": UserProfile.from_dict(
-                    obj.get("created_by_profile")
-                )
-                if obj.get("created_by_profile") is not None
-                else None,
+                "cancellation_request": (
+                    WorkflowRunCancellationRequest.from_dict(
+                        obj.get("cancellation_request")
+                    )
+                    if obj.get("cancellation_request") is not None
+                    else None
+                ),
+                "created_by_profile": (
+                    UserProfile.from_dict(obj.get("created_by_profile"))
+                    if obj.get("created_by_profile") is not None
+                    else None
+                ),
                 "total_compute_time_sconds": obj.get("total_compute_time_sconds"),
             }
         )

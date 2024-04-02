@@ -76,9 +76,11 @@ class SearchWorkflowRunsResponse(BaseModel):
 
         _obj = SearchWorkflowRunsResponse.parse_obj(
             {
-                "runs": [WorkflowRun.from_dict(_item) for _item in obj.get("runs")]
-                if obj.get("runs") is not None
-                else None,
+                "runs": (
+                    [WorkflowRun.from_dict(_item) for _item in obj.get("runs")]
+                    if obj.get("runs") is not None
+                    else None
+                ),
                 "total": obj.get("total"),
             }
         )
