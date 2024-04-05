@@ -28,7 +28,7 @@ class CreateWorkflowRequest(BaseModel):
     CreateWorkflowRequest
     """
 
-    name: StrictStr = Field(...)
+    name: Optional[StrictStr] = None
     project_id: StrictStr = Field(...)
     config: Optional[Dict[str, Any]] = None
     config_text: Optional[StrictStr] = None
