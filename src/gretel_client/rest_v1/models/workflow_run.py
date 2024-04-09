@@ -24,6 +24,7 @@ from typing import Any, Dict, Optional
 from pydantic import BaseModel, Field, StrictInt, StrictStr, validator
 
 from gretel_client.rest_v1.models.project import Project
+from gretel_client.rest_v1.models.status_details import StatusDetails
 from gretel_client.rest_v1.models.user_profile import UserProfile
 from gretel_client.rest_v1.models.workflow_run_cancellation_request import (
     WorkflowRunCancellationRequest,
@@ -44,6 +45,7 @@ class WorkflowRun(BaseModel):
     config_text: Optional[StrictStr] = None
     runner_mode: StrictStr = Field(...)
     status: StrictStr = Field(...)
+    status_details: Optional[StatusDetails] = None
     created_by: StrictStr = Field(...)
     created_at: datetime = Field(...)
     updated_at: Optional[datetime] = None
@@ -65,6 +67,7 @@ class WorkflowRun(BaseModel):
         "config_text",
         "runner_mode",
         "status",
+        "status_details",
         "created_by",
         "created_at",
         "updated_at",
@@ -136,6 +139,9 @@ class WorkflowRun(BaseModel):
         # override the default output from pydantic by calling `to_dict()` of project
         if self.project:
             _dict["project"] = self.project.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of status_details
+        if self.status_details:
+            _dict["status_details"] = self.status_details.to_dict()
         # override the default output from pydantic by calling `to_dict()` of cancellation_request
         if self.cancellation_request:
             _dict["cancellation_request"] = self.cancellation_request.to_dict()
@@ -168,6 +174,11 @@ class WorkflowRun(BaseModel):
                 "config_text": obj.get("config_text"),
                 "runner_mode": obj.get("runner_mode"),
                 "status": obj.get("status"),
+                "status_details": (
+                    StatusDetails.from_dict(obj.get("status_details"))
+                    if obj.get("status_details") is not None
+                    else None
+                ),
                 "created_by": obj.get("created_by"),
                 "created_at": obj.get("created_at"),
                 "updated_at": obj.get("updated_at"),

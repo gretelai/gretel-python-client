@@ -81,6 +81,7 @@ from gretel_client.rest_v1.models.search_workflows_response import (
     SearchWorkflowsResponse,
 )
 from gretel_client.rest_v1.models.status import Status
+from gretel_client.rest_v1.models.status_details import StatusDetails
 from gretel_client.rest_v1.models.update_connection_request import (
     UpdateConnectionRequest,
 )
