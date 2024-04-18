@@ -403,13 +403,14 @@ def create_project(
         payload["display_name"] = display_name
     if runner_mode := RunnerMode.parse_optional(runner_mode):
         payload["runner_mode"] = runner_mode.value
+    elif runner_mode := RunnerMode.parse_optional(session.default_runner):
+        payload["runner_mode"] = runner_mode.value
     if hybrid_environment_guid:
         if runner_mode != RunnerMode.HYBRID:
             raise ValueError(
                 "cannot specify a hybrid environment for non-hybrid projects"
             )
         payload["cluster_guid"] = hybrid_environment_guid
-
     resp = api.create_project(project=models.Project(**payload))
     project = api.get_project(project_id=resp.get(DATA).get("id"))
 
@@ -536,6 +537,8 @@ def create_or_get_unique_project(
     desc: Optional[str] = None,
     display_name: Optional[str] = None,
     session: Optional[ClientConfig] = None,
+    runner_mode: Optional[Union[RunnerMode, str]] = None,
+    hybrid_environment_guid: Optional[str] = None,
 ) -> Project:
     """
     Helper function that provides a consistent experience for creating
@@ -553,6 +556,10 @@ def create_or_get_unique_project(
             of ``name`` _before_ the user ID is appended.
         session: The client session to use, or ``None`` to use the default client
             session.
+        runner_mode: The runner_mode for the project, one of either
+            ``"cloud"`` or ``"hybrid"``.
+        hybrid_environment_guid: The guid of the hybrid environment to associate
+            with the project, when the runner_mode is of type "hybrid".
 
     NOTE:
         The ``desc`` and ``display_name`` parameters will only be used when
@@ -581,5 +588,7 @@ def create_or_get_unique_project(
         display_name=display_name or name,
         desc=desc,
         session=session,
+        runner_mode=runner_mode,
+        hybrid_environment_guid=hybrid_environment_guid,
     )
     return project
