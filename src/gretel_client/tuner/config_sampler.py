@@ -60,40 +60,66 @@ class SampleType(_TunerEnum):
     FLOAT_RANGE = "float_range"
     LOG_RANGE = "log_range"
 
-    def _check_range_like(self, value):
-        if not isinstance(value, (list, tuple)) or len(value) != 2:
+    def _check_list_like(self, value, *, required_type=None):
+        if not isinstance(value, (list, tuple)):
             raise InvalidSampleTypeError(
-                f"{self.upper()} must have exactly 2 elements. " f"You gave '{value}'."
+                f"{self.upper()} must be a list. You gave '{value}'."
+            )
+        if required_type is not None and not all(
+            isinstance(v, required_type) for v in value
+        ):
+            raise InvalidSampleTypeError(
+                f"{self.upper()} values must be of type {required_type}. You gave '{value}'"
+            )
+
+    def _check_range_like(self, value, *, step_optional):
+        if not step_optional:
+            if len(value) != 2:
+                raise InvalidSampleTypeError(
+                    f"{self.upper()} must have exactly 2 elements. "
+                    f"You gave '{value}'."
+                )
+        else:
+            if (len(value) < 2) or (len(value) > 3):
+                raise InvalidSampleTypeError(
+                    f"{self.upper()} must have exactly 2 or 3 elements. "
+                    f"You gave '{value}'."
+                )
+            if len(value) == 3:
+                if value[2] <= 0:
+                    raise InvalidSampleTypeError(
+                        f"The third element of {self.upper()} is the step size "
+                        f"and must be > 0. You gave '{value}'."
+                    )
+                if len(value) == 3 and value[2] > value[1] - value[0]:
+                    raise InvalidSampleTypeError(
+                        f"The third element of {self.upper()} is the step size "
+                        f"and must be less than the range. You gave '{value}'. "
+                        "Consider a smaller step size or using CHOICES instead."
+                    )
+        if value[1] < value[0]:
+            raise InvalidSampleTypeError(
+                f"{self.upper()} must have min < max. You gave '{value}'."
             )
 
     def check_type_of_sampling(self, sampling):
         """Check that the type of the given value is valid for the sample type."""
         msg = f"You gave '{sampling}'."
         if self == self.CHOICES:
-            if not isinstance(sampling, list):
-                raise InvalidSampleTypeError(f"{self.upper()} must be a list. {msg}")
+            self._check_list_like(sampling)
         elif self == self.INT_RANGE:
-            self._check_range_like(sampling)
-            if not all(isinstance(s, int) for s in sampling):
-                raise InvalidSampleTypeError(
-                    f"{self.upper()} values must be integers. {msg}"
-                )
+            self._check_list_like(sampling, required_type=int)
+            self._check_range_like(sampling, step_optional=True)
         elif self == self.FLOAT_RANGE:
-            self._check_range_like(sampling)
-            if not all(isinstance(s, Number) for s in sampling):
-                raise InvalidSampleTypeError(
-                    f"{self.upper()} values must be a number. {msg}"
-                )
+            self._check_list_like(sampling, required_type=Number)
+            self._check_range_like(sampling, step_optional=True)
         elif self == self.LOG_RANGE:
-            self._check_range_like(sampling)
-            if not all(isinstance(s, Number) for s in sampling):
-                raise InvalidSampleTypeError(
-                    f"{self.upper()} values must be a number. {msg}"
-                )
+            self._check_list_like(sampling, required_type=Number)
             if not all(s > 0 for s in sampling):
                 raise InvalidSampleTypeError(
                     f"{self.upper()} values must be > 0. {msg}"
                 )
+            self._check_range_like(sampling, step_optional=False)
 
     @classmethod
     def validate(cls, value):
@@ -267,16 +293,17 @@ class ModelConfigSampler:
         if sample_type == SampleType.CHOICES:
             self._map_choices(name, sampling)
             sample = trial.suggest_categorical(
-                name,
-                choices=list(self._choices_mapping[name].keys()),
+                name, choices=list(self._choices_mapping[name].keys())
             )
             sample = self._choices_mapping[name][sample]
         elif sample_type == SampleType.INT_RANGE:
-            sample = trial.suggest_int(name, *sampling)
-        elif sample_type in [SampleType.FLOAT_RANGE, SampleType.LOG_RANGE]:
-            sample = trial.suggest_float(
-                name, *sampling, log=sample_type == SampleType.LOG_RANGE
-            )
+            step = sampling[2] if len(sampling) == 3 else 1
+            sample = trial.suggest_int(name, *sampling[:2], step=step)
+        elif sample_type == SampleType.FLOAT_RANGE:
+            step = sampling[2] if len(sampling) == 3 else None
+            sample = trial.suggest_float(name, *sampling[:2], step=step)
+        elif sample_type == SampleType.LOG_RANGE:
+            sample = trial.suggest_float(name, *sampling, log=True)
         elif sample_type == SampleType.FIXED:
             sample = sampling
         else:

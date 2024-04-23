@@ -1,3 +1,5 @@
+import math
+
 from pathlib import Path
 from typing import Callable
 
@@ -24,12 +26,13 @@ def _check_value(value, sample_type, sampling):
         assert value == sampling
     elif sample_type == SampleType.CHOICES:
         assert value in sampling
-    elif sample_type in [
-        SampleType.INT_RANGE,
-        SampleType.FLOAT_RANGE,
-        SampleType.LOG_RANGE,
-    ]:
+    elif sample_type == SampleType.LOG_RANGE:
         assert value >= sampling[0] and value <= sampling[1]
+    elif sample_type in [SampleType.INT_RANGE, SampleType.FLOAT_RANGE]:
+        assert value >= sampling[0] and value <= sampling[1]
+        if len(sampling) == 3:
+            num_steps = (value - sampling[0]) / sampling[2]
+            assert math.isclose(num_steps, round(num_steps, 0), abs_tol=1e-8)
     else:
         raise ValueError(f"Unknown sample type {sample_type}")
 
@@ -207,7 +210,7 @@ def test_invalid_int_range_sample_type():
         epochs: 
             int_range: [10.0, 100]
     """
-    with pytest.raises(InvalidSampleTypeError, match="values must be integers"):
+    with pytest.raises(InvalidSampleTypeError, match="values must be of type"):
         ModelConfigSampler(config_str)
 
 
@@ -220,7 +223,7 @@ def test_invalid_float_range_sample_type():
         generator_lr: 
             float_range: ["nope", 0.01]
     """
-    with pytest.raises(InvalidSampleTypeError, match="values must be a number"):
+    with pytest.raises(InvalidSampleTypeError, match="values must be of type"):
         ModelConfigSampler(config_str)
 
 
@@ -237,6 +240,17 @@ def test_invalid_log_range_sample_type():
         ModelConfigSampler(config_str)
 
 
+def test_invalid_log_range_no_optional_step():
+    config_str = """
+    base_config: tabular-actgan
+    params:
+        generator_lr: 
+            log_range: [0.01, 0.1, 0.01]
+    """
+    with pytest.raises(InvalidSampleTypeError, match="must have exactly 2 elements"):
+        ModelConfigSampler(config_str)
+
+
 def test_invalid_range_length():
     config_str = """
     base_config: tabular-actgan
@@ -244,9 +258,44 @@ def test_invalid_range_length():
         batch_size: 
             fixed: 500
         epochs: 
+            int_range: [10, 100, 1000, 10000]
+    """
+    with pytest.raises(
+        InvalidSampleTypeError, match="must have exactly 2 or 3 elements"
+    ):
+        ModelConfigSampler(config_str)
+
+
+def test_invalid_range_min_max_order():
+    config_str = """
+    base_config: tabular-actgan
+    params:
+        generator_lr: 
+            float_range: [100.0, 10.0]
+    """
+    with pytest.raises(InvalidSampleTypeError, match="must have min < max"):
+        ModelConfigSampler(config_str)
+
+
+def test_invalid_log_range_min_max_order():
+    config_str = """
+    base_config: tabular-actgan
+    params:
+        generator_lr: 
+            log_range: [0.1, 0.001]
+    """
+    with pytest.raises(InvalidSampleTypeError, match="must have min < max"):
+        ModelConfigSampler(config_str)
+
+
+def test_invalid_range_step_too_big():
+    config_str = """
+    base_config: tabular-actgan
+    params:
+        epochs: 
             int_range: [10, 100, 1000]
     """
-    with pytest.raises(InvalidSampleTypeError, match="must have exactly 2 elements"):
+    with pytest.raises(InvalidSampleTypeError, match="must be less than the range"):
         ModelConfigSampler(config_str)
 
 

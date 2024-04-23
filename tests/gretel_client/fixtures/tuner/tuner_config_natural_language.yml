@@ -26,4 +26,4 @@ generate:
     int_range: [500, 600]
   
   temperature: 
-    float_range: [0.5, 1.5]
+    float_range: [0.5, 4.0, 0.1]

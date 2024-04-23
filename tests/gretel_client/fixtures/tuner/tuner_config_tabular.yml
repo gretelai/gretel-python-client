@@ -18,7 +18,7 @@ params:
       - [512, 512, 512]
   
   epochs: 
-    int_range: [50, 70]
+    int_range: [50, 100, 10]
 
   generator_lr: 
     log_range: [0.001, 0.01]
