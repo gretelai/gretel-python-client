@@ -23,7 +23,7 @@ SYNTHETICS_BLUEPRINT_REPO = (
 
 
 @dataclass(frozen=True)
-class TabLLMDefaultParams:
+class NavigatorDefaultParams:
     temperature: float = 0.7
     top_k: int = 40
     top_p: float = 0.95

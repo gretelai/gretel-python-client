@@ -13,11 +13,11 @@ tabular.STREAM_SLEEP_TIME = 0
 def test_generate_error_retry():
     # We need to patch the api call method on the class since we make an API
     # call right away to retrieve the model list
-    with patch.object(tabular.TabularLLMInferenceAPI, "_call_api") as mock_models:
+    with patch.object(tabular.NavigatorInferenceAPI, "_call_api") as mock_models:
         mock_models.return_value = {
             "models": [{"model_id": "gretelai/tabular-v0", "model_type": "TABULAR"}]
         }
-        api = tabular.TabularLLMInferenceAPI()
+        api = tabular.NavigatorInferenceAPI()
 
     api_response = {
         "data": [
@@ -51,11 +51,11 @@ def test_generate_error_retry():
 def test_generate_timeout(retry_count: int):
     # We need to patch the api call method on the class since we make an API
     # call right away to retrieve the model list
-    with patch.object(tabular.TabularLLMInferenceAPI, "_call_api") as mock_models:
+    with patch.object(tabular.NavigatorInferenceAPI, "_call_api") as mock_models:
         mock_models.return_value = {
             "models": [{"model_id": "gretelai/tabular-v0", "model_type": "TABULAR"}]
         }
-        api = tabular.TabularLLMInferenceAPI()
+        api = tabular.NavigatorInferenceAPI()
 
     timeout = 60
     api_response = {

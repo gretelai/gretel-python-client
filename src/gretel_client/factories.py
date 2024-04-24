@@ -10,8 +10,8 @@ from gretel_client.inference_api.base import (
     InferenceAPIModelType,
 )
 from gretel_client.inference_api.tabular import (
-    TABLLM_DEFAULT_MODEL,
-    TabularLLMInferenceAPI,
+    NAVIGATOR_DEFAULT_MODEL,
+    NavigatorInferenceAPI,
 )
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ class GretelFactories:
 
     def initialize_inference_api(
         self,
-        model_type: InferenceAPIModelType = InferenceAPIModelType.TABULAR_LLM,
+        model_type: InferenceAPIModelType = InferenceAPIModelType.NAVIGATOR,
         *,
         backend_model: Optional[str] = None,
     ) -> BaseInferenceAPI:
@@ -52,9 +52,9 @@ class GretelFactories:
         Returns:
             An instance of the initialized inference API object.
         """
-        if model_type == InferenceAPIModelType.TABULAR_LLM:
-            gretel_api = TabularLLMInferenceAPI(
-                backend_model=backend_model or TABLLM_DEFAULT_MODEL,
+        if model_type == InferenceAPIModelType.NAVIGATOR:
+            gretel_api = NavigatorInferenceAPI(
+                backend_model=backend_model or NAVIGATOR_DEFAULT_MODEL,
                 session=self._session,
             )
         else:

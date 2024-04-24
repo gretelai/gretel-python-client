@@ -16,7 +16,7 @@ class GretelInferenceAPIError(Exception):
 
 
 class InferenceAPIModelType(str, Enum):
-    TABULAR_LLM = "tabllm"
+    NAVIGATOR = "navigator"
 
 
 class BaseInferenceAPI(ABC):

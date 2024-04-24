@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from gretel_client.dataframe import _DataFrameT
 from gretel_client.gretel.artifact_fetching import PANDAS_IS_INSTALLED
-from gretel_client.gretel.config_setup import TabLLMDefaultParams
+from gretel_client.gretel.config_setup import NavigatorDefaultParams
 from gretel_client.inference_api.base import BaseInferenceAPI, GretelInferenceAPIError
 
 if PANDAS_IS_INSTALLED:
@@ -25,7 +25,7 @@ STREAM_SLEEP_TIME = 0.5
 MAX_ROWS_PER_STREAM = 50
 REQUEST_TIMEOUT_SEC = 60
 TABULAR_API_PATH = "/v1/inference/tabular/"
-TABLLM_DEFAULT_MODEL = "gretelai/tabular-v0"
+NAVIGATOR_DEFAULT_MODEL = "gretelai/tabular-v0"
 
 
 StreamReturnType = Union[
@@ -33,7 +33,7 @@ StreamReturnType = Union[
 ]
 
 
-class TabularLLMInferenceAPI(BaseInferenceAPI):
+class NavigatorInferenceAPI(BaseInferenceAPI):
     """Inference API for real-time data generation with Gretel's tabular LLM.
 
     Args:
@@ -62,7 +62,7 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
     process raises a user-facing error.
     """
 
-    def __init__(self, backend_model: str = "gretelai/tabular-v0", **session_kwargs):
+    def __init__(self, backend_model: str = NAVIGATOR_DEFAULT_MODEL, **session_kwargs):
         super().__init__(**session_kwargs)
         self.backend_model = backend_model
 
@@ -109,7 +109,7 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
     @property
     def name(self) -> str:
         """Returns display name for this inference api."""
-        return "Gretel Tabular LLM"
+        return "Gretel Navigator"
 
     def _reset_stream(self) -> None:
         """Reset the stream state."""
@@ -326,9 +326,9 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
         *,
         seed_data: Union[_DataFrameT, List[dict[str, Any]]],
         chunk_size: int = 25,
-        temperature: float = TabLLMDefaultParams.temperature,
-        top_k: int = TabLLMDefaultParams.top_k,
-        top_p: float = TabLLMDefaultParams.top_p,
+        temperature: float = NavigatorDefaultParams.temperature,
+        top_k: int = NavigatorDefaultParams.top_k,
+        top_p: float = NavigatorDefaultParams.top_p,
         stream: bool = False,
         as_dataframe: bool = True,
         disable_progress_bar: bool = False,
@@ -360,7 +360,7 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
 
         Example::
 
-            from gretel_client.inference_api.tabular import TabularLLMInferenceAPI
+            from gretel_client.inference_api.tabular import NavigatorInferenceAPI
 
             # Example seed data if using a list of dicts.
             # You can also use a pandas DataFrame.
@@ -381,9 +381,9 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
 
             prompt = "Please add a column with the character's favorite food."
 
-            tabllm = TabularLLMInferenceAPI(api_key="prompt")
+            nav = NavigatorInferenceAPI(api_key="prompt")
 
-            df = tabllm.edit(prompt=prompt, seed_data=seed_data)
+            df = nav.edit(prompt=prompt, seed_data=seed_data)
         """
         if isinstance(seed_data, list) and isinstance(seed_data[0], dict):
             table_headers = list(seed_data[0].keys())
@@ -451,9 +451,9 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
         prompt: str,
         *,
         num_records: int,
-        temperature: float = TabLLMDefaultParams.temperature,
-        top_k: int = TabLLMDefaultParams.top_k,
-        top_p: float = TabLLMDefaultParams.top_p,
+        temperature: float = NavigatorDefaultParams.temperature,
+        top_k: int = NavigatorDefaultParams.top_k,
+        top_p: float = NavigatorDefaultParams.top_p,
         stream: bool = False,
         as_dataframe: bool = True,
         disable_progress_bar: bool = False,
@@ -496,7 +496,7 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
 
         Example::
 
-            from gretel_client.inference_api.tabular import TabularLLMInferenceAPI
+            from gretel_client.inference_api.tabular import NavigatorInferenceAPI
 
             prompt = (
                 "Generate positive and negative reviews for the following products: "
@@ -504,9 +504,9 @@ class TabularLLMInferenceAPI(BaseInferenceAPI):
                 "Include columns for the product name, number of stars (1-5), review, and customer id."
             )
 
-            tabllm = TabularLLMInferenceAPI(api_key="prompt")
+            nav = NavigatorInferenceAPI(api_key="prompt")
 
-            df = tabllm.generate(prompt=prompt, num_records=10)
+            df = nav.generate(prompt=prompt, num_records=10)
         """
         stream_iterator = self._stream(
             prompt=prompt,

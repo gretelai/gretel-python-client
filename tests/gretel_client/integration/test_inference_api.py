@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from gretel_client.inference_api.base import GretelInferenceAPIError
-from gretel_client.inference_api.tabular import TabularLLMInferenceAPI
+from gretel_client.inference_api.tabular import NavigatorInferenceAPI
 
 PROMPT = """\
 Generate a dataset of characters from the Simpsons.
@@ -61,21 +61,21 @@ SIMPSONS_TABLE_DF = pd.DataFrame(SIMPSONS_TABLE)
 
 
 @pytest.fixture(scope="module")
-def tabllm():
-    return TabularLLMInferenceAPI(
+def nav():
+    return NavigatorInferenceAPI(
         api_key=os.getenv("GRETEL_API_KEY"), endpoint="https://api-dev.gretel.cloud"
     )
 
 
-def test_tabllm_inference_api_generate(tabllm):
-    df = tabllm.generate(PROMPT, num_records=NUM_RECORDS)
+def test_nav_inference_api_generate(nav):
+    df = nav.generate(PROMPT, num_records=NUM_RECORDS)
     assert isinstance(df, pd.DataFrame)
     assert len(df) == NUM_RECORDS
 
 
-def test_tabllm_inference_api_generate_stream(tabllm):
+def test_nav_inference_api_generate_stream(nav):
     record_list = []
-    for record in tabllm.generate(PROMPT, num_records=NUM_RECORDS, stream=True):
+    for record in nav.generate(PROMPT, num_records=NUM_RECORDS, stream=True):
         assert isinstance(record, dict)
         record_list.append(record)
     assert len(record_list) == NUM_RECORDS
@@ -84,18 +84,18 @@ def test_tabllm_inference_api_generate_stream(tabllm):
 @pytest.mark.parametrize(
     "chunk_size,seed_data", [(10, SIMPSONS_TABLE), (1, SIMPSONS_TABLE_DF)]
 )
-def test_tabllm_inference_api_edit(chunk_size, seed_data, tabllm):
+def test_nav_inference_api_edit(chunk_size, seed_data, nav):
     """
     We test a chunk size that fits the entire table and a chunks size
     that requires multiple upstream calls to process the table and we
     also alternate between dict and DF as seed data
 
-    NOTE: The prompt is very strict about the colummn name because
+    NOTE: The prompt is very strict about the column name because
     when we make multiple upstream requests there is a chance that
     different inferences will add slightly different column names
     each time.
     """
-    df = tabllm.edit(
+    df = nav.edit(
         prompt="Please add exactly one and only one column called 'personality' that describes the character's personality.",
         seed_data=seed_data,
         chunk_size=chunk_size,
@@ -105,13 +105,13 @@ def test_tabllm_inference_api_edit(chunk_size, seed_data, tabllm):
     assert len(df.columns) == 6
 
 
-def test_tabllm_inference_api_edit_stream(tabllm):
+def test_nav_inference_api_edit_stream(nav):
     """
     We test a chunk size that fits the entire table and a chunks size
     that requires multiple upstream calls to process the table
     """
     results = list(
-        tabllm.edit(
+        nav.edit(
             prompt="Please add a column that describes the character's personality.",
             seed_data=SIMPSONS_TABLE,
             stream=True,
@@ -121,14 +121,14 @@ def test_tabllm_inference_api_edit_stream(tabllm):
     assert len(results[0].keys()) == 6
 
 
-def test_tabllm_inference_api_invalid_backend_model():
+def test_nav_inference_api_invalid_backend_model():
     with pytest.raises(GretelInferenceAPIError):
-        TabularLLMInferenceAPI(backend_model="invalid_model")
+        NavigatorInferenceAPI(backend_model="invalid_model")
 
 
-def test_tabllm_inference_api_edit_invalid_seed_data_type(tabllm):
+def test_nav_inference_api_edit_invalid_seed_data_type(nav):
     with pytest.raises(GretelInferenceAPIError):
-        tabllm.edit(
+        nav.edit(
             prompt="Please add a column that describes the character's personality.",
             seed_data=["Eat my shorts!"],
         )
