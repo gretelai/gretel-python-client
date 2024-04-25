@@ -167,7 +167,7 @@ def _get_quiet_poll_context(job: Job) -> Tuple[Optional[int], Optional[int]]:
     return num_epochs, num_records
 
 
-def poll(job: Job, wait: int = WAIT_UNTIL_DONE, verbose: bool = True) -> Callable:
+def poll(job: Job, wait: int = WAIT_UNTIL_DONE, verbose: bool = True) -> None:
     """
         Polls a ``Model`` or ``RecordHandler``.
 
@@ -177,9 +177,9 @@ def poll(job: Job, wait: int = WAIT_UNTIL_DONE, verbose: bool = True) -> Callabl
         verbose: ``False`` uses new quiet polling, defaults to ``True``.
     """
     if verbose:
-        return _verbose_poll(job, wait)
+        _verbose_poll(job, wait)
     num_epochs, num_records = _get_quiet_poll_context(job)
-    return _quiet_poll(job, wait, num_epochs, num_records)
+    _quiet_poll(job, wait, num_epochs, num_records)
 
 
 def get_description_set(job: Job) -> Optional[dict]:

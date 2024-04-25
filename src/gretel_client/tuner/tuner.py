@@ -4,7 +4,7 @@ import sys
 from contextlib import nullcontext
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Union
+from typing import Callable, Optional, Protocol, Union
 
 import optuna
 import pandas as pd
@@ -17,6 +17,7 @@ from gretel_client.gretel.config_setup import (
 )
 from gretel_client.helpers import poll
 from gretel_client.projects import Project, tmp_project
+from gretel_client.projects.jobs import Job
 from gretel_client.projects.models import Model
 from gretel_client.tuner.config_sampler import ModelConfigSampler
 from gretel_client.tuner.exceptions import ModelMetricMismatchError, TunerTrialError
@@ -29,9 +30,13 @@ from gretel_client.tuner.metrics import (
 logger = logging.getLogger(__name__)
 logger.propagate = False
 logger.addHandler(logging.StreamHandler(sys.stdout))
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 TUNER_SESSION_METADATA = {"tuner": "1"}
+
+
+class Poll(Protocol):
+    def __call__(self, job: Job, verbose: bool) -> None: ...
 
 
 @dataclass(frozen=True)
@@ -75,6 +80,7 @@ class GretelTuner:
         self.sampler = config_sampler
         self.metric = metric or GretelQualityScore()
         self.model_setup = CONFIG_SETUP_DICT[self.sampler.model_type]
+        self.poll = poll
 
         if isinstance(self.metric, GretelQualityScore):
             if self.sampler.model_type not in self.metric.metric_name.compatible_models:
@@ -101,6 +107,10 @@ class GretelTuner:
             )
         return trial_data
 
+    def _set_poll(self, poll: Poll) -> None:
+        """Replace the poll function used to wait for job completion"""
+        self.poll = poll
+
     def _objective(self, trial: optuna.Trial) -> float:
         """Objective function for Optuna hyperparameter tuning."""
         trial_config = self.sampler.create_trial_config(trial)
@@ -117,7 +127,7 @@ class GretelTuner:
             )
 
             model.submit()
-            poll(model, verbose=self._verbose_logging)
+            self.poll(model, verbose=self._verbose_logging)
 
             if model.errors is not None:
                 raise Exception(f"Model failed with error: {model.errors}")
@@ -134,7 +144,9 @@ class GretelTuner:
             sampled_params = self.sampler.parse_trial_params(trial.params)
 
             logger.info(f"Trial {trial.number} -> {self.metric} value: {score:.5f} ")
-            logger.info(f"Trial {trial.number} -> sampled parameters: {sampled_params}")
+            logger.debug(
+                f"Trial {trial.number} -> sampled parameters: {sampled_params}"
+            )
 
             return score
 
@@ -210,7 +222,7 @@ class GretelTuner:
                     direction=self.metric.direction.value,
                 )
 
-            logger.info(
+            logger.debug(
                 f"Starting {self.model_setup.model_name.upper()} "
                 "hyperparameter-tuning experiment...\n"
                 f"Model Docs: {get_model_docs_url(self.sampler.model_type)}\n"
