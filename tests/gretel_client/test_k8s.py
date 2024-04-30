@@ -309,12 +309,16 @@ class TestKubernetesDriver(TestCase):
 
         job_spec: V1JobSpec = k8s_job.spec
         job_template: V1PodTemplateSpec = job_spec.template
-        expected_resources = {"memory": "14Gi", "nvidia.com/gpu": "1"}
+        expected_resources = {
+            "memory": "14Gi",
+            "nvidia.com/gpu": "1",
+        }
         self.assertEqual(
             expected_resources,
             job_template.spec.containers[0].resources.limits,
         )
         expected_resources["cpu"] = "1"
+        expected_resources["ephemeral-storage"] = "50Gi"
         self.assertEqual(
             expected_resources,
             job_template.spec.containers[0].resources.requests,
@@ -528,7 +532,7 @@ class TestKubernetesDriver(TestCase):
             job_spec: V1JobSpec = k8s_job.spec
             job_template: V1PodTemplateSpec = job_spec.template
             self.assertEqual(
-                {"memory": "14Gi", "cpu": "5"},
+                {"memory": "14Gi", "cpu": "5", "ephemeral-storage": "50Gi"},
                 job_template.spec.containers[0].resources.requests,
             )
             self.assertEqual(
@@ -589,7 +593,7 @@ class TestKubernetesDriver(TestCase):
             job_spec: V1JobSpec = k8s_job.spec
             job_template: V1PodTemplateSpec = job_spec.template
             self.assertEqual(
-                {"memory": "12Gi", "cpu": "3.5"},
+                {"memory": "12Gi", "cpu": "3.5", "ephemeral-storage": "50Gi"},
                 job_template.spec.containers[0].resources.requests,
             )
             self.assertEqual(
@@ -616,7 +620,7 @@ class TestKubernetesDriver(TestCase):
             job_spec: V1JobSpec = k8s_job.spec
             job_template: V1PodTemplateSpec = job_spec.template
             self.assertEqual(
-                {"memory": "12Gi", "cpu": "1.5"},
+                {"memory": "12Gi", "cpu": "1.5", "ephemeral-storage": "50Gi"},
                 job_template.spec.containers[0].resources.requests,
             )
             self.assertEqual(
@@ -648,7 +652,7 @@ class TestKubernetesDriver(TestCase):
             job_spec: V1JobSpec = k8s_job.spec
             job_template: V1PodTemplateSpec = job_spec.template
             self.assertEqual(
-                {"memory": "12Gi", "cpu": "2"},
+                {"memory": "12Gi", "cpu": "2", "ephemeral-storage": "50Gi"},
                 job_template.spec.containers[0].resources.requests,
             )
             self.assertEqual(
@@ -680,7 +684,7 @@ class TestKubernetesDriver(TestCase):
             job_spec: V1JobSpec = k8s_job.spec
             job_template: V1PodTemplateSpec = job_spec.template
             self.assertEqual(
-                {"memory": "14Gi", "cpu": "3.5"},
+                {"memory": "14Gi", "cpu": "3.5", "ephemeral-storage": "50Gi"},
                 job_template.spec.containers[0].resources.requests,
             )
             self.assertEqual(
@@ -709,7 +713,7 @@ class TestKubernetesDriver(TestCase):
             job_spec: V1JobSpec = k8s_job.spec
             job_template: V1PodTemplateSpec = job_spec.template
             self.assertEqual(
-                {"memory": "8Gi", "cpu": "3"},
+                {"memory": "8Gi", "cpu": "3", "ephemeral-storage": "50Gi"},
                 job_template.spec.containers[0].resources.requests,
             )
             self.assertEqual(
@@ -734,7 +738,12 @@ class TestKubernetesDriver(TestCase):
             job_spec: V1JobSpec = k8s_job.spec
             job_template: V1PodTemplateSpec = job_spec.template
             self.assertEqual(
-                {"memory": "8Gi", "cpu": "3", "nvidia.com/gpu": "1"},
+                {
+                    "memory": "8Gi",
+                    "cpu": "3",
+                    "nvidia.com/gpu": "1",
+                    "ephemeral-storage": "50Gi",
+                },
                 job_template.spec.containers[0].resources.requests,
             )
             self.assertEqual(
@@ -767,7 +776,7 @@ class TestKubernetesDriver(TestCase):
             job_spec: V1JobSpec = k8s_job.spec
             job_template: V1PodTemplateSpec = job_spec.template
             self.assertEqual(
-                {"memory": "8Gi", "cpu": "3"},
+                {"memory": "8Gi", "cpu": "3", "ephemeral-storage": "50Gi"},
                 job_template.spec.containers[0].resources.requests,
             )
             self.assertEqual(
@@ -800,7 +809,12 @@ class TestKubernetesDriver(TestCase):
             job_spec: V1JobSpec = k8s_job.spec
             job_template: V1PodTemplateSpec = job_spec.template
             self.assertEqual(
-                {"memory": "8Gi", "cpu": "3", "nvidia.com/gpu": "1"},
+                {
+                    "memory": "8Gi",
+                    "cpu": "3",
+                    "nvidia.com/gpu": "1",
+                    "ephemeral-storage": "50Gi",
+                },
                 job_template.spec.containers[0].resources.requests,
             )
             self.assertEqual(

@@ -112,6 +112,9 @@ def _set_default_resources(resources: dict) -> dict:
     resources["requests"].setdefault(
         "memory", resources["limits"].get("memory", "14Gi")
     )
+    resources["requests"].setdefault(
+        "ephemeral-storage", resources["limits"].get("ephemeral-storage", "50Gi")
+    )
     resources["limits"].setdefault("memory", resources["requests"].get("memory"))
     return resources
 
