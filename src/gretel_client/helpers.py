@@ -147,8 +147,8 @@ def _quiet_poll(
 def _get_quiet_poll_context(job: Job) -> Tuple[Optional[int], Optional[int]]:
     num_epochs = None
     num_records = None
-    if isinstance(job, RecordHandler):
-        num_records = job.params["num_records"]
+    if isinstance(job, RecordHandler) and job.params:
+        num_records = job.params.get("num_records")
     elif isinstance(job, Model):
         if job.model_type == "amplify":
             num_records = job.model_config["models"][0][job.model_type]["params"][
@@ -178,8 +178,9 @@ def poll(job: Job, wait: int = WAIT_UNTIL_DONE, verbose: bool = True) -> None:
     """
     if verbose:
         _verbose_poll(job, wait)
-    num_epochs, num_records = _get_quiet_poll_context(job)
-    _quiet_poll(job, wait, num_epochs, num_records)
+    else:
+        num_epochs, num_records = _get_quiet_poll_context(job)
+        _quiet_poll(job, wait, num_epochs, num_records)
 
 
 def get_description_set(job: Job) -> Optional[dict]:
