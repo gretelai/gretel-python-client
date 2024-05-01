@@ -22,11 +22,20 @@ SYNTHETICS_BLUEPRINT_REPO = (
 )
 
 
+# Default parameters for the Navigator and Natural Language inference APIs.
 @dataclass(frozen=True)
 class NavigatorDefaultParams:
     temperature: float = 0.7
     top_k: int = 40
     top_p: float = 0.95
+
+
+@dataclass(frozen=True)
+class NaturalLanguageDefaultParams:
+    temperature: float = 0.6
+    top_k: int = 43
+    top_p: float = 0.9
+    max_tokens: int = 512
 
 
 class ModelType(str, Enum):

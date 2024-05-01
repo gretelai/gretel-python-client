@@ -8,6 +8,7 @@ from typing import Any, Iterator, List, Optional, Union
 
 from tqdm import tqdm
 
+from gretel_client import analysis_utils
 from gretel_client.dataframe import _DataFrameT
 from gretel_client.gretel.artifact_fetching import PANDAS_IS_INSTALLED
 from gretel_client.gretel.config_setup import NavigatorDefaultParams
@@ -25,7 +26,6 @@ STREAM_SLEEP_TIME = 0.5
 MAX_ROWS_PER_STREAM = 50
 REQUEST_TIMEOUT_SEC = 60
 TABULAR_API_PATH = "/v1/inference/tabular/"
-NAVIGATOR_DEFAULT_MODEL = "gretelai/tabular-v0"
 
 
 StreamReturnType = Union[
@@ -34,11 +34,12 @@ StreamReturnType = Union[
 
 
 class NavigatorInferenceAPI(BaseInferenceAPI):
-    """Inference API for real-time data generation with Gretel's tabular LLM.
+    """Inference API for real-time data generation with Gretel Navigator.
 
     Args:
         backend_model (str, optional): The model that is used under the hood.
-            See the `backend_model_list` property for a list of available models.
+            If None, the latest default model will be used. See the
+            `backend_model_list` property for a list of available models.
         **session_kwargs: kwargs for your Gretel session.
 
     Raises:
@@ -62,13 +63,13 @@ class NavigatorInferenceAPI(BaseInferenceAPI):
     process raises a user-facing error.
     """
 
-    def __init__(self, backend_model: str = NAVIGATOR_DEFAULT_MODEL, **session_kwargs):
-        super().__init__(**session_kwargs)
-        self.backend_model = backend_model
-
     @property
     def api_path(self) -> str:
         return TABULAR_API_PATH
+
+    @property
+    def model_type(self) -> str:
+        return "tabular"
 
     @property
     def stream_api_path(self) -> str:
@@ -83,33 +84,23 @@ class NavigatorInferenceAPI(BaseInferenceAPI):
         return self.api_path + "generate"
 
     @property
-    def backend_model(self) -> str:
-        return self._backend_model
-
-    @backend_model.setter
-    def backend_model(self, backend_model: str) -> None:
-        if backend_model not in self.backend_model_list:
-            raise GretelInferenceAPIError(
-                f"Model {backend_model} is not a valid backend model. "
-                f"Valid models are: {self.backend_model_list}"
-            )
-        self._backend_model = backend_model
-        logger.info("Backend model: %s", backend_model)
-        self._reset_stream()
-
-    @property
-    def backend_model_list(self) -> List[str]:
-        """Returns list of available tabular backend models."""
-        return [
-            m["model_id"]
-            for m in self._available_backend_models
-            if m["model_type"].upper() == "TABULAR"
-        ]
-
-    @property
     def name(self) -> str:
         """Returns display name for this inference api."""
         return "Gretel Navigator"
+
+    def display_dataframe_in_notebook(
+        self, dataframe: _DataFrameT, settings: Optional[dict] = None
+    ) -> None:
+        """Display pandas DataFrame in notebook with better settings for readability.
+
+        This function is intended to be used in a Jupyter notebook.
+
+        Args:
+            dataframe: The pandas DataFrame to display.
+            settings: Optional properties to set on the DataFrame's style.
+                If None, default settings with text wrapping are used.
+        """
+        analysis_utils.display_dataframe_in_notebook(dataframe, settings)
 
     def _reset_stream(self) -> None:
         """Reset the stream state."""

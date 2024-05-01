@@ -1,14 +1,19 @@
 import json
+import logging
+import sys
 
 from abc import ABC, abstractproperty
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
-from gretel_client import analysis_utils
 from gretel_client.config import ClientConfig, configure_session, get_session_config
-from gretel_client.dataframe import _DataFrameT
 
 MODELS_API_PATH = "/v1/inference/models"
+
+logger = logging.getLogger(__name__)
+logger.propagate = False
+logger.addHandler(logging.StreamHandler(sys.stdout))
+logger.setLevel(logging.INFO)
 
 
 class GretelInferenceAPIError(Exception):
@@ -17,14 +22,22 @@ class GretelInferenceAPIError(Exception):
 
 class InferenceAPIModelType(str, Enum):
     NAVIGATOR = "navigator"
+    NATURAL_LANGUAGE = "natural_language"
 
 
 class BaseInferenceAPI(ABC):
     """Base class for Gretel Inference API objects."""
 
     _available_backend_models: list[str]
+    _model_type: str
 
-    def __init__(self, *, session: Optional[ClientConfig] = None, **session_kwargs):
+    def __init__(
+        self,
+        backend_model: Optional[str] = None,
+        *,
+        session: Optional[ClientConfig] = None,
+        **session_kwargs,
+    ):
         if session is None:
             if len(session_kwargs) > 0:
                 configure_session(**session_kwargs)
@@ -38,14 +51,43 @@ class BaseInferenceAPI(ABC):
                 "available within Gretel Cloud. Your current runner "
                 f"is configured to: {session.default_runner}"
             )
-        self._api_client = session._get_api_client()
         self.endpoint = session.endpoint
+        self._api_client = session._get_api_client()
         self._available_backend_models = [
             m for m in self._call_api("get", self.models_api_path).get("models", [])
         ]
+        self.backend_model = backend_model
 
     @abstractproperty
     def api_path(self) -> str: ...
+
+    @abstractproperty
+    def model_type(self) -> str: ...
+
+    @property
+    def backend_model_list(self) -> List[str]:
+        """Returns list of backend models for this model type."""
+        return [
+            m["model_id"]
+            for m in self._available_backend_models
+            if m["model_type"].upper() == self.model_type.upper()
+        ]
+
+    @property
+    def backend_model(self) -> str:
+        return self._backend_model
+
+    @backend_model.setter
+    def backend_model(self, backend_model: str) -> None:
+        if backend_model is None:
+            backend_model = self.backend_model_list[0]
+        elif backend_model not in self.backend_model_list:
+            raise GretelInferenceAPIError(
+                f"Model {backend_model} is not a valid backend model. "
+                f"Valid models are: {self.backend_model_list}"
+            )
+        self._backend_model = backend_model
+        logger.info("Backend model: %s", backend_model)
 
     @property
     def models_api_path(self) -> str:
@@ -54,20 +96,6 @@ class BaseInferenceAPI(ABC):
     @property
     def name(self) -> str:
         return self.__class__.__name__
-
-    def display_dataframe_in_notebook(
-        self, dataframe: _DataFrameT, settings: Optional[dict] = None
-    ) -> None:
-        """Display pandas DataFrame in notebook with better settings for readability.
-
-        This function is intended to be used in a Jupyter notebook.
-
-        Args:
-            dataframe: The pandas DataFrame to display.
-            settings: Optional properties to set on the DataFrame's style.
-                If None, default settings with text wrapping are used.
-        """
-        analysis_utils.display_dataframe_in_notebook(dataframe, settings)
 
     def _call_api(
         self,

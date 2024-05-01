@@ -9,10 +9,8 @@ from gretel_client.inference_api.base import (
     GretelInferenceAPIError,
     InferenceAPIModelType,
 )
-from gretel_client.inference_api.tabular import (
-    NAVIGATOR_DEFAULT_MODEL,
-    NavigatorInferenceAPI,
-)
+from gretel_client.inference_api.natural_language import NaturalLanguageInferenceAPI
+from gretel_client.inference_api.tabular import NavigatorInferenceAPI
 
 logger = logging.getLogger(__name__)
 logger.propagate = False
@@ -37,7 +35,6 @@ class GretelFactories:
     def initialize_inference_api(
         self,
         model_type: InferenceAPIModelType = InferenceAPIModelType.NAVIGATOR,
-        *,
         backend_model: Optional[str] = None,
     ) -> BaseInferenceAPI:
         """Initializes and returns a gretel inference API object.
@@ -45,6 +42,7 @@ class GretelFactories:
         Args:
             model_type: The type of the inference API model.
             backend_model: The model used under the hood by the inference API.
+                If None, the latest default model will be used.
 
         Raises:
             GretelInferenceAPIError: If the specified model type is not valid.
@@ -52,16 +50,19 @@ class GretelFactories:
         Returns:
             An instance of the initialized inference API object.
         """
+
         if model_type == InferenceAPIModelType.NAVIGATOR:
-            gretel_api = NavigatorInferenceAPI(
-                backend_model=backend_model or NAVIGATOR_DEFAULT_MODEL,
-                session=self._session,
-            )
+            inference_api_cls = NavigatorInferenceAPI
+        elif model_type == InferenceAPIModelType.NATURAL_LANGUAGE:
+            inference_api_cls = NaturalLanguageInferenceAPI
         else:
             raise GretelInferenceAPIError(
                 f"{model_type} is not a valid inference API model type."
                 f"Valid types are {[t.value for t in InferenceAPIModelType]}"
             )
+        gretel_api = inference_api_cls(
+            backend_model=backend_model, session=self._session
+        )
         logger.info("API path: %s%s", gretel_api.endpoint, gretel_api.api_path)
         logger.info("Initialized %s 🚀", gretel_api.name)
         return gretel_api

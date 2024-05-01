@@ -4,6 +4,7 @@ import pandas as pd
 import pytest
 
 from gretel_client.inference_api.base import GretelInferenceAPIError
+from gretel_client.inference_api.natural_language import NaturalLanguageInferenceAPI
 from gretel_client.inference_api.tabular import NavigatorInferenceAPI
 
 PROMPT = """\
@@ -61,10 +62,28 @@ SIMPSONS_TABLE_DF = pd.DataFrame(SIMPSONS_TABLE)
 
 
 @pytest.fixture(scope="module")
+def llm():
+    return NaturalLanguageInferenceAPI(
+        api_key=os.getenv("GRETEL_API_KEY"), endpoint="https://api-dev.gretel.cloud"
+    )
+
+
+@pytest.fixture(scope="module")
 def nav():
     return NavigatorInferenceAPI(
         api_key=os.getenv("GRETEL_API_KEY"), endpoint="https://api-dev.gretel.cloud"
     )
+
+
+def test_llm_inference_api_generate(llm):
+    response = llm.generate(
+        prompt="What is the meaning of life?",
+        temperature=0.1,
+        max_tokens=10,
+        top_k=40,
+        top_p=0.9,
+    )
+    assert isinstance(response, str)
 
 
 def test_nav_inference_api_generate(nav):
