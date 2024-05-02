@@ -54,6 +54,7 @@ class WorkflowRun(BaseModel):
     error_at: Optional[datetime] = None
     lost_at: Optional[datetime] = None
     cancelled_at: Optional[datetime] = None
+    lease_expires_at: Optional[datetime] = None
     cancellation_request: Optional[WorkflowRunCancellationRequest] = None
     created_by_profile: Optional[UserProfile] = None
     total_compute_time_sconds: Optional[StrictInt] = None
@@ -76,6 +77,7 @@ class WorkflowRun(BaseModel):
         "error_at",
         "lost_at",
         "cancelled_at",
+        "lease_expires_at",
         "cancellation_request",
         "created_by_profile",
         "total_compute_time_sconds",
@@ -187,6 +189,7 @@ class WorkflowRun(BaseModel):
                 "error_at": obj.get("error_at"),
                 "lost_at": obj.get("lost_at"),
                 "cancelled_at": obj.get("cancelled_at"),
+                "lease_expires_at": obj.get("lease_expires_at"),
                 "cancellation_request": (
                     WorkflowRunCancellationRequest.from_dict(
                         obj.get("cancellation_request")
