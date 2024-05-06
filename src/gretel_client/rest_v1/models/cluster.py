@@ -26,6 +26,7 @@ from pydantic import BaseModel, StrictStr, validator
 from gretel_client.rest_v1.models.cluster_cloud_provider_info import (
     ClusterCloudProviderInfo,
 )
+from gretel_client.rest_v1.models.cluster_config import ClusterConfig
 from gretel_client.rest_v1.models.cluster_status import ClusterStatus
 from gretel_client.rest_v1.models.user_profile import UserProfile
 
@@ -44,6 +45,7 @@ class Cluster(BaseModel):
     status: Optional[ClusterStatus] = None
     created_at: Optional[datetime] = None
     last_checkin_time: Optional[datetime] = None
+    config: Optional[ClusterConfig] = None
     __properties = [
         "guid",
         "name",
@@ -54,6 +56,7 @@ class Cluster(BaseModel):
         "status",
         "created_at",
         "last_checkin_time",
+        "config",
     ]
 
     @validator("cloud_provider_type")
@@ -99,6 +102,9 @@ class Cluster(BaseModel):
         # override the default output from pydantic by calling `to_dict()` of status
         if self.status:
             _dict["status"] = self.status.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of config
+        if self.config:
+            _dict["config"] = self.config.to_dict()
         return _dict
 
     @classmethod
@@ -133,6 +139,11 @@ class Cluster(BaseModel):
                 ),
                 "created_at": obj.get("created_at"),
                 "last_checkin_time": obj.get("last_checkin_time"),
+                "config": (
+                    ClusterConfig.from_dict(obj.get("config"))
+                    if obj.get("config") is not None
+                    else None
+                ),
             }
         )
         return _obj

@@ -19,7 +19,11 @@ from gretel_client.rest_v1.models.cluster import Cluster
 from gretel_client.rest_v1.models.cluster_cloud_provider_info import (
     ClusterCloudProviderInfo,
 )
+from gretel_client.rest_v1.models.cluster_config import ClusterConfig
 from gretel_client.rest_v1.models.cluster_status import ClusterStatus
+from gretel_client.rest_v1.models.config_asymmetric_key_metadata import (
+    ConfigAsymmetricKeyMetadata,
+)
 from gretel_client.rest_v1.models.connection import Connection
 from gretel_client.rest_v1.models.create_connection_request import (
     CreateConnectionRequest,
