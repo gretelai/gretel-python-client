@@ -23,6 +23,8 @@ from typing import Optional
 
 from pydantic import BaseModel, StrictBool, StrictStr, validator
 
+from gretel_client.rest_v1.models.cluster import Cluster
+
 
 class Project(BaseModel):
     """
@@ -40,6 +42,7 @@ class Project(BaseModel):
     public: Optional[StrictBool] = None
     runner_mode: Optional[StrictStr] = None
     cluster_guid: Optional[StrictStr] = None
+    cluster: Optional[Cluster] = None
     modified: Optional[datetime] = None
     created: Optional[datetime] = None
     __properties = [
@@ -54,6 +57,7 @@ class Project(BaseModel):
         "public",
         "runner_mode",
         "cluster_guid",
+        "cluster",
         "modified",
         "created",
     ]
@@ -97,6 +101,9 @@ class Project(BaseModel):
     def to_dict(self):
         """Returns the dictionary representation of the model using alias"""
         _dict = self.dict(by_alias=True, exclude={}, exclude_none=True)
+        # override the default output from pydantic by calling `to_dict()` of cluster
+        if self.cluster:
+            _dict["cluster"] = self.cluster.to_dict()
         return _dict
 
     @classmethod
@@ -121,6 +128,11 @@ class Project(BaseModel):
                 "public": obj.get("public"),
                 "runner_mode": obj.get("runner_mode"),
                 "cluster_guid": obj.get("cluster_guid"),
+                "cluster": (
+                    Cluster.from_dict(obj.get("cluster"))
+                    if obj.get("cluster") is not None
+                    else None
+                ),
                 "modified": obj.get("modified"),
                 "created": obj.get("created"),
             }

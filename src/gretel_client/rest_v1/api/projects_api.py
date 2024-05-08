@@ -18,12 +18,13 @@ import warnings
 
 from typing import Optional
 
-from pydantic import StrictInt, StrictStr, validate_arguments, ValidationError
+from pydantic import conlist, StrictInt, StrictStr, validate_arguments, ValidationError
 from typing_extensions import Annotated
 
 from gretel_client.rest_v1.api_client import ApiClient
 from gretel_client.rest_v1.api_response import ApiResponse
 from gretel_client.rest_v1.exceptions import ApiTypeError, ApiValueError  # noqa: F401
+from gretel_client.rest_v1.models.get_project_response import GetProjectResponse
 from gretel_client.rest_v1.models.search_projects_response import SearchProjectsResponse
 
 
@@ -40,11 +41,171 @@ class ProjectsApi(object):
         self.api_client = api_client
 
     @validate_arguments
+    def get_project(
+        self,
+        project_guid: StrictStr,
+        expand: Optional[conlist(StrictStr)] = None,
+        **kwargs,
+    ) -> GetProjectResponse:  # noqa: E501
+        """get_project  # noqa: E501
+
+        This method makes a synchronous HTTP request by default. To make an
+        asynchronous HTTP request, please pass async_req=True
+
+        >>> thread = api.get_project(project_guid, expand, async_req=True)
+        >>> result = thread.get()
+
+        :param project_guid: (required)
+        :type project_guid: str
+        :param expand:
+        :type expand: List[str]
+        :param async_req: Whether to execute the request asynchronously.
+        :type async_req: bool, optional
+        :param _request_timeout: timeout setting for this request. If one
+                                 number provided, it will be total request
+                                 timeout. It can also be a pair (tuple) of
+                                 (connection, read) timeouts.
+        :return: Returns the result object.
+                 If the method is called asynchronously,
+                 returns the request thread.
+        :rtype: GetProjectResponse
+        """
+        kwargs["_return_http_data_only"] = True
+        if "_preload_content" in kwargs:
+            raise ValueError(
+                "Error! Please call the get_project_with_http_info method with `_preload_content` instead and obtain raw data from ApiResponse.raw_data"
+            )
+        return self.get_project_with_http_info(
+            project_guid, expand, **kwargs
+        )  # noqa: E501
+
+    @validate_arguments
+    def get_project_with_http_info(
+        self,
+        project_guid: StrictStr,
+        expand: Optional[conlist(StrictStr)] = None,
+        **kwargs,
+    ) -> ApiResponse:  # noqa: E501
+        """get_project  # noqa: E501
+
+        This method makes a synchronous HTTP request by default. To make an
+        asynchronous HTTP request, please pass async_req=True
+
+        >>> thread = api.get_project_with_http_info(project_guid, expand, async_req=True)
+        >>> result = thread.get()
+
+        :param project_guid: (required)
+        :type project_guid: str
+        :param expand:
+        :type expand: List[str]
+        :param async_req: Whether to execute the request asynchronously.
+        :type async_req: bool, optional
+        :param _preload_content: if False, the ApiResponse.data will
+                                 be set to none and raw_data will store the
+                                 HTTP response body without reading/decoding.
+                                 Default is True.
+        :type _preload_content: bool, optional
+        :param _return_http_data_only: response data instead of ApiResponse
+                                       object with status code, headers, etc
+        :type _return_http_data_only: bool, optional
+        :param _request_timeout: timeout setting for this request. If one
+                                 number provided, it will be total request
+                                 timeout. It can also be a pair (tuple) of
+                                 (connection, read) timeouts.
+        :param _request_auth: set to override the auth_settings for an a single
+                              request; this effectively ignores the authentication
+                              in the spec for a single request.
+        :type _request_auth: dict, optional
+        :type _content_type: string, optional: force content-type for the request
+        :return: Returns the result object.
+                 If the method is called asynchronously,
+                 returns the request thread.
+        :rtype: tuple(GetProjectResponse, status_code(int), headers(HTTPHeaderDict))
+        """
+
+        _params = locals()
+
+        _all_params = ["project_guid", "expand"]
+        _all_params.extend(
+            [
+                "async_req",
+                "_return_http_data_only",
+                "_preload_content",
+                "_request_timeout",
+                "_request_auth",
+                "_content_type",
+                "_headers",
+            ]
+        )
+
+        # validate the arguments
+        for _key, _val in _params["kwargs"].items():
+            if _key not in _all_params:
+                raise ApiTypeError(
+                    "Got an unexpected keyword argument '%s'"
+                    " to method get_project" % _key
+                )
+            _params[_key] = _val
+        del _params["kwargs"]
+
+        _collection_formats = {}
+
+        # process the path parameters
+        _path_params = {}
+        if _params["project_guid"]:
+            _path_params["project_guid"] = _params["project_guid"]
+
+        # process the query parameters
+        _query_params = []
+        if _params.get("expand") is not None:  # noqa: E501
+            _query_params.append(("expand", _params["expand"]))
+            _collection_formats["expand"] = "multi"
+
+        # process the header parameters
+        _header_params = dict(_params.get("_headers", {}))
+        # process the form parameters
+        _form_params = []
+        _files = {}
+        # process the body parameter
+        _body_params = None
+        # set the HTTP header `Accept`
+        _header_params["Accept"] = self.api_client.select_header_accept(
+            ["application/json"]
+        )  # noqa: E501
+
+        # authentication setting
+        _auth_settings = []  # noqa: E501
+
+        _response_types_map = {
+            "200": "GetProjectResponse",
+        }
+
+        return self.api_client.call_api(
+            "/v1/projects/{project_guid}",
+            "GET",
+            _path_params,
+            _query_params,
+            _header_params,
+            body=_body_params,
+            post_params=_form_params,
+            files=_files,
+            response_types_map=_response_types_map,
+            auth_settings=_auth_settings,
+            async_req=_params.get("async_req"),
+            _return_http_data_only=_params.get("_return_http_data_only"),  # noqa: E501
+            _preload_content=_params.get("_preload_content", True),
+            _request_timeout=_params.get("_request_timeout"),
+            collection_formats=_collection_formats,
+            _request_auth=_params.get("_request_auth"),
+        )
+
+    @validate_arguments
     def search_projects(
         self,
         query: Optional[StrictStr] = None,
         limit: Optional[StrictInt] = None,
         skip: Optional[StrictInt] = None,
+        expand: Optional[conlist(StrictStr)] = None,
         **kwargs,
     ) -> SearchProjectsResponse:  # noqa: E501
         """search_projects  # noqa: E501
@@ -52,7 +213,7 @@ class ProjectsApi(object):
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
-        >>> thread = api.search_projects(query, limit, skip, async_req=True)
+        >>> thread = api.search_projects(query, limit, skip, expand, async_req=True)
         >>> result = thread.get()
 
         :param query:
@@ -61,6 +222,8 @@ class ProjectsApi(object):
         :type limit: int
         :param skip:
         :type skip: int
+        :param expand:
+        :type expand: List[str]
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
         :param _request_timeout: timeout setting for this request. If one
@@ -78,7 +241,7 @@ class ProjectsApi(object):
                 "Error! Please call the search_projects_with_http_info method with `_preload_content` instead and obtain raw data from ApiResponse.raw_data"
             )
         return self.search_projects_with_http_info(
-            query, limit, skip, **kwargs
+            query, limit, skip, expand, **kwargs
         )  # noqa: E501
 
     @validate_arguments
@@ -87,6 +250,7 @@ class ProjectsApi(object):
         query: Optional[StrictStr] = None,
         limit: Optional[StrictInt] = None,
         skip: Optional[StrictInt] = None,
+        expand: Optional[conlist(StrictStr)] = None,
         **kwargs,
     ) -> ApiResponse:  # noqa: E501
         """search_projects  # noqa: E501
@@ -94,7 +258,7 @@ class ProjectsApi(object):
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
-        >>> thread = api.search_projects_with_http_info(query, limit, skip, async_req=True)
+        >>> thread = api.search_projects_with_http_info(query, limit, skip, expand, async_req=True)
         >>> result = thread.get()
 
         :param query:
@@ -103,6 +267,8 @@ class ProjectsApi(object):
         :type limit: int
         :param skip:
         :type skip: int
+        :param expand:
+        :type expand: List[str]
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
         :param _preload_content: if False, the ApiResponse.data will
@@ -130,7 +296,7 @@ class ProjectsApi(object):
 
         _params = locals()
 
-        _all_params = ["query", "limit", "skip"]
+        _all_params = ["query", "limit", "skip", "expand"]
         _all_params.extend(
             [
                 "async_req",
@@ -168,6 +334,10 @@ class ProjectsApi(object):
 
         if _params.get("skip") is not None:  # noqa: E501
             _query_params.append(("skip", _params["skip"]))
+
+        if _params.get("expand") is not None:  # noqa: E501
+            _query_params.append(("expand", _params["expand"]))
+            _collection_formats["expand"] = "multi"
 
         # process the header parameters
         _header_params = dict(_params.get("_headers", {}))
