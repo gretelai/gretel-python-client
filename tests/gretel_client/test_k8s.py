@@ -991,6 +991,40 @@ class TestKubernetesDriver(TestCase):
             {"name": "gretel-pull-secret"},
         ]
 
+    @patch_auth
+    def test_build_job_params_set_correctly(self):
+        job = Job.from_dict(get_mock_job(), self.config)
+        k8s_job = self.reload_env_and_build_job(job, restart_worker=True)
+
+        job_spec: V1JobSpec = k8s_job.spec
+        pod_template: V1PodTemplateSpec = job_spec.template
+        pod_spec: V1PodSpec = pod_template.spec
+        container: V1Container = pod_spec.containers[0]
+
+        assert container.args == ["--worker-token", job.worker_token]
+
+    @patch_auth
+    def test_build_job_params_set_correctly_with_empty_arg_val(self):
+        job = Job.from_dict(get_mock_job(), self.config)
+        job.disable_cloud_logging = True
+        job.disable_cloud_report_scores = True
+        job.artifact_endpoint = "s3://davey-jones-bucket/"
+        k8s_job = self.reload_env_and_build_job(job, restart_worker=True)
+
+        job_spec: V1JobSpec = k8s_job.spec
+        pod_template: V1PodTemplateSpec = job_spec.template
+        pod_spec: V1PodSpec = pod_template.spec
+        container: V1Container = pod_spec.containers[0]
+
+        assert container.args == [
+            "--worker-token",
+            job.worker_token,
+            "--artifact-endpoint",
+            job.artifact_endpoint,
+            "--disable-cloud-logging",
+            "--disable-cloud-report-scores",
+        ]
+
     @patch_image_registry("shiny-new-reg.example.ai")
     @patch_auth
     @patch_env(

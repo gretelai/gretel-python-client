@@ -403,7 +403,9 @@ class Kubernetes(Driver):
         # tolerable, especially for hybrid users.
         job_params = dict(job_config.params)
         job_params.pop("--worker_token", None)
-        args = list(itertools.chain.from_iterable(job_params.items()))
+        args = [
+            arg for k, v in job_params.items() for arg in ((k, v) if v != "" else (k,))
+        ]
 
         image = self._resolve_image(job_config)
 
