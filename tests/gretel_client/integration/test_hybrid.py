@@ -6,12 +6,13 @@ from typing import Callable
 import pandas as pd
 import pytest
 
+from gretel_client._hybrid.config import _HybridSessionConfig
 from gretel_client._hybrid.creds_encryption import (
     CredentialsEncryption,
     NoCredentialsEncryption,
 )
 from gretel_client.config import get_session_config
-from gretel_client.projects import Project
+from gretel_client.projects import get_project, Project
 from gretel_client.projects.projects import Model, RunnerMode
 from gretel_client.rest.api.projects_api import Artifact, ProjectsApi
 from gretel_client.rest_v1.api.connections_api import (
@@ -19,6 +20,21 @@ from gretel_client.rest_v1.api.connections_api import (
     CreateConnectionRequest,
 )
 from gretel_client.rest_v1.api.workflows_api import CreateWorkflowRequest, WorkflowsApi
+
+
+@pytest.fixture
+def legacy_project():
+    """
+    Returns a legacy (i.e., non-hybrid) project. This is required by some tests that attempt
+    to create cloud models.
+    """
+    session = get_session_config()
+    if isinstance(session, _HybridSessionConfig):
+        session = session._delegate
+    p = get_project(create=True, session=session)
+    p = get_project(name=p.name)
+    yield p
+    p.delete()
 
 
 @pytest.mark.gretel_hybrid(creds_encryption=NoCredentialsEncryption())
@@ -34,8 +50,8 @@ def test_create_project_artifact_fails(project: Project):
 
 
 @pytest.mark.gretel_hybrid(creds_encryption=NoCredentialsEncryption())
-def test_create_cloud_model_fails(project: Project, get_fixture):
-    model: Model = project.create_model_obj(get_fixture("llama2_config.yml"))
+def test_create_cloud_model_fails(legacy_project: Project, get_fixture):
+    model: Model = legacy_project.create_model_obj(get_fixture("llama2_config.yml"))
 
     with pytest.raises(ValueError, match="only 'hybrid' is allowed"):
         model.submit_cloud(dry_run=True)

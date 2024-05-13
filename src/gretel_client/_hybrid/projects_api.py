@@ -2,6 +2,7 @@ from functools import partial
 from typing import Any, Optional
 
 from gretel_client.config import RunnerMode
+from gretel_client.rest import models
 from gretel_client.rest.api.projects_api import ProjectInvite, ProjectsApi
 from gretel_client.rest.exceptions import ApiException
 
@@ -21,8 +22,14 @@ class HybridProjectsApi(ProjectsApi):
     """
 
     _deployment_user: Optional[str]
+    _default_cluster_guid: Optional[str]
 
-    def __init__(self, api: ProjectsApi, deployment_user: Optional[str] = None):
+    def __init__(
+        self,
+        api: ProjectsApi,
+        deployment_user: Optional[str] = None,
+        default_cluster_guid: Optional[str] = None,
+    ):
         """
         Constructor.
 
@@ -34,6 +41,7 @@ class HybridProjectsApi(ProjectsApi):
         """
         super().__init__(api.api_client)
         self._deployment_user = deployment_user
+        self._default_cluster_guid = default_cluster_guid
 
         # The API object we inherit from does not define methods for invoking API
         # endpoints, but instead sets them as attributes in the constructor.
@@ -49,6 +57,18 @@ class HybridProjectsApi(ProjectsApi):
         )
 
     def _create_project(self, super_create_project, *args, **kwargs):
+        project: models.Project = kwargs["project"]
+        if (runner_mode := project.get("runner_mode")) and RunnerMode.parse(
+            runner_mode
+        ) != RunnerMode.HYBRID:
+            raise ValueError(
+                f"invalid project runner mode '{runner_mode}', only '{RunnerMode.HYBRID}' is allowed"
+            )
+
+        project.runner_mode = RunnerMode.HYBRID.value
+        if not project.get("cluster_guid") and self._default_cluster_guid:
+            project.cluster_guid = self._default_cluster_guid
+
         resp = super_create_project(*args, **kwargs)
         if self._deployment_user:
             project_id = resp["data"]["id"]

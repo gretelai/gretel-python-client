@@ -7,6 +7,7 @@ from typing import Optional, Union
 import click
 import yaml
 
+from gretel_client._hybrid.asymmetric import AsymmetricCredentialsEncryption
 from gretel_client.cli.common import pass_session, project_option, SessionContext
 from gretel_client.cli.connection_credentials_aws_kms import AWSKMSEncryption
 from gretel_client.cli.connection_credentials_azure_key_vault import (
@@ -15,10 +16,10 @@ from gretel_client.cli.connection_credentials_azure_key_vault import (
 from gretel_client.cli.connection_credentials_gcp_kms import GCPKMSEncryption
 from gretel_client.config import ClientConfig
 from gretel_client.rest_v1.api.connections_api import ConnectionsApi
-from gretel_client.rest_v1.models import (
-    CreateConnectionRequest,
-    UpdateConnectionRequest,
-)
+from gretel_client.rest_v1.api.projects_api import ProjectsApi as ProjectsV1API
+from gretel_client.rest_v1.models import CreateConnectionRequest
+from gretel_client.rest_v1.models import Project as V1Project
+from gretel_client.rest_v1.models import UpdateConnectionRequest
 
 
 @click.group(help="Commands for working with Gretel connections.")
@@ -37,6 +38,13 @@ def _read_connection_file(file: Union[Path, str]) -> dict:
     except JSONDecodeError:
         with open(fp) as fd:
             return yaml.safe_load(fd)
+
+
+def _get_v1_project(project_guid: str, *, session: ClientConfig) -> V1Project:
+    projects_v1_api = session.get_v1_api(ProjectsV1API)
+    return projects_v1_api.get_project(
+        project_guid=project_guid, expand=["cluster"]
+    ).project
 
 
 @connections.command(help="Create a new connection.")
@@ -90,7 +98,31 @@ def create(
         raise click.UsageError(
             "Please specify options for at most one encryption provider only"
         )
-    encryption_provider = encryption_providers[0] if encryption_providers else None
+
+    encryption_provider = None
+    if encryption_providers:
+        encryption_provider = encryption_providers[0]
+    elif conn.get("credentials"):
+        # Check if the project is a hybrid project, in which case we need to make
+        # sure that credentials are always encrypted.
+        project_obj = _get_v1_project(project_guid, session=sc.session)
+        if project_obj.runner_mode == "RUNNER_MODE_HYBRID":
+            cluster = project_obj.cluster
+            if not cluster:
+                raise Exception(
+                    f"Project {project_obj.name} is a hybrid project, but does not have any hybrid environment "
+                    "info associated with it. Please specify the credentials encryption mechanism manually."
+                )
+            if not cluster.config or not cluster.config.asymmetric_key:
+                raise Exception(
+                    f"Hybrid environment {cluster.name} for project {project_obj.name} is not set up for asymmetric "
+                    "encryption. Please specify the credentials encyrption mechanism manually, or enable asymmetric "
+                    "encryption in your environment configuration."
+                )
+
+            encryption_provider = AsymmetricCredentialsEncryption(
+                projects_v1_api, asymmetric_key_metadata=cluster.config.asymmetric_key
+            )
 
     if conn.get("encrypted_credentials") is not None:
         if conn.get("credentials") is not None:

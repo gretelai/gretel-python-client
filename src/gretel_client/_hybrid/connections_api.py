@@ -1,8 +1,8 @@
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import StrictStr
 
-from gretel_client._hybrid.creds_encryption import CredentialsEncryption
+from gretel_client._hybrid.creds_encryption import BaseCredentialsEncryption
 from gretel_client.rest_v1.api.connections_api import (
     ConnectionsApi,
     CreateConnectionRequest,
@@ -25,9 +25,13 @@ class HybridConnectionsApi(ConnectionsApi):
       before making the request to the server.
     """
 
-    _creds_encryption: CredentialsEncryption
+    _creds_encryption: BaseCredentialsEncryption
 
-    def __init__(self, api: ConnectionsApi, creds_encryption: CredentialsEncryption):
+    def __init__(
+        self,
+        api: ConnectionsApi,
+        creds_encryption: BaseCredentialsEncryption,
+    ):
         """
         Constructor.
 
@@ -44,7 +48,9 @@ class HybridConnectionsApi(ConnectionsApi):
     ) -> ApiResponse:
         if creds := create_connection_request.credentials:
             create_connection_request.credentials = None
-            encrypted_creds = self._creds_encryption.apply(creds)
+            encrypted_creds = self._creds_encryption.apply(
+                creds, project_guid=create_connection_request.project_id
+            )
             create_connection_request.encrypted_credentials = encrypted_creds
 
         return super().create_connection_with_http_info(
@@ -61,6 +67,7 @@ class HybridConnectionsApi(ConnectionsApi):
             update_connection_request.credentials = None
             encrypted_creds = self._creds_encryption.apply(
                 creds,
+                project_guid=super().get_connection(connection_id).project_id,
             )
             update_connection_request.encrypted_credentials = encrypted_creds
 
