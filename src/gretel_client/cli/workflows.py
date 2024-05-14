@@ -75,7 +75,7 @@ def create(
     runner_mode = RunnerMode.from_str(runner_mode)
 
     wfl = CreateWorkflowRequest(
-        config=workflow_config,
+        config_text=yaml.dump(workflow_config, sort_keys=False),
         name=workflow_config["name"],
         project_id=project_id,
         runner_mode=runner_mode,
@@ -135,8 +135,7 @@ def get(sc: SessionContext, id: str):
 @pass_session
 def update(sc: SessionContext, workflow_id: str, config: Path):
     with open(config, encoding="utf-8") as file:
-        # Temporarily load the yaml into a json string and upload that, we can upload raw yaml once the api changes land. -md
-        workflow_config = json.dumps(yaml.safe_load(file))
+        workflow_config = file.read()
     workflow_api = _get_workflows_api(session=sc.session)
     updated_workflow = workflow_api.update_workflow_config(
         workflow_id=workflow_id, body=workflow_config, _content_type="text/yaml"
