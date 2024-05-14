@@ -5,6 +5,7 @@ docker==6.1.2
 kubernetes==28.1.0
 opentelemetry-distro==0.44b0
 opentelemetry-exporter-prometheus==0.44b0
+pycryptodome>=3.19,<4
 pydantic==1.10.13
 python_dateutil>=2.8.0
 pyyaml==6.0.1

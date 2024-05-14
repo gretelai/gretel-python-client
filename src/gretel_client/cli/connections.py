@@ -121,7 +121,7 @@ def create(
                 )
 
             encryption_provider = AsymmetricCredentialsEncryption(
-                projects_v1_api, asymmetric_key_metadata=cluster.config.asymmetric_key
+                asymmetric_key_metadata=cluster.config.asymmetric_key
             )
 
     if conn.get("encrypted_credentials") is not None:

@@ -131,7 +131,9 @@ class _HybridSessionConfig(DelegatingClientConfig):
         self._creds_encryption = (
             creds_encryption
             if creds_encryption is not None
-            else AsymmetricCredentialsEncryption(session.get_v1_api(ProjectsV1Api))
+            else AsymmetricCredentialsEncryption(
+                projects_api=session.get_v1_api(ProjectsV1Api)
+            )
         )
         self._deployment_user = deployment_user
         self._default_cluster_guid = default_cluster_guid

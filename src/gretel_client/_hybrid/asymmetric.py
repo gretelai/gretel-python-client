@@ -19,12 +19,13 @@ from gretel_client.rest_v1.models.config_asymmetric_key_metadata import (
 
 class AsymmetricCredentialsEncryption(BaseCredentialsEncryption):
 
-    _projects_api: ProjectsApi
-    _asymmetric_key_metadata: ConfigAsymmetricKeyMetadata
+    _projects_api: Optional[ProjectsApi]
+    _asymmetric_key_metadata: Optional[ConfigAsymmetricKeyMetadata]
 
     def __init__(
         self,
-        projects_api: ProjectsApi,
+        *,
+        projects_api: Optional[ProjectsApi] = None,
         asymmetric_key_metadata: Optional[ConfigAsymmetricKeyMetadata] = None,
     ):
         self._projects_api = projects_api
@@ -36,6 +37,10 @@ class AsymmetricCredentialsEncryption(BaseCredentialsEncryption):
             if not project_guid:
                 raise ValueError(
                     "can not apply asymmetric encryption for connections not specifying a project ID"
+                )
+            if not self._projects_api:
+                raise ValueError(
+                    "encryption mechanism is not configured for dynamic retrieval of asymmetric key"
                 )
 
             project = self._projects_api.get_project(
