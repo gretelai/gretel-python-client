@@ -215,8 +215,6 @@ class TimeseriesDganModelTypeConfig(GenericModelTypeConfig):
         return GPU
 
 
-
-
 def _peek_any_report(report_contents) -> dict:
     """
     Extract the fields from any synthetic report (SQS, MQS, Text SQS).
