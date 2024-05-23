@@ -293,6 +293,26 @@ def test_does_populate_record_details(
     )
 
 
+@pytest.mark.parametrize("num_records", [0, 1, 5, 9, 10, 11, 15, 19, 20, 21, 25, 50])
+def test_goes_through_records(
+    m: Model,
+    num_records,
+):
+    m.submit(runner_mode=RunnerMode.LOCAL)
+
+    def mock_record_handlers(status, skip, limit, *args, **kwargs):
+        handlers = (
+            [{"uid": 0} for _ in range(min(limit, num_records - skip))]
+            if status == "completed"
+            else []
+        )
+        return {"data": {"handlers": handlers}}
+
+    m._projects_api.query_record_handlers.side_effect = mock_record_handlers
+
+    assert len([h for h in m.get_record_handlers()]) == num_records
+
+
 def test_billing_output(m: Model):
     m._poll_job_endpoint()
     # assert m.billing_details == {"total_billed_seconds": 60, "task_type": "cpu"}

@@ -454,6 +454,6 @@ class Model(Job):
                 if len(handlers) > 0:
                     for handler in handlers:
                         yield RecordHandler(self, record_id=handler["uid"])
-                    offset += limit + 1
+                    offset += limit
                 else:
                     break
