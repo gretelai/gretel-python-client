@@ -115,7 +115,7 @@ CONFIG_SETUP_DICT = {
     ),
     ModelType.GPT_X: ModelConfigSections(
         model_name="gpt",
-        config_sections=["params", "generate"],
+        config_sections=["params", "peft_params", "privacy_params", "generate"],
         data_source_optional=True,
         report_type=ReportType.TEXT,
         extra_kwargs=[
