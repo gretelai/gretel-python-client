@@ -24,6 +24,7 @@ from gretel_client.agents.drivers.driver import ComputeUnit, Driver
 from gretel_client.agents.drivers.registry import get_driver
 from gretel_client.agents.logger import configure_logging
 from gretel_client.config import (
+    add_session_context,
     ClientConfig,
     configure_custom_logger,
     get_session_config,
@@ -40,6 +41,8 @@ configure_logging()
 
 
 _CLUSTERID_HEADER_KEY = "X-Gretel-Clusterid"
+_APP_VERSION_KEY = "X-Gretel-AppVersion"
+_IMAGE_VERSION_KEY = "X-Gretel-ImageVersion"
 
 
 class AgentError(Exception): ...
@@ -122,6 +125,10 @@ class AgentConfig:
 
     session: Optional[ClientConfig] = None
 
+    app_version: Optional[str] = None
+
+    image_version: Optional[str] = None
+
     _project_ids: Optional[List[str]] = None
     """Cached project ID."""
 
@@ -130,7 +137,15 @@ class AgentConfig:
 
     def __post_init__(self):
         if self.session is None:
-            self.session = get_session_config()
+            session = get_session_config()
+            self.session = add_session_context(
+                session=session,
+                client_metrics={
+                    "image_version": self.image_version,
+                    "app_version": self.app_version,
+                    "service": "agent",
+                },
+            )
         self._logger = logging.getLogger(__name__)
         self._max_workers_from_config = self.max_workers
         self._update_max_workers()
@@ -546,9 +561,14 @@ class Agent:
         self._jobs_manager = JobManager(self._driver, config.disable_job_cleanup)
         self._rate_limiter = RateLimiter(config.max_workers, self._jobs_manager, config)
 
-        default_headers = None
+        default_headers = {}
         if config.cluster_guid:
-            default_headers = {_CLUSTERID_HEADER_KEY: config.cluster_guid}
+            default_headers[_CLUSTERID_HEADER_KEY] = config.cluster_guid
+        if config.app_version:
+            default_headers[_APP_VERSION_KEY] = config.app_version
+        if config.image_version:
+            default_headers[_IMAGE_VERSION_KEY] = config.image_version
+
         self._jobs_api = self._client_config.get_api(
             JobsApi, default_headers=default_headers
         )
