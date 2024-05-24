@@ -54,6 +54,55 @@ def _convert_to_valid_data_source(
     return str(data) if isinstance(data, Path) else data
 
 
+NAVFT_CONFIG = """\
+ schema_version: 1.0
+ name: "atlas"
+ models:
+   - atlas:
+       debug_overrides:
+         image_tag: test-atlas-johnny_nav-ft_cleanup-and-implementation-improvements
+
+       data_source: "__tmp__"
+       pretrained_model: GretelTinyLlamaTabular
+       group_training_examples_by: null
+       order_training_examples_by: null
+       rope_scaling_factor: 1
+       test_set_size: 0.05
+
+       generate:
+         num_records: 1000
+         repetition_penalty: 1.2
+         temperature: 0.75
+         top_p: 1.0
+         stop_params: 
+            invalid_fraction_threshold: 100.0
+
+       params:
+         num_training_records: 25000
+         batch_size: 2
+         gradient_accumulation_steps: 4
+         learning_rate: 0.0005
+         lr_scheduler: cosine
+         warmup_ratio: 0.05
+         weight_decay: 0.01
+         lora_alpha_over_r: 1
+         lora_r: 32
+         lora_target_modules: [q_proj, k_proj, v_proj, o_proj]
+
+       evaluate:
+         correlation_columns: 75
+         holdout: null
+         mandatory_columns: null
+         metric: null
+         models: null
+         skip: false
+         sqs_report_columns: 250
+         sqs_report_rows: 5000
+         target: null
+         task: null
+"""
+
+
 class Gretel:
     """High-level interface for interacting with Gretel's APIs.
 
@@ -301,6 +350,9 @@ class Gretel:
                 privacy_filters={"similarity": "high", "outliers": None},
             )
         """
+        if base_config == "navigator-ft":
+            base_config = NAVFT_CONFIG
+
         job_config = create_model_config_from_base(
             base_config=base_config,
             job_label=job_label,

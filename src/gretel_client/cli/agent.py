@@ -115,16 +115,6 @@ def build_logger(job_id: str) -> Callable:
     envvar="GRETEL_CLUSTER_ID",
 )
 @click.option(
-    "--app-version",
-    help="Version of the application running, if appropriate",
-    envvar="GRETEL_APP_VERSION",
-)
-@click.option(
-    "--image-version",
-    help="Version of the image running, if appropriate",
-    envvar="GRETEL_IMAGE_VERSION",
-)
-@click.option(
     "--disable-job-cleanup",
     help="Disables the cleanup of jobs to help debugging",
     envvar="GRETEL_DISABLE_JOB_CLEANUP",
@@ -148,8 +138,6 @@ def start(
     runner_modes: Optional[List[str]] = None,
     cluster_id: Optional[str] = None,
     disable_job_cleanup: bool = False,
-    app_version: Optional[str] = None,
-    image_version: Optional[str] = False,
 ):
     sc.log.info(f"Starting Gretel agent using driver {driver}.")
     creds = []
@@ -210,8 +198,6 @@ def start(
         cluster_guid=cluster_id,
         session=sc.session,
         disable_job_cleanup=disable_job_cleanup,
-        app_version=app_version,
-        image_version=image_version,
     )
     agent = get_agent(config)
     sc.register_cleanup(lambda: agent.interrupt())
