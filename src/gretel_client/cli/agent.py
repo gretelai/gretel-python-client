@@ -128,6 +128,7 @@ def build_logger(job_id: str) -> Callable:
     "--disable-job-cleanup",
     help="Disables the cleanup of jobs to help debugging",
     envvar="GRETEL_DISABLE_JOB_CLEANUP",
+    type=bool,
 )
 @pass_session
 def start(
