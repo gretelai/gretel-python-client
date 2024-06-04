@@ -45,6 +45,7 @@ from gretel_client.agents.drivers.k8s import (
     GPU_TOLERATIONS_ENV_NAME,
     IMAGE_REGISTRY_OVERRIDE_HOST_ENV_NAME,
     IMAGE_REGISTRY_OVERRIDE_TAG_ENV_NAME,
+    JOB_BACKOFF_LIMIT_ENV_NAME,
     Kubernetes,
     KubernetesDriverDaemon,
     KubernetesError,
@@ -400,6 +401,15 @@ class TestKubernetesDriver(TestCase):
                     job_template.spec.affinity,
                 )
 
+    @patch_env(JOB_BACKOFF_LIMIT_ENV_NAME, "3")
+    def test_backoff_set_above_zero(self):
+        job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
+
+        k8s_job = self.reload_env_and_build_job(job)
+
+        job_spec: V1JobSpec = k8s_job.spec
+        assert job_spec.backoff_limit == 3
+
     def test_build_job_cpu_req_node_selector_set(self):
         with patch_cpu_environ('{"selector":"my-cpu-node"}'):
             self.driver._load_env_and_set_vars()
@@ -408,6 +418,7 @@ class TestKubernetesDriver(TestCase):
             k8s_job = self.driver._build_job(job)
 
             job_spec: V1JobSpec = k8s_job.spec
+            assert job_spec.backoff_limit == 0
             job_template: V1PodTemplateSpec = job_spec.template
             self.assertEqual(
                 {"memory": "14Gi"},

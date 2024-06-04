@@ -7,7 +7,6 @@ from __future__ import annotations
 import base64
 import contextlib
 import datetime
-import itertools
 import json
 import math
 import os
@@ -63,6 +62,7 @@ COMMON_DATA_MOUNT_PATH_ENV_NAME = "GRETEL_COMMON_DATA_MOUNT_PATH"
 LIVENESS_FILE_ENV_NAME = "LIVENESS_FILE"
 GPU_SEC_CONTEXT_ENV_NAME = "GPU_WORKER_SECURITY_CONTEXT"
 CPU_SEC_CONTEXT_ENV_NAME = "CPU_WORKER_SECURITY_CONTEXT"
+JOB_BACKOFF_LIMIT_ENV_NAME = "JOB_BACKOFF_LIMIT"
 
 GRETEL_CLUSTER_SECRET_NAME_ENV_NAME = "GRETEL_CLUSTER_SECRET_NAME"
 GRETEL_CLUSTER_ID_KEY = "GRETEL_CLUSTER_ID"
@@ -295,6 +295,7 @@ class Kubernetes(Driver):
                 agent_config=self._agent_config, core_api=self._core_api
             )
             self._worker.start_update_pull_secret_thread()
+        self._job_backoff_limit = int(os.getenv(JOB_BACKOFF_LIMIT_ENV_NAME, "0"))
 
     def _parse_kube_env_var(
         self, env_var_name: str, expected_type: Type[T]
@@ -510,7 +511,9 @@ class Kubernetes(Driver):
             )
 
         spec = client.V1JobSpec(
-            template=template, backoff_limit=0, ttl_seconds_after_finished=86400
+            template=template,
+            backoff_limit=self._job_backoff_limit,
+            ttl_seconds_after_finished=86400,
         )
 
         job = client.V1Job(
