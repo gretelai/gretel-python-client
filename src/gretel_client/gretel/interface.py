@@ -327,12 +327,15 @@ class Gretel:
 
         logger.info(
             f"Submitting {model_name.upper()} training job...\n"
-            f"Model Docs:{get_model_docs_url(model_type)}"
+            f"Model Docs: {get_model_docs_url(model_type)}"
         )
 
         model.submit()
 
-        logger.info(f"Console URL: {project_url}/models/{model.model_id}/activity")
+        logger.info(
+            f"Model ID: {model.model_id}\n"
+            f"Console URL: {project_url}/models/{model.model_id}/activity"
+        )
 
         report = None
         logs = None
@@ -430,7 +433,7 @@ class Gretel:
 
         logger.info(
             f"Submitting {model_name.upper()} generate job...\n"
-            f"Model Docs:{get_model_docs_url(model_type)}\n"
+            f"Model Docs: {get_model_docs_url(model_type)}\n"
             f"Console URL: {project_url}/models/{model.model_id}/data"
         )
 

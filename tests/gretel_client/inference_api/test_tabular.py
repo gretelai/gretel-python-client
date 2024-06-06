@@ -3,6 +3,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 
+import gretel_client.inference_api.base as api_base
 import gretel_client.inference_api.tabular as tabular
 
 from gretel_client.inference_api.tabular import GretelInferenceAPIError
@@ -11,13 +12,13 @@ tabular.STREAM_SLEEP_TIME = 0
 
 
 def test_generate_error_retry():
-    # We need to patch the api call method on the class since we make an API
+    # We need to patch the models api call within the class since we make an API
     # call right away to retrieve the model list
-    with patch.object(tabular.NavigatorInferenceAPI, "_call_api") as mock_models:
-        mock_models.return_value = {
-            "models": [{"model_id": "gretelai/tabular-v0", "model_type": "TABULAR"}]
-        }
-        api = tabular.NavigatorInferenceAPI()
+    with patch.object(api_base, "get_full_navigator_model_list") as mock_models:
+        mock_models.return_value = [
+            {"model_id": "gretelai/tabular-v0", "model_type": "TABULAR"}
+        ]
+        api = tabular.TabularInferenceAPI()
 
     api_response = {
         "data": [
@@ -49,13 +50,13 @@ def test_generate_error_retry():
 
 @pytest.mark.parametrize("retry_count", [2, 1])
 def test_generate_timeout(retry_count: int):
-    # We need to patch the api call method on the class since we make an API
+    # We need to patch the models api call within the class since we make an API
     # call right away to retrieve the model list
-    with patch.object(tabular.NavigatorInferenceAPI, "_call_api") as mock_models:
-        mock_models.return_value = {
-            "models": [{"model_id": "gretelai/tabular-v0", "model_type": "TABULAR"}]
-        }
-        api = tabular.NavigatorInferenceAPI()
+    with patch.object(api_base, "get_full_navigator_model_list") as mock_models:
+        mock_models.return_value = [
+            {"model_id": "gretelai/tabular-v0", "model_type": "TABULAR"}
+        ]
+        api = tabular.TabularInferenceAPI()
 
     timeout = 60
     api_response = {

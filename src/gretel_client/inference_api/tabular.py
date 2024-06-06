@@ -23,7 +23,7 @@ logger.addHandler(logging.StreamHandler(sys.stdout))
 logger.setLevel(logging.INFO)
 
 STREAM_SLEEP_TIME = 0.5
-MAX_ROWS_PER_STREAM = 50
+MAX_ROWS_PER_STREAM = 100
 REQUEST_TIMEOUT_SEC = 60
 TABULAR_API_PATH = "/v1/inference/tabular/"
 PROGRESS_BAR_FORMAT = "{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed},{rate_noinv_fmt}]"
@@ -33,7 +33,7 @@ StreamReturnType = Union[
 ]
 
 
-class NavigatorInferenceAPI(BaseInferenceAPI):
+class TabularInferenceAPI(BaseInferenceAPI):
     """Inference API for real-time data generation with Gretel Navigator.
 
     Args:
@@ -86,7 +86,7 @@ class NavigatorInferenceAPI(BaseInferenceAPI):
     @property
     def name(self) -> str:
         """Returns display name for this inference api."""
-        return "Gretel Navigator"
+        return "Navigator Tabular"
 
     def display_dataframe_in_notebook(
         self, dataframe: _DataFrameT, settings: Optional[dict] = None

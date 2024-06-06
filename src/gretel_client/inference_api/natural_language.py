@@ -40,7 +40,7 @@ class NaturalLanguageInferenceAPI(BaseInferenceAPI):
     @property
     def name(self) -> str:
         """Returns display name for this inference api."""
-        return "Gretel Natural Language"
+        return "Navigator LLM"
 
     def generate(
         self,

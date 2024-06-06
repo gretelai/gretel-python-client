@@ -5,7 +5,7 @@ import pytest
 
 from gretel_client.inference_api.base import GretelInferenceAPIError
 from gretel_client.inference_api.natural_language import NaturalLanguageInferenceAPI
-from gretel_client.inference_api.tabular import NavigatorInferenceAPI
+from gretel_client.inference_api.tabular import TabularInferenceAPI
 
 PROMPT = """\
 Generate a dataset of characters from the Simpsons.
@@ -70,7 +70,7 @@ def llm():
 
 @pytest.fixture(scope="module")
 def nav():
-    return NavigatorInferenceAPI(
+    return TabularInferenceAPI(
         api_key=os.getenv("GRETEL_API_KEY"), endpoint="https://api-dev.gretel.cloud"
     )
 
@@ -142,7 +142,7 @@ def test_nav_inference_api_edit_stream(nav):
 
 def test_nav_inference_api_invalid_backend_model():
     with pytest.raises(GretelInferenceAPIError):
-        NavigatorInferenceAPI(backend_model="invalid_model")
+        TabularInferenceAPI(backend_model="invalid_model")
 
 
 def test_nav_inference_api_edit_invalid_seed_data_type(nav):
