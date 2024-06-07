@@ -3,11 +3,13 @@ import os
 
 from pathlib import Path
 from typing import Callable
+from unittest.mock import Mock, patch
 
 import pytest
 
 from click.testing import CliRunner
 
+from gretel_client._hybrid.azure import KeyVaultEncryption
 from gretel_client.cli.cli import cli
 from gretel_client.projects.projects import Project
 from gretel_client.rest_v1.api.connections_api import ConnectionsApi
@@ -251,3 +253,27 @@ def test_azure_connection_crud_from_cli(
         .replace("\n", "")
         .strip()
     )
+
+
+@patch("azure.keyvault.keys.KeyClient")
+@patch("azure.keyvault.keys.crypto.CryptographyClient")
+def test_key_vault_encryption_validation(
+    cryptography_client_patch: Mock, key_client_patch: Mock
+):
+    with pytest.raises(ValueError, match="Malformed Azure Key Vault URL"):
+        KeyVaultEncryption("https://dev.vault.dfs", "abc")
+    with pytest.raises(ValueError, match="Malformed Azure Key Vault Key ID"):
+        KeyVaultEncryption(
+            "https://dev.vault.usgovcloudapi.net",
+            "https://dev.vault.usgovcloudapif.net/keys/abc",
+        )
+
+    KeyVaultEncryption("https://dev.vault.usgovcloudapi.net", "abc")
+    key_client_patch.assert_called_once()
+    cryptography_client_patch.assert_called_once()
+
+    key_client_patch.reset_mock()
+    cryptography_client_patch.reset_mock()
+    KeyVaultEncryption("https://dev.vault.azure.net", "abc")
+    key_client_patch.assert_called_once()
+    cryptography_client_patch.assert_called_once()

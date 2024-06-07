@@ -17,10 +17,14 @@ if TYPE_CHECKING:
 from gretel_client._hybrid.creds_encryption import CredentialsEncryption
 
 # Format: https://myvaultname.vault.azure.net/
-_VALID_VAULT_URL = re.compile(r"https://[A-Za-z0-9_-]+\.vault\.azure\.net/?")
+# or      https://myvaultname.vault.usgovcloudapi.net/
+_VALID_VAULT_URL = re.compile(
+    r"https://[A-Za-z0-9_-]+(\.vault\.azure\.net|\.vault\.usgovcloudapi\.net)/?"
+)
 # Format: https://myvaultname.vault.azure.net/keys/my-key-name
+# or:     https://myvaultname.vault.usgovcloudapi.net/keys/my-key-name
 _VALID_QUALIFIED_KEY_ID = re.compile(
-    r"^https://[A-Za-z0-9_-]+\.vault\.azure\.net/keys/[A-Za-z0-9_-]+$"
+    r"^https://[A-Za-z0-9_-]+(\.vault\.azure\.net|\.vault\.usgovcloudapi\.net)keys/[A-Za-z0-9_-]+$"
 )
 _VALID_KEY_ID = re.compile(r"^[A-Za-z0-9_-]+$")
 
