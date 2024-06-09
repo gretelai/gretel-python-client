@@ -355,7 +355,7 @@ class TabularInferenceAPI(BaseInferenceAPI):
 
         Example::
 
-            from gretel_client.inference_api.tabular import NavigatorInferenceAPI
+            from gretel_client.inference_api.tabular import TabularInferenceAPI
 
             # Example seed data if using a list of dicts.
             # You can also use a pandas DataFrame.
@@ -376,9 +376,9 @@ class TabularInferenceAPI(BaseInferenceAPI):
 
             prompt = "Please add a column with the character's favorite food."
 
-            nav = NavigatorInferenceAPI(api_key="prompt")
+            tabular = TabularInferenceAPI(api_key="prompt")
 
-            df = nav.edit(prompt=prompt, seed_data=seed_data)
+            df = tabular.edit(prompt=prompt, seed_data=seed_data)
         """
         if isinstance(seed_data, list) and isinstance(seed_data[0], dict):
             table_headers = list(seed_data[0].keys())
@@ -491,7 +491,7 @@ class TabularInferenceAPI(BaseInferenceAPI):
 
         Example::
 
-            from gretel_client.inference_api.tabular import NavigatorInferenceAPI
+            from gretel_client.inference_api.tabular import TabularInferenceAPI
 
             prompt = (
                 "Generate positive and negative reviews for the following products: "
@@ -499,9 +499,9 @@ class TabularInferenceAPI(BaseInferenceAPI):
                 "Include columns for the product name, number of stars (1-5), review, and customer id."
             )
 
-            nav = NavigatorInferenceAPI(api_key="prompt")
+            tabular = TabularInferenceAPI(api_key="prompt")
 
-            df = nav.generate(prompt=prompt, num_records=10)
+            df = tabular.generate(prompt=prompt, num_records=10)
         """
         stream_iterator = self._stream(
             prompt=prompt,

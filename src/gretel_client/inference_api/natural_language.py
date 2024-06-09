@@ -59,6 +59,16 @@ class NaturalLanguageInferenceAPI(BaseInferenceAPI):
             top_k: Number of highest probability tokens to keep for top-k filtering.
             top_p: The cumulative probability cutoff for sampling tokens.
 
+        Example::
+
+            from gretel_client.inference_api.natural_language import NaturalLanguageInferenceAPI
+
+            llm = NaturalLanguageInferenceAPI(api_key="prompt")
+
+            prompt = "Tell me a funny joke about data scientists."
+
+            text = llm.generate(prompt=prompt, temperature=0.5, max_tokens=100)
+
         Returns:
             The generated text as a string.
         """
