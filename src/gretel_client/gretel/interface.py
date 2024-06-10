@@ -28,6 +28,7 @@ from gretel_client.gretel.exceptions import (
 from gretel_client.gretel.job_results import GenerateJobResults, TrainJobResults
 from gretel_client.helpers import poll
 from gretel_client.projects import get_project, Project
+from gretel_client.projects.jobs import Status
 from gretel_client.projects.models import Model
 from gretel_client.rest.exceptions import ApiException
 from gretel_client.users.users import get_me
@@ -348,8 +349,14 @@ class Gretel:
             if (
                 model_setup.report_type is not None
                 and model_config_section.get("data_source") is not None
+                and model.status == Status.COMPLETED
             ):
                 report = fetch_model_report(model, model_setup.report_type)
+
+            if model.status != Status.COMPLETED:
+                logger.warning(
+                    f"Training didn't complete successfully. Job status was '{model.status}', details: {model.errors}"
+                )
 
         self._last_model = model
 
@@ -444,16 +451,21 @@ class Gretel:
 
         if wait:
             poll(record_handler, verbose=verbose_logging)
-            synthetic_data_link = record_handler.get_artifact_link("data")
-            if fetch_data:
-                if PANDAS_IS_INSTALLED:
-                    synthetic_data = fetch_synthetic_data(record_handler)
-                else:
-                    logger.warning(
-                        "`fetch_data` is True, but pandas is not installed. "
-                        "Only the synthetic data link will be returned. "
-                        "Install pandas by running `pip install pandas`."
-                    )
+            if record_handler.status == Status.COMPLETED:
+                synthetic_data_link = record_handler.get_artifact_link("data")
+                if fetch_data:
+                    if PANDAS_IS_INSTALLED:
+                        synthetic_data = fetch_synthetic_data(record_handler)
+                    else:
+                        logger.warning(
+                            "`fetch_data` is True, but pandas is not installed. "
+                            "Only the synthetic data link will be returned. "
+                            "Install pandas by running `pip install pandas`."
+                        )
+            else:
+                logger.warning(
+                    f"Generation didn't complete successfully. Job status was '{record_handler.status}', details: {record_handler.errors}"
+                )
 
         return GenerateJobResults(
             model=model,
