@@ -355,7 +355,8 @@ class Gretel:
 
             if model.status != Status.COMPLETED:
                 logger.warning(
-                    f"Training didn't complete successfully. Job status was '{model.status}', details: {model.errors}"
+                    "Training didn't complete successfully. Job status was "
+                    f"'{model.status}', details: {model.errors}"
                 )
 
         self._last_model = model
@@ -464,7 +465,8 @@ class Gretel:
                         )
             else:
                 logger.warning(
-                    f"Generation didn't complete successfully. Job status was '{record_handler.status}', details: {record_handler.errors}"
+                    "Generation didn't complete successfully. Job status was "
+                    f"'{record_handler.status}', details: {record_handler.errors}"
                 )
 
         return GenerateJobResults(
