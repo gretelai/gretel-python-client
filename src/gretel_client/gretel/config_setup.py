@@ -48,6 +48,7 @@ class ModelType(str, Enum):
     ACTGAN = "actgan"
     AMPLIFY = "amplify"
     LSTM = "synthetics"
+    NAVIGATOR_FT = "navigator_ft"
     TABULAR_DP = "tabular_dp"
 
     # text
@@ -105,6 +106,17 @@ CONFIG_SETUP_DICT = {
         data_source_optional=False,
         report_type=ReportType.SQS,
         extra_kwargs=["ref_data"],
+    ),
+    ModelType.NAVIGATOR_FT: ModelConfigSections(
+        model_name="navigator_ft",
+        config_sections=["params", "generate", "evaluate"],
+        data_source_optional=False,
+        report_type=ReportType.SQS,
+        extra_kwargs=[
+            "group_training_examples_by",
+            "order_training_examples_by",
+            "ref_data",
+        ],
     ),
     ModelType.TABULAR_DP: ModelConfigSections(
         model_name="tabular_dp",

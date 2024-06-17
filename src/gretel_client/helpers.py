@@ -161,6 +161,11 @@ def _get_quiet_poll_context(job: Job) -> Tuple[Optional[int], Optional[int]]:
             num_records = job.model_config["models"][0][job.model_type]["generate"][
                 "num_records"
             ]
+        elif job.model_type == "navigator_ft":
+            num_epochs = 1
+            num_records = job.model_config["models"][0][job.model_type]["generate"][
+                "num_records"
+            ]
         # Fetch the ``num_epochs`` value from the logs in `pre` stage for `auto` value for `num_epochs`,
         if isinstance(num_epochs, str):
             num_epochs = None
