@@ -103,6 +103,33 @@ def test_hybrid_created_with_azure_artifact_endpoint(key: str, value: str):
         assert isinstance(transport_params.get("client"), BlobServiceClient)
 
 
+def test_hybrid_created_with_azure_artifact_different_domain():
+    with patch.dict(
+        os.environ,
+        {
+            "AZURE_STORAGE_ACCOUNT_NAME": "test-storage",
+            "AZURE_STORAGE_DOMAIN": ".usgovcloudapi.net",
+        },
+    ):
+        artifact_endpoint = "azure://my-bucket"
+        config = Mock(artifact_endpoint=artifact_endpoint)
+        project = Mock(
+            project_id="123",
+            name="proj",
+            projects_api=Mock(),
+            client_config=config,
+        )
+
+        assert isinstance(hybrid_handler(project), HybridArtifactsHandler)
+        transport_params = get_transport_params(artifact_endpoint)
+
+        assert transport_params is not None
+        client: BlobServiceClient = transport_params.get("client")
+        assert isinstance(client, BlobServiceClient)
+        assert client.account_name == "test-storage"
+        assert client.url == "https://test-storage.blob.core.usgovcloudapi.net/"
+
+
 def test_missing_environment_variable_error_with_azure_hybrid():
     with pytest.raises(
         ArtifactsException, match="Could not find Azure storage account credentials."

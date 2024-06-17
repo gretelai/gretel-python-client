@@ -41,7 +41,9 @@ HYBRID_ARTIFACT_ENDPOINT_PREFIXES = ["azure://", "gs://", "s3://"]
 def _get_azure_blob_srv_client() -> Optional[BlobServiceClient]:
     for env_var_name in ("AZURE_STORAGE_ACCOUNT_NAME", "OAUTH_STORAGE_ACCOUNT_NAME"):
         if (storage_account := os.getenv(env_var_name)) is not None:
-            oauth_url = f"https://{storage_account}.blob.core.windows.net"
+            domain = os.getenv("AZURE_STORAGE_DOMAIN") or "windows.net"
+            normalized_domain = domain.removeprefix(".")
+            oauth_url = f"https://{storage_account}.blob.core.{normalized_domain}"
             return BlobServiceClient(
                 account_url=oauth_url, credential=DefaultAzureCredential()
             )
