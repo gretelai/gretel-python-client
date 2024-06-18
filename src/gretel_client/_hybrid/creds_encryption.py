@@ -17,7 +17,6 @@ T = TypeVar(
 
 
 class BaseCredentialsEncryption(ABC):
-
     @abstractmethod
     def apply(self, credentials: dict, *, project_guid: Optional[str] = None) -> dict:
         """
