@@ -269,7 +269,7 @@ def get_model_docs_url(model_type: str) -> str:
         The URL for the model docs.
     """
     model_name = CONFIG_SETUP_DICT[model_type].model_name.replace("_", "-")
-    return f"https://docs.gretel.ai/reference/synthetics/models/gretel-{model_name}"
+    return f"https://docs.gretel.ai/create-synthetic-data/models/synthetics/gretel-{model_name}"
 
 
 def smart_load_yaml(yaml_in: Union[str, Path, dict]) -> dict:
