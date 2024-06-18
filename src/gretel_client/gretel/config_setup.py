@@ -108,7 +108,7 @@ CONFIG_SETUP_DICT = {
         extra_kwargs=["ref_data"],
     ),
     ModelType.NAVIGATOR_FT: ModelConfigSections(
-        model_name="navigator_ft",
+        model_name="navigator_fine_tuning",
         config_sections=["params", "generate", "evaluate"],
         data_source_optional=False,
         report_type=ReportType.SQS,

@@ -312,7 +312,7 @@ class Gretel:
 
         model_type, model_config_section = extract_model_config_section(job_config)
         model_setup = CONFIG_SETUP_DICT[model_type]
-        model_name = model_setup.model_name.replace("_", "-")
+        model_name = model_setup.model_name.replace("_", " ")
 
         if data_source is None:
             if not model_setup.data_source_optional:
@@ -334,8 +334,8 @@ class Gretel:
         model.submit()
 
         logger.info(
-            f"Model ID: {model.model_id}\n"
-            f"Console URL: {project_url}/models/{model.model_id}/activity"
+            f"Console URL: {project_url}/models/{model.model_id}/activity\n"
+            f"Model ID: {model.model_id}"
         )
 
         report = None
@@ -436,7 +436,7 @@ class Gretel:
         )
 
         model_type, _ = extract_model_config_section(model.model_config)
-        model_name = CONFIG_SETUP_DICT[model_type].model_name.replace("_", "-")
+        model_name = CONFIG_SETUP_DICT[model_type].model_name.replace("_", " ")
         project_url = project.get_console_url()
 
         logger.info(
