@@ -46,6 +46,8 @@ class Cluster(BaseModel):
     created_at: Optional[datetime] = None
     last_checkin_time: Optional[datetime] = None
     config: Optional[ClusterConfig] = None
+    chart_version: Optional[StrictStr] = None
+    app_version: Optional[StrictStr] = None
     __properties = [
         "guid",
         "name",
@@ -57,6 +59,8 @@ class Cluster(BaseModel):
         "created_at",
         "last_checkin_time",
         "config",
+        "chart_version",
+        "app_version",
     ]
 
     @validator("cloud_provider_type")
@@ -144,6 +148,8 @@ class Cluster(BaseModel):
                     if obj.get("config") is not None
                     else None
                 ),
+                "chart_version": obj.get("chart_version"),
+                "app_version": obj.get("app_version"),
             }
         )
         return _obj
