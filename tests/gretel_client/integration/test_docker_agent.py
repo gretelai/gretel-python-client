@@ -4,6 +4,7 @@ import time
 from typing import Iterator
 
 import pytest
+import yaml
 
 from gretel_client.agents.agent import Agent, AgentConfig
 from gretel_client.projects.jobs import ACTIVE_STATES, Status
@@ -28,7 +29,20 @@ def test_docker_agent(agent_config: AgentConfig, request):
     request.addfinalizer(agent.interrupt)
 
     project = get_project(name=agent_config.project_ids[0])
-    model = project.create_model_obj("transform/default", fake_pii)
+    model_config = yaml.safe_load(
+        """schema_version: 1.0
+name: "first catmeme model"
+models:
+  - catmeme:
+      data_source: "_"
+      params:
+        color: orange
+        breed: cat
+        attitude: chill_af
+        name: tigger
+"""
+    )
+    model = project.create_model_obj(model_config, fake_pii)
 
     model.submit_manual()
     request.addfinalizer(model.cancel)
