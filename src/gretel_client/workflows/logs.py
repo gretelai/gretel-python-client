@@ -342,7 +342,7 @@ class LogWorker:
     ) -> Iterator[LogLine]:
         params = {
             "query": f"{WORKFLOW_TASK_SEARCH_KEY}:{self.task.id}",
-            "limit": 10_000,  # todo: drop this lower once continuation tokens work
+            "limit": 1_000,
         }
 
         if next_page_token is not None:
@@ -358,21 +358,14 @@ class LogWorker:
         for line_envelope in resp.lines:
             log_line = LogLine.from_envelope(self.task, line_envelope)
 
-            # todo: remove once continuation tokens are in place
-            if self._log_checkpoint and log_line.ts <= self._log_checkpoint.ts:
-                continue
-
             self._log_checkpoint = log_line
             yield self._log_checkpoint
 
-        # TODO: re-enable, continuation tokens don't currently seem to work
-        # so we load the entire set of logs on each request
-        #
         # We get a continuation token no matter what. If the current response
         # has no log lines, we can assume we've exhausted the current log
         # cursor.
-        # if len(resp.lines) > 0:
-        #     yield from self._fetch_log_lines(resp.next_page_token)
+        if len(resp.lines) > 0:
+            yield from self._fetch_log_lines(resp.next_page_token)
 
     def _poll(self):
         while self._control.is_set():

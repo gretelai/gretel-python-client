@@ -195,16 +195,26 @@ def test_log_worker(workflows_api: MagicMock, logs_api: MagicMock):
     worker.start()
     worker.wait(timeout=30)
 
-    assert logs_api.get_logs.call_count == 6
+    assert logs_api.get_logs.call_count == 8
 
     logs_api.get_logs.assert_has_calls(
         [
-            call(query=f"{WORKFLOW_TASK_SEARCH_KEY}:wt_1", limit=10_000),
-            call(query=f"{WORKFLOW_TASK_SEARCH_KEY}:wt_1", limit=10_000),
-            call(query=f"{WORKFLOW_TASK_SEARCH_KEY}:wt_1", limit=10_000),
-            call(query=f"{WORKFLOW_TASK_SEARCH_KEY}:wt_1", limit=10_000),
-            call(query=f"{WORKFLOW_TASK_SEARCH_KEY}:wt_1", limit=10_000),
-            call(query=f"{WORKFLOW_TASK_SEARCH_KEY}:wt_1", limit=10_000),
+            call(query=f"{WORKFLOW_TASK_SEARCH_KEY}:wt_1", limit=1_000),
+            call(
+                query=f"{WORKFLOW_TASK_SEARCH_KEY}:wt_1",
+                limit=1_000,
+                page_token="page_2",
+            ),
+            call(
+                query=f"{WORKFLOW_TASK_SEARCH_KEY}:wt_1",
+                limit=1_000,
+                page_token="page_3",
+            ),
+            call(query=f"{WORKFLOW_TASK_SEARCH_KEY}:wt_1", limit=1_000),
+            call(query=f"{WORKFLOW_TASK_SEARCH_KEY}:wt_1", limit=1_000),
+            call(query=f"{WORKFLOW_TASK_SEARCH_KEY}:wt_1", limit=1_000),
+            call(query=f"{WORKFLOW_TASK_SEARCH_KEY}:wt_1", limit=1_000),
+            call(query=f"{WORKFLOW_TASK_SEARCH_KEY}:wt_1", limit=1_000),
         ]
     )
 
