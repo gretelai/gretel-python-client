@@ -51,6 +51,7 @@ class JobsApi(object):
                 runner_modes ([str]): [optional]
                 org_only (bool): Query for jobs within the same organization only. [optional]
                 cluster_guid (str): GUID of the cluster for which to retrieve jobs. [optional]
+                use_combined_models_image (bool): True results in the jobs' container_image field being set to the combined models image. [optional] if omitted the server will use the default value of False
                 _return_http_data_only (bool): response data without head status
                     code and headers. Default is True.
                 _preload_content (bool): if False, the urllib3.HTTPResponse object
@@ -117,6 +118,7 @@ class JobsApi(object):
                     "runner_modes",
                     "org_only",
                     "cluster_guid",
+                    "use_combined_models_image",
                 ],
                 "required": [],
                 "nullable": [],
@@ -140,6 +142,7 @@ class JobsApi(object):
                     "runner_modes": ([str],),
                     "org_only": (bool,),
                     "cluster_guid": (str,),
+                    "use_combined_models_image": (bool,),
                 },
                 "attribute_map": {
                     "project_id": "project_id",
@@ -147,6 +150,7 @@ class JobsApi(object):
                     "runner_modes": "runner_modes",
                     "org_only": "org_only",
                     "cluster_guid": "cluster_guid",
+                    "use_combined_models_image": "use_combined_models_image",
                 },
                 "location_map": {
                     "project_id": "query",
@@ -154,6 +158,7 @@ class JobsApi(object):
                     "runner_modes": "query",
                     "org_only": "query",
                     "cluster_guid": "query",
+                    "use_combined_models_image": "query",
                 },
                 "collection_format_map": {
                     "project_ids": "csv",

@@ -40,6 +40,7 @@ WORKER_RESOURCES_ENV_NAME = "GRETEL_WORKER_RESOURCES"
 CPU_MODEL_WORKER_RESOURCES_ENV_NAME = "GRETEL_MODEL_WORKER_CPU_RESOURCES"
 GPU_MODEL_WORKER_RESOURCES_ENV_NAME = "GRETEL_MODEL_WORKER_GPU_RESOURCES"
 WORKER_MEMORY_GB_ENV_NAME = "MEMORY_LIMIT_IN_GB"
+GRETEL_MODEL_TYPE_ENV_NAME = "GRETEL_MODEL_TYPE"
 PULL_SECRET_ENV_NAME = "GRETEL_PULL_SECRET"
 PULL_SECRETS_ENV_NAME = "GRETEL_PULL_SECRETS"
 GPU_NODE_SELECTOR_ENV_NAME = "GPU_NODE_SELECTOR"
@@ -546,6 +547,12 @@ class Kubernetes(Driver):
             client.V1EnvVar(name="GRETEL_ENDPOINT", value=job_config.gretel_endpoint)
         )
         env.append(client.V1EnvVar(name="GRETEL_STAGE", value=job_config.gretel_stage))
+
+        env.append(
+            client.V1EnvVar(
+                name=GRETEL_MODEL_TYPE_ENV_NAME, value=job_config.model_type
+            )
+        )
 
         if cpu_limit := resources.limits.get("cpu"):
             cpu_quantity = parse_quantity(cpu_limit)
