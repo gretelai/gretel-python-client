@@ -98,6 +98,9 @@ from gretel_client.rest_v1.models.validate_connection_credentials_response impor
 from gretel_client.rest_v1.models.validate_workflow_action_response import (
     ValidateWorkflowActionResponse,
 )
+from gretel_client.rest_v1.models.validate_workflow_config_request import (
+    ValidateWorkflowConfigRequest,
+)
 from gretel_client.rest_v1.models.workflow import Workflow
 from gretel_client.rest_v1.models.workflow_run import WorkflowRun
 from gretel_client.rest_v1.models.workflow_run_cancellation_request import (
