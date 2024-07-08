@@ -32,12 +32,18 @@ class WorkflowTask(BaseModel):
     Next Tag: 24
     """
 
-    id: StrictStr = Field(...)
-    workflow_run_id: StrictStr = Field(...)
-    project_id: StrictStr = Field(...)
+    id: StrictStr = Field(..., description="The unique ID of the workflow task.")
+    workflow_run_id: StrictStr = Field(
+        ..., description="The ID of the workflow run that this task belongs to."
+    )
+    project_id: StrictStr = Field(
+        ..., description="The project ID that this workflow task belongs to."
+    )
     project: Optional[Project] = None
-    log_location: StrictStr = Field(...)
-    status: StrictStr = Field(...)
+    log_location: StrictStr = Field(
+        ..., description="The location of the log for this workflow task."
+    )
+    status: StrictStr = Field(..., description="The status of the workflow task.")
     action_name: StrictStr = Field(
         ...,
         description="The user supplied name of the workflow action that produced this task. The name can be mapped back to the original workflow config.",
@@ -58,16 +64,37 @@ class WorkflowTask(BaseModel):
         None,
         description="A more detailed stack trace that can be used for root cause analysis. This stack trace generally shouldn't be shown in the UI and will span many lines.",
     )
-    created_by: StrictStr = Field(...)
+    created_by: StrictStr = Field(
+        ..., description="The user ID that created this workflow."
+    )
     created_by_profile: Optional[UserProfile] = None
-    created_at: datetime = Field(...)
-    updated_at: Optional[datetime] = None
-    pending_at: Optional[datetime] = None
-    active_at: Optional[datetime] = None
-    error_at: Optional[datetime] = None
-    lost_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    total_compute_time_sconds: Optional[StrictInt] = None
+    created_at: datetime = Field(
+        ..., description="A timestamp indicating when this workflow was created."
+    )
+    updated_at: Optional[datetime] = Field(
+        None, description="A timestamp indicating when this workflow was last updated."
+    )
+    pending_at: Optional[datetime] = Field(
+        None,
+        description="A timestamp indicating when this workflow entered the pending state.",
+    )
+    active_at: Optional[datetime] = Field(
+        None,
+        description="A timestamp indicating when this workflow entered the active state.",
+    )
+    error_at: Optional[datetime] = Field(
+        None,
+        description="A timestamp indicating when an error occurred in this workflow.",
+    )
+    lost_at: Optional[datetime] = Field(
+        None, description="A timestamp indicating when this workflow was lost."
+    )
+    completed_at: Optional[datetime] = Field(
+        None, description="A timestamp indicating when this workflow was completed."
+    )
+    total_compute_time_sconds: Optional[StrictInt] = Field(
+        None, description="The total compute time in seconds for this workflow."
+    )
     __properties = [
         "id",
         "workflow_run_id",

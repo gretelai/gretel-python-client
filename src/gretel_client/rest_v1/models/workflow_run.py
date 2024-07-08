@@ -36,28 +36,67 @@ class WorkflowRun(BaseModel):
     WorkflowRun
     """
 
-    id: StrictStr = Field(...)
-    workflow_id: StrictStr = Field(...)
-    project_id: StrictStr = Field(...)
+    id: StrictStr = Field(..., description="The unique ID of the workflow run.")
+    workflow_id: StrictStr = Field(
+        ..., description="The ID of the workflow that this run belongs to."
+    )
+    project_id: StrictStr = Field(
+        ...,
+        description="The project ID that this workflow run belongs to. This will be the same as the project ID of the workflow.",
+    )
     project: Optional[Project] = None
-    cluster_guid: Optional[StrictStr] = None
-    config: Optional[Dict[str, Any]] = None
-    config_text: Optional[StrictStr] = None
-    runner_mode: StrictStr = Field(...)
-    status: StrictStr = Field(...)
+    cluster_guid: Optional[StrictStr] = Field(
+        None, description="The GUID of the cluster where the workflow run is executed."
+    )
+    config: Optional[Dict[str, Any]] = Field(
+        None, description="The config of the workflow run."
+    )
+    config_text: Optional[StrictStr] = Field(
+        None, description="The config of the workflow run as a YAML string."
+    )
+    runner_mode: StrictStr = Field(
+        ...,
+        description="The runner mode of the workflow run. Can be `cloud` or `hybrid`.",
+    )
+    status: StrictStr = Field(..., description="The status of the workflow run.")
     status_details: Optional[StatusDetails] = None
-    created_by: StrictStr = Field(...)
-    created_at: datetime = Field(...)
-    updated_at: Optional[datetime] = None
-    pending_at: Optional[datetime] = None
-    active_at: Optional[datetime] = None
-    error_at: Optional[datetime] = None
-    lost_at: Optional[datetime] = None
-    cancelled_at: Optional[datetime] = None
-    lease_expires_at: Optional[datetime] = None
+    created_by: StrictStr = Field(
+        ..., description="The user ID that created this workflow run."
+    )
+    created_at: datetime = Field(
+        ..., description="A timestamp indicating when this workflow run was created."
+    )
+    updated_at: Optional[datetime] = Field(
+        None,
+        description="A timestamp indicating when this workflow run was last updated.",
+    )
+    pending_at: Optional[datetime] = Field(
+        None,
+        description="A timestamp indicating when this workflow run entered the pending state.",
+    )
+    active_at: Optional[datetime] = Field(
+        None,
+        description="A timestamp indicating when this workflow run entered the active state.",
+    )
+    error_at: Optional[datetime] = Field(
+        None,
+        description="A timestamp indicating when an error occurred in this workflow run.",
+    )
+    lost_at: Optional[datetime] = Field(
+        None, description="A timestamp indicating when this workflow run was lost."
+    )
+    cancelled_at: Optional[datetime] = Field(
+        None, description="A timestamp indicating when this workflow run was cancelled."
+    )
+    lease_expires_at: Optional[datetime] = Field(
+        None,
+        description="A timestamp indicating when the lease for this workflow run expires.",
+    )
     cancellation_request: Optional[WorkflowRunCancellationRequest] = None
     created_by_profile: Optional[UserProfile] = None
-    total_compute_time_sconds: Optional[StrictInt] = None
+    total_compute_time_sconds: Optional[StrictInt] = Field(
+        None, description="The total compute time in seconds for this workflow run."
+    )
     __properties = [
         "id",
         "workflow_id",

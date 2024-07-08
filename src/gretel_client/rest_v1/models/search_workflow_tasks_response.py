@@ -30,8 +30,14 @@ class SearchWorkflowTasksResponse(BaseModel):
     SearchWorkflowTasksResponse
     """
 
-    tasks: Optional[conlist(WorkflowTask)] = None
-    total: StrictInt = Field(...)
+    tasks: Optional[conlist(WorkflowTask)] = Field(
+        None,
+        description="The list of workflow tasks that matched the search query in the requested page.",
+    )
+    total: StrictInt = Field(
+        ...,
+        description="The total number of workflow tasks that matched the search query.",
+    )
     __properties = ["tasks", "total"]
 
     class Config:

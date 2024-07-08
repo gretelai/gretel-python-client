@@ -70,17 +70,22 @@ class WorkflowsApi(object):
 
     @validate_arguments
     def cancel_workflow_run(
-        self, workflow_run_id: StrictStr, **kwargs
+        self,
+        workflow_run_id: Annotated[
+            StrictStr, Field(..., description="The ID of the workflow run to cancel.")
+        ],
+        **kwargs,
     ) -> WorkflowRun:  # noqa: E501
         """cancel_workflow_run  # noqa: E501
 
+        Cancel a workflow run.  This endpoint is used to cancel a workflow run. This will stop the workflow run and transition it to a `cancelled` state.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.cancel_workflow_run(workflow_run_id, async_req=True)
         >>> result = thread.get()
 
-        :param workflow_run_id: (required)
+        :param workflow_run_id: The ID of the workflow run to cancel. (required)
         :type workflow_run_id: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -104,17 +109,22 @@ class WorkflowsApi(object):
 
     @validate_arguments
     def cancel_workflow_run_with_http_info(
-        self, workflow_run_id: StrictStr, **kwargs
+        self,
+        workflow_run_id: Annotated[
+            StrictStr, Field(..., description="The ID of the workflow run to cancel.")
+        ],
+        **kwargs,
     ) -> ApiResponse:  # noqa: E501
         """cancel_workflow_run  # noqa: E501
 
+        Cancel a workflow run.  This endpoint is used to cancel a workflow run. This will stop the workflow run and transition it to a `cancelled` state.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.cancel_workflow_run_with_http_info(workflow_run_id, async_req=True)
         >>> result = thread.get()
 
-        :param workflow_run_id: (required)
+        :param workflow_run_id: The ID of the workflow run to cancel. (required)
         :type workflow_run_id: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -219,7 +229,7 @@ class WorkflowsApi(object):
     ) -> Workflow:  # noqa: E501
         """create_workflow  # noqa: E501
 
-        Create a new workflow in the provided project.  Providing a config is optional, but workflow runs created from this workflow will require a config be provided.  # noqa: E501
+        Create a new workflow in the provided project.  Providing a config is optional, but workflow runs created from this workflow will require a config be provided.  Config can be provided as an object or as a YAML string. String configs will preserve comments and formatting where object configs cannot.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -254,7 +264,7 @@ class WorkflowsApi(object):
     ) -> ApiResponse:  # noqa: E501
         """create_workflow  # noqa: E501
 
-        Create a new workflow in the provided project.  Providing a config is optional, but workflow runs created from this workflow will require a config be provided.  # noqa: E501
+        Create a new workflow in the provided project.  Providing a config is optional, but workflow runs created from this workflow will require a config be provided.  Config can be provided as an object or as a YAML string. String configs will preserve comments and formatting where object configs cannot.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -375,7 +385,7 @@ class WorkflowsApi(object):
     ) -> WorkflowRun:  # noqa: E501
         """create_workflow_run  # noqa: E501
 
-        Workflow Runs  # noqa: E501
+        Create a new workflow run for a given workflow.  Providing a config is optional, but the workflow run will require a config be provided.  Config can be provided as an object or as a YAML string. String configs will preserve comments and formatting where object configs cannot.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -410,7 +420,7 @@ class WorkflowsApi(object):
     ) -> ApiResponse:  # noqa: E501
         """create_workflow_run  # noqa: E501
 
-        Workflow Runs  # noqa: E501
+        Create a new workflow run for a given workflow.  Providing a config is optional, but the workflow run will require a config be provided.  Config can be provided as an object or as a YAML string. String configs will preserve comments and formatting where object configs cannot.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -526,16 +536,23 @@ class WorkflowsApi(object):
         )
 
     @validate_arguments
-    def delete_workflow(self, workflow_id: StrictStr, **kwargs) -> None:  # noqa: E501
+    def delete_workflow(
+        self,
+        workflow_id: Annotated[
+            StrictStr, Field(..., description="The ID of the workflow to delete.")
+        ],
+        **kwargs,
+    ) -> None:  # noqa: E501
         """delete_workflow  # noqa: E501
 
+        Delete a workflow by ID.  This will also delete all associated workflow runs and tasks.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.delete_workflow(workflow_id, async_req=True)
         >>> result = thread.get()
 
-        :param workflow_id: (required)
+        :param workflow_id: The ID of the workflow to delete. (required)
         :type workflow_id: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -557,17 +574,22 @@ class WorkflowsApi(object):
 
     @validate_arguments
     def delete_workflow_with_http_info(
-        self, workflow_id: StrictStr, **kwargs
+        self,
+        workflow_id: Annotated[
+            StrictStr, Field(..., description="The ID of the workflow to delete.")
+        ],
+        **kwargs,
     ) -> ApiResponse:  # noqa: E501
         """delete_workflow  # noqa: E501
 
+        Delete a workflow by ID.  This will also delete all associated workflow runs and tasks.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.delete_workflow_with_http_info(workflow_id, async_req=True)
         >>> result = thread.get()
 
-        :param workflow_id: (required)
+        :param workflow_id: The ID of the workflow to delete. (required)
         :type workflow_id: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -667,21 +689,29 @@ class WorkflowsApi(object):
     @validate_arguments
     def get_workflow(
         self,
-        workflow_id: StrictStr,
-        expand: Optional[conlist(StrictStr)] = None,
+        workflow_id: Annotated[
+            StrictStr, Field(..., description="The ID of the workflow to retrieve.")
+        ],
+        expand: Annotated[
+            Optional[conlist(StrictStr)],
+            Field(
+                description="The fields to expand in the response. Supported values are: `project`, `created_by`, `updated_by`, `latest_run`"
+            ),
+        ] = None,
         **kwargs,
     ) -> Workflow:  # noqa: E501
         """get_workflow  # noqa: E501
 
+        Get a single workflow by ID.  This endpoint supports expansion.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.get_workflow(workflow_id, expand, async_req=True)
         >>> result = thread.get()
 
-        :param workflow_id: (required)
+        :param workflow_id: The ID of the workflow to retrieve. (required)
         :type workflow_id: str
-        :param expand:
+        :param expand: The fields to expand in the response. Supported values are: `project`, `created_by`, `updated_by`, `latest_run`
         :type expand: List[str]
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -706,21 +736,29 @@ class WorkflowsApi(object):
     @validate_arguments
     def get_workflow_with_http_info(
         self,
-        workflow_id: StrictStr,
-        expand: Optional[conlist(StrictStr)] = None,
+        workflow_id: Annotated[
+            StrictStr, Field(..., description="The ID of the workflow to retrieve.")
+        ],
+        expand: Annotated[
+            Optional[conlist(StrictStr)],
+            Field(
+                description="The fields to expand in the response. Supported values are: `project`, `created_by`, `updated_by`, `latest_run`"
+            ),
+        ] = None,
         **kwargs,
     ) -> ApiResponse:  # noqa: E501
         """get_workflow  # noqa: E501
 
+        Get a single workflow by ID.  This endpoint supports expansion.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.get_workflow_with_http_info(workflow_id, expand, async_req=True)
         >>> result = thread.get()
 
-        :param workflow_id: (required)
+        :param workflow_id: The ID of the workflow to retrieve. (required)
         :type workflow_id: str
-        :param expand:
+        :param expand: The fields to expand in the response. Supported values are: `project`, `created_by`, `updated_by`, `latest_run`
         :type expand: List[str]
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -826,21 +864,29 @@ class WorkflowsApi(object):
     @validate_arguments
     def get_workflow_run(
         self,
-        workflow_run_id: StrictStr,
-        expand: Optional[conlist(StrictStr)] = None,
+        workflow_run_id: Annotated[
+            StrictStr, Field(..., description="The ID of the workflow run to retrieve.")
+        ],
+        expand: Annotated[
+            Optional[conlist(StrictStr)],
+            Field(
+                description="The fields to expand in the response. Supported values are: `project`, `config.system`, `created_by`"
+            ),
+        ] = None,
         **kwargs,
     ) -> WorkflowRun:  # noqa: E501
         """get_workflow_run  # noqa: E501
 
+        Get a single workflow run by ID.  This endpoint supports expansion.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.get_workflow_run(workflow_run_id, expand, async_req=True)
         >>> result = thread.get()
 
-        :param workflow_run_id: (required)
+        :param workflow_run_id: The ID of the workflow run to retrieve. (required)
         :type workflow_run_id: str
-        :param expand:
+        :param expand: The fields to expand in the response. Supported values are: `project`, `config.system`, `created_by`
         :type expand: List[str]
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -865,21 +911,29 @@ class WorkflowsApi(object):
     @validate_arguments
     def get_workflow_run_with_http_info(
         self,
-        workflow_run_id: StrictStr,
-        expand: Optional[conlist(StrictStr)] = None,
+        workflow_run_id: Annotated[
+            StrictStr, Field(..., description="The ID of the workflow run to retrieve.")
+        ],
+        expand: Annotated[
+            Optional[conlist(StrictStr)],
+            Field(
+                description="The fields to expand in the response. Supported values are: `project`, `config.system`, `created_by`"
+            ),
+        ] = None,
         **kwargs,
     ) -> ApiResponse:  # noqa: E501
         """get_workflow_run  # noqa: E501
 
+        Get a single workflow run by ID.  This endpoint supports expansion.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.get_workflow_run_with_http_info(workflow_run_id, expand, async_req=True)
         >>> result = thread.get()
 
-        :param workflow_run_id: (required)
+        :param workflow_run_id: The ID of the workflow run to retrieve. (required)
         :type workflow_run_id: str
-        :param expand:
+        :param expand: The fields to expand in the response. Supported values are: `project`, `config.system`, `created_by`
         :type expand: List[str]
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -984,17 +1038,23 @@ class WorkflowsApi(object):
 
     @validate_arguments
     def get_workflow_task(
-        self, workflow_task_id: StrictStr, **kwargs
+        self,
+        workflow_task_id: Annotated[
+            StrictStr,
+            Field(..., description="The ID of the workflow task to retrieve."),
+        ],
+        **kwargs,
     ) -> WorkflowTask:  # noqa: E501
         """get_workflow_task  # noqa: E501
 
+        Get a single workflow task by ID.  This endpoint supports expansion.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.get_workflow_task(workflow_task_id, async_req=True)
         >>> result = thread.get()
 
-        :param workflow_task_id: (required)
+        :param workflow_task_id: The ID of the workflow task to retrieve. (required)
         :type workflow_task_id: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -1018,17 +1078,23 @@ class WorkflowsApi(object):
 
     @validate_arguments
     def get_workflow_task_with_http_info(
-        self, workflow_task_id: StrictStr, **kwargs
+        self,
+        workflow_task_id: Annotated[
+            StrictStr,
+            Field(..., description="The ID of the workflow task to retrieve."),
+        ],
+        **kwargs,
     ) -> ApiResponse:  # noqa: E501
         """get_workflow_task  # noqa: E501
 
+        Get a single workflow task by ID.  This endpoint supports expansion.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.get_workflow_task_with_http_info(workflow_task_id, async_req=True)
         >>> result = thread.get()
 
-        :param workflow_task_id: (required)
+        :param workflow_task_id: The ID of the workflow task to retrieve. (required)
         :type workflow_task_id: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -1263,30 +1329,50 @@ class WorkflowsApi(object):
     @validate_arguments
     def search_workflow_runs(
         self,
-        query: Optional[StrictStr] = None,
-        expand: Optional[conlist(StrictStr)] = None,
-        limit: Optional[StrictInt] = None,
-        skip: Optional[StrictInt] = None,
-        sort: Optional[StrictStr] = None,
+        query: Annotated[
+            Optional[StrictStr],
+            Field(description="The query string for searching workflow runs."),
+        ] = None,
+        expand: Annotated[
+            Optional[conlist(StrictStr)],
+            Field(
+                description="The fields to expand in the search results. Supported values are: `project`, `config.system`, `created_by`"
+            ),
+        ] = None,
+        limit: Annotated[
+            Optional[StrictInt],
+            Field(description="The maximum number of results to return."),
+        ] = None,
+        skip: Annotated[
+            Optional[StrictInt],
+            Field(
+                description="The number of results to skip before applying the limit."
+            ),
+        ] = None,
+        sort: Annotated[
+            Optional[StrictStr],
+            Field(description="The sort order for the search results."),
+        ] = None,
         **kwargs,
     ) -> SearchWorkflowRunsResponse:  # noqa: E501
         """search_workflow_runs  # noqa: E501
 
+        Search for workflow runs.  This endpoint supports pagination, querying, and expansion.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.search_workflow_runs(query, expand, limit, skip, sort, async_req=True)
         >>> result = thread.get()
 
-        :param query:
+        :param query: The query string for searching workflow runs.
         :type query: str
-        :param expand:
+        :param expand: The fields to expand in the search results. Supported values are: `project`, `config.system`, `created_by`
         :type expand: List[str]
-        :param limit:
+        :param limit: The maximum number of results to return.
         :type limit: int
-        :param skip:
+        :param skip: The number of results to skip before applying the limit.
         :type skip: int
-        :param sort:
+        :param sort: The sort order for the search results.
         :type sort: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -1311,30 +1397,50 @@ class WorkflowsApi(object):
     @validate_arguments
     def search_workflow_runs_with_http_info(
         self,
-        query: Optional[StrictStr] = None,
-        expand: Optional[conlist(StrictStr)] = None,
-        limit: Optional[StrictInt] = None,
-        skip: Optional[StrictInt] = None,
-        sort: Optional[StrictStr] = None,
+        query: Annotated[
+            Optional[StrictStr],
+            Field(description="The query string for searching workflow runs."),
+        ] = None,
+        expand: Annotated[
+            Optional[conlist(StrictStr)],
+            Field(
+                description="The fields to expand in the search results. Supported values are: `project`, `config.system`, `created_by`"
+            ),
+        ] = None,
+        limit: Annotated[
+            Optional[StrictInt],
+            Field(description="The maximum number of results to return."),
+        ] = None,
+        skip: Annotated[
+            Optional[StrictInt],
+            Field(
+                description="The number of results to skip before applying the limit."
+            ),
+        ] = None,
+        sort: Annotated[
+            Optional[StrictStr],
+            Field(description="The sort order for the search results."),
+        ] = None,
         **kwargs,
     ) -> ApiResponse:  # noqa: E501
         """search_workflow_runs  # noqa: E501
 
+        Search for workflow runs.  This endpoint supports pagination, querying, and expansion.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.search_workflow_runs_with_http_info(query, expand, limit, skip, sort, async_req=True)
         >>> result = thread.get()
 
-        :param query:
+        :param query: The query string for searching workflow runs.
         :type query: str
-        :param expand:
+        :param expand: The fields to expand in the search results. Supported values are: `project`, `config.system`, `created_by`
         :type expand: List[str]
-        :param limit:
+        :param limit: The maximum number of results to return.
         :type limit: int
-        :param skip:
+        :param skip: The number of results to skip before applying the limit.
         :type skip: int
-        :param sort:
+        :param sort: The sort order for the search results.
         :type sort: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -1450,27 +1556,44 @@ class WorkflowsApi(object):
     @validate_arguments
     def search_workflow_tasks(
         self,
-        query: Optional[StrictStr] = None,
-        limit: Optional[StrictInt] = None,
-        skip: Optional[StrictInt] = None,
-        expand: Optional[conlist(StrictStr)] = None,
+        query: Annotated[
+            Optional[StrictStr],
+            Field(description="The query string for searching workflow tasks."),
+        ] = None,
+        limit: Annotated[
+            Optional[StrictInt],
+            Field(description="The maximum number of results to return."),
+        ] = None,
+        skip: Annotated[
+            Optional[StrictInt],
+            Field(
+                description="The number of results to skip before applying the limit."
+            ),
+        ] = None,
+        expand: Annotated[
+            Optional[conlist(StrictStr)],
+            Field(
+                description="The fields to expand in the search results. Supported values are: `project`, `created_by`"
+            ),
+        ] = None,
         **kwargs,
     ) -> SearchWorkflowTasksResponse:  # noqa: E501
         """search_workflow_tasks  # noqa: E501
 
+        Search for workflow tasks.  This endpoint supports pagination, querying, and expansion.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.search_workflow_tasks(query, limit, skip, expand, async_req=True)
         >>> result = thread.get()
 
-        :param query:
+        :param query: The query string for searching workflow tasks.
         :type query: str
-        :param limit:
+        :param limit: The maximum number of results to return.
         :type limit: int
-        :param skip:
+        :param skip: The number of results to skip before applying the limit.
         :type skip: int
-        :param expand:
+        :param expand: The fields to expand in the search results. Supported values are: `project`, `created_by`
         :type expand: List[str]
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -1495,27 +1618,44 @@ class WorkflowsApi(object):
     @validate_arguments
     def search_workflow_tasks_with_http_info(
         self,
-        query: Optional[StrictStr] = None,
-        limit: Optional[StrictInt] = None,
-        skip: Optional[StrictInt] = None,
-        expand: Optional[conlist(StrictStr)] = None,
+        query: Annotated[
+            Optional[StrictStr],
+            Field(description="The query string for searching workflow tasks."),
+        ] = None,
+        limit: Annotated[
+            Optional[StrictInt],
+            Field(description="The maximum number of results to return."),
+        ] = None,
+        skip: Annotated[
+            Optional[StrictInt],
+            Field(
+                description="The number of results to skip before applying the limit."
+            ),
+        ] = None,
+        expand: Annotated[
+            Optional[conlist(StrictStr)],
+            Field(
+                description="The fields to expand in the search results. Supported values are: `project`, `created_by`"
+            ),
+        ] = None,
         **kwargs,
     ) -> ApiResponse:  # noqa: E501
         """search_workflow_tasks  # noqa: E501
 
+        Search for workflow tasks.  This endpoint supports pagination, querying, and expansion.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.search_workflow_tasks_with_http_info(query, limit, skip, expand, async_req=True)
         >>> result = thread.get()
 
-        :param query:
+        :param query: The query string for searching workflow tasks.
         :type query: str
-        :param limit:
+        :param limit: The maximum number of results to return.
         :type limit: int
-        :param skip:
+        :param skip: The number of results to skip before applying the limit.
         :type skip: int
-        :param expand:
+        :param expand: The fields to expand in the search results. Supported values are: `project`, `created_by`
         :type expand: List[str]
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -1628,11 +1768,30 @@ class WorkflowsApi(object):
     @validate_arguments
     def search_workflows(
         self,
-        query: Optional[StrictStr] = None,
-        sort: Optional[StrictStr] = None,
-        limit: Optional[StrictInt] = None,
-        skip: Optional[StrictInt] = None,
-        expand: Optional[conlist(StrictStr)] = None,
+        query: Annotated[
+            Optional[StrictStr],
+            Field(description="The query string for searching workflows."),
+        ] = None,
+        sort: Annotated[
+            Optional[StrictStr],
+            Field(description="The sort order for the search results."),
+        ] = None,
+        limit: Annotated[
+            Optional[StrictInt],
+            Field(description="The maximum number of results to return."),
+        ] = None,
+        skip: Annotated[
+            Optional[StrictInt],
+            Field(
+                description="The number of results to skip before applying the limit."
+            ),
+        ] = None,
+        expand: Annotated[
+            Optional[conlist(StrictStr)],
+            Field(
+                description="The fields to expand in the search results. Supported values are: `project`, `created_by`, `updated_by`, `latest_run`"
+            ),
+        ] = None,
         **kwargs,
     ) -> SearchWorkflowsResponse:  # noqa: E501
         """search_workflows  # noqa: E501
@@ -1644,15 +1803,15 @@ class WorkflowsApi(object):
         >>> thread = api.search_workflows(query, sort, limit, skip, expand, async_req=True)
         >>> result = thread.get()
 
-        :param query:
+        :param query: The query string for searching workflows.
         :type query: str
-        :param sort:
+        :param sort: The sort order for the search results.
         :type sort: str
-        :param limit:
+        :param limit: The maximum number of results to return.
         :type limit: int
-        :param skip:
+        :param skip: The number of results to skip before applying the limit.
         :type skip: int
-        :param expand:
+        :param expand: The fields to expand in the search results. Supported values are: `project`, `created_by`, `updated_by`, `latest_run`
         :type expand: List[str]
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -1677,11 +1836,30 @@ class WorkflowsApi(object):
     @validate_arguments
     def search_workflows_with_http_info(
         self,
-        query: Optional[StrictStr] = None,
-        sort: Optional[StrictStr] = None,
-        limit: Optional[StrictInt] = None,
-        skip: Optional[StrictInt] = None,
-        expand: Optional[conlist(StrictStr)] = None,
+        query: Annotated[
+            Optional[StrictStr],
+            Field(description="The query string for searching workflows."),
+        ] = None,
+        sort: Annotated[
+            Optional[StrictStr],
+            Field(description="The sort order for the search results."),
+        ] = None,
+        limit: Annotated[
+            Optional[StrictInt],
+            Field(description="The maximum number of results to return."),
+        ] = None,
+        skip: Annotated[
+            Optional[StrictInt],
+            Field(
+                description="The number of results to skip before applying the limit."
+            ),
+        ] = None,
+        expand: Annotated[
+            Optional[conlist(StrictStr)],
+            Field(
+                description="The fields to expand in the search results. Supported values are: `project`, `created_by`, `updated_by`, `latest_run`"
+            ),
+        ] = None,
         **kwargs,
     ) -> ApiResponse:  # noqa: E501
         """search_workflows  # noqa: E501
@@ -1693,15 +1871,15 @@ class WorkflowsApi(object):
         >>> thread = api.search_workflows_with_http_info(query, sort, limit, skip, expand, async_req=True)
         >>> result = thread.get()
 
-        :param query:
+        :param query: The query string for searching workflows.
         :type query: str
-        :param sort:
+        :param sort: The sort order for the search results.
         :type sort: str
-        :param limit:
+        :param limit: The maximum number of results to return.
         :type limit: int
-        :param skip:
+        :param skip: The number of results to skip before applying the limit.
         :type skip: int
-        :param expand:
+        :param expand: The fields to expand in the search results. Supported values are: `project`, `created_by`, `updated_by`, `latest_run`
         :type expand: List[str]
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -1816,18 +1994,23 @@ class WorkflowsApi(object):
 
     @validate_arguments
     def update_workflow_config(
-        self, workflow_id: StrictStr, body: StrictStr, **kwargs
+        self,
+        workflow_id: Annotated[
+            StrictStr, Field(..., description="The ID of the workflow to update.")
+        ],
+        body: StrictStr,
+        **kwargs,
     ) -> Workflow:  # noqa: E501
         """update_workflow_config  # noqa: E501
 
-        Update the config of an existing workflow.  Future runs will be created with this config, existing runs will keep the config they were created with.  # noqa: E501
+        Update the config of an existing workflow.  Future runs will be created with this config, existing runs will keep the config they were created with.  Config can be provided as JSON or YAML content types. If provided as JSON, the `config_text` will be replaced with the JSON representation of the config, and any existing formatting or comments will be lost.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.update_workflow_config(workflow_id, body, async_req=True)
         >>> result = thread.get()
 
-        :param workflow_id: (required)
+        :param workflow_id: The ID of the workflow to update. (required)
         :type workflow_id: str
         :param body: (required)
         :type body: str
@@ -1853,18 +2036,23 @@ class WorkflowsApi(object):
 
     @validate_arguments
     def update_workflow_config_with_http_info(
-        self, workflow_id: StrictStr, body: StrictStr, **kwargs
+        self,
+        workflow_id: Annotated[
+            StrictStr, Field(..., description="The ID of the workflow to update.")
+        ],
+        body: StrictStr,
+        **kwargs,
     ) -> ApiResponse:  # noqa: E501
         """update_workflow_config  # noqa: E501
 
-        Update the config of an existing workflow.  Future runs will be created with this config, existing runs will keep the config they were created with.  # noqa: E501
+        Update the config of an existing workflow.  Future runs will be created with this config, existing runs will keep the config they were created with.  Config can be provided as JSON or YAML content types. If provided as JSON, the `config_text` will be replaced with the JSON representation of the config, and any existing formatting or comments will be lost.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.update_workflow_config_with_http_info(workflow_id, body, async_req=True)
         >>> result = thread.get()
 
-        :param workflow_id: (required)
+        :param workflow_id: The ID of the workflow to update. (required)
         :type workflow_id: str
         :param body: (required)
         :type body: str
@@ -1983,13 +2171,14 @@ class WorkflowsApi(object):
         runner_mode: Annotated[
             Optional[StrictStr],
             Field(
-                description="If this field is not UNSET, take the runner mode (cloud or hybrid) into account. This primarily affects which connections can be used in an action; those with Gretel-managed credentials encryption can't be used in a Hybrid workflow, and vice versa."
+                description="The runner mode to validate the action for. If this field is not UNSET, take the runner mode (cloud or hybrid) into account. This primarily affects which connections can be used in an action; those with Gretel-managed credentials encryption can't be used in a Hybrid workflow, and vice versa."
             ),
         ] = None,
         **kwargs,
     ) -> ValidateWorkflowActionResponse:  # noqa: E501
         """validate_workflow_action  # noqa: E501
 
+        Validate a single workflow action.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -1998,7 +2187,7 @@ class WorkflowsApi(object):
 
         :param body: (required)
         :type body: object
-        :param runner_mode: If this field is not UNSET, take the runner mode (cloud or hybrid) into account. This primarily affects which connections can be used in an action; those with Gretel-managed credentials encryption can't be used in a Hybrid workflow, and vice versa.
+        :param runner_mode: The runner mode to validate the action for. If this field is not UNSET, take the runner mode (cloud or hybrid) into account. This primarily affects which connections can be used in an action; those with Gretel-managed credentials encryption can't be used in a Hybrid workflow, and vice versa.
         :type runner_mode: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -2027,13 +2216,14 @@ class WorkflowsApi(object):
         runner_mode: Annotated[
             Optional[StrictStr],
             Field(
-                description="If this field is not UNSET, take the runner mode (cloud or hybrid) into account. This primarily affects which connections can be used in an action; those with Gretel-managed credentials encryption can't be used in a Hybrid workflow, and vice versa."
+                description="The runner mode to validate the action for. If this field is not UNSET, take the runner mode (cloud or hybrid) into account. This primarily affects which connections can be used in an action; those with Gretel-managed credentials encryption can't be used in a Hybrid workflow, and vice versa."
             ),
         ] = None,
         **kwargs,
     ) -> ApiResponse:  # noqa: E501
         """validate_workflow_action  # noqa: E501
 
+        Validate a single workflow action.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -2042,7 +2232,7 @@ class WorkflowsApi(object):
 
         :param body: (required)
         :type body: object
-        :param runner_mode: If this field is not UNSET, take the runner mode (cloud or hybrid) into account. This primarily affects which connections can be used in an action; those with Gretel-managed credentials encryption can't be used in a Hybrid workflow, and vice versa.
+        :param runner_mode: The runner mode to validate the action for. If this field is not UNSET, take the runner mode (cloud or hybrid) into account. This primarily affects which connections can be used in an action; those with Gretel-managed credentials encryption can't be used in a Hybrid workflow, and vice versa.
         :type runner_mode: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional

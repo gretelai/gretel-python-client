@@ -20,7 +20,7 @@ import re  # noqa: F401
 
 from typing import Optional
 
-from pydantic import BaseModel, StrictStr, validator
+from pydantic import BaseModel, Field, StrictStr, validator
 
 
 class ValidateWorkflowActionResponse(BaseModel):
@@ -28,8 +28,12 @@ class ValidateWorkflowActionResponse(BaseModel):
     ValidateWorkflowActionResponse
     """
 
-    status: Optional[StrictStr] = None
-    message: Optional[StrictStr] = None
+    status: Optional[StrictStr] = Field(
+        None, description="The validation status of the action."
+    )
+    message: Optional[StrictStr] = Field(
+        None, description="The error message if the action is invalid."
+    )
     __properties = ["status", "message"]
 
     @validator("status")

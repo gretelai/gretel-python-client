@@ -20,7 +20,7 @@ import re  # noqa: F401
 
 from typing import List, Optional
 
-from pydantic import BaseModel, conlist
+from pydantic import BaseModel, conlist, Field
 
 from gretel_client.rest_v1.models.workflow import Workflow
 
@@ -30,7 +30,9 @@ class GetWorkflowsResponse(BaseModel):
     GetWorkflowsResponse
     """
 
-    workflows: Optional[conlist(Workflow)] = None
+    workflows: Optional[conlist(Workflow)] = Field(
+        None, description="The list of workflows."
+    )
     __properties = ["workflows"]
 
     class Config:

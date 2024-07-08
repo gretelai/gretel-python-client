@@ -33,20 +33,38 @@ class Workflow(BaseModel):
     Workflow
     """
 
-    id: StrictStr = Field(...)
-    name: StrictStr = Field(...)
-    project_id: StrictStr = Field(...)
+    id: StrictStr = Field(..., description="The unique ID of the workflow.")
+    name: StrictStr = Field(..., description="The name of the workflow.")
+    project_id: StrictStr = Field(
+        ..., description="The project ID that this workflow belongs to."
+    )
     project: Optional[Project] = None
-    config: Optional[Dict[str, Any]] = None
-    config_text: Optional[StrictStr] = None
-    runner_mode: Optional[StrictStr] = None
-    next_scheduled_run: Optional[datetime] = None
-    created_by: StrictStr = Field(...)
+    config: Optional[Dict[str, Any]] = Field(
+        None, description="The config of the workflow."
+    )
+    config_text: Optional[StrictStr] = Field(
+        None, description="The config of the workflow as a YAML string."
+    )
+    runner_mode: Optional[StrictStr] = Field(
+        None, description="The runner mode of the workflow. Can be `cloud` or `hybrid`."
+    )
+    created_by: StrictStr = Field(
+        ..., description="The user ID that created this workflow."
+    )
     created_by_profile: Optional[UserProfile] = None
-    updated_by: Optional[StrictStr] = None
+    updated_by: Optional[StrictStr] = Field(
+        None, description="The user ID that last updated this workflow."
+    )
     updated_by_profile: Optional[UserProfile] = None
-    created_at: datetime = Field(...)
-    updated_at: Optional[datetime] = None
+    created_at: datetime = Field(
+        ..., description="A timestamp indicating when this workflow was created."
+    )
+    updated_at: Optional[datetime] = Field(
+        None, description="A timestamp indicating when this workflow was last updated."
+    )
+    next_scheduled_run: Optional[datetime] = Field(
+        None, description="A timestamp indicating when the next scheduled run is."
+    )
     latest_run: Optional[WorkflowRun] = None
     __properties = [
         "id",
@@ -56,13 +74,13 @@ class Workflow(BaseModel):
         "config",
         "config_text",
         "runner_mode",
-        "next_scheduled_run",
         "created_by",
         "created_by_profile",
         "updated_by",
         "updated_by_profile",
         "created_at",
         "updated_at",
+        "next_scheduled_run",
         "latest_run",
     ]
 
@@ -141,7 +159,6 @@ class Workflow(BaseModel):
                 "config": obj.get("config"),
                 "config_text": obj.get("config_text"),
                 "runner_mode": obj.get("runner_mode"),
-                "next_scheduled_run": obj.get("next_scheduled_run"),
                 "created_by": obj.get("created_by"),
                 "created_by_profile": (
                     UserProfile.from_dict(obj.get("created_by_profile"))
@@ -156,6 +173,7 @@ class Workflow(BaseModel):
                 ),
                 "created_at": obj.get("created_at"),
                 "updated_at": obj.get("updated_at"),
+                "next_scheduled_run": obj.get("next_scheduled_run"),
                 "latest_run": (
                     WorkflowRun.from_dict(obj.get("latest_run"))
                     if obj.get("latest_run") is not None

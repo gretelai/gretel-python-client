@@ -28,9 +28,17 @@ class CreateWorkflowRunRequest(BaseModel):
     CreateWorkflowRunRequest
     """
 
-    workflow_id: StrictStr = Field(...)
-    config: Optional[Dict[str, Any]] = None
-    config_text: Optional[StrictStr] = None
+    workflow_id: StrictStr = Field(
+        ..., description="The ID of the workflow to create a run for."
+    )
+    config: Optional[Dict[str, Any]] = Field(
+        None,
+        description="An optional config for the workflow run If provided, this will be used in place of the workflow's config.",
+    )
+    config_text: Optional[StrictStr] = Field(
+        None,
+        description="An optional config for the workflow run as a YAML string. If provided, this will be used in place of the workflow's config.",
+    )
     __properties = ["workflow_id", "config", "config_text"]
 
     class Config:

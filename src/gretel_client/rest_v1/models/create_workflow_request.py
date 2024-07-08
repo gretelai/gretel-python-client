@@ -28,11 +28,24 @@ class CreateWorkflowRequest(BaseModel):
     CreateWorkflowRequest
     """
 
-    name: Optional[StrictStr] = None
-    project_id: StrictStr = Field(...)
-    config: Optional[Dict[str, Any]] = None
-    config_text: Optional[StrictStr] = None
-    runner_mode: Optional[StrictStr] = None
+    name: Optional[StrictStr] = Field(
+        None,
+        description="The name of the workflow. This field has been deprecated in favor of the `config.name` field.",
+    )
+    project_id: StrictStr = Field(
+        ..., description="The project ID that this workflow should belong to."
+    )
+    config: Optional[Dict[str, Any]] = Field(
+        None,
+        description="The workflow config object. See production documentation for more information on the structure of this field.",
+    )
+    config_text: Optional[StrictStr] = Field(
+        None, description="The workflow config as a YAML string."
+    )
+    runner_mode: Optional[StrictStr] = Field(
+        None,
+        description="The runner mode of the workflow. Can be `cloud` or `hybrid`. Some projects may require workflows to run in a specific mode.",
+    )
     __properties = ["name", "project_id", "config", "config_text", "runner_mode"]
 
     @validator("runner_mode")
