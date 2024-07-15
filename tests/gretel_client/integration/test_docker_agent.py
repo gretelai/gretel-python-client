@@ -45,7 +45,14 @@ models:
     model = project.create_model_obj(model_config, fake_pii)
 
     model.submit_manual()
-    request.addfinalizer(model.cancel)
+
+    def model_cancel_ignore_exception():
+        try:
+            model.cancel()
+        except Exception as e:
+            print(e)
+
+    request.addfinalizer(model_cancel_ignore_exception)
 
     print(f"launched model {model.id}")
 
