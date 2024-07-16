@@ -38,36 +38,39 @@ class Connection(BaseModel):
     )
     name: StrictStr = Field(..., description="Name of the connection.")
     validation_status: StrictStr = Field(
-        ..., description="Validation status: COMPLETED, ERROR, NONE."
+        ...,
+        description="Current connection validation status. Possible values are: `COMPLETED`, `ERROR`, or `NONE`.",
     )
     credentials: Optional[Dict[str, Any]] = Field(
-        None,
-        description="Connection credentials in plain text. This can only be set when creating a connection for letting the control plane encrypt credentials. It is never set in API responses.",
+        None, description="Connection credentials in plain text."
     )
     config: Optional[Dict[str, Any]] = Field(
-        None, description="Connection config. These values are returned by the API."
+        None,
+        description="The connection configuration. See [connection type documentation](https://docs.gretel.ai/create-synthetic-data/workflows-and-connectors/connectors) for structure.",
     )
     encrypted_credentials: Optional[Dict[str, Any]] = Field(
         None, description="Connection credentials in encrypted form."
     )
-    customer_managed_credentials_encryption: Optional[StrictBool] = Field(
-        None,
-        description="Indicates whether the encrypted credentials are encrypted using a customer-managed key, as opposed to a Gretel-managed one. TODO: This should be [(google.api.field_behavior) = REQUIRED] but we can only set this once the change has been rolled out to Pilot.",
+    customer_managed_credentials_encryption: StrictBool = Field(
+        ...,
+        description="When true, this connection is using a customer-managed key to encrypt credentials. Otherwise, this connection is using a Gretel-managed key to encrypt credentials.",
     )
-    created_at: datetime = Field(...)
+    created_at: datetime = Field(
+        ..., description="Timestamp when this connection was created."
+    )
     project_id: StrictStr = Field(
-        ..., description="ID of the Project that owns this connection"
+        ..., description="ID of the project that owns this connection"
     )
     created_by: StrictStr = Field(
-        ..., description="ID of the User who created this connection"
+        ..., description="ID of the user who created this connection"
     )
     connection_target_type: Optional[StrictStr] = Field(
         None,
-        description="Explicitly declare this as `source`, `destination` or `unspecified`.  If unspecified or empty, no target enforcement.",
+        description="The type of workflow action this connection may be used with. If empty or `unspecified`, this connection may be used with any workflow action. Possible values are: `source`, `destination`, `unspecified`",
     )
     auth_strategy: Optional[StrictStr] = Field(
         None,
-        description="This field is used to configure a specific auth strategy for connections that might support multiple strategies such as role or access key based auth.",
+        description="The auth strategy used when supported by a connection type. See [connection type documentation](https://docs.gretel.ai/create-synthetic-data/workflows-and-connectors/connectors) for possible values.",
     )
     __properties = [
         "id",

@@ -25,10 +25,12 @@ from pydantic import BaseModel, Field, StrictStr
 
 class UpdateConnectionRequest(BaseModel):
     """
-    Request message for `UpdateConnection` Next Tag: 8
+    Request message for `UpdateConnection`
     """
 
-    name: Optional[StrictStr] = None
+    name: Optional[StrictStr] = Field(
+        None, description="A new connection name. (optional)"
+    )
     credentials: Optional[Dict[str, Any]] = Field(
         None,
         description="Plaintext credentials for the connection, to be encrypted in our cloud. This field may only be set if the existing connection's credentials are encrypted with a Gretel-managed key.",
@@ -37,9 +39,18 @@ class UpdateConnectionRequest(BaseModel):
         None,
         description="Pre-encrypted credentials for the connection, encrypted by a customer-managed key. This field may only be set if the existing connection's credentials are encrypted with a user-managed key.",
     )
-    config: Optional[Dict[str, Any]] = None
-    connection_target_type: Optional[StrictStr] = None
-    auth_strategy: Optional[StrictStr] = None
+    config: Optional[Dict[str, Any]] = Field(
+        None,
+        description="An updated connection configuration. See [connection type documentation](https://docs.gretel.ai/create-synthetic-data/workflows-and-connectors/connectors) for structure.",
+    )
+    connection_target_type: Optional[StrictStr] = Field(
+        None,
+        description="An updated workflow action target type for this connection. Possible values are: `source`, `destination`, `unspecified`",
+    )
+    auth_strategy: Optional[StrictStr] = Field(
+        None,
+        description="An updated connection auth strategy. See [connection type documentation](https://docs.gretel.ai/create-synthetic-data/workflows-and-connectors/connectors) for possible values.",
+    )
     __properties = [
         "name",
         "credentials",

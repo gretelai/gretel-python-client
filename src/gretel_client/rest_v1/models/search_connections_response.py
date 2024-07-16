@@ -30,8 +30,13 @@ class SearchConnectionsResponse(BaseModel):
     SearchConnectionsResponse
     """
 
-    connections: Optional[conlist(Connection)] = None
-    total: StrictInt = Field(...)
+    connections: Optional[conlist(Connection)] = Field(
+        None,
+        description="List of sorted connections that match the provided query, given the limit and skip.",
+    )
+    total: StrictInt = Field(
+        ..., description="Total number of connections that match the provided query."
+    )
     __properties = ["connections", "total"]
 
     class Config:

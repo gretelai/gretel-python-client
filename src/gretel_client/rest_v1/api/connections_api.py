@@ -18,7 +18,7 @@ import warnings
 
 from typing import Optional
 
-from pydantic import StrictInt, StrictStr, validate_arguments, ValidationError
+from pydantic import Field, StrictInt, StrictStr, validate_arguments, ValidationError
 from typing_extensions import Annotated
 
 from gretel_client.rest_v1.api_client import ApiClient
@@ -60,7 +60,7 @@ class ConnectionsApi(object):
     ) -> Connection:  # noqa: E501
         """create_connection  # noqa: E501
 
-        Creates a new connection.  # noqa: E501
+        Create a new connection.  Credentials may be provided in plaintext or pre-encrypted. Plaintext credentials will be encrypted by Gretel.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -95,7 +95,7 @@ class ConnectionsApi(object):
     ) -> ApiResponse:  # noqa: E501
         """create_connection  # noqa: E501
 
-        Creates a new connection.  # noqa: E501
+        Create a new connection.  Credentials may be provided in plaintext or pre-encrypted. Plaintext credentials will be encrypted by Gretel.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -212,18 +212,22 @@ class ConnectionsApi(object):
 
     @validate_arguments
     def delete_connection(
-        self, connection_id: StrictStr, **kwargs
+        self,
+        connection_id: Annotated[
+            StrictStr, Field(..., description="The connection ID to delete.")
+        ],
+        **kwargs,
     ) -> None:  # noqa: E501
         """delete_connection  # noqa: E501
 
-        Delete a connection by it's connection id.  # noqa: E501
+        Delete a connection by ID.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.delete_connection(connection_id, async_req=True)
         >>> result = thread.get()
 
-        :param connection_id: (required)
+        :param connection_id: The connection ID to delete. (required)
         :type connection_id: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -247,18 +251,22 @@ class ConnectionsApi(object):
 
     @validate_arguments
     def delete_connection_with_http_info(
-        self, connection_id: StrictStr, **kwargs
+        self,
+        connection_id: Annotated[
+            StrictStr, Field(..., description="The connection ID to delete.")
+        ],
+        **kwargs,
     ) -> ApiResponse:  # noqa: E501
         """delete_connection  # noqa: E501
 
-        Delete a connection by it's connection id.  # noqa: E501
+        Delete a connection by ID.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.delete_connection_with_http_info(connection_id, async_req=True)
         >>> result = thread.get()
 
-        :param connection_id: (required)
+        :param connection_id: The connection ID to delete. (required)
         :type connection_id: str
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -361,7 +369,7 @@ class ConnectionsApi(object):
     ) -> Connection:  # noqa: E501
         """get_connection  # noqa: E501
 
-        Get a single connection by it's connection id.  # noqa: E501
+        Get a single connection by ID.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -394,7 +402,7 @@ class ConnectionsApi(object):
     ) -> ApiResponse:  # noqa: E501
         """get_connection  # noqa: E501
 
-        Get a single connection by it's connection id.  # noqa: E501
+        Get a single connection by ID.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -506,7 +514,6 @@ class ConnectionsApi(object):
     ) -> Connection:  # noqa: E501
         """get_connection_with_credentials  # noqa: E501
 
-        Get connection details along with credentials.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -541,7 +548,6 @@ class ConnectionsApi(object):
     ) -> ApiResponse:  # noqa: E501
         """get_connection_with_credentials  # noqa: E501
 
-        Get connection details along with credentials.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -799,7 +805,7 @@ class ConnectionsApi(object):
     def list_connections(self, **kwargs) -> ListConnectionsResponse:  # noqa: E501
         """list_connections  # noqa: E501
 
-        List connections  # noqa: E501
+        List all connections available to the user.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -828,7 +834,7 @@ class ConnectionsApi(object):
     def list_connections_with_http_info(self, **kwargs) -> ApiResponse:  # noqa: E501
         """list_connections  # noqa: E501
 
-        List connections  # noqa: E501
+        List all connections available to the user.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -936,7 +942,7 @@ class ConnectionsApi(object):
     ) -> ListConnectionsResponse:  # noqa: E501
         """list_sample_connections  # noqa: E501
 
-        List connections  # noqa: E501
+        List all sample connections available to the user.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -967,7 +973,7 @@ class ConnectionsApi(object):
     ) -> ApiResponse:  # noqa: E501
         """list_sample_connections  # noqa: E501
 
-        List connections  # noqa: E501
+        List all sample connections available to the user.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -1072,28 +1078,46 @@ class ConnectionsApi(object):
     @validate_arguments
     def search_connections(
         self,
-        query: Optional[StrictStr] = None,
-        sort: Optional[StrictStr] = None,
-        limit: Optional[StrictInt] = None,
-        skip: Optional[StrictInt] = None,
+        query: Annotated[
+            Optional[StrictStr],
+            Field(
+                description="Query string to filter connections. Supported query fields are: `project_id`"
+            ),
+        ] = None,
+        sort: Annotated[
+            Optional[StrictStr],
+            Field(
+                description="Sort order for connections. Supported sort fields are: `created_at`, `updated_at`"
+            ),
+        ] = None,
+        limit: Annotated[
+            Optional[StrictInt],
+            Field(
+                description="Maximum number of connections to return. Default is no limit."
+            ),
+        ] = None,
+        skip: Annotated[
+            Optional[StrictInt],
+            Field(description="Number of connections to skip before applying limit."),
+        ] = None,
         **kwargs,
     ) -> SearchConnectionsResponse:  # noqa: E501
         """search_connections  # noqa: E501
 
-        Search connections by project ID  # noqa: E501
+        Search for connections available to the user.  This endpoint supports pagination and querying.  Valid query fields are: `project_id`  Example query: `/v1/connections/search?query=project_id:proj_123abc&sort=-created_at  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.search_connections(query, sort, limit, skip, async_req=True)
         >>> result = thread.get()
 
-        :param query:
+        :param query: Query string to filter connections. Supported query fields are: `project_id`
         :type query: str
-        :param sort:
+        :param sort: Sort order for connections. Supported sort fields are: `created_at`, `updated_at`
         :type sort: str
-        :param limit:
+        :param limit: Maximum number of connections to return. Default is no limit.
         :type limit: int
-        :param skip:
+        :param skip: Number of connections to skip before applying limit.
         :type skip: int
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -1118,28 +1142,46 @@ class ConnectionsApi(object):
     @validate_arguments
     def search_connections_with_http_info(
         self,
-        query: Optional[StrictStr] = None,
-        sort: Optional[StrictStr] = None,
-        limit: Optional[StrictInt] = None,
-        skip: Optional[StrictInt] = None,
+        query: Annotated[
+            Optional[StrictStr],
+            Field(
+                description="Query string to filter connections. Supported query fields are: `project_id`"
+            ),
+        ] = None,
+        sort: Annotated[
+            Optional[StrictStr],
+            Field(
+                description="Sort order for connections. Supported sort fields are: `created_at`, `updated_at`"
+            ),
+        ] = None,
+        limit: Annotated[
+            Optional[StrictInt],
+            Field(
+                description="Maximum number of connections to return. Default is no limit."
+            ),
+        ] = None,
+        skip: Annotated[
+            Optional[StrictInt],
+            Field(description="Number of connections to skip before applying limit."),
+        ] = None,
         **kwargs,
     ) -> ApiResponse:  # noqa: E501
         """search_connections  # noqa: E501
 
-        Search connections by project ID  # noqa: E501
+        Search for connections available to the user.  This endpoint supports pagination and querying.  Valid query fields are: `project_id`  Example query: `/v1/connections/search?query=project_id:proj_123abc&sort=-created_at  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.search_connections_with_http_info(query, sort, limit, skip, async_req=True)
         >>> result = thread.get()
 
-        :param query:
+        :param query: Query string to filter connections. Supported query fields are: `project_id`
         :type query: str
-        :param sort:
+        :param sort: Sort order for connections. Supported sort fields are: `created_at`, `updated_at`
         :type sort: str
-        :param limit:
+        :param limit: Maximum number of connections to return. Default is no limit.
         :type limit: int
-        :param skip:
+        :param skip: Number of connections to skip before applying limit.
         :type skip: int
         :param async_req: Whether to execute the request asynchronously.
         :type async_req: bool, optional
@@ -1251,20 +1293,22 @@ class ConnectionsApi(object):
     @validate_arguments
     def update_connection(
         self,
-        connection_id: StrictStr,
+        connection_id: Annotated[
+            StrictStr, Field(..., description="The connection ID to update.")
+        ],
         update_connection_request: UpdateConnectionRequest,
         **kwargs,
     ) -> Connection:  # noqa: E501
         """update_connection  # noqa: E501
 
-        Updates a connection. Connections can be modified with updated connection.  # noqa: E501
+        Update a connection by ID.  When updating connection credentials, the same encryption strategy must be used.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.update_connection(connection_id, update_connection_request, async_req=True)
         >>> result = thread.get()
 
-        :param connection_id: (required)
+        :param connection_id: The connection ID to update. (required)
         :type connection_id: str
         :param update_connection_request: (required)
         :type update_connection_request: UpdateConnectionRequest
@@ -1291,20 +1335,22 @@ class ConnectionsApi(object):
     @validate_arguments
     def update_connection_with_http_info(
         self,
-        connection_id: StrictStr,
+        connection_id: Annotated[
+            StrictStr, Field(..., description="The connection ID to update.")
+        ],
         update_connection_request: UpdateConnectionRequest,
         **kwargs,
     ) -> ApiResponse:  # noqa: E501
         """update_connection  # noqa: E501
 
-        Updates a connection. Connections can be modified with updated connection.  # noqa: E501
+        Update a connection by ID.  When updating connection credentials, the same encryption strategy must be used.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
         >>> thread = api.update_connection_with_http_info(connection_id, update_connection_request, async_req=True)
         >>> result = thread.get()
 
-        :param connection_id: (required)
+        :param connection_id: The connection ID to update. (required)
         :type connection_id: str
         :param update_connection_request: (required)
         :type update_connection_request: UpdateConnectionRequest
@@ -1422,7 +1468,7 @@ class ConnectionsApi(object):
     ) -> ValidateConnectionCredentialsResponse:  # noqa: E501
         """validate_connection_credentials  # noqa: E501
 
-        Validate a connection's credentials by it's connection id.  # noqa: E501
+        Validate the credentials of a connection by ID.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 
@@ -1457,7 +1503,7 @@ class ConnectionsApi(object):
     ) -> ApiResponse:  # noqa: E501
         """validate_connection_credentials  # noqa: E501
 
-        Validate a connection's credentials by it's connection id.  # noqa: E501
+        Validate the credentials of a connection by ID.  # noqa: E501
         This method makes a synchronous HTTP request by default. To make an
         asynchronous HTTP request, please pass async_req=True
 

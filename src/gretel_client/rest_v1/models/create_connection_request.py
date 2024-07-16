@@ -25,7 +25,7 @@ from pydantic import BaseModel, Field, StrictStr
 
 class CreateConnectionRequest(BaseModel):
     """
-    Request message for `CreateConnection` method. Next Tag: 8
+    Request message for `CreateConnection` method.
     """
 
     project_id: StrictStr = Field(...)
@@ -40,7 +40,10 @@ class CreateConnectionRequest(BaseModel):
         description="Pre-encrypted credentials for the connection, encrypted by a customer-managed key. If this field is set, credentials must be unset. At least one of those fields must be set.",
     )
     config: Optional[Dict[str, Any]] = None
-    connection_target_type: Optional[StrictStr] = None
+    connection_target_type: Optional[StrictStr] = Field(
+        None,
+        description="The type of workflow action this connection may be used with. If empty or `unspecified`, this connection may be used with any workflow action. Possible values are: `source`, `destination`, `unspecified`",
+    )
     auth_strategy: Optional[StrictStr] = None
     __properties = [
         "project_id",
