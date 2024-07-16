@@ -7,6 +7,7 @@ from typing import List, Optional, Tuple, Union
 
 import yaml
 
+from gretel_client.config import get_session_config
 from gretel_client.gretel.artifact_fetching import ReportType
 from gretel_client.gretel.exceptions import (
     ConfigSettingError,
@@ -221,6 +222,7 @@ def create_model_config_from_base(
     config = smart_read_model_config(base_config)
     model_type, model_config_section = extract_model_config_section(config)
     setup = CONFIG_SETUP_DICT[ModelType(model_type)]
+    is_gretel_dev = get_session_config().stage == "dev"
 
     config = _backwards_compat_transform_config(config, non_default_settings)
 
@@ -230,20 +232,20 @@ def create_model_config_from_base(
     for section, settings in non_default_settings.items():
         if not isinstance(settings, dict):
             extra_kwargs = setup.extra_kwargs or []
-            if section in extra_kwargs:
+            if section in extra_kwargs or is_gretel_dev:
                 model_config_section[section] = settings
             else:
                 raise ConfigSettingError(
                     f"`{section}` is an invalid keyword argument. Valid options "
                     f"include {setup.config_sections + extra_kwargs}."
                 )
-        elif section not in setup.config_sections:
+        elif section in setup.config_sections or is_gretel_dev:
+            model_config_section.setdefault(section, {}).update(settings)
+        else:
             raise ConfigSettingError(
                 f"`{section}` is not a valid `{setup.model_name}` config section. "
                 f"Must be one of [{setup.config_sections}]."
             )
-        else:
-            model_config_section.setdefault(section, {}).update(settings)
     return config
 
 

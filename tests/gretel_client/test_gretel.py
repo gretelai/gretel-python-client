@@ -1,5 +1,6 @@
 from pathlib import Path
 from typing import Callable
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -116,6 +117,26 @@ def test_update_non_nested_setting(gpt_x_config_file_path: Path):
     assert settings["column_name"] == "custom_name"
 
 
+def test_no_validation_on_dev():
+    # Additional keys are accepted for internal testing on dev.
+    with patch(
+        "gretel_client.gretel.config_setup.get_session_config"
+    ) as mock_get_session_config:
+        mock_session_config = MagicMock()
+        mock_session_config.stage = "dev"
+        mock_get_session_config.return_value = mock_session_config
+
+        settings = create_model_config_from_base(
+            base_config="navigator-ft",
+            is_gretel_dev=True,
+            params={"rope_scaling_factor": 2},
+            extra_stuff={"foo": "bar"},
+        )["models"][0]["navigator_ft"]
+
+        assert settings["params"]["rope_scaling_factor"] == 2
+        assert settings["extra_stuff"]["foo"] == "bar"
+
+
 def test_gpt_x_backwards_compatibility(
     gpt_x_old_config_file_path: Path, gpt_x_config_file_path: Path
 ):
@@ -185,4 +206,10 @@ def test_create_config_settings_error():
         create_model_config_from_base(
             base_config="tabular-actgan",
             invalid_section={"invalid": "section"},
+        )
+
+    with pytest.raises(ConfigSettingError):
+        create_model_config_from_base(
+            base_config="navigator-ft",
+            extra_stuff={"foo": "bar"},
         )
