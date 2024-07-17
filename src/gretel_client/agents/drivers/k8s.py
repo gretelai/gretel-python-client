@@ -609,6 +609,8 @@ class Kubernetes(Driver):
             elif len(image_parts) > 1:
                 image_parts[0] = registry_host
                 image = "/".join(image_parts)
+            elif len(image_parts) == 1 and image_parts[0].startswith("models"):
+                image = f"{registry_host}/{image_parts[0]}"
             # The override_tag will take precedence over a sha256 value if specified, or
             # over the original tag
             # Matches image_name:latest@sha256:abc12345

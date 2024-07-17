@@ -1042,6 +1042,22 @@ class TestKubernetesDriver(TestCase):
         PULL_SECRETS_ENV_NAME,
         json.dumps(["personal-secret", "gretel-pull-secret"]),
     )
+    def test_resolve_image_models(self):
+        job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
+        original_image = "models:latest"
+        job.container_image = original_image
+        self.reload_env_and_build_job(job, restart_worker=True)
+
+        image = self.driver._resolve_image(job)
+
+        assert image == "shiny-new-reg.example.ai/models:latest"
+
+    @patch_image_registry("shiny-new-reg.example.ai")
+    @patch_auth
+    @patch_env(
+        PULL_SECRETS_ENV_NAME,
+        json.dumps(["personal-secret", "gretel-pull-secret"]),
+    )
     def test_resolve_image_only_one_part(self):
         job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
         original_image = "my.ecr/busybox:latest"
