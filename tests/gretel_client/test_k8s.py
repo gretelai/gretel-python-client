@@ -1110,6 +1110,18 @@ class TestKubernetesDriver(TestCase):
 
         assert image == "shiny-new-reg.example.ai/gretelai/gcc-my-workflow-image:latest"
 
+    @patch_auth
+    @patch_image_registry("shiny-new-reg.example.ai/gretelai")
+    def test_special_case_gretelai_models(self):
+        job = Job.from_dict(get_mock_job("gpu-standard"), self.config)
+        original_image = "models:latest"
+        job.container_image = original_image
+        daemon = KubernetesDriverDaemon(self.config, self.core_api)
+        self.driver._worker = daemon
+        image = self.driver._resolve_image(job)
+
+        assert image == "shiny-new-reg.example.ai/gretelai/models:latest"
+
     @patch_autoscaler_env_var("true")
     def test_annotation_set_true(self):
         job = Job.from_dict(get_mock_job(), self.config)

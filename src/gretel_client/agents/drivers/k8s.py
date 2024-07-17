@@ -599,7 +599,9 @@ class Kubernetes(Driver):
             # We'll instead release the images with gretelai/image-separated-by-dashes
             if registry_host and self._worker.uses_dockerhub_format:
                 start_index = 0
-                if "." in image_parts[0] or ":" in image_parts[0]:
+                if len(image_parts) != 1 and any(
+                    ["." in image_parts[0], ":" in image_parts[0]]
+                ):
                     start_index = 1
                 image_name_with_dashes = "-".join(image_parts[start_index:])
                 image = f"{registry_host}/{image_name_with_dashes}"
