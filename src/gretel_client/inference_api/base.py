@@ -112,6 +112,31 @@ def get_full_navigator_model_list(api_client: ApiClient) -> List[Dict[str, str]]
     return available_models
 
 
+def get_model(
+    api_client: ApiClient, model_id: str = None, model_type: str = None
+) -> Dict[str, str]:
+    """Returns a Navigator backend model by model_id and model_type.
+
+    Args:
+        api_client: The Gretel API client
+        model_id: Model ID
+        model_type: Type of the models (natural, tabular)
+
+    Returns:
+        Backend model.
+    """
+
+    available_model = call_api(
+        api_client,
+        "get",
+        MODELS_API_PATH,
+        query_params={"model_id": model_id, "model_type": model_type},
+    )
+    model = available_model["models"][0] if available_model["models"] else None
+
+    return model
+
+
 class BaseInferenceAPI(ABC):
     """Base class for Gretel Inference API objects."""
 
@@ -167,10 +192,14 @@ class BaseInferenceAPI(ABC):
         if backend_model is None:
             backend_model = self.backend_model_list[0]
         elif backend_model not in self.backend_model_list:
-            raise GretelInferenceAPIError(
-                f"Model {backend_model} is not a valid backend model. "
-                f"Valid models are: {self.backend_model_list}"
+            model = get_model(
+                self._api_client, model_id=backend_model, model_type=self.model_type
             )
+            if model is None or backend_model != model.get("model_id"):
+                raise GretelInferenceAPIError(
+                    f"Model {backend_model} is not a valid backend model. "
+                    f"Valid models are: {self.backend_model_list}"
+                )
         self._backend_model = backend_model
         logger.info("Backend model: %s", backend_model)
 

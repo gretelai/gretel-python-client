@@ -11,15 +11,18 @@ from gretel_client.inference_api.tabular import GretelInferenceAPIError
 tabular.STREAM_SLEEP_TIME = 0
 
 
-def test_generate_error_retry():
-    # We need to patch the models api call within the class since we make an API
+@patch.object(api_base, "get_full_navigator_model_list")
+@patch.object(api_base, "get_model")
+def test_generate_error_retry(mock_models, mock_all_models):
+    # We need to patch the models api calls within the class since we make an API
     # call right away to retrieve the model list
-    with patch.object(api_base, "get_full_navigator_model_list") as mock_models:
-        mock_models.return_value = [
-            {"model_id": "gretelai/tabular-v0", "model_type": "TABULAR"}
-        ]
-        api = tabular.TabularInferenceAPI()
-
+    mock_all_models.return_value = [
+        {"model_id": "gretelai/auto", "model_type": "TABULAR"}
+    ]
+    mock_models.return_value = [
+        {"model_id": "gretelai/tabular-v0", "model_type": "TABULAR"}
+    ]
+    api = tabular.TabularInferenceAPI()
     api_response = {
         "data": [
             {
@@ -49,14 +52,22 @@ def test_generate_error_retry():
 
 
 @pytest.mark.parametrize("retry_count", [2, 1])
-def test_generate_timeout(retry_count: int):
-    # We need to patch the models api call within the class since we make an API
+@patch.object(api_base, "get_full_navigator_model_list")
+@patch.object(api_base, "get_model")
+def test_generate_timeout(
+    mock_models,
+    mock_all_models,
+    retry_count: int,
+):
+    # We need to patch the models api calls within the class since we make an API
     # call right away to retrieve the model list
-    with patch.object(api_base, "get_full_navigator_model_list") as mock_models:
-        mock_models.return_value = [
-            {"model_id": "gretelai/tabular-v0", "model_type": "TABULAR"}
-        ]
-        api = tabular.TabularInferenceAPI()
+    mock_all_models.return_value = [
+        {"model_id": "gretelai/auto", "model_type": "TABULAR"}
+    ]
+    mock_models.return_value = [
+        {"model_id": "gretelai/tabular-v0", "model_type": "TABULAR"}
+    ]
+    api = tabular.TabularInferenceAPI()
 
     timeout = 60
     api_response = {
