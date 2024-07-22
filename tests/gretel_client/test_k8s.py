@@ -16,6 +16,7 @@ from kubernetes.client import (
     CoreV1Api,
     V1ConfigMapVolumeSource,
     V1Container,
+    V1EnvVar,
     V1Job,
     V1JobCondition,
     V1JobSpec,
@@ -457,6 +458,7 @@ class TestKubernetesDriver(TestCase):
             security_context: dict = container.security_context
             assert security_context.get("runAsNonRoot") is True
             assert security_context.get("runAsUser") == 1001
+            assert V1EnvVar(name="HOME", value="/run") in container.env
 
     def test_build_job_cpu_set_security_context(self):
         with patch.dict(

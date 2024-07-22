@@ -680,6 +680,8 @@ class Kubernetes(Driver):
             # or readOnlyRootFileSystem is true, but older containers won't
             # necessarily have this set
             container.working_dir = running_path
+            # Set the home directory to be the writable /run path as well
+            container.env.append(client.V1EnvVar(name="HOME", value=running_path))
 
     def _delete_kubernetes_job(self, job: Optional[client.V1Job]):
         """Deletes the input V1Job in the cluster pointed to by the input Api Client."""
