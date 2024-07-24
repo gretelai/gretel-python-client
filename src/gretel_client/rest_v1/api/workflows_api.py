@@ -1331,7 +1331,9 @@ class WorkflowsApi(object):
         self,
         query: Annotated[
             Optional[StrictStr],
-            Field(description="The query string for searching workflow runs."),
+            Field(
+                description="The query string for searching workflow runs. Supported fields are: `id`, `workflow_id`, `project_id`, `status`, `runner_mode`, `cancelation_request`"
+            ),
         ] = None,
         expand: Annotated[
             Optional[conlist(StrictStr)],
@@ -1364,7 +1366,7 @@ class WorkflowsApi(object):
         >>> thread = api.search_workflow_runs(query, expand, limit, skip, sort, async_req=True)
         >>> result = thread.get()
 
-        :param query: The query string for searching workflow runs.
+        :param query: The query string for searching workflow runs. Supported fields are: `id`, `workflow_id`, `project_id`, `status`, `runner_mode`, `cancelation_request`
         :type query: str
         :param expand: The fields to expand in the search results. Supported values are: `project`, `config.system`, `created_by`
         :type expand: List[str]
@@ -1399,7 +1401,9 @@ class WorkflowsApi(object):
         self,
         query: Annotated[
             Optional[StrictStr],
-            Field(description="The query string for searching workflow runs."),
+            Field(
+                description="The query string for searching workflow runs. Supported fields are: `id`, `workflow_id`, `project_id`, `status`, `runner_mode`, `cancelation_request`"
+            ),
         ] = None,
         expand: Annotated[
             Optional[conlist(StrictStr)],
@@ -1432,7 +1436,7 @@ class WorkflowsApi(object):
         >>> thread = api.search_workflow_runs_with_http_info(query, expand, limit, skip, sort, async_req=True)
         >>> result = thread.get()
 
-        :param query: The query string for searching workflow runs.
+        :param query: The query string for searching workflow runs. Supported fields are: `id`, `workflow_id`, `project_id`, `status`, `runner_mode`, `cancelation_request`
         :type query: str
         :param expand: The fields to expand in the search results. Supported values are: `project`, `config.system`, `created_by`
         :type expand: List[str]
@@ -1558,7 +1562,9 @@ class WorkflowsApi(object):
         self,
         query: Annotated[
             Optional[StrictStr],
-            Field(description="The query string for searching workflow tasks."),
+            Field(
+                description="The query string for searching workflow tasks. Supported fields are: `workflow_run_id`"
+            ),
         ] = None,
         limit: Annotated[
             Optional[StrictInt],
@@ -1587,7 +1593,7 @@ class WorkflowsApi(object):
         >>> thread = api.search_workflow_tasks(query, limit, skip, expand, async_req=True)
         >>> result = thread.get()
 
-        :param query: The query string for searching workflow tasks.
+        :param query: The query string for searching workflow tasks. Supported fields are: `workflow_run_id`
         :type query: str
         :param limit: The maximum number of results to return.
         :type limit: int
@@ -1620,7 +1626,9 @@ class WorkflowsApi(object):
         self,
         query: Annotated[
             Optional[StrictStr],
-            Field(description="The query string for searching workflow tasks."),
+            Field(
+                description="The query string for searching workflow tasks. Supported fields are: `workflow_run_id`"
+            ),
         ] = None,
         limit: Annotated[
             Optional[StrictInt],
@@ -1649,7 +1657,7 @@ class WorkflowsApi(object):
         >>> thread = api.search_workflow_tasks_with_http_info(query, limit, skip, expand, async_req=True)
         >>> result = thread.get()
 
-        :param query: The query string for searching workflow tasks.
+        :param query: The query string for searching workflow tasks. Supported fields are: `workflow_run_id`
         :type query: str
         :param limit: The maximum number of results to return.
         :type limit: int
@@ -1770,7 +1778,9 @@ class WorkflowsApi(object):
         self,
         query: Annotated[
             Optional[StrictStr],
-            Field(description="The query string for searching workflows."),
+            Field(
+                description="The query string for searching workflows. Supported fields are: `id`, `project_id`"
+            ),
         ] = None,
         sort: Annotated[
             Optional[StrictStr],
@@ -1803,7 +1813,7 @@ class WorkflowsApi(object):
         >>> thread = api.search_workflows(query, sort, limit, skip, expand, async_req=True)
         >>> result = thread.get()
 
-        :param query: The query string for searching workflows.
+        :param query: The query string for searching workflows. Supported fields are: `id`, `project_id`
         :type query: str
         :param sort: The sort order for the search results.
         :type sort: str
@@ -1838,7 +1848,9 @@ class WorkflowsApi(object):
         self,
         query: Annotated[
             Optional[StrictStr],
-            Field(description="The query string for searching workflows."),
+            Field(
+                description="The query string for searching workflows. Supported fields are: `id`, `project_id`"
+            ),
         ] = None,
         sort: Annotated[
             Optional[StrictStr],
@@ -1871,7 +1883,7 @@ class WorkflowsApi(object):
         >>> thread = api.search_workflows_with_http_info(query, sort, limit, skip, expand, async_req=True)
         >>> result = thread.get()
 
-        :param query: The query string for searching workflows.
+        :param query: The query string for searching workflows. Supported fields are: `id`, `project_id`
         :type query: str
         :param sort: The sort order for the search results.
         :type sort: str

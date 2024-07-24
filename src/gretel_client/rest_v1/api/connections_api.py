@@ -1081,7 +1081,7 @@ class ConnectionsApi(object):
         query: Annotated[
             Optional[StrictStr],
             Field(
-                description="Query string to filter connections. Supported query fields are: `project_id`"
+                description="Query string to filter connections. Supported fields are: `project_id`"
             ),
         ] = None,
         sort: Annotated[
@@ -1111,7 +1111,7 @@ class ConnectionsApi(object):
         >>> thread = api.search_connections(query, sort, limit, skip, async_req=True)
         >>> result = thread.get()
 
-        :param query: Query string to filter connections. Supported query fields are: `project_id`
+        :param query: Query string to filter connections. Supported fields are: `project_id`
         :type query: str
         :param sort: Sort order for connections. Supported sort fields are: `created_at`, `updated_at`
         :type sort: str
@@ -1145,7 +1145,7 @@ class ConnectionsApi(object):
         query: Annotated[
             Optional[StrictStr],
             Field(
-                description="Query string to filter connections. Supported query fields are: `project_id`"
+                description="Query string to filter connections. Supported fields are: `project_id`"
             ),
         ] = None,
         sort: Annotated[
@@ -1175,7 +1175,7 @@ class ConnectionsApi(object):
         >>> thread = api.search_connections_with_http_info(query, sort, limit, skip, async_req=True)
         >>> result = thread.get()
 
-        :param query: Query string to filter connections. Supported query fields are: `project_id`
+        :param query: Query string to filter connections. Supported fields are: `project_id`
         :type query: str
         :param sort: Sort order for connections. Supported sort fields are: `created_at`, `updated_at`
         :type sort: str
