@@ -292,7 +292,7 @@ class ClientConfig(ABC):
 
     @property
     def stage(self) -> str:
-        if "https://api-dev.gretel.cloud" in self.endpoint:
+        if "https://api-dev.gretel" in self.endpoint:
             return "dev"
         return "prod"
 
