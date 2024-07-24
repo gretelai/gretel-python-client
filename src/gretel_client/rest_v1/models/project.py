@@ -40,6 +40,7 @@ class Project(BaseModel):
     owner: Optional[StrictStr] = None
     color: Optional[StrictStr] = None
     public: Optional[StrictBool] = None
+    domain_guid: Optional[StrictStr] = None
     runner_mode: Optional[StrictStr] = None
     cluster_guid: Optional[StrictStr] = None
     cluster: Optional[Cluster] = None
@@ -55,6 +56,7 @@ class Project(BaseModel):
         "owner",
         "color",
         "public",
+        "domain_guid",
         "runner_mode",
         "cluster_guid",
         "cluster",
@@ -126,6 +128,7 @@ class Project(BaseModel):
                 "owner": obj.get("owner"),
                 "color": obj.get("color"),
                 "public": obj.get("public"),
+                "domain_guid": obj.get("domain_guid"),
                 "runner_mode": obj.get("runner_mode"),
                 "cluster_guid": obj.get("cluster_guid"),
                 "cluster": (
