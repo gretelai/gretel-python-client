@@ -20,7 +20,7 @@ import re  # noqa: F401
 
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, Field, StrictStr
+from pydantic import BaseModel, constr, Field, StrictStr, validator
 
 
 class CreateWorkflowRunRequest(BaseModel):
@@ -28,7 +28,7 @@ class CreateWorkflowRunRequest(BaseModel):
     CreateWorkflowRunRequest
     """
 
-    workflow_id: StrictStr = Field(
+    workflow_id: constr(strict=True) = Field(
         ..., description="The ID of the workflow to create a run for."
     )
     config: Optional[Dict[str, Any]] = Field(
@@ -40,6 +40,13 @@ class CreateWorkflowRunRequest(BaseModel):
         description="An optional config for the workflow run as a YAML string. If provided, this will be used in place of the workflow's config.",
     )
     __properties = ["workflow_id", "config", "config_text"]
+
+    @validator("workflow_id")
+    def workflow_id_validate_regular_expression(cls, value):
+        """Validates the regular expression"""
+        if not re.match(r"^w_.*$", value):
+            raise ValueError(r"must validate the regular expression /^w_.*$/")
+        return value
 
     class Config:
         """Pydantic configuration"""

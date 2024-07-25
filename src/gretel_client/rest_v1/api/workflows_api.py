@@ -20,11 +20,13 @@ from typing import Any, Dict, Optional
 
 from pydantic import (
     conlist,
+    constr,
     Field,
     StrictInt,
     StrictStr,
     validate_arguments,
     ValidationError,
+    validator,
 )
 from typing_extensions import Annotated
 
@@ -72,7 +74,8 @@ class WorkflowsApi(object):
     def cancel_workflow_run(
         self,
         workflow_run_id: Annotated[
-            StrictStr, Field(..., description="The ID of the workflow run to cancel.")
+            constr(strict=True),
+            Field(..., description="The ID of the workflow run to cancel."),
         ],
         **kwargs,
     ) -> WorkflowRun:  # noqa: E501
@@ -111,7 +114,8 @@ class WorkflowsApi(object):
     def cancel_workflow_run_with_http_info(
         self,
         workflow_run_id: Annotated[
-            StrictStr, Field(..., description="The ID of the workflow run to cancel.")
+            constr(strict=True),
+            Field(..., description="The ID of the workflow run to cancel."),
         ],
         **kwargs,
     ) -> ApiResponse:  # noqa: E501
@@ -539,7 +543,8 @@ class WorkflowsApi(object):
     def delete_workflow(
         self,
         workflow_id: Annotated[
-            StrictStr, Field(..., description="The ID of the workflow to delete.")
+            constr(strict=True),
+            Field(..., description="The ID of the workflow to delete."),
         ],
         **kwargs,
     ) -> None:  # noqa: E501
@@ -576,7 +581,8 @@ class WorkflowsApi(object):
     def delete_workflow_with_http_info(
         self,
         workflow_id: Annotated[
-            StrictStr, Field(..., description="The ID of the workflow to delete.")
+            constr(strict=True),
+            Field(..., description="The ID of the workflow to delete."),
         ],
         **kwargs,
     ) -> ApiResponse:  # noqa: E501
@@ -690,7 +696,8 @@ class WorkflowsApi(object):
     def get_workflow(
         self,
         workflow_id: Annotated[
-            StrictStr, Field(..., description="The ID of the workflow to retrieve.")
+            constr(strict=True),
+            Field(..., description="The ID of the workflow to retrieve."),
         ],
         expand: Annotated[
             Optional[conlist(StrictStr)],
@@ -737,7 +744,8 @@ class WorkflowsApi(object):
     def get_workflow_with_http_info(
         self,
         workflow_id: Annotated[
-            StrictStr, Field(..., description="The ID of the workflow to retrieve.")
+            constr(strict=True),
+            Field(..., description="The ID of the workflow to retrieve."),
         ],
         expand: Annotated[
             Optional[conlist(StrictStr)],
@@ -865,7 +873,8 @@ class WorkflowsApi(object):
     def get_workflow_run(
         self,
         workflow_run_id: Annotated[
-            StrictStr, Field(..., description="The ID of the workflow run to retrieve.")
+            constr(strict=True),
+            Field(..., description="The ID of the workflow run to retrieve."),
         ],
         expand: Annotated[
             Optional[conlist(StrictStr)],
@@ -912,7 +921,8 @@ class WorkflowsApi(object):
     def get_workflow_run_with_http_info(
         self,
         workflow_run_id: Annotated[
-            StrictStr, Field(..., description="The ID of the workflow run to retrieve.")
+            constr(strict=True),
+            Field(..., description="The ID of the workflow run to retrieve."),
         ],
         expand: Annotated[
             Optional[conlist(StrictStr)],
@@ -2008,7 +2018,8 @@ class WorkflowsApi(object):
     def update_workflow_config(
         self,
         workflow_id: Annotated[
-            StrictStr, Field(..., description="The ID of the workflow to update.")
+            constr(strict=True),
+            Field(..., description="The ID of the workflow to update."),
         ],
         body: StrictStr,
         **kwargs,
@@ -2050,7 +2061,8 @@ class WorkflowsApi(object):
     def update_workflow_config_with_http_info(
         self,
         workflow_id: Annotated[
-            StrictStr, Field(..., description="The ID of the workflow to update.")
+            constr(strict=True),
+            Field(..., description="The ID of the workflow to update."),
         ],
         body: StrictStr,
         **kwargs,

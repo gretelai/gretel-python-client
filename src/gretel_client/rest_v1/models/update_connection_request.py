@@ -20,7 +20,7 @@ import re  # noqa: F401
 
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, Field, StrictStr
+from pydantic import BaseModel, constr, Field, StrictStr, validator
 
 
 class UpdateConnectionRequest(BaseModel):
@@ -28,7 +28,7 @@ class UpdateConnectionRequest(BaseModel):
     Request message for `UpdateConnection`
     """
 
-    name: Optional[StrictStr] = Field(
+    name: Optional[constr(strict=True, max_length=30, min_length=3)] = Field(
         None, description="A new connection name. (optional)"
     )
     credentials: Optional[Dict[str, Any]] = Field(
@@ -59,6 +59,16 @@ class UpdateConnectionRequest(BaseModel):
         "connection_target_type",
         "auth_strategy",
     ]
+
+    @validator("name")
+    def name_validate_regular_expression(cls, value):
+        """Validates the regular expression"""
+        if value is None:
+            return value
+
+        if not re.match(r"^[a-z0-9-_]+$", value):
+            raise ValueError(r"must validate the regular expression /^[a-z0-9-_]+$/")
+        return value
 
     class Config:
         """Pydantic configuration"""

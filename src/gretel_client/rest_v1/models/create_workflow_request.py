@@ -20,7 +20,7 @@ import re  # noqa: F401
 
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, Field, StrictStr, validator
+from pydantic import BaseModel, constr, Field, StrictStr, validator
 
 
 class CreateWorkflowRequest(BaseModel):
@@ -32,7 +32,7 @@ class CreateWorkflowRequest(BaseModel):
         None,
         description="The name of the workflow. This field has been deprecated in favor of the `config.name` field.",
     )
-    project_id: StrictStr = Field(
+    project_id: constr(strict=True) = Field(
         ..., description="The project ID that this workflow should belong to."
     )
     config: Optional[Dict[str, Any]] = Field(
@@ -47,6 +47,13 @@ class CreateWorkflowRequest(BaseModel):
         description="The runner mode of the workflow. Can be `cloud` or `hybrid`. Some projects may require workflows to run in a specific mode.",
     )
     __properties = ["name", "project_id", "config", "config_text", "runner_mode"]
+
+    @validator("project_id")
+    def project_id_validate_regular_expression(cls, value):
+        """Validates the regular expression"""
+        if not re.match(r"^proj_.*$", value):
+            raise ValueError(r"must validate the regular expression /^proj_.*$/")
+        return value
 
     @validator("runner_mode")
     def runner_mode_validate_enum(cls, value):

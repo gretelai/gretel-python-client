@@ -18,7 +18,15 @@ import warnings
 
 from typing import Optional
 
-from pydantic import conlist, StrictInt, StrictStr, validate_arguments, ValidationError
+from pydantic import (
+    conlist,
+    constr,
+    StrictInt,
+    StrictStr,
+    validate_arguments,
+    ValidationError,
+    validator,
+)
 from typing_extensions import Annotated
 
 from gretel_client.rest_v1.api_client import ApiClient
@@ -43,7 +51,7 @@ class ProjectsApi(object):
     @validate_arguments
     def get_project(
         self,
-        project_guid: StrictStr,
+        project_guid: constr(strict=True),
         expand: Optional[conlist(StrictStr)] = None,
         **kwargs,
     ) -> GetProjectResponse:  # noqa: E501
@@ -82,7 +90,7 @@ class ProjectsApi(object):
     @validate_arguments
     def get_project_with_http_info(
         self,
-        project_guid: StrictStr,
+        project_guid: constr(strict=True),
         expand: Optional[conlist(StrictStr)] = None,
         **kwargs,
     ) -> ApiResponse:  # noqa: E501
