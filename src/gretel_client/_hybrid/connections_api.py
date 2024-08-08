@@ -1,6 +1,6 @@
 from typing import Any, Optional
 
-from pydantic import StrictStr
+from pydantic.v1 import StrictStr
 
 from gretel_client._hybrid.creds_encryption import BaseCredentialsEncryption
 from gretel_client.rest_v1.api.connections_api import (

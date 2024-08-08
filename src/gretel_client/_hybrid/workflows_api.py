@@ -1,6 +1,6 @@
 from typing import Any, Dict, Optional
 
-from pydantic import StrictStr
+from pydantic.v1 import StrictStr
 
 from gretel_client.rest_v1.api.workflows_api import CreateWorkflowRequest, WorkflowsApi
 from gretel_client.rest_v1.api_response import ApiResponse
