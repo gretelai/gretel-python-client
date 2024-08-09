@@ -30,7 +30,7 @@ from gretel_client.helpers import poll
 from gretel_client.projects import get_project, Project
 from gretel_client.projects.jobs import Status
 from gretel_client.projects.models import Model
-from gretel_client.rest.exceptions import ApiException
+from gretel_client.rest.exceptions import ApiException, NotFoundException
 from gretel_client.users.users import get_me
 
 try:
@@ -170,8 +170,11 @@ class Gretel:
                 create=True,
                 session=self._session,
             )
-        except ApiException as exception:
-            if "Project name not available" not in exception.body:
+        except (ApiException, NotFoundException) as exception:
+            if (
+                "Project name not available" not in exception.body
+                and "not found" not in exception.body
+            ):
                 raise exception
             logger.warning(
                 f"Project name `{name}` is not unique -> "
