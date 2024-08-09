@@ -1,9 +1,25 @@
+import json
+
+from dataclasses import dataclass
 from unittest.mock import call, patch
 
 from gretel_client.gretel.interface import Gretel
 from gretel_client.projects.projects import Project
 from gretel_client.rest.exceptions import NotFoundException
-from python.tests.gretel_client.test_errors import MockResponse
+
+
+@dataclass
+class MockResponse:
+    status: int
+    reason: str
+    resp: dict
+
+    def getheaders(self) -> dict:
+        return {}
+
+    @property
+    def data(self) -> str:
+        return json.dumps(self.resp)
 
 
 @patch(
