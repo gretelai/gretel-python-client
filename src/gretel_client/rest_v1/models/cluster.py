@@ -19,9 +19,10 @@ import pprint
 import re  # noqa: F401
 
 from datetime import datetime
-from typing import Optional
+from typing import Any, ClassVar, Dict, List, Optional, Set
 
-from pydantic import BaseModel, StrictStr, validator
+from pydantic import BaseModel, ConfigDict, field_validator, StrictStr
+from typing_extensions import Self
 
 from gretel_client.rest_v1.models.cluster_cloud_provider_info import (
     ClusterCloudProviderInfo,
@@ -34,7 +35,7 @@ from gretel_client.rest_v1.models.user_profile import UserProfile
 class Cluster(BaseModel):
     """
     Cluster
-    """
+    """  # noqa: E501
 
     guid: Optional[StrictStr] = None
     name: Optional[StrictStr] = None
@@ -48,7 +49,7 @@ class Cluster(BaseModel):
     config: Optional[ClusterConfig] = None
     chart_version: Optional[StrictStr] = None
     app_version: Optional[StrictStr] = None
-    __properties = [
+    __properties: ClassVar[List[str]] = [
         "guid",
         "name",
         "owner_guid",
@@ -63,40 +64,55 @@ class Cluster(BaseModel):
         "app_version",
     ]
 
-    @validator("cloud_provider_type")
+    @field_validator("cloud_provider_type")
     def cloud_provider_type_validate_enum(cls, value):
         """Validates the enum"""
         if value is None:
             return value
 
-        if value not in ("UNKNOWN", "AWS", "GCP", "AZURE"):
+        if value not in set(["UNKNOWN", "AWS", "GCP", "AZURE"]):
             raise ValueError(
                 "must be one of enum values ('UNKNOWN', 'AWS', 'GCP', 'AZURE')"
             )
         return value
 
-    class Config:
-        """Pydantic configuration"""
-
-        allow_population_by_field_name = True
-        validate_assignment = True
+    model_config = ConfigDict(
+        populate_by_name=True,
+        validate_assignment=True,
+        protected_namespaces=(),
+    )
 
     def to_str(self) -> str:
         """Returns the string representation of the model using alias"""
-        return pprint.pformat(self.dict(by_alias=True))
+        return pprint.pformat(self.model_dump(by_alias=True))
 
     def to_json(self) -> str:
         """Returns the JSON representation of the model using alias"""
+        # TODO: pydantic v2: use .model_dump_json(by_alias=True, exclude_unset=True) instead
         return json.dumps(self.to_dict())
 
     @classmethod
-    def from_json(cls, json_str: str) -> Cluster:
+    def from_json(cls, json_str: str) -> Optional[Self]:
         """Create an instance of Cluster from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
-    def to_dict(self):
-        """Returns the dictionary representation of the model using alias"""
-        _dict = self.dict(by_alias=True, exclude={}, exclude_none=True)
+    def to_dict(self) -> Dict[str, Any]:
+        """Return the dictionary representation of the model using alias.
+
+        This has the following differences from calling pydantic's
+        `self.model_dump(by_alias=True)`:
+
+        * `None` is only added to the output dict for nullable fields that
+          were set at model initialization. Other fields with value `None`
+          are ignored.
+        """
+        excluded_fields: Set[str] = set([])
+
+        _dict = self.model_dump(
+            by_alias=True,
+            exclude=excluded_fields,
+            exclude_none=True,
+        )
         # override the default output from pydantic by calling `to_dict()` of owner_profile
         if self.owner_profile:
             _dict["owner_profile"] = self.owner_profile.to_dict()
@@ -112,39 +128,39 @@ class Cluster(BaseModel):
         return _dict
 
     @classmethod
-    def from_dict(cls, obj: dict) -> Cluster:
+    def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
         """Create an instance of Cluster from a dict"""
         if obj is None:
             return None
 
         if not isinstance(obj, dict):
-            return Cluster.parse_obj(obj)
+            return cls.model_validate(obj)
 
-        _obj = Cluster.parse_obj(
+        _obj = cls.model_validate(
             {
                 "guid": obj.get("guid"),
                 "name": obj.get("name"),
                 "owner_guid": obj.get("owner_guid"),
                 "owner_profile": (
-                    UserProfile.from_dict(obj.get("owner_profile"))
+                    UserProfile.from_dict(obj["owner_profile"])
                     if obj.get("owner_profile") is not None
                     else None
                 ),
                 "cloud_provider": (
-                    ClusterCloudProviderInfo.from_dict(obj.get("cloud_provider"))
+                    ClusterCloudProviderInfo.from_dict(obj["cloud_provider"])
                     if obj.get("cloud_provider") is not None
                     else None
                 ),
                 "cloud_provider_type": obj.get("cloud_provider_type"),
                 "status": (
-                    ClusterStatus.from_dict(obj.get("status"))
+                    ClusterStatus.from_dict(obj["status"])
                     if obj.get("status") is not None
                     else None
                 ),
                 "created_at": obj.get("created_at"),
                 "last_checkin_time": obj.get("last_checkin_time"),
                 "config": (
-                    ClusterConfig.from_dict(obj.get("config"))
+                    ClusterConfig.from_dict(obj["config"])
                     if obj.get("config") is not None
                     else None
                 ),

@@ -4,6 +4,7 @@ from pydantic.v1 import StrictStr
 
 from gretel_client.rest_v1.api.workflows_api import CreateWorkflowRequest, WorkflowsApi
 from gretel_client.rest_v1.api_response import ApiResponse
+from gretel_client.rest_v1.models.workflow import Workflow
 from gretel_client.workflows.runner_mode import RunnerMode
 
 
@@ -25,18 +26,18 @@ class HybridWorkflowsApi(WorkflowsApi):
     def __init__(self, api: WorkflowsApi):
         super().__init__(api.api_client)
 
-    # We only override the ..._with_http_info methods, as these are
-    # the lower-level ones.
+    def create_workflow(
+        self,
+        create_workflow_request: CreateWorkflowRequest,
+        **kwargs,
+    ) -> Workflow:
+        create_workflow_request = _update_runner_mode(create_workflow_request)
+        return super().create_workflow(create_workflow_request, **kwargs)
 
     def create_workflow_with_http_info(
         self, create_workflow_request: CreateWorkflowRequest, **kwargs
     ) -> ApiResponse:
-        if create_workflow_request.runner_mode is None:
-            create_workflow_request.runner_mode = RunnerMode.RUNNER_MODE_HYBRID.value
-        elif create_workflow_request.runner_mode != RunnerMode.RUNNER_MODE_HYBRID.value:
-            raise ValueError(
-                "in hybrid mode, only workflows with runner mode RUNNER_MODE_HYBRID can be created"
-            )
+        create_workflow_request = _update_runner_mode(create_workflow_request)
         return super().create_workflow_with_http_info(create_workflow_request, **kwargs)
 
     def validate_workflow_action_with_http_info(
@@ -54,3 +55,15 @@ class HybridWorkflowsApi(WorkflowsApi):
         return super().validate_workflow_action_with_http_info(
             body, runner_mode, **kwargs
         )
+
+
+def _update_runner_mode(
+    create_workflow_request: CreateWorkflowRequest,
+) -> CreateWorkflowRequest:
+    if create_workflow_request.runner_mode is None:
+        create_workflow_request.runner_mode = RunnerMode.RUNNER_MODE_HYBRID.value
+    elif create_workflow_request.runner_mode != RunnerMode.RUNNER_MODE_HYBRID.value:
+        raise ValueError(
+            "in hybrid mode, only workflows with runner mode RUNNER_MODE_HYBRID can be created"
+        )
+    return create_workflow_request

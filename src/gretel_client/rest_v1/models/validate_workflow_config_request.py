@@ -18,71 +18,89 @@ import json
 import pprint
 import re  # noqa: F401
 
-from typing import Any, Dict, Optional
+from typing import Any, ClassVar, Dict, List, Optional, Set
 
-from pydantic import BaseModel, Field, StrictStr, validator
+from pydantic import BaseModel, ConfigDict, field_validator, StrictStr
+from typing_extensions import Self
 
 
 class ValidateWorkflowConfigRequest(BaseModel):
     """
     ValidateWorkflowConfigRequest
-    """
+    """  # noqa: E501
 
-    config: Dict[str, Any] = Field(...)
+    config: Dict[str, Any]
     runner_mode: Optional[StrictStr] = None
-    __properties = ["config", "runner_mode"]
+    __properties: ClassVar[List[str]] = ["config", "runner_mode"]
 
-    @validator("runner_mode")
+    @field_validator("runner_mode")
     def runner_mode_validate_enum(cls, value):
         """Validates the enum"""
         if value is None:
             return value
 
-        if value not in (
-            "RUNNER_MODE_UNSET",
-            "RUNNER_MODE_CLOUD",
-            "RUNNER_MODE_HYBRID",
-            "RUNNER_MODE_INVALID",
+        if value not in set(
+            [
+                "RUNNER_MODE_UNSET",
+                "RUNNER_MODE_CLOUD",
+                "RUNNER_MODE_HYBRID",
+                "RUNNER_MODE_INVALID",
+            ]
         ):
             raise ValueError(
                 "must be one of enum values ('RUNNER_MODE_UNSET', 'RUNNER_MODE_CLOUD', 'RUNNER_MODE_HYBRID', 'RUNNER_MODE_INVALID')"
             )
         return value
 
-    class Config:
-        """Pydantic configuration"""
-
-        allow_population_by_field_name = True
-        validate_assignment = True
+    model_config = ConfigDict(
+        populate_by_name=True,
+        validate_assignment=True,
+        protected_namespaces=(),
+    )
 
     def to_str(self) -> str:
         """Returns the string representation of the model using alias"""
-        return pprint.pformat(self.dict(by_alias=True))
+        return pprint.pformat(self.model_dump(by_alias=True))
 
     def to_json(self) -> str:
         """Returns the JSON representation of the model using alias"""
+        # TODO: pydantic v2: use .model_dump_json(by_alias=True, exclude_unset=True) instead
         return json.dumps(self.to_dict())
 
     @classmethod
-    def from_json(cls, json_str: str) -> ValidateWorkflowConfigRequest:
+    def from_json(cls, json_str: str) -> Optional[Self]:
         """Create an instance of ValidateWorkflowConfigRequest from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
-    def to_dict(self):
-        """Returns the dictionary representation of the model using alias"""
-        _dict = self.dict(by_alias=True, exclude={}, exclude_none=True)
+    def to_dict(self) -> Dict[str, Any]:
+        """Return the dictionary representation of the model using alias.
+
+        This has the following differences from calling pydantic's
+        `self.model_dump(by_alias=True)`:
+
+        * `None` is only added to the output dict for nullable fields that
+          were set at model initialization. Other fields with value `None`
+          are ignored.
+        """
+        excluded_fields: Set[str] = set([])
+
+        _dict = self.model_dump(
+            by_alias=True,
+            exclude=excluded_fields,
+            exclude_none=True,
+        )
         return _dict
 
     @classmethod
-    def from_dict(cls, obj: dict) -> ValidateWorkflowConfigRequest:
+    def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
         """Create an instance of ValidateWorkflowConfigRequest from a dict"""
         if obj is None:
             return None
 
         if not isinstance(obj, dict):
-            return ValidateWorkflowConfigRequest.parse_obj(obj)
+            return cls.model_validate(obj)
 
-        _obj = ValidateWorkflowConfigRequest.parse_obj(
+        _obj = cls.model_validate(
             {"config": obj.get("config"), "runner_mode": obj.get("runner_mode")}
         )
         return _obj

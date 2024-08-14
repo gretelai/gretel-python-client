@@ -9,6 +9,7 @@ from gretel_client.rest_v1.api.connections_api import (
     UpdateConnectionRequest,
 )
 from gretel_client.rest_v1.api_response import ApiResponse
+from gretel_client.rest_v1.models.connection import Connection
 
 
 class HybridConnectionsApi(ConnectionsApi):
@@ -43,16 +44,29 @@ class HybridConnectionsApi(ConnectionsApi):
         super().__init__(api.api_client)
         self._creds_encryption = creds_encryption
 
-    def create_connection_with_http_info(
-        self, create_connection_request: CreateConnectionRequest, **kwargs
-    ) -> ApiResponse:
+    def _encrypt_creds(
+        self, create_connection_request: CreateConnectionRequest
+    ) -> CreateConnectionRequest:
         if creds := create_connection_request.credentials:
             create_connection_request.credentials = None
             encrypted_creds = self._creds_encryption.apply(
                 creds, project_guid=create_connection_request.project_id
             )
             create_connection_request.encrypted_credentials = encrypted_creds
+        return create_connection_request
 
+    def create_connection(
+        self,
+        create_connection_request: CreateConnectionRequest,
+        **kwargs,
+    ) -> Connection:
+        create_connection_request = self._encrypt_creds(create_connection_request)
+        return super().create_connection(create_connection_request, **kwargs)
+
+    def create_connection_with_http_info(
+        self, create_connection_request: CreateConnectionRequest, **kwargs
+    ) -> ApiResponse:
+        create_connection_request = self._encrypt_creds(create_connection_request)
         return super().create_connection_with_http_info(
             create_connection_request, **kwargs
         )

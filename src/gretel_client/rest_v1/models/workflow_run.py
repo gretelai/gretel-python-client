@@ -19,9 +19,10 @@ import pprint
 import re  # noqa: F401
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, ClassVar, Dict, List, Optional, Set
 
-from pydantic import BaseModel, Field, StrictInt, StrictStr, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, StrictInt, StrictStr
+from typing_extensions import Self
 
 from gretel_client.rest_v1.models.project import Project
 from gretel_client.rest_v1.models.status_details import StatusDetails
@@ -34,70 +35,83 @@ from gretel_client.rest_v1.models.workflow_run_cancellation_request import (
 class WorkflowRun(BaseModel):
     """
     WorkflowRun
-    """
+    """  # noqa: E501
 
-    id: StrictStr = Field(..., description="The unique ID of the workflow run.")
+    id: StrictStr = Field(description="The unique ID of the workflow run.")
     workflow_id: StrictStr = Field(
-        ..., description="The ID of the workflow that this run belongs to."
+        description="The ID of the workflow that this run belongs to."
     )
     project_id: StrictStr = Field(
-        ...,
-        description="The project ID that this workflow run belongs to. This will be the same as the project ID of the workflow.",
+        description="The project ID that this workflow run belongs to. This will be the same as the project ID of the workflow."
     )
-    project: Optional[Project] = None
+    project: Optional[Project] = Field(
+        default=None,
+        description="The project that this workflow run belongs to. Provided when the `expand=project` query param is present.",
+    )
     cluster_guid: Optional[StrictStr] = Field(
-        None, description="The GUID of the cluster where the workflow run is executed."
+        default=None,
+        description="The GUID of the cluster where the workflow run is executed.",
     )
     config: Optional[Dict[str, Any]] = Field(
-        None, description="The config of the workflow run."
+        default=None, description="The config of the workflow run."
     )
     config_text: Optional[StrictStr] = Field(
-        None, description="The config of the workflow run as a YAML string."
+        default=None, description="The config of the workflow run as a YAML string."
     )
     runner_mode: StrictStr = Field(
-        ...,
-        description="The runner mode of the workflow run. Can be `cloud` or `hybrid`.",
+        description="The runner mode of the workflow run. Can be `cloud` or `hybrid`."
     )
-    status: StrictStr = Field(..., description="The status of the workflow run.")
-    status_details: Optional[StatusDetails] = None
+    status: StrictStr = Field(description="The status of the workflow run.")
+    status_details: Optional[StatusDetails] = Field(
+        default=None,
+        description="Additional details about the status of the workflow run.",
+    )
     created_by: StrictStr = Field(
-        ..., description="The user ID that created this workflow run."
+        description="The user ID that created this workflow run."
     )
     created_at: datetime = Field(
-        ..., description="A timestamp indicating when this workflow run was created."
+        description="A timestamp indicating when this workflow run was created."
     )
     updated_at: Optional[datetime] = Field(
-        None,
+        default=None,
         description="A timestamp indicating when this workflow run was last updated.",
     )
     pending_at: Optional[datetime] = Field(
-        None,
+        default=None,
         description="A timestamp indicating when this workflow run entered the pending state.",
     )
     active_at: Optional[datetime] = Field(
-        None,
+        default=None,
         description="A timestamp indicating when this workflow run entered the active state.",
     )
     error_at: Optional[datetime] = Field(
-        None,
+        default=None,
         description="A timestamp indicating when an error occurred in this workflow run.",
     )
     lost_at: Optional[datetime] = Field(
-        None, description="A timestamp indicating when this workflow run was lost."
+        default=None,
+        description="A timestamp indicating when this workflow run was lost.",
     )
     cancelled_at: Optional[datetime] = Field(
-        None, description="A timestamp indicating when this workflow run was cancelled."
+        default=None,
+        description="A timestamp indicating when this workflow run was cancelled.",
     )
     lease_expires_at: Optional[datetime] = Field(
-        None,
+        default=None,
         description="A timestamp indicating when the lease for this workflow run expires.",
     )
-    cancellation_request: Optional[WorkflowRunCancellationRequest] = None
-    created_by_profile: Optional[UserProfile] = None
-    total_compute_time_sconds: Optional[StrictInt] = Field(
-        None, description="The total compute time in seconds for this workflow run."
+    cancellation_request: Optional[WorkflowRunCancellationRequest] = Field(
+        default=None, description="The cancellation request for this workflow run."
     )
-    __properties = [
+    created_by_profile: Optional[UserProfile] = Field(
+        default=None,
+        description="The user profile of the user that created this workflow run. Provided when the `expand=created_by` query param is present.",
+    )
+    total_compute_time_sconds: Optional[StrictInt] = Field(
+        default=None,
+        description="The total compute time in seconds for this workflow run.",
+    )
+    __properties: ClassVar[List[str]] = [
         "id",
         "workflow_id",
         "project_id",
@@ -122,61 +136,80 @@ class WorkflowRun(BaseModel):
         "total_compute_time_sconds",
     ]
 
-    @validator("runner_mode")
+    @field_validator("runner_mode")
     def runner_mode_validate_enum(cls, value):
         """Validates the enum"""
-        if value not in (
-            "RUNNER_MODE_UNSET",
-            "RUNNER_MODE_CLOUD",
-            "RUNNER_MODE_HYBRID",
-            "RUNNER_MODE_INVALID",
+        if value not in set(
+            [
+                "RUNNER_MODE_UNSET",
+                "RUNNER_MODE_CLOUD",
+                "RUNNER_MODE_HYBRID",
+                "RUNNER_MODE_INVALID",
+            ]
         ):
             raise ValueError(
                 "must be one of enum values ('RUNNER_MODE_UNSET', 'RUNNER_MODE_CLOUD', 'RUNNER_MODE_HYBRID', 'RUNNER_MODE_INVALID')"
             )
         return value
 
-    @validator("status")
+    @field_validator("status")
     def status_validate_enum(cls, value):
         """Validates the enum"""
-        if value not in (
-            "RUN_STATUS_UNKNOWN",
-            "RUN_STATUS_CREATED",
-            "RUN_STATUS_PENDING",
-            "RUN_STATUS_ACTIVE",
-            "RUN_STATUS_ERROR",
-            "RUN_STATUS_LOST",
-            "RUN_STATUS_COMPLETED",
-            "RUN_STATUS_CANCELLING",
-            "RUN_STATUS_CANCELLED",
+        if value not in set(
+            [
+                "RUN_STATUS_UNKNOWN",
+                "RUN_STATUS_CREATED",
+                "RUN_STATUS_PENDING",
+                "RUN_STATUS_ACTIVE",
+                "RUN_STATUS_ERROR",
+                "RUN_STATUS_LOST",
+                "RUN_STATUS_COMPLETED",
+                "RUN_STATUS_CANCELLING",
+                "RUN_STATUS_CANCELLED",
+            ]
         ):
             raise ValueError(
                 "must be one of enum values ('RUN_STATUS_UNKNOWN', 'RUN_STATUS_CREATED', 'RUN_STATUS_PENDING', 'RUN_STATUS_ACTIVE', 'RUN_STATUS_ERROR', 'RUN_STATUS_LOST', 'RUN_STATUS_COMPLETED', 'RUN_STATUS_CANCELLING', 'RUN_STATUS_CANCELLED')"
             )
         return value
 
-    class Config:
-        """Pydantic configuration"""
-
-        allow_population_by_field_name = True
-        validate_assignment = True
+    model_config = ConfigDict(
+        populate_by_name=True,
+        validate_assignment=True,
+        protected_namespaces=(),
+    )
 
     def to_str(self) -> str:
         """Returns the string representation of the model using alias"""
-        return pprint.pformat(self.dict(by_alias=True))
+        return pprint.pformat(self.model_dump(by_alias=True))
 
     def to_json(self) -> str:
         """Returns the JSON representation of the model using alias"""
+        # TODO: pydantic v2: use .model_dump_json(by_alias=True, exclude_unset=True) instead
         return json.dumps(self.to_dict())
 
     @classmethod
-    def from_json(cls, json_str: str) -> WorkflowRun:
+    def from_json(cls, json_str: str) -> Optional[Self]:
         """Create an instance of WorkflowRun from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
-    def to_dict(self):
-        """Returns the dictionary representation of the model using alias"""
-        _dict = self.dict(by_alias=True, exclude={}, exclude_none=True)
+    def to_dict(self) -> Dict[str, Any]:
+        """Return the dictionary representation of the model using alias.
+
+        This has the following differences from calling pydantic's
+        `self.model_dump(by_alias=True)`:
+
+        * `None` is only added to the output dict for nullable fields that
+          were set at model initialization. Other fields with value `None`
+          are ignored.
+        """
+        excluded_fields: Set[str] = set([])
+
+        _dict = self.model_dump(
+            by_alias=True,
+            exclude=excluded_fields,
+            exclude_none=True,
+        )
         # override the default output from pydantic by calling `to_dict()` of project
         if self.project:
             _dict["project"] = self.project.to_dict()
@@ -192,21 +225,21 @@ class WorkflowRun(BaseModel):
         return _dict
 
     @classmethod
-    def from_dict(cls, obj: dict) -> WorkflowRun:
+    def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
         """Create an instance of WorkflowRun from a dict"""
         if obj is None:
             return None
 
         if not isinstance(obj, dict):
-            return WorkflowRun.parse_obj(obj)
+            return cls.model_validate(obj)
 
-        _obj = WorkflowRun.parse_obj(
+        _obj = cls.model_validate(
             {
                 "id": obj.get("id"),
                 "workflow_id": obj.get("workflow_id"),
                 "project_id": obj.get("project_id"),
                 "project": (
-                    Project.from_dict(obj.get("project"))
+                    Project.from_dict(obj["project"])
                     if obj.get("project") is not None
                     else None
                 ),
@@ -216,7 +249,7 @@ class WorkflowRun(BaseModel):
                 "runner_mode": obj.get("runner_mode"),
                 "status": obj.get("status"),
                 "status_details": (
-                    StatusDetails.from_dict(obj.get("status_details"))
+                    StatusDetails.from_dict(obj["status_details"])
                     if obj.get("status_details") is not None
                     else None
                 ),
@@ -231,13 +264,13 @@ class WorkflowRun(BaseModel):
                 "lease_expires_at": obj.get("lease_expires_at"),
                 "cancellation_request": (
                     WorkflowRunCancellationRequest.from_dict(
-                        obj.get("cancellation_request")
+                        obj["cancellation_request"]
                     )
                     if obj.get("cancellation_request") is not None
                     else None
                 ),
                 "created_by_profile": (
-                    UserProfile.from_dict(obj.get("created_by_profile"))
+                    UserProfile.from_dict(obj["created_by_profile"])
                     if obj.get("created_by_profile") is not None
                     else None
                 ),

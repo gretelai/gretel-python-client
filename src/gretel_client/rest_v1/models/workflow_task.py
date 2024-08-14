@@ -19,9 +19,10 @@ import pprint
 import re  # noqa: F401
 
 from datetime import datetime
-from typing import Optional
+from typing import Any, ClassVar, Dict, List, Optional, Set
 
-from pydantic import BaseModel, Field, StrictInt, StrictStr, validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, StrictInt, StrictStr
+from typing_extensions import Self
 
 from gretel_client.rest_v1.models.project import Project
 from gretel_client.rest_v1.models.user_profile import UserProfile
@@ -30,72 +31,76 @@ from gretel_client.rest_v1.models.user_profile import UserProfile
 class WorkflowTask(BaseModel):
     """
     Next Tag: 24
-    """
+    """  # noqa: E501
 
-    id: StrictStr = Field(..., description="The unique ID of the workflow task.")
+    id: StrictStr = Field(description="The unique ID of the workflow task.")
     workflow_run_id: StrictStr = Field(
-        ..., description="The ID of the workflow run that this task belongs to."
+        description="The ID of the workflow run that this task belongs to."
     )
     project_id: StrictStr = Field(
-        ..., description="The project ID that this workflow task belongs to."
+        description="The project ID that this workflow task belongs to."
     )
-    project: Optional[Project] = None
+    project: Optional[Project] = Field(
+        default=None,
+        description="The project that this workflow task belongs to. Provided when the `expand=project` query param is present.",
+    )
     log_location: StrictStr = Field(
-        ..., description="The location of the log for this workflow task."
+        description="The location of the log for this workflow task."
     )
-    status: StrictStr = Field(..., description="The status of the workflow task.")
+    status: StrictStr = Field(description="The status of the workflow task.")
     action_name: StrictStr = Field(
-        ...,
-        description="The user supplied name of the workflow action that produced this task. The name can be mapped back to the original workflow config.",
+        description="The user supplied name of the workflow action that produced this task. The name can be mapped back to the original workflow config."
     )
     action_type: StrictStr = Field(
-        ...,
-        description="The type of workflow action running the task. Eg `s3_source` or `gretel_model`.",
+        description="The type of workflow action running the task. Eg `s3_source` or `gretel_model`."
     )
     error_msg: Optional[StrictStr] = Field(
-        None,
+        default=None,
         description="If the task is in an error state, this field will get populated with an error message suitable for displaying in the console. These error messages are meant to span a single line, and will be human readable.",
     )
     error_code: Optional[StrictInt] = Field(
-        None,
+        default=None,
         description="The code associated with an error message. These codes can be used to group like errors together.",
     )
     stack_trace: Optional[StrictStr] = Field(
-        None,
+        default=None,
         description="A more detailed stack trace that can be used for root cause analysis. This stack trace generally shouldn't be shown in the UI and will span many lines.",
     )
-    created_by: StrictStr = Field(
-        ..., description="The user ID that created this workflow."
+    created_by: StrictStr = Field(description="The user ID that created this workflow.")
+    created_by_profile: Optional[UserProfile] = Field(
+        default=None,
+        description="The user profile of the user that created this workflow. Provided when the `expand=created_by` query param is present.",
     )
-    created_by_profile: Optional[UserProfile] = None
     created_at: datetime = Field(
-        ..., description="A timestamp indicating when this workflow was created."
+        description="A timestamp indicating when this workflow was created."
     )
     updated_at: Optional[datetime] = Field(
-        None, description="A timestamp indicating when this workflow was last updated."
+        default=None,
+        description="A timestamp indicating when this workflow was last updated.",
     )
     pending_at: Optional[datetime] = Field(
-        None,
+        default=None,
         description="A timestamp indicating when this workflow entered the pending state.",
     )
     active_at: Optional[datetime] = Field(
-        None,
+        default=None,
         description="A timestamp indicating when this workflow entered the active state.",
     )
     error_at: Optional[datetime] = Field(
-        None,
+        default=None,
         description="A timestamp indicating when an error occurred in this workflow.",
     )
     lost_at: Optional[datetime] = Field(
-        None, description="A timestamp indicating when this workflow was lost."
+        default=None, description="A timestamp indicating when this workflow was lost."
     )
     completed_at: Optional[datetime] = Field(
-        None, description="A timestamp indicating when this workflow was completed."
+        default=None,
+        description="A timestamp indicating when this workflow was completed.",
     )
     total_compute_time_sconds: Optional[StrictInt] = Field(
-        None, description="The total compute time in seconds for this workflow."
+        default=None, description="The total compute time in seconds for this workflow."
     )
-    __properties = [
+    __properties: ClassVar[List[str]] = [
         "id",
         "workflow_run_id",
         "project_id",
@@ -119,47 +124,64 @@ class WorkflowTask(BaseModel):
         "total_compute_time_sconds",
     ]
 
-    @validator("status")
+    @field_validator("status")
     def status_validate_enum(cls, value):
         """Validates the enum"""
-        if value not in (
-            "RUN_STATUS_UNKNOWN",
-            "RUN_STATUS_CREATED",
-            "RUN_STATUS_PENDING",
-            "RUN_STATUS_ACTIVE",
-            "RUN_STATUS_ERROR",
-            "RUN_STATUS_LOST",
-            "RUN_STATUS_COMPLETED",
-            "RUN_STATUS_CANCELLING",
-            "RUN_STATUS_CANCELLED",
+        if value not in set(
+            [
+                "RUN_STATUS_UNKNOWN",
+                "RUN_STATUS_CREATED",
+                "RUN_STATUS_PENDING",
+                "RUN_STATUS_ACTIVE",
+                "RUN_STATUS_ERROR",
+                "RUN_STATUS_LOST",
+                "RUN_STATUS_COMPLETED",
+                "RUN_STATUS_CANCELLING",
+                "RUN_STATUS_CANCELLED",
+            ]
         ):
             raise ValueError(
                 "must be one of enum values ('RUN_STATUS_UNKNOWN', 'RUN_STATUS_CREATED', 'RUN_STATUS_PENDING', 'RUN_STATUS_ACTIVE', 'RUN_STATUS_ERROR', 'RUN_STATUS_LOST', 'RUN_STATUS_COMPLETED', 'RUN_STATUS_CANCELLING', 'RUN_STATUS_CANCELLED')"
             )
         return value
 
-    class Config:
-        """Pydantic configuration"""
-
-        allow_population_by_field_name = True
-        validate_assignment = True
+    model_config = ConfigDict(
+        populate_by_name=True,
+        validate_assignment=True,
+        protected_namespaces=(),
+    )
 
     def to_str(self) -> str:
         """Returns the string representation of the model using alias"""
-        return pprint.pformat(self.dict(by_alias=True))
+        return pprint.pformat(self.model_dump(by_alias=True))
 
     def to_json(self) -> str:
         """Returns the JSON representation of the model using alias"""
+        # TODO: pydantic v2: use .model_dump_json(by_alias=True, exclude_unset=True) instead
         return json.dumps(self.to_dict())
 
     @classmethod
-    def from_json(cls, json_str: str) -> WorkflowTask:
+    def from_json(cls, json_str: str) -> Optional[Self]:
         """Create an instance of WorkflowTask from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
-    def to_dict(self):
-        """Returns the dictionary representation of the model using alias"""
-        _dict = self.dict(by_alias=True, exclude={}, exclude_none=True)
+    def to_dict(self) -> Dict[str, Any]:
+        """Return the dictionary representation of the model using alias.
+
+        This has the following differences from calling pydantic's
+        `self.model_dump(by_alias=True)`:
+
+        * `None` is only added to the output dict for nullable fields that
+          were set at model initialization. Other fields with value `None`
+          are ignored.
+        """
+        excluded_fields: Set[str] = set([])
+
+        _dict = self.model_dump(
+            by_alias=True,
+            exclude=excluded_fields,
+            exclude_none=True,
+        )
         # override the default output from pydantic by calling `to_dict()` of project
         if self.project:
             _dict["project"] = self.project.to_dict()
@@ -169,21 +191,21 @@ class WorkflowTask(BaseModel):
         return _dict
 
     @classmethod
-    def from_dict(cls, obj: dict) -> WorkflowTask:
+    def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
         """Create an instance of WorkflowTask from a dict"""
         if obj is None:
             return None
 
         if not isinstance(obj, dict):
-            return WorkflowTask.parse_obj(obj)
+            return cls.model_validate(obj)
 
-        _obj = WorkflowTask.parse_obj(
+        _obj = cls.model_validate(
             {
                 "id": obj.get("id"),
                 "workflow_run_id": obj.get("workflow_run_id"),
                 "project_id": obj.get("project_id"),
                 "project": (
-                    Project.from_dict(obj.get("project"))
+                    Project.from_dict(obj["project"])
                     if obj.get("project") is not None
                     else None
                 ),
@@ -196,7 +218,7 @@ class WorkflowTask(BaseModel):
                 "stack_trace": obj.get("stack_trace"),
                 "created_by": obj.get("created_by"),
                 "created_by_profile": (
-                    UserProfile.from_dict(obj.get("created_by_profile"))
+                    UserProfile.from_dict(obj["created_by_profile"])
                     if obj.get("created_by_profile") is not None
                     else None
                 ),

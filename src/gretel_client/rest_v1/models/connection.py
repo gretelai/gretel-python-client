@@ -19,60 +19,63 @@ import pprint
 import re  # noqa: F401
 
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any, ClassVar, Dict, List, Optional, Set
 
-from pydantic import BaseModel, Field, StrictBool, StrictStr, validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    StrictBool,
+    StrictStr,
+)
+from typing_extensions import Self
 
 
 class Connection(BaseModel):
     """
     Next available tag: 14
-    """
+    """  # noqa: E501
 
     id: StrictStr = Field(
-        ...,
-        description="The id of the connection. Connection id's are prefixed with `c_`.",
+        description="The id of the connection. Connection id's are prefixed with `c_`."
     )
-    type: StrictStr = Field(
-        ..., description="Type of the connection: aws, gcs, azure etc."
-    )
-    name: StrictStr = Field(..., description="Name of the connection.")
+    type: StrictStr = Field(description="Type of the connection: aws, gcs, azure etc.")
+    name: StrictStr = Field(description="Name of the connection.")
     validation_status: StrictStr = Field(
-        ...,
-        description="Current connection validation status. Possible values are: `COMPLETED`, `ERROR`, or `NONE`.",
+        description="Current connection validation status. Possible values are: `COMPLETED`, `ERROR`, or `NONE`."
     )
     credentials: Optional[Dict[str, Any]] = Field(
-        None, description="Connection credentials in plain text."
+        default=None, description="Connection credentials in plain text."
     )
     config: Optional[Dict[str, Any]] = Field(
-        None,
+        default=None,
         description="The connection configuration. See [connection type documentation](https://docs.gretel.ai/create-synthetic-data/workflows-and-connectors/connectors) for structure.",
     )
     encrypted_credentials: Optional[Dict[str, Any]] = Field(
-        None, description="Connection credentials in encrypted form."
+        default=None, description="Connection credentials in encrypted form."
     )
     customer_managed_credentials_encryption: StrictBool = Field(
-        ...,
-        description="When true, this connection is using a customer-managed key to encrypt credentials. Otherwise, this connection is using a Gretel-managed key to encrypt credentials.",
+        description="When true, this connection is using a customer-managed key to encrypt credentials. Otherwise, this connection is using a Gretel-managed key to encrypt credentials."
     )
     created_at: datetime = Field(
-        ..., description="Timestamp when this connection was created."
+        description="Timestamp when this connection was created."
     )
     project_id: StrictStr = Field(
-        ..., description="ID of the project that owns this connection"
+        description="ID of the project that owns this connection"
     )
     created_by: StrictStr = Field(
-        ..., description="ID of the user who created this connection"
+        description="ID of the user who created this connection"
     )
     connection_target_type: Optional[StrictStr] = Field(
-        None,
+        default=None,
         description="The type of workflow action this connection may be used with. If empty or `unspecified`, this connection may be used with any workflow action. Possible values are: `source`, `destination`, `unspecified`",
     )
     auth_strategy: Optional[StrictStr] = Field(
-        None,
+        default=None,
         description="The auth strategy used when supported by a connection type. See [connection type documentation](https://docs.gretel.ai/create-synthetic-data/workflows-and-connectors/connectors) for possible values.",
     )
-    __properties = [
+    __properties: ClassVar[List[str]] = [
         "id",
         "type",
         "name",
@@ -88,54 +91,71 @@ class Connection(BaseModel):
         "auth_strategy",
     ]
 
-    @validator("validation_status")
+    @field_validator("validation_status")
     def validation_status_validate_enum(cls, value):
         """Validates the enum"""
-        if value not in (
-            "VALIDATION_STATUS_UNKNOWN",
-            "VALIDATION_STATUS_VALIDATING",
-            "VALIDATION_STATUS_VALID",
-            "VALIDATION_STATUS_INVALID",
+        if value not in set(
+            [
+                "VALIDATION_STATUS_UNKNOWN",
+                "VALIDATION_STATUS_VALIDATING",
+                "VALIDATION_STATUS_VALID",
+                "VALIDATION_STATUS_INVALID",
+            ]
         ):
             raise ValueError(
                 "must be one of enum values ('VALIDATION_STATUS_UNKNOWN', 'VALIDATION_STATUS_VALIDATING', 'VALIDATION_STATUS_VALID', 'VALIDATION_STATUS_INVALID')"
             )
         return value
 
-    class Config:
-        """Pydantic configuration"""
-
-        allow_population_by_field_name = True
-        validate_assignment = True
+    model_config = ConfigDict(
+        populate_by_name=True,
+        validate_assignment=True,
+        protected_namespaces=(),
+    )
 
     def to_str(self) -> str:
         """Returns the string representation of the model using alias"""
-        return pprint.pformat(self.dict(by_alias=True))
+        return pprint.pformat(self.model_dump(by_alias=True))
 
     def to_json(self) -> str:
         """Returns the JSON representation of the model using alias"""
+        # TODO: pydantic v2: use .model_dump_json(by_alias=True, exclude_unset=True) instead
         return json.dumps(self.to_dict())
 
     @classmethod
-    def from_json(cls, json_str: str) -> Connection:
+    def from_json(cls, json_str: str) -> Optional[Self]:
         """Create an instance of Connection from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
-    def to_dict(self):
-        """Returns the dictionary representation of the model using alias"""
-        _dict = self.dict(by_alias=True, exclude={}, exclude_none=True)
+    def to_dict(self) -> Dict[str, Any]:
+        """Return the dictionary representation of the model using alias.
+
+        This has the following differences from calling pydantic's
+        `self.model_dump(by_alias=True)`:
+
+        * `None` is only added to the output dict for nullable fields that
+          were set at model initialization. Other fields with value `None`
+          are ignored.
+        """
+        excluded_fields: Set[str] = set([])
+
+        _dict = self.model_dump(
+            by_alias=True,
+            exclude=excluded_fields,
+            exclude_none=True,
+        )
         return _dict
 
     @classmethod
-    def from_dict(cls, obj: dict) -> Connection:
+    def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
         """Create an instance of Connection from a dict"""
         if obj is None:
             return None
 
         if not isinstance(obj, dict):
-            return Connection.parse_obj(obj)
+            return cls.model_validate(obj)
 
-        _obj = Connection.parse_obj(
+        _obj = cls.model_validate(
             {
                 "id": obj.get("id"),
                 "type": obj.get("type"),

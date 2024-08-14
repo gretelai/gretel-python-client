@@ -18,9 +18,10 @@ import logging
 import multiprocessing
 import sys
 
-import urllib3
+from logging import FileHandler
+from typing import Optional
 
-from gretel_client.rest_v1.exceptions import ApiValueError
+import urllib3
 
 JSON_SCHEMA_VALIDATION_KEYWORDS = {
     "multipleOf",
@@ -36,10 +37,13 @@ JSON_SCHEMA_VALIDATION_KEYWORDS = {
 }
 
 
-class Configuration(object):
+class Configuration:
     """This class contains various settings of the API client.
 
     :param host: Base url.
+    :param ignore_operation_servers
+      Boolean to ignore operation servers for the API client.
+      Config will use `host` as the base url regardless of the operation servers.
     :param api_key: Dict to store API key(s).
       Each entry in the dict specifies an API key.
       The dict key is the name of the security scheme in the OAS specification.
@@ -58,9 +62,11 @@ class Configuration(object):
       configuration.
     :param server_operation_variables: Mapping from operation ID to a mapping with
       string values to replace variables in templated server configuration.
-      The validation of enums is performed for variables with defined enum values before.
+      The validation of enums is performed for variables with defined enum
+      values before.
     :param ssl_ca_cert: str - the path to a file of concatenated CA certificates
       in PEM format.
+    :param retries: Number of retries for API requests.
 
     """
 
@@ -78,8 +84,12 @@ class Configuration(object):
         server_variables=None,
         server_operation_index=None,
         server_operation_variables=None,
+        ignore_operation_servers=False,
         ssl_ca_cert=None,
-    ):
+        retries=None,
+        *,
+        debug: Optional[bool] = None,
+    ) -> None:
         """Constructor"""
         self._base_path = "https://api.gretel.cloud" if host is None else host
         """Default Base url
@@ -91,6 +101,9 @@ class Configuration(object):
         self.server_variables = server_variables or {}
         self.server_operation_variables = server_operation_variables or {}
         """Default server variables
+        """
+        self.ignore_operation_servers = ignore_operation_servers
+        """Ignore operation servers
         """
         self.temp_folder_path = None
         """Temp file folder for downloading files
@@ -129,13 +142,16 @@ class Configuration(object):
         self.logger_stream_handler = None
         """Log stream handler
         """
-        self.logger_file_handler = None
+        self.logger_file_handler: Optional[FileHandler] = None
         """Log file handler
         """
         self.logger_file = None
         """Debug file location
         """
-        self.debug = False
+        if debug is not None:
+            self.debug = debug
+        else:
+            self.__debug = False
         """Debug switch
         """
 
@@ -169,7 +185,7 @@ class Configuration(object):
            cpu_count * 5 is used as default value to increase performance.
         """
 
-        self.proxy = None
+        self.proxy: Optional[str] = None
         """Proxy URL
         """
         self.proxy_headers = None
@@ -178,7 +194,7 @@ class Configuration(object):
         self.safe_chars_for_path_param = ""
         """Safe chars for path_param
         """
-        self.retries = None
+        self.retries = retries
         """Adding retries to override urllib3 default value 3
         """
         # Enable client side validation
