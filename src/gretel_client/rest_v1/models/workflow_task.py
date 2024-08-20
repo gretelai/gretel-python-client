@@ -30,7 +30,7 @@ from gretel_client.rest_v1.models.user_profile import UserProfile
 
 class WorkflowTask(BaseModel):
     """
-    Next Tag: 24
+    Next Tag: 25
     """  # noqa: E501
 
     id: StrictStr = Field(description="The unique ID of the workflow task.")
@@ -97,6 +97,10 @@ class WorkflowTask(BaseModel):
         default=None,
         description="A timestamp indicating when this workflow was completed.",
     )
+    cancelled_at: Optional[datetime] = Field(
+        default=None,
+        description="A timestamp indicating when this workflow was cancelled.",
+    )
     total_compute_time_sconds: Optional[StrictInt] = Field(
         default=None, description="The total compute time in seconds for this workflow."
     )
@@ -121,6 +125,7 @@ class WorkflowTask(BaseModel):
         "error_at",
         "lost_at",
         "completed_at",
+        "cancelled_at",
         "total_compute_time_sconds",
     ]
 
@@ -229,6 +234,7 @@ class WorkflowTask(BaseModel):
                 "error_at": obj.get("error_at"),
                 "lost_at": obj.get("lost_at"),
                 "completed_at": obj.get("completed_at"),
+                "cancelled_at": obj.get("cancelled_at"),
                 "total_compute_time_sconds": obj.get("total_compute_time_sconds"),
             }
         )
