@@ -33,6 +33,7 @@ class QualityReport(BaseReport):
             in the sample of columns.  Any additional requested columns will be selected randomly.
         session: The client session to use, or ``None`` to use the session associated with the project
             (if any), or the default session otherwise.
+        test_data: Optional reference data used for the Privacy Metrics of the report.
     """
 
     _model_dict: dict = {
@@ -69,6 +70,7 @@ class QualityReport(BaseReport):
         column_count: Optional[int] = DEFAULT_SQS_REPORT_COLUMNS,
         mandatory_columns: Optional[List[str]] = [],
         session: Optional[ClientConfig] = None,
+        test_data: Optional[RefDataTypes] = None,
     ):
         project, session = BaseReport.resolve_session(project, session)
         runner_mode = runner_mode or session.default_runner
@@ -90,7 +92,13 @@ class QualityReport(BaseReport):
         params["mandatory_columns"] = mandatory_columns
 
         super().__init__(
-            project, data_source, ref_data, output_dir, runner_mode, session=session
+            project,
+            data_source,
+            ref_data,
+            output_dir,
+            runner_mode,
+            session=session,
+            test_data=test_data,
         )
 
     def peek(self) -> Optional[ReportDictType]:
