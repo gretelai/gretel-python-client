@@ -22,7 +22,7 @@ from datetime import datetime
 from typing import Any, ClassVar, Dict, List, Optional, Set
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, StrictInt, StrictStr
-from typing_extensions import Self
+from typing_extensions import Annotated, Self
 
 from gretel_client.rest_v1.models.project import Project
 from gretel_client.rest_v1.models.user_profile import UserProfile
@@ -33,11 +33,13 @@ class WorkflowTask(BaseModel):
     Next Tag: 25
     """  # noqa: E501
 
-    id: StrictStr = Field(description="The unique ID of the workflow task.")
-    workflow_run_id: StrictStr = Field(
+    id: Annotated[str, Field(strict=True)] = Field(
+        description="The unique ID of the workflow task."
+    )
+    workflow_run_id: Annotated[str, Field(strict=True)] = Field(
         description="The ID of the workflow run that this task belongs to."
     )
-    project_id: StrictStr = Field(
+    project_id: Annotated[str, Field(strict=True)] = Field(
         description="The project ID that this workflow task belongs to."
     )
     project: Optional[Project] = Field(
@@ -66,7 +68,9 @@ class WorkflowTask(BaseModel):
         default=None,
         description="A more detailed stack trace that can be used for root cause analysis. This stack trace generally shouldn't be shown in the UI and will span many lines.",
     )
-    created_by: StrictStr = Field(description="The user ID that created this workflow.")
+    created_by: Annotated[str, Field(strict=True)] = Field(
+        description="The user ID that created this workflow."
+    )
     created_by_profile: Optional[UserProfile] = Field(
         default=None,
         description="The user profile of the user that created this workflow. Provided when the `expand=created_by` query param is present.",
@@ -129,6 +133,27 @@ class WorkflowTask(BaseModel):
         "total_compute_time_sconds",
     ]
 
+    @field_validator("id")
+    def id_validate_regular_expression(cls, value):
+        """Validates the regular expression"""
+        if not re.match(r"^wt_.*$", value):
+            raise ValueError(r"must validate the regular expression /^wt_.*$/")
+        return value
+
+    @field_validator("workflow_run_id")
+    def workflow_run_id_validate_regular_expression(cls, value):
+        """Validates the regular expression"""
+        if not re.match(r"^wr_.*$", value):
+            raise ValueError(r"must validate the regular expression /^wr_.*$/")
+        return value
+
+    @field_validator("project_id")
+    def project_id_validate_regular_expression(cls, value):
+        """Validates the regular expression"""
+        if not re.match(r"^proj_.*$", value):
+            raise ValueError(r"must validate the regular expression /^proj_.*$/")
+        return value
+
     @field_validator("status")
     def status_validate_enum(cls, value):
         """Validates the enum"""
@@ -148,6 +173,13 @@ class WorkflowTask(BaseModel):
             raise ValueError(
                 "must be one of enum values ('RUN_STATUS_UNKNOWN', 'RUN_STATUS_CREATED', 'RUN_STATUS_PENDING', 'RUN_STATUS_ACTIVE', 'RUN_STATUS_ERROR', 'RUN_STATUS_LOST', 'RUN_STATUS_COMPLETED', 'RUN_STATUS_CANCELLING', 'RUN_STATUS_CANCELLED')"
             )
+        return value
+
+    @field_validator("created_by")
+    def created_by_validate_regular_expression(cls, value):
+        """Validates the regular expression"""
+        if not re.match(r"^user_.*$", value):
+            raise ValueError(r"must validate the regular expression /^user_.*$/")
         return value
 
     model_config = ConfigDict(

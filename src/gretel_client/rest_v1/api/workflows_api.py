@@ -2115,7 +2115,9 @@ class WorkflowsApi:
         ] = None,
         sort: Annotated[
             Optional[StrictStr],
-            Field(description="The sort order for the search results."),
+            Field(
+                description="The sort order for the search results. Supported sort fields are: `created_at`, `updated_at`"
+            ),
         ] = None,
         _request_timeout: Union[
             None,
@@ -2141,7 +2143,7 @@ class WorkflowsApi:
         :type limit: int
         :param skip: The number of results to skip before applying the limit.
         :type skip: int
-        :param sort: The sort order for the search results.
+        :param sort: The sort order for the search results. Supported sort fields are: `created_at`, `updated_at`
         :type sort: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
@@ -2216,7 +2218,9 @@ class WorkflowsApi:
         ] = None,
         sort: Annotated[
             Optional[StrictStr],
-            Field(description="The sort order for the search results."),
+            Field(
+                description="The sort order for the search results. Supported sort fields are: `created_at`, `updated_at`"
+            ),
         ] = None,
         _request_timeout: Union[
             None,
@@ -2242,7 +2246,7 @@ class WorkflowsApi:
         :type limit: int
         :param skip: The number of results to skip before applying the limit.
         :type skip: int
-        :param sort: The sort order for the search results.
+        :param sort: The sort order for the search results. Supported sort fields are: `created_at`, `updated_at`
         :type sort: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
@@ -2317,7 +2321,9 @@ class WorkflowsApi:
         ] = None,
         sort: Annotated[
             Optional[StrictStr],
-            Field(description="The sort order for the search results."),
+            Field(
+                description="The sort order for the search results. Supported sort fields are: `created_at`, `updated_at`"
+            ),
         ] = None,
         _request_timeout: Union[
             None,
@@ -2343,7 +2349,7 @@ class WorkflowsApi:
         :type limit: int
         :param skip: The number of results to skip before applying the limit.
         :type skip: int
-        :param sort: The sort order for the search results.
+        :param sort: The sort order for the search results. Supported sort fields are: `created_at`, `updated_at`
         :type sort: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
@@ -2823,7 +2829,9 @@ class WorkflowsApi:
         ] = None,
         sort: Annotated[
             Optional[StrictStr],
-            Field(description="The sort order for the search results."),
+            Field(
+                description="The sort order for the search results. Supported sort fields are: `created_at`, `updated_at`"
+            ),
         ] = None,
         limit: Annotated[
             Optional[StrictInt],
@@ -2859,7 +2867,7 @@ class WorkflowsApi:
 
         :param query: The query string for searching workflows. Supported fields are: `id`, `project_id`
         :type query: str
-        :param sort: The sort order for the search results.
+        :param sort: The sort order for the search results. Supported sort fields are: `created_at`, `updated_at`
         :type sort: str
         :param limit: The maximum number of results to return.
         :type limit: int
@@ -2924,7 +2932,9 @@ class WorkflowsApi:
         ] = None,
         sort: Annotated[
             Optional[StrictStr],
-            Field(description="The sort order for the search results."),
+            Field(
+                description="The sort order for the search results. Supported sort fields are: `created_at`, `updated_at`"
+            ),
         ] = None,
         limit: Annotated[
             Optional[StrictInt],
@@ -2960,7 +2970,7 @@ class WorkflowsApi:
 
         :param query: The query string for searching workflows. Supported fields are: `id`, `project_id`
         :type query: str
-        :param sort: The sort order for the search results.
+        :param sort: The sort order for the search results. Supported sort fields are: `created_at`, `updated_at`
         :type sort: str
         :param limit: The maximum number of results to return.
         :type limit: int
@@ -3025,7 +3035,9 @@ class WorkflowsApi:
         ] = None,
         sort: Annotated[
             Optional[StrictStr],
-            Field(description="The sort order for the search results."),
+            Field(
+                description="The sort order for the search results. Supported sort fields are: `created_at`, `updated_at`"
+            ),
         ] = None,
         limit: Annotated[
             Optional[StrictInt],
@@ -3061,7 +3073,7 @@ class WorkflowsApi:
 
         :param query: The query string for searching workflows. Supported fields are: `id`, `project_id`
         :type query: str
-        :param sort: The sort order for the search results.
+        :param sort: The sort order for the search results. Supported sort fields are: `created_at`, `updated_at`
         :type sort: str
         :param limit: The maximum number of results to return.
         :type limit: int

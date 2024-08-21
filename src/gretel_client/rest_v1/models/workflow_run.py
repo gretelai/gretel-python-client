@@ -22,7 +22,7 @@ from datetime import datetime
 from typing import Any, ClassVar, Dict, List, Optional, Set
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, StrictInt, StrictStr
-from typing_extensions import Self
+from typing_extensions import Annotated, Self
 
 from gretel_client.rest_v1.models.project import Project
 from gretel_client.rest_v1.models.status_details import StatusDetails
@@ -37,11 +37,13 @@ class WorkflowRun(BaseModel):
     WorkflowRun
     """  # noqa: E501
 
-    id: StrictStr = Field(description="The unique ID of the workflow run.")
-    workflow_id: StrictStr = Field(
+    id: Annotated[str, Field(strict=True)] = Field(
+        description="The unique ID of the workflow run."
+    )
+    workflow_id: Annotated[str, Field(strict=True)] = Field(
         description="The ID of the workflow that this run belongs to."
     )
-    project_id: StrictStr = Field(
+    project_id: Annotated[str, Field(strict=True)] = Field(
         description="The project ID that this workflow run belongs to. This will be the same as the project ID of the workflow."
     )
     project: Optional[Project] = Field(
@@ -66,7 +68,7 @@ class WorkflowRun(BaseModel):
         default=None,
         description="Additional details about the status of the workflow run.",
     )
-    created_by: StrictStr = Field(
+    created_by: Annotated[str, Field(strict=True)] = Field(
         description="The user ID that created this workflow run."
     )
     created_at: datetime = Field(
@@ -136,6 +138,27 @@ class WorkflowRun(BaseModel):
         "total_compute_time_sconds",
     ]
 
+    @field_validator("id")
+    def id_validate_regular_expression(cls, value):
+        """Validates the regular expression"""
+        if not re.match(r"^wr_.*$", value):
+            raise ValueError(r"must validate the regular expression /^wr_.*$/")
+        return value
+
+    @field_validator("workflow_id")
+    def workflow_id_validate_regular_expression(cls, value):
+        """Validates the regular expression"""
+        if not re.match(r"^w_.*$", value):
+            raise ValueError(r"must validate the regular expression /^w_.*$/")
+        return value
+
+    @field_validator("project_id")
+    def project_id_validate_regular_expression(cls, value):
+        """Validates the regular expression"""
+        if not re.match(r"^proj_.*$", value):
+            raise ValueError(r"must validate the regular expression /^proj_.*$/")
+        return value
+
     @field_validator("runner_mode")
     def runner_mode_validate_enum(cls, value):
         """Validates the enum"""
@@ -171,6 +194,13 @@ class WorkflowRun(BaseModel):
             raise ValueError(
                 "must be one of enum values ('RUN_STATUS_UNKNOWN', 'RUN_STATUS_CREATED', 'RUN_STATUS_PENDING', 'RUN_STATUS_ACTIVE', 'RUN_STATUS_ERROR', 'RUN_STATUS_LOST', 'RUN_STATUS_COMPLETED', 'RUN_STATUS_CANCELLING', 'RUN_STATUS_CANCELLED')"
             )
+        return value
+
+    @field_validator("created_by")
+    def created_by_validate_regular_expression(cls, value):
+        """Validates the regular expression"""
+        if not re.match(r"^user_.*$", value):
+            raise ValueError(r"must validate the regular expression /^user_.*$/")
         return value
 
     model_config = ConfigDict(
