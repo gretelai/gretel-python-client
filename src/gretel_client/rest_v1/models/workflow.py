@@ -22,7 +22,7 @@ from datetime import datetime
 from typing import Any, ClassVar, Dict, List, Optional, Set
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, StrictStr
-from typing_extensions import Annotated, Self
+from typing_extensions import Self
 
 from gretel_client.rest_v1.models.project import Project
 from gretel_client.rest_v1.models.user_profile import UserProfile
@@ -34,11 +34,9 @@ class Workflow(BaseModel):
     Workflow
     """  # noqa: E501
 
-    id: Annotated[str, Field(strict=True)] = Field(
-        description="The unique ID of the workflow."
-    )
+    id: StrictStr = Field(description="The unique ID of the workflow.")
     name: StrictStr = Field(description="The name of the workflow.")
-    project_id: Annotated[str, Field(strict=True)] = Field(
+    project_id: StrictStr = Field(
         description="The project ID that this workflow belongs to."
     )
     project: Optional[Project] = Field(
@@ -55,9 +53,7 @@ class Workflow(BaseModel):
         default=None,
         description="The runner mode of the workflow. Can be `cloud` or `hybrid`.",
     )
-    created_by: Annotated[str, Field(strict=True)] = Field(
-        description="The user ID that created this workflow."
-    )
+    created_by: StrictStr = Field(description="The user ID that created this workflow.")
     created_by_profile: Optional[UserProfile] = Field(
         default=None,
         description="The user profile of the user that created this workflow. Provided when the `expand=created_by` query param is present.",
@@ -102,20 +98,6 @@ class Workflow(BaseModel):
         "latest_run",
     ]
 
-    @field_validator("id")
-    def id_validate_regular_expression(cls, value):
-        """Validates the regular expression"""
-        if not re.match(r"^w_.*$", value):
-            raise ValueError(r"must validate the regular expression /^w_.*$/")
-        return value
-
-    @field_validator("project_id")
-    def project_id_validate_regular_expression(cls, value):
-        """Validates the regular expression"""
-        if not re.match(r"^proj_.*$", value):
-            raise ValueError(r"must validate the regular expression /^proj_.*$/")
-        return value
-
     @field_validator("runner_mode")
     def runner_mode_validate_enum(cls, value):
         """Validates the enum"""
@@ -133,13 +115,6 @@ class Workflow(BaseModel):
             raise ValueError(
                 "must be one of enum values ('RUNNER_MODE_UNSET', 'RUNNER_MODE_CLOUD', 'RUNNER_MODE_HYBRID', 'RUNNER_MODE_INVALID')"
             )
-        return value
-
-    @field_validator("created_by")
-    def created_by_validate_regular_expression(cls, value):
-        """Validates the regular expression"""
-        if not re.match(r"^user_.*$", value):
-            raise ValueError(r"must validate the regular expression /^user_.*$/")
         return value
 
     model_config = ConfigDict(
