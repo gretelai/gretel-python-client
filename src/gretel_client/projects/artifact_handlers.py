@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 
 import requests
 import smart_open
+import urllib3
 
 from backports.cached_property import cached_property
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
@@ -36,6 +37,16 @@ except ImportError:  # pragma: no cover
     BlobServiceClient = None
 
 HYBRID_ARTIFACT_ENDPOINT_PREFIXES = ["azure://", "gs://", "s3://"]
+
+GITHUB_RAW = "raw.githubusercontent.com"
+GRETEL_GITHUB_BLUEPRINT_REPO = "/gretelai/gretel-blueprints"
+
+GRETEL_SOURCES = {
+    "gretel-datasets.s3.amazonaws.com",
+    "gretel-public-website.s3.us-west-2.amazonaws.com",
+    "blueprints.gretel.cloud",
+    "blueprints-dev.gretel.cloud",
+}
 
 
 def _get_azure_blob_srv_client() -> Optional[BlobServiceClient]:
@@ -212,7 +223,26 @@ class CloudArtifactsHandler:
     def _does_not_require_upload(
         self, artifact_path: Union[Path, str, _DataFrameT]
     ) -> bool:
-        return isinstance(artifact_path, str) and artifact_path.startswith("gretel_")
+        return isinstance(artifact_path, str) and (
+            self._is_gretel_project_artifact_key(artifact_path)
+            or self._is_public_gretel_artifact(artifact_path)
+        )
+
+    def _is_gretel_project_artifact_key(self, artifact_path: str) -> bool:
+        return artifact_path.startswith("gretel_")
+
+    def _is_public_gretel_artifact(self, artifact_path: str) -> bool:
+        try:
+            parsed_url: urllib3.util.Url = urllib3.util.parse_url(artifact_path)
+            if parsed_url.scheme is not None:
+                if (
+                    parsed_url.hostname == GITHUB_RAW
+                    and parsed_url.path.startswith(GRETEL_GITHUB_BLUEPRINT_REPO)
+                ) or parsed_url.hostname in GRETEL_SOURCES:
+                    return True
+        except Exception:
+            pass
+        return False
 
     def delete_project_artifact(self, key: str) -> None:
         return self.projects_api.delete_artifact(project_id=self.project_guid, key=key)

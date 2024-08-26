@@ -13,6 +13,7 @@ from gretel_client.config import DEFAULT_GRETEL_ARTIFACT_ENDPOINT
 from gretel_client.projects.artifact_handlers import (
     _get_artifact_path_and_file_name,
     ArtifactsException,
+    CloudArtifactsHandler,
     get_transport_params,
     hybrid_handler,
     HybridArtifactsHandler,
@@ -317,3 +318,47 @@ def test_hybrid_download(endpoint):
 
         downloaded_file = output / "report.html.gz"
         assert downloaded_file.exists()
+
+
+def test_cloud_data_source_passthrough_gretel_project_artifact():
+    project_artifact = "gretel_1234567890_mydata.csv"
+    projects_api = Mock()
+
+    handler = CloudArtifactsHandler(projects_api, "proj_123", "projectname")
+    artifact_key = handler.upload_project_artifact(project_artifact)
+    assert artifact_key == project_artifact
+
+    projects_api.create_artifact.assert_not_called()
+
+
+def test_cloud_data_source_passthrough_public_gretel_artifact():
+    remote_data_source = "https://raw.githubusercontent.com/gretelai/gretel-blueprints/main/sample_data/sample-synthetic-healthcare.csv"
+    projects_api = Mock()
+
+    handler = CloudArtifactsHandler(projects_api, "proj_123", "projectname")
+    artifact_key = handler.upload_project_artifact(remote_data_source)
+    assert artifact_key == remote_data_source
+
+    projects_api.create_artifact.assert_not_called()
+
+
+def test_cloud_data_source_upload_as_project_artifact():
+    projects_api = Mock()
+
+    resp_key = "gretel_uuid_filename.csv"
+    resp_url = "response-url"
+    projects_api.create_artifact.return_value = {
+        "data": {"key": resp_key, "url": resp_url}
+    }
+
+    handler = CloudArtifactsHandler(projects_api, "proj_123", "projectname")
+
+    with (
+        tempfile.NamedTemporaryFile(delete=False) as source,
+        patch("gretel_client.projects.artifact_handlers.requests.put"),
+    ):
+        artifact_path = handler.upload_project_artifact(source.name)
+
+    assert artifact_path == resp_key
+
+    projects_api.create_artifact.assert_called_once()
