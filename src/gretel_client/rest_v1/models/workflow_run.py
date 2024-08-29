@@ -24,6 +24,7 @@ from typing import Any, ClassVar, Dict, List, Optional, Set
 from pydantic import BaseModel, ConfigDict, Field, field_validator, StrictInt, StrictStr
 from typing_extensions import Self
 
+from gretel_client.rest_v1.models.action_summary import ActionSummary
 from gretel_client.rest_v1.models.project import Project
 from gretel_client.rest_v1.models.status_details import StatusDetails
 from gretel_client.rest_v1.models.user_profile import UserProfile
@@ -111,6 +112,14 @@ class WorkflowRun(BaseModel):
         default=None,
         description="The total compute time in seconds for this workflow run.",
     )
+    actions: Optional[List[ActionSummary]] = Field(
+        default=None,
+        description="An ordered summary of the actions in this workflow run. Provided when the `expand=actions` query param is present.",
+    )
+    previous_workflow_run_id: Optional[StrictStr] = Field(
+        default=None,
+        description="The id of the previous run. This can be: - empty (this workflow run is the first run of the workflow) - the chronologically most recently completed run - the run being retried in this workflow run",
+    )
     __properties: ClassVar[List[str]] = [
         "id",
         "workflow_id",
@@ -134,6 +143,8 @@ class WorkflowRun(BaseModel):
         "cancellation_request",
         "created_by_profile",
         "total_compute_time_sconds",
+        "actions",
+        "previous_workflow_run_id",
     ]
 
     @field_validator("runner_mode")
@@ -222,6 +233,13 @@ class WorkflowRun(BaseModel):
         # override the default output from pydantic by calling `to_dict()` of created_by_profile
         if self.created_by_profile:
             _dict["created_by_profile"] = self.created_by_profile.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of each item in actions (list)
+        _items = []
+        if self.actions:
+            for _item in self.actions:
+                if _item:
+                    _items.append(_item.to_dict())
+            _dict["actions"] = _items
         return _dict
 
     @classmethod
@@ -275,6 +293,12 @@ class WorkflowRun(BaseModel):
                     else None
                 ),
                 "total_compute_time_sconds": obj.get("total_compute_time_sconds"),
+                "actions": (
+                    [ActionSummary.from_dict(_item) for _item in obj["actions"]]
+                    if obj.get("actions") is not None
+                    else None
+                ),
+                "previous_workflow_run_id": obj.get("previous_workflow_run_id"),
             }
         )
         return _obj

@@ -1347,7 +1347,7 @@ class WorkflowsApi:
         expand: Annotated[
             Optional[List[StrictStr]],
             Field(
-                description="The fields to expand in the response. Supported values are: `project`, `config.system`, `created_by`"
+                description="The fields to expand in the response. Supported values are: `project`, `config.system`, `created_by`, `actions`"
             ),
         ] = None,
         _request_timeout: Union[
@@ -1368,7 +1368,7 @@ class WorkflowsApi:
 
         :param workflow_run_id: The ID of the workflow run to retrieve. (required)
         :type workflow_run_id: str
-        :param expand: The fields to expand in the response. Supported values are: `project`, `config.system`, `created_by`
+        :param expand: The fields to expand in the response. Supported values are: `project`, `config.system`, `created_by`, `actions`
         :type expand: List[str]
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
@@ -1423,7 +1423,7 @@ class WorkflowsApi:
         expand: Annotated[
             Optional[List[StrictStr]],
             Field(
-                description="The fields to expand in the response. Supported values are: `project`, `config.system`, `created_by`"
+                description="The fields to expand in the response. Supported values are: `project`, `config.system`, `created_by`, `actions`"
             ),
         ] = None,
         _request_timeout: Union[
@@ -1444,7 +1444,7 @@ class WorkflowsApi:
 
         :param workflow_run_id: The ID of the workflow run to retrieve. (required)
         :type workflow_run_id: str
-        :param expand: The fields to expand in the response. Supported values are: `project`, `config.system`, `created_by`
+        :param expand: The fields to expand in the response. Supported values are: `project`, `config.system`, `created_by`, `actions`
         :type expand: List[str]
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
@@ -1499,7 +1499,7 @@ class WorkflowsApi:
         expand: Annotated[
             Optional[List[StrictStr]],
             Field(
-                description="The fields to expand in the response. Supported values are: `project`, `config.system`, `created_by`"
+                description="The fields to expand in the response. Supported values are: `project`, `config.system`, `created_by`, `actions`"
             ),
         ] = None,
         _request_timeout: Union[
@@ -1520,7 +1520,7 @@ class WorkflowsApi:
 
         :param workflow_run_id: The ID of the workflow run to retrieve. (required)
         :type workflow_run_id: str
-        :param expand: The fields to expand in the response. Supported values are: `project`, `config.system`, `created_by`
+        :param expand: The fields to expand in the response. Supported values are: `project`, `config.system`, `created_by`, `actions`
         :type expand: List[str]
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request

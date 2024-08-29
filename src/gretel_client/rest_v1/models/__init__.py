@@ -14,6 +14,7 @@
 
 
 # import models into model package
+from gretel_client.rest_v1.models.action_summary import ActionSummary
 from gretel_client.rest_v1.models.activity_event import ActivityEvent
 from gretel_client.rest_v1.models.cluster import Cluster
 from gretel_client.rest_v1.models.cluster_cloud_provider_info import (
