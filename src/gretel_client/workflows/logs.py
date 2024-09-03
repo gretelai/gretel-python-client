@@ -358,6 +358,10 @@ class LogWorker:
         for line_envelope in resp.lines:
             log_line = LogLine.from_envelope(self.task, line_envelope)
 
+            # ensure we don't print logs that we've already seen
+            if self._log_checkpoint and log_line.ts <= self._log_checkpoint.ts:
+                continue
+
             self._log_checkpoint = log_line
             yield self._log_checkpoint
 
