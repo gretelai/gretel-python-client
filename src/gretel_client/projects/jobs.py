@@ -37,6 +37,7 @@ from gretel_client.projects.artifact_handlers import (
 )
 from gretel_client.projects.common import f, ModelArtifact, WAIT_UNTIL_DONE
 from gretel_client.projects.exceptions import (
+    CreditExhaustException,
     GretelJobNotFound,
     MaxConcurrentJobsException,
     WaitTimeExceeded,
@@ -609,6 +610,10 @@ class Job(ABC):
     def _handle_submit_error(self, apix: ApiException) -> None:
         if "Maximum number of" in str(apix):
             raise MaxConcurrentJobsException(
+                status=apix.status, reason=apix.reason
+            ) from apix
+        if "cannot run job, credits exhausted" in str(apix).lower():
+            raise CreditExhaustException(
                 status=apix.status, reason=apix.reason
             ) from apix
         raise apix

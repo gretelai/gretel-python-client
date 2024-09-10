@@ -77,6 +77,14 @@ class MaxConcurrentJobsException(ApiException):
     ...
 
 
+class CreditExhaustException(ApiException):
+    """
+    The user has exhausted their credit limit.
+    """
+
+    ...
+
+
 # Model Config
 
 
