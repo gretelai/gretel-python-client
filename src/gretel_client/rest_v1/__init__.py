@@ -22,6 +22,7 @@ from gretel_client.rest_v1.api.clusters_api import ClustersApi
 from gretel_client.rest_v1.api.connections_api import ConnectionsApi
 from gretel_client.rest_v1.api.logs_api import LogsApi
 from gretel_client.rest_v1.api.projects_api import ProjectsApi
+from gretel_client.rest_v1.api.serverless_api import ServerlessApi
 from gretel_client.rest_v1.api.workflows_api import WorkflowsApi
 from gretel_client.rest_v1.api_client import ApiClient
 
@@ -70,7 +71,13 @@ from gretel_client.rest_v1.models.list_clusters_response import ListClustersResp
 from gretel_client.rest_v1.models.list_connections_response import (
     ListConnectionsResponse,
 )
+from gretel_client.rest_v1.models.list_serverless_tenants_response import (
+    ListServerlessTenantsResponse,
+)
 from gretel_client.rest_v1.models.log_envelope import LogEnvelope
+from gretel_client.rest_v1.models.poll_serverless_tenants_response import (
+    PollServerlessTenantsResponse,
+)
 from gretel_client.rest_v1.models.project import Project
 from gretel_client.rest_v1.models.search_activity_response import SearchActivityResponse
 from gretel_client.rest_v1.models.search_connections_response import (
@@ -86,6 +93,11 @@ from gretel_client.rest_v1.models.search_workflow_tasks_response import (
 from gretel_client.rest_v1.models.search_workflows_response import (
     SearchWorkflowsResponse,
 )
+from gretel_client.rest_v1.models.serverless_tenant import ServerlessTenant
+from gretel_client.rest_v1.models.serverless_tenant_cloud_provider_info import (
+    ServerlessTenantCloudProviderInfo,
+)
+from gretel_client.rest_v1.models.serverless_tenant_config import ServerlessTenantConfig
 from gretel_client.rest_v1.models.status import Status
 from gretel_client.rest_v1.models.status_details import StatusDetails
 from gretel_client.rest_v1.models.update_connection_request import (
