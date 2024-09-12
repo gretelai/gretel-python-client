@@ -300,8 +300,7 @@ class ServerlessApi:
     @validate_call
     def delete_serverless_tenant(
         self,
-        tenant_id: StrictStr,
-        tenant_guid: Optional[StrictStr] = None,
+        tenant_guid: StrictStr,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -317,9 +316,7 @@ class ServerlessApi:
         """delete_serverless_tenant
 
 
-        :param tenant_id: (required)
-        :type tenant_id: str
-        :param tenant_guid:
+        :param tenant_guid: (required)
         :type tenant_guid: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
@@ -344,7 +341,6 @@ class ServerlessApi:
         """  # noqa: E501
 
         _param = self._delete_serverless_tenant_serialize(
-            tenant_id=tenant_id,
             tenant_guid=tenant_guid,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -367,8 +363,7 @@ class ServerlessApi:
     @validate_call
     def delete_serverless_tenant_with_http_info(
         self,
-        tenant_id: StrictStr,
-        tenant_guid: Optional[StrictStr] = None,
+        tenant_guid: StrictStr,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -384,9 +379,7 @@ class ServerlessApi:
         """delete_serverless_tenant
 
 
-        :param tenant_id: (required)
-        :type tenant_id: str
-        :param tenant_guid:
+        :param tenant_guid: (required)
         :type tenant_guid: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
@@ -411,7 +404,6 @@ class ServerlessApi:
         """  # noqa: E501
 
         _param = self._delete_serverless_tenant_serialize(
-            tenant_id=tenant_id,
             tenant_guid=tenant_guid,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -434,8 +426,7 @@ class ServerlessApi:
     @validate_call
     def delete_serverless_tenant_without_preload_content(
         self,
-        tenant_id: StrictStr,
-        tenant_guid: Optional[StrictStr] = None,
+        tenant_guid: StrictStr,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -451,9 +442,7 @@ class ServerlessApi:
         """delete_serverless_tenant
 
 
-        :param tenant_id: (required)
-        :type tenant_id: str
-        :param tenant_guid:
+        :param tenant_guid: (required)
         :type tenant_guid: str
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
@@ -478,7 +467,6 @@ class ServerlessApi:
         """  # noqa: E501
 
         _param = self._delete_serverless_tenant_serialize(
-            tenant_id=tenant_id,
             tenant_guid=tenant_guid,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -496,7 +484,6 @@ class ServerlessApi:
 
     def _delete_serverless_tenant_serialize(
         self,
-        tenant_id,
         tenant_guid,
         _request_auth,
         _content_type,
@@ -516,13 +503,9 @@ class ServerlessApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
-        if tenant_id is not None:
-            _path_params["tenant_id"] = tenant_id
-        # process the query parameters
         if tenant_guid is not None:
-
-            _query_params.append(("tenant_guid", tenant_guid))
-
+            _path_params["tenant_guid"] = tenant_guid
+        # process the query parameters
         # process the header parameters
         # process the form parameters
         # process the body parameter
@@ -538,7 +521,7 @@ class ServerlessApi:
 
         return self.api_client.param_serialize(
             method="DELETE",
-            resource_path="/v1/serverless/tenants/{tenant_id}",
+            resource_path="/v1/serverless/tenants/{tenant_guid}",
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
