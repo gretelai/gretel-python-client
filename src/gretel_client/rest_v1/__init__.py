@@ -54,9 +54,18 @@ from gretel_client.rest_v1.models.connection import Connection
 from gretel_client.rest_v1.models.create_connection_request import (
     CreateConnectionRequest,
 )
+from gretel_client.rest_v1.models.create_serverless_tenant_request import (
+    CreateServerlessTenantRequest,
+)
+from gretel_client.rest_v1.models.create_serverless_tenant_response import (
+    CreateServerlessTenantResponse,
+)
 from gretel_client.rest_v1.models.create_workflow_request import CreateWorkflowRequest
 from gretel_client.rest_v1.models.create_workflow_run_request import (
     CreateWorkflowRunRequest,
+)
+from gretel_client.rest_v1.models.delete_serverless_tenant_response import (
+    DeleteServerlessTenantResponse,
 )
 from gretel_client.rest_v1.models.event_component import EventComponent
 from gretel_client.rest_v1.models.get_cluster_response import GetClusterResponse
