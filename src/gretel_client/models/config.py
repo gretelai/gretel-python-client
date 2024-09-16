@@ -228,6 +228,9 @@ def _peek_any_report(report_contents) -> dict:
         "average_metric_difference",
         "semantic_similarity",
         "structure_similarity",
+        "membership_inference_attack_score",
+        "attribute_inference_attack_score",
+        "data_privacy_score",
     ]
     return {f: report_contents[f] for f in fields if f in report_contents}
 
