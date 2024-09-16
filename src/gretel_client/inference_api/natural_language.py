@@ -49,7 +49,7 @@ class NaturalLanguageInferenceAPI(BaseInferenceAPI):
         max_tokens: int = NaturalLanguageDefaultParams.max_tokens,
         top_p: float = NaturalLanguageDefaultParams.top_p,
         top_k: int = NaturalLanguageDefaultParams.top_k,
-    ):
+    ) -> str:
         """Generate synthetic text.
 
         Args:

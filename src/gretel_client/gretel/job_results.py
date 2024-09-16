@@ -142,6 +142,9 @@ class GenerateJobResults(GretelJobResults):
 
     @property
     def record_id(self) -> str:
+        """
+        The ID of the job that generated the requested data.
+        """
         return self.record_handler.record_id
 
     @property
