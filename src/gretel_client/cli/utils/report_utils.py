@@ -18,9 +18,6 @@ SCORE_FIELDS = [
     "privacy_protection_level",
     "semantic_similarity",
     "structure_similarity",
-    "membership_inference_attack_score",
-    "attribute_inference_attack_score",
-    "data_privacy_score",
 ]
 
 
