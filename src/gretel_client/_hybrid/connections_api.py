@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 from pydantic.v1 import StrictStr
 
@@ -45,15 +45,19 @@ class HybridConnectionsApi(ConnectionsApi):
         self._creds_encryption = creds_encryption
 
     def _encrypt_creds(
-        self, create_connection_request: CreateConnectionRequest
-    ) -> CreateConnectionRequest:
-        if creds := create_connection_request.credentials:
-            create_connection_request.credentials = None
+        self,
+        connection_request: Union[CreateConnectionRequest, UpdateConnectionRequest],
+    ) -> Union[CreateConnectionRequest, UpdateConnectionRequest]:
+        if creds := connection_request.credentials:
+            connection_request.credentials = None
+            project_id = None
+            if hasattr(connection_request, "project_id"):
+                project_id = connection_request.project_id
             encrypted_creds = self._creds_encryption.apply(
-                creds, project_guid=create_connection_request.project_id
+                creds, project_guid=project_id
             )
-            create_connection_request.encrypted_credentials = encrypted_creds
-        return create_connection_request
+            connection_request.encrypted_credentials = encrypted_creds
+        return connection_request
 
     def create_connection(
         self,
@@ -69,6 +73,17 @@ class HybridConnectionsApi(ConnectionsApi):
         create_connection_request = self._encrypt_creds(create_connection_request)
         return super().create_connection_with_http_info(
             create_connection_request, **kwargs
+        )
+
+    def update_connection(
+        self,
+        connection_id: str,
+        update_connection_request: UpdateConnectionRequest,
+        **kwargs,
+    ) -> Connection:
+        update_connection_request = self._encrypt_creds(update_connection_request)
+        return super().update_connection(
+            connection_id, update_connection_request, **kwargs
         )
 
     def update_connection_with_http_info(
