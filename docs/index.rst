@@ -19,6 +19,7 @@ Modules
    config.rst
    evaluation.rst
    helpers.rst
+   bigquery/index.rst
 
 
 
