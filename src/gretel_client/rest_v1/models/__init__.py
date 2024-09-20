@@ -63,6 +63,9 @@ from gretel_client.rest_v1.models.poll_serverless_tenants_response import (
     PollServerlessTenantsResponse,
 )
 from gretel_client.rest_v1.models.project import Project
+from gretel_client.rest_v1.models.retry_workflow_run_failures_request import (
+    RetryWorkflowRunFailuresRequest,
+)
 from gretel_client.rest_v1.models.search_activity_response import SearchActivityResponse
 from gretel_client.rest_v1.models.search_connections_response import (
     SearchConnectionsResponse,

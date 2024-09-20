@@ -116,10 +116,6 @@ class WorkflowRun(BaseModel):
         default=None,
         description="An ordered summary of the actions in this workflow run. Provided when the `expand=actions` query param is present.",
     )
-    previous_workflow_run_id: Optional[StrictStr] = Field(
-        default=None,
-        description="The id of the previous run. This can be: - empty (this workflow run is the first run of the workflow) - the chronologically most recently completed run - the run being retried in this workflow run",
-    )
     __properties: ClassVar[List[str]] = [
         "id",
         "workflow_id",
@@ -144,7 +140,6 @@ class WorkflowRun(BaseModel):
         "created_by_profile",
         "total_compute_time_sconds",
         "actions",
-        "previous_workflow_run_id",
     ]
 
     @field_validator("runner_mode")
@@ -177,10 +172,11 @@ class WorkflowRun(BaseModel):
                 "RUN_STATUS_COMPLETED",
                 "RUN_STATUS_CANCELLING",
                 "RUN_STATUS_CANCELLED",
+                "RUN_STATUS_SKIPPED",
             ]
         ):
             raise ValueError(
-                "must be one of enum values ('RUN_STATUS_UNKNOWN', 'RUN_STATUS_CREATED', 'RUN_STATUS_PENDING', 'RUN_STATUS_ACTIVE', 'RUN_STATUS_ERROR', 'RUN_STATUS_LOST', 'RUN_STATUS_COMPLETED', 'RUN_STATUS_CANCELLING', 'RUN_STATUS_CANCELLED')"
+                "must be one of enum values ('RUN_STATUS_UNKNOWN', 'RUN_STATUS_CREATED', 'RUN_STATUS_PENDING', 'RUN_STATUS_ACTIVE', 'RUN_STATUS_ERROR', 'RUN_STATUS_LOST', 'RUN_STATUS_COMPLETED', 'RUN_STATUS_CANCELLING', 'RUN_STATUS_CANCELLED', 'RUN_STATUS_SKIPPED')"
             )
         return value
 
@@ -298,7 +294,6 @@ class WorkflowRun(BaseModel):
                     if obj.get("actions") is not None
                     else None
                 ),
-                "previous_workflow_run_id": obj.get("previous_workflow_run_id"),
             }
         )
         return _obj

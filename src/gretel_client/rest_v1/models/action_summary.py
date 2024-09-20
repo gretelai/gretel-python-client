@@ -20,7 +20,7 @@ import re  # noqa: F401
 
 from typing import Any, ClassVar, Dict, List, Optional, Set
 
-from pydantic import BaseModel, ConfigDict, field_validator, StrictStr
+from pydantic import BaseModel, ConfigDict, Field, field_validator, StrictStr
 from typing_extensions import Self
 
 
@@ -29,11 +29,31 @@ class ActionSummary(BaseModel):
     ActionSummary
     """  # noqa: E501
 
-    name: StrictStr
-    action_type: StrictStr
-    status: Optional[StrictStr] = None
-    task_id: Optional[StrictStr] = None
-    __properties: ClassVar[List[str]] = ["name", "action_type", "status", "task_id"]
+    name: StrictStr = Field(description="The name of the action (v1) or step (v2)")
+    action_type: StrictStr = Field(description="The action_type (v1) or task (v2)")
+    status: Optional[StrictStr] = Field(
+        default=None, description="The status of the action"
+    )
+    task_id: Optional[StrictStr] = Field(
+        default=None,
+        description="The ID of the workflow task for this action, if it exists",
+    )
+    previous_run_manifest_id: Optional[StrictStr] = Field(
+        default=None,
+        description="The ID of the workflow run that should be used for checkpoint data. This is usually the ID of the most recent successfully completed run (or empty if there are no previous completed runs for this workflow). However, in the case of retrying failures, this will be the ID of the run being retried for failed actions so that it can pick up partial state from the previous attempt.",
+    )
+    input_run_manifest_id: Optional[StrictStr] = Field(
+        default=None,
+        description='The ID of the workflow run containing the input action run manifest to use. This is usually the ID of the workflow run to which both "this" action being summarized and its input belong. However, in the case of retrying failures, this field will reference the ID of the workflow run being retried if "this" action\'s input was successful in that previous run and thus skipped in this one. This field is empty for actions that do not take any input.',
+    )
+    __properties: ClassVar[List[str]] = [
+        "name",
+        "action_type",
+        "status",
+        "task_id",
+        "previous_run_manifest_id",
+        "input_run_manifest_id",
+    ]
 
     @field_validator("status")
     def status_validate_enum(cls, value):
@@ -52,10 +72,11 @@ class ActionSummary(BaseModel):
                 "RUN_STATUS_COMPLETED",
                 "RUN_STATUS_CANCELLING",
                 "RUN_STATUS_CANCELLED",
+                "RUN_STATUS_SKIPPED",
             ]
         ):
             raise ValueError(
-                "must be one of enum values ('RUN_STATUS_UNKNOWN', 'RUN_STATUS_CREATED', 'RUN_STATUS_PENDING', 'RUN_STATUS_ACTIVE', 'RUN_STATUS_ERROR', 'RUN_STATUS_LOST', 'RUN_STATUS_COMPLETED', 'RUN_STATUS_CANCELLING', 'RUN_STATUS_CANCELLED')"
+                "must be one of enum values ('RUN_STATUS_UNKNOWN', 'RUN_STATUS_CREATED', 'RUN_STATUS_PENDING', 'RUN_STATUS_ACTIVE', 'RUN_STATUS_ERROR', 'RUN_STATUS_LOST', 'RUN_STATUS_COMPLETED', 'RUN_STATUS_CANCELLING', 'RUN_STATUS_CANCELLED', 'RUN_STATUS_SKIPPED')"
             )
         return value
 
@@ -113,6 +134,8 @@ class ActionSummary(BaseModel):
                 "action_type": obj.get("action_type"),
                 "status": obj.get("status"),
                 "task_id": obj.get("task_id"),
+                "previous_run_manifest_id": obj.get("previous_run_manifest_id"),
+                "input_run_manifest_id": obj.get("input_run_manifest_id"),
             }
         )
         return _obj

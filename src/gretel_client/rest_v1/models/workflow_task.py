@@ -143,10 +143,11 @@ class WorkflowTask(BaseModel):
                 "RUN_STATUS_COMPLETED",
                 "RUN_STATUS_CANCELLING",
                 "RUN_STATUS_CANCELLED",
+                "RUN_STATUS_SKIPPED",
             ]
         ):
             raise ValueError(
-                "must be one of enum values ('RUN_STATUS_UNKNOWN', 'RUN_STATUS_CREATED', 'RUN_STATUS_PENDING', 'RUN_STATUS_ACTIVE', 'RUN_STATUS_ERROR', 'RUN_STATUS_LOST', 'RUN_STATUS_COMPLETED', 'RUN_STATUS_CANCELLING', 'RUN_STATUS_CANCELLED')"
+                "must be one of enum values ('RUN_STATUS_UNKNOWN', 'RUN_STATUS_CREATED', 'RUN_STATUS_PENDING', 'RUN_STATUS_ACTIVE', 'RUN_STATUS_ERROR', 'RUN_STATUS_LOST', 'RUN_STATUS_COMPLETED', 'RUN_STATUS_CANCELLING', 'RUN_STATUS_CANCELLED', 'RUN_STATUS_SKIPPED')"
             )
         return value
 
