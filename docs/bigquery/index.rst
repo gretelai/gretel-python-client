@@ -1,11 +1,11 @@
-Google Big Query Integration
+Google BigQuery Integration
 ----------------------------
 
 The Gretel Client provides interfaces that make it easy to
 work directly with BigQuery DataFrames via the ``bigframes``
 Python package.
 
-In order to use the Big Query integration, you must install
+In order to use the BigQuery integration, you must install
 ``bigframes`` directly. It is not installed as a dependency
 of the Gretel SDK.
 

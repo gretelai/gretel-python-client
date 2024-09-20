@@ -1,5 +1,5 @@
 m2r
-bigframes # for doc build
+bigframes # needed for docs build
 sphinx==6.2.1
 docutils==0.18.1
 mistune==0.8.4

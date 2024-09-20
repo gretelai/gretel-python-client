@@ -1,5 +1,5 @@
 """
-Interfaces for using Gretel with Google Big Query. This module
+Interfaces for using Gretel with Google BigQuery. This module
 assumes that the `bigframes` package is already installed as
 a transitive dependency.
 """
