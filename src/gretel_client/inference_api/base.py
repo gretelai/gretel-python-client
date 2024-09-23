@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 
 from gretel_client.config import ClientConfig, configure_session, get_session_config
 from gretel_client.rest.api_client import ApiClient
+from gretel_client.rest.configuration import Configuration
 
 MODELS_API_PATH = "/v1/inference/models"
 
@@ -147,6 +148,7 @@ class BaseInferenceAPI(ABC):
         self,
         backend_model: Optional[str] = None,
         *,
+        verify_ssl: bool = True,
         session: Optional[ClientConfig] = None,
         **session_kwargs,
     ):
@@ -164,7 +166,7 @@ class BaseInferenceAPI(ABC):
                 f"is configured to: {session.default_runner}"
             )
         self.endpoint = session.endpoint
-        self._api_client = session._get_api_client()
+        self._api_client = session._get_api_client(verify_ssl=verify_ssl)
         self._available_backend_models = get_full_navigator_model_list(self._api_client)
         self.backend_model = backend_model
 

@@ -303,6 +303,7 @@ class ClientConfig(ABC):
         config_cls: Type[ConfigT],
         max_retry_attempts: int = 3,
         backoff_factor: float = 1,
+        verify_ssl: bool = True,
         *,
         default_headers: Optional[dict[str, str]] = None,
     ) -> ClientT: ...
@@ -491,6 +492,7 @@ class DefaultClientConfig(ClientConfig):
         config_cls: Type[ConfigT],
         max_retry_attempts: int = 3,
         backoff_factor: float = 1,
+        verify_ssl: bool = True,
         *,
         default_headers: Optional[dict[str, str]] = None,
     ) -> ClientT:
@@ -523,6 +525,7 @@ class DefaultClientConfig(ClientConfig):
             max_retry_attempts=max_retry_attempts,
             backoff_factor=backoff_factor,
         )
+        configuration.verify_ssl = verify_ssl
         client = client_cls(configuration, **client_kwargs)
         client.default_headers.update(_metrics_headers() | (default_headers or {}))
         return client
@@ -591,6 +594,7 @@ class DelegatingClientConfig(ClientConfig):
         config_cls: Type[ConfigT],
         max_retry_attempts: int = 3,
         backoff_factor: float = 1,
+        verify_ssl: bool = True,
         *,
         default_headers: Optional[dict[str, str]] = None,
     ) -> ClientT:
@@ -599,6 +603,7 @@ class DelegatingClientConfig(ClientConfig):
             config_cls=config_cls,
             max_retry_attempts=max_retry_attempts,
             backoff_factor=backoff_factor,
+            verify_ssl=verify_ssl,
             default_headers=default_headers,
         )
 
@@ -628,6 +633,7 @@ class TaggedClientConfig(DelegatingClientConfig):
         config_cls: Type[ConfigT],
         max_retry_attempts: int = 3,
         backoff_factor: float = 1,
+        verify_ssl: bool = True,
         *,
         default_headers: Optional[dict[str, str]] = None,
     ) -> ClientT:
@@ -637,6 +643,7 @@ class TaggedClientConfig(DelegatingClientConfig):
             config_cls=config_cls,
             max_retry_attempts=max_retry_attempts,
             backoff_factor=backoff_factor,
+            verify_ssl=verify_ssl,
             default_headers=all_headers,
         )
 
