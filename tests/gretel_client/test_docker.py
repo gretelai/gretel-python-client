@@ -26,9 +26,9 @@ def test_docker_pull_progress(get_fixture: Callable):
 
 def test_container(request):
     c = Container(
-        image="hello-world:latest",
+        image="public.ecr.aws/gretelai/container-utils:system-check",
         auth_strategy=None,
-        params=[],
+        params=["echo", "Hello from Docker!"],
         remove=False,
         detach=True,
     )
