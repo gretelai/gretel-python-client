@@ -20,21 +20,19 @@ import re  # noqa: F401
 
 from typing import Any, ClassVar, Dict, List, Optional, Set
 
-from pydantic import BaseModel, ConfigDict, StrictStr
+from pydantic import BaseModel, ConfigDict
 from typing_extensions import Self
 
-from gretel_client.rest_v1.models.llm_config import LlmConfig
+from gretel_client.rest_v1.models.serverless_tenant import ServerlessTenant
 
 
-class ServerlessTenantConfig(BaseModel):
+class UpdateServerlessTenantResponse(BaseModel):
     """
-    ServerlessTenantConfig
+    UpdateServerlessTenantResponse
     """  # noqa: E501
 
-    cell_id: StrictStr
-    api_endpoint: StrictStr
-    enabled_llms: Optional[List[LlmConfig]] = None
-    __properties: ClassVar[List[str]] = ["cell_id", "api_endpoint", "enabled_llms"]
+    tenant: Optional[ServerlessTenant] = None
+    __properties: ClassVar[List[str]] = ["tenant"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -53,7 +51,7 @@ class ServerlessTenantConfig(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of ServerlessTenantConfig from a JSON string"""
+        """Create an instance of UpdateServerlessTenantResponse from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -73,18 +71,14 @@ class ServerlessTenantConfig(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of each item in enabled_llms (list)
-        _items = []
-        if self.enabled_llms:
-            for _item in self.enabled_llms:
-                if _item:
-                    _items.append(_item.to_dict())
-            _dict["enabled_llms"] = _items
+        # override the default output from pydantic by calling `to_dict()` of tenant
+        if self.tenant:
+            _dict["tenant"] = self.tenant.to_dict()
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of ServerlessTenantConfig from a dict"""
+        """Create an instance of UpdateServerlessTenantResponse from a dict"""
         if obj is None:
             return None
 
@@ -93,13 +87,11 @@ class ServerlessTenantConfig(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "cell_id": obj.get("cell_id"),
-                "api_endpoint": obj.get("api_endpoint"),
-                "enabled_llms": (
-                    [LlmConfig.from_dict(_item) for _item in obj["enabled_llms"]]
-                    if obj.get("enabled_llms") is not None
+                "tenant": (
+                    ServerlessTenant.from_dict(obj["tenant"])
+                    if obj.get("tenant") is not None
                     else None
-                ),
+                )
             }
         )
         return _obj

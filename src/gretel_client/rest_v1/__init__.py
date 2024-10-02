@@ -83,6 +83,7 @@ from gretel_client.rest_v1.models.list_connections_response import (
 from gretel_client.rest_v1.models.list_serverless_tenants_response import (
     ListServerlessTenantsResponse,
 )
+from gretel_client.rest_v1.models.llm_config import LlmConfig
 from gretel_client.rest_v1.models.log_envelope import LogEnvelope
 from gretel_client.rest_v1.models.poll_serverless_tenants_response import (
     PollServerlessTenantsResponse,
@@ -114,6 +115,12 @@ from gretel_client.rest_v1.models.status import Status
 from gretel_client.rest_v1.models.status_details import StatusDetails
 from gretel_client.rest_v1.models.update_connection_request import (
     UpdateConnectionRequest,
+)
+from gretel_client.rest_v1.models.update_serverless_tenant_request import (
+    UpdateServerlessTenantRequest,
+)
+from gretel_client.rest_v1.models.update_serverless_tenant_response import (
+    UpdateServerlessTenantResponse,
 )
 from gretel_client.rest_v1.models.user_profile import UserProfile
 from gretel_client.rest_v1.models.user_profile_image import UserProfileImage

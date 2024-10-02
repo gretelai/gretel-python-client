@@ -20,21 +20,35 @@ import re  # noqa: F401
 
 from typing import Any, ClassVar, Dict, List, Optional, Set
 
-from pydantic import BaseModel, ConfigDict, StrictStr
-from typing_extensions import Self
+from pydantic import BaseModel, ConfigDict, Field, field_validator, StrictStr
+from typing_extensions import Annotated, Self
 
 from gretel_client.rest_v1.models.llm_config import LlmConfig
 
 
-class ServerlessTenantConfig(BaseModel):
+class UpdateServerlessTenantRequest(BaseModel):
     """
-    ServerlessTenantConfig
+    UpdateServerlessTenantRequest
     """  # noqa: E501
 
-    cell_id: StrictStr
-    api_endpoint: StrictStr
+    name: Optional[Annotated[str, Field(min_length=3, strict=True, max_length=63)]] = (
+        Field(default=None, description="A human-readable name to identify the tenant.")
+    )
+    domain_guid: Optional[StrictStr] = None
     enabled_llms: Optional[List[LlmConfig]] = None
-    __properties: ClassVar[List[str]] = ["cell_id", "api_endpoint", "enabled_llms"]
+    __properties: ClassVar[List[str]] = ["name", "domain_guid", "enabled_llms"]
+
+    @field_validator("name")
+    def name_validate_regular_expression(cls, value):
+        """Validates the regular expression"""
+        if value is None:
+            return value
+
+        if not re.match(r"^[a-z](-?[a-z0-9]+)*$", value):
+            raise ValueError(
+                r"must validate the regular expression /^[a-z](-?[a-z0-9]+)*$/"
+            )
+        return value
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -53,7 +67,7 @@ class ServerlessTenantConfig(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of ServerlessTenantConfig from a JSON string"""
+        """Create an instance of UpdateServerlessTenantRequest from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -84,7 +98,7 @@ class ServerlessTenantConfig(BaseModel):
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of ServerlessTenantConfig from a dict"""
+        """Create an instance of UpdateServerlessTenantRequest from a dict"""
         if obj is None:
             return None
 
@@ -93,8 +107,8 @@ class ServerlessTenantConfig(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "cell_id": obj.get("cell_id"),
-                "api_endpoint": obj.get("api_endpoint"),
+                "name": obj.get("name"),
+                "domain_guid": obj.get("domain_guid"),
                 "enabled_llms": (
                     [LlmConfig.from_dict(_item) for _item in obj["enabled_llms"]]
                     if obj.get("enabled_llms") is not None
