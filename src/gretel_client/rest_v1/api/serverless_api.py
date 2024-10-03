@@ -1004,6 +1004,7 @@ class ServerlessApi:
     @validate_call
     def update_serverless_tenant(
         self,
+        tenant_guid: StrictStr,
         update_serverless_tenant_request: UpdateServerlessTenantRequest,
         _request_timeout: Union[
             None,
@@ -1020,6 +1021,8 @@ class ServerlessApi:
         """update_serverless_tenant
 
 
+        :param tenant_guid: (required)
+        :type tenant_guid: str
         :param update_serverless_tenant_request: (required)
         :type update_serverless_tenant_request: UpdateServerlessTenantRequest
         :param _request_timeout: timeout setting for this request. If one
@@ -1045,6 +1048,7 @@ class ServerlessApi:
         """  # noqa: E501
 
         _param = self._update_serverless_tenant_serialize(
+            tenant_guid=tenant_guid,
             update_serverless_tenant_request=update_serverless_tenant_request,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -1067,6 +1071,7 @@ class ServerlessApi:
     @validate_call
     def update_serverless_tenant_with_http_info(
         self,
+        tenant_guid: StrictStr,
         update_serverless_tenant_request: UpdateServerlessTenantRequest,
         _request_timeout: Union[
             None,
@@ -1083,6 +1088,8 @@ class ServerlessApi:
         """update_serverless_tenant
 
 
+        :param tenant_guid: (required)
+        :type tenant_guid: str
         :param update_serverless_tenant_request: (required)
         :type update_serverless_tenant_request: UpdateServerlessTenantRequest
         :param _request_timeout: timeout setting for this request. If one
@@ -1108,6 +1115,7 @@ class ServerlessApi:
         """  # noqa: E501
 
         _param = self._update_serverless_tenant_serialize(
+            tenant_guid=tenant_guid,
             update_serverless_tenant_request=update_serverless_tenant_request,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -1130,6 +1138,7 @@ class ServerlessApi:
     @validate_call
     def update_serverless_tenant_without_preload_content(
         self,
+        tenant_guid: StrictStr,
         update_serverless_tenant_request: UpdateServerlessTenantRequest,
         _request_timeout: Union[
             None,
@@ -1146,6 +1155,8 @@ class ServerlessApi:
         """update_serverless_tenant
 
 
+        :param tenant_guid: (required)
+        :type tenant_guid: str
         :param update_serverless_tenant_request: (required)
         :type update_serverless_tenant_request: UpdateServerlessTenantRequest
         :param _request_timeout: timeout setting for this request. If one
@@ -1171,6 +1182,7 @@ class ServerlessApi:
         """  # noqa: E501
 
         _param = self._update_serverless_tenant_serialize(
+            tenant_guid=tenant_guid,
             update_serverless_tenant_request=update_serverless_tenant_request,
             _request_auth=_request_auth,
             _content_type=_content_type,
@@ -1188,6 +1200,7 @@ class ServerlessApi:
 
     def _update_serverless_tenant_serialize(
         self,
+        tenant_guid,
         update_serverless_tenant_request,
         _request_auth,
         _content_type,
@@ -1207,6 +1220,8 @@ class ServerlessApi:
         _body_params: Optional[bytes] = None
 
         # process the path parameters
+        if tenant_guid is not None:
+            _path_params["tenant_guid"] = tenant_guid
         # process the query parameters
         # process the header parameters
         # process the form parameters
@@ -1235,7 +1250,7 @@ class ServerlessApi:
 
         return self.api_client.param_serialize(
             method="POST",
-            resource_path="/v1/serverless/tenants/update/",
+            resource_path="/v1/serverless/tenants/{tenant_guid}",
             path_params=_path_params,
             query_params=_query_params,
             header_params=_header_params,
