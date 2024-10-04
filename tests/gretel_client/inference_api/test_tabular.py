@@ -22,7 +22,7 @@ def test_generate_error_retry(mock_models, mock_all_models):
     mock_models.return_value = [
         {"model_id": "gretelai/tabular-v0", "model_type": "TABULAR"}
     ]
-    api = tabular.TabularInferenceAPI(validate=False)
+    api = tabular.TabularInferenceAPI(skip_configure_session=True)
     api_response = {
         "data": [
             {
@@ -67,7 +67,7 @@ def test_generate_timeout(
     mock_models.return_value = [
         {"model_id": "gretelai/tabular-v0", "model_type": "TABULAR"}
     ]
-    api = tabular.TabularInferenceAPI(validate=False)
+    api = tabular.TabularInferenceAPI(skip_configure_session=True)
 
     timeout = 60
     api_response = {
