@@ -50,7 +50,7 @@ def test_configure_env(write_config: MagicMock, runner: CliRunner):
             GRETEL_CONFIG_FILE: "none",
         },
     ):
-        configure_session(ClientConfig())
+        configure_session(ClientConfig(), validate=False)
         assert get_session_config().api_key == orig_api
         assert get_session_config().endpoint == orig_endpoint
         assert get_session_config().default_project_name == orig_proj
@@ -64,6 +64,7 @@ def test_configure_env(write_config: MagicMock, runner: CliRunner):
                 new_endpoint,
                 "--project",
                 new_proj,
+                "--skip-validate",
             ],
         )
 
@@ -107,7 +108,8 @@ def test_create_nonhybrid_project_warn(create_project: MagicMock, runner: CliRun
     create_project.return_value = mock_project
 
     configure_session(
-        ClientConfig(default_runner="hybrid", artifact_endpoint="s3://my-artifacts")
+        ClientConfig(default_runner="hybrid", artifact_endpoint="s3://my-artifacts"),
+        validate=False,
     )
     cmd = runner.invoke(
         cli,
@@ -139,7 +141,7 @@ def test_create_nonhybrid_project_no_warn_if_not_hybrid_default_runner(
     mock_project.runner_mode = None
     create_project.return_value = mock_project
 
-    configure_session(ClientConfig(default_runner="cloud"))
+    configure_session(ClientConfig(default_runner="cloud"), validate=False)
     cmd = runner.invoke(
         cli,
         [
@@ -171,7 +173,8 @@ def test_create_nonhybrid_project_no_warn_if_explicit_project_type(
     create_project.return_value = mock_project
 
     configure_session(
-        ClientConfig(default_runner="hybrid", artifact_endpoint="s3://my-artifacts")
+        ClientConfig(default_runner="hybrid", artifact_endpoint="s3://my-artifacts"),
+        validate=False,
     )
     cmd = runner.invoke(
         cli,
@@ -206,7 +209,8 @@ def test_create_hybrid_project_no_warn_if_implicit(
     create_project.return_value = mock_project
 
     configure_session(
-        ClientConfig(default_runner="hybrid", artifact_endpoint="s3://my-artifacts")
+        ClientConfig(default_runner="hybrid", artifact_endpoint="s3://my-artifacts"),
+        validate=False,
     )
     cmd = runner.invoke(
         cli,

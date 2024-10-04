@@ -24,9 +24,16 @@ class GretelFactories:
 
     _session: ClientConfig
 
-    def __init__(self, *, session: Optional[ClientConfig] = None, **session_kwargs):
+    def __init__(
+        self,
+        *,
+        session: Optional[ClientConfig] = None,
+        skip_configure_session: Optional[bool] = False,
+        **session_kwargs,
+    ):
         if session is None:
-            if len(session_kwargs) > 0:
+            # Only used for unit tests
+            if not skip_configure_session:
                 configure_session(**session_kwargs)
             session = get_session_config()
         elif len(session_kwargs) > 0:

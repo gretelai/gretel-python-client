@@ -52,7 +52,7 @@ def test_project_creation(
         project_name="project-name",
         api_key="grtu...",
         endpoint="https://api-dev.gretel.cloud",
-        validate=True,
+        skip_configure_session=True,
     )
     assert mock_get_project.call_count == 2
     assert mock_get_project.call_args_list[0] == call(

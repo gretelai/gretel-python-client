@@ -32,6 +32,7 @@ def gretel() -> Gretel:
         project_name=f"pytest-tabular-{uuid.uuid4().hex[:8]}",
         api_key=os.getenv("GRETEL_API_KEY"),
         endpoint="https://api-dev.gretel.cloud",
+        validate=False,
     )
     yield gretel
     gretel._project.delete()
@@ -161,6 +162,7 @@ def test_gretel_no_project_set_exceptions():
     gretel = Gretel(
         api_key=os.getenv("GRETEL_API_KEY"),
         endpoint="https://api-dev.gretel.cloud",
+        validate=False,
     )
 
     assert gretel._project is None

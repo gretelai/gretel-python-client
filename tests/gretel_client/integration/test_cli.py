@@ -30,11 +30,11 @@ def clear_session_config():
     an existing Gretel config.
     """
     with patch.dict(os.environ, {}, clear=True):
-        configure_session(ClientConfig())
+        configure_session(ClientConfig(), validate=False)
     try:
         yield
     finally:
-        configure_session(_load_config())
+        configure_session(_load_config(), validate=False)
 
 
 def test_cli(runner):
@@ -45,7 +45,9 @@ def test_cli(runner):
 
 @patch("gretel_client.cli.cli.write_config")
 def test_cli_does_configure(write_config: MagicMock, runner: CliRunner):
-    cmd = runner.invoke(cli, ["configure"], input="\n\n\ngrtu...\n\n")
+    cmd = runner.invoke(
+        cli, ["configure", "--skip-validate"], input="\n\n\ngrtu...\n\n"
+    )
     assert not cmd.exception
     write_config.assert_called_once_with(
         ClientConfig(
@@ -65,7 +67,7 @@ def test_cli_does_configure_with_project(
     with clear_session_config():
         cmd = runner.invoke(
             cli,
-            ["configure"],
+            ["configure", "--skip-validate"],
             input=f"https://api-dev.gretel.cloud\n\n\n{os.getenv(GRETEL_API_KEY)}\n{project.name}\n",
             catch_exceptions=True,
         )
@@ -88,7 +90,7 @@ def test_cli_does_configure_with_custom_artifact_endpoint_and_hybrid_runner(
     with clear_session_config():
         cmd = runner.invoke(
             cli,
-            ["configure"],
+            ["configure", "--skip-validate"],
             input=f"https://api-dev.gretel.cloud\ns3://my-bucket\nhybrid\n{os.getenv(GRETEL_API_KEY)}\n\n",
             catch_exceptions=True,
         )
@@ -112,7 +114,7 @@ def test_cli_fails_configure_with_custom_artifact_endpoint_and_default_cloud_run
     with clear_session_config():
         cmd = runner.invoke(
             cli,
-            ["configure"],
+            ["configure", "--skip-validate"],
             input=f"https://api-dev.gretel.cloud\ns3://my-bucket\n\n{os.getenv(GRETEL_API_KEY)}\n\n",
             catch_exceptions=True,
         )
@@ -127,7 +129,7 @@ def test_cli_does_pass_configure_with_bad_project(
     with clear_session_config():
         cmd = runner.invoke(
             cli,
-            ["configure"],
+            ["configure", "--skip-validate"],
             input=f"{DEFAULT_GRETEL_ENDPOINT}\n\n{os.getenv(GRETEL_API_KEY)}\nbad-project-key\n",
             catch_exceptions=True,
         )
@@ -144,7 +146,7 @@ def test_missing_api_key(runner: CliRunner):
 
 def test_invalid_api_key(runner: CliRunner):
     with clear_session_config():
-        configure_session(ClientConfig(api_key="invalid"))
+        configure_session(ClientConfig(api_key="invalid"), validate=False)
 
         cmd = runner.invoke(cli, ["projects", "create", "--name", "foo"])
         assert cmd.exit_code == 1

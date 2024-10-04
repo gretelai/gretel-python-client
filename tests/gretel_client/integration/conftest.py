@@ -63,10 +63,10 @@ def configure_session_client(request):
             configurator = configure_hybrid_session
             configure_kwargs = hybrid.kwargs or {}
 
-        configurator(config, **configure_kwargs)
+        configurator(config, validate=False, **configure_kwargs)
 
     yield
-    configure_session(_load_config())
+    configure_session(_load_config(), validate=False)
 
 
 @pytest.fixture

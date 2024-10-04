@@ -25,6 +25,7 @@ from gretel_client.rest.api.projects_api import ProjectsApi
 from gretel_client.rest.api.users_api import UsersApi
 from gretel_client.rest.api_client import ApiClient
 from gretel_client.rest.configuration import Configuration
+from gretel_client.rest_v1.api.serverless_api import ServerlessApi
 from gretel_client.rest_v1.api_client import ApiClient as V1ApiClient
 from gretel_client.rest_v1.configuration import Configuration as V1Configuration
 
@@ -292,7 +293,10 @@ class ClientConfig(ABC):
 
     @property
     def stage(self) -> str:
-        if "https://api-dev.gretel" in self.endpoint:
+        if (
+            "https://api-dev.gretel" in self.endpoint
+            or ".dev.gretel.cloud" in self.endpoint
+        ):
             return "dev"
         return "prod"
 
@@ -315,6 +319,25 @@ class ClientConfig(ABC):
         return self._get_api_client_generic(
             V1ApiClient, V1Configuration, *args, **kwargs
         )
+
+    def set_serverless_api(self) -> bool:
+        serverless: ServerlessApi = self.get_v1_api(ServerlessApi)
+        serverless_tenants_resp = serverless.list_serverless_tenants()
+        if (
+            isinstance(serverless_tenants_resp.tenants, list)
+            and len(serverless_tenants_resp.tenants) > 0
+        ):
+            tenant = serverless_tenants_resp.tenants[0]
+            tenant_endpoint = tenant.config.api_endpoint
+            if not tenant_endpoint.startswith("https://"):
+                tenant_endpoint = f"https://{tenant_endpoint}"
+            if tenant_endpoint != self.endpoint:
+                print(
+                    "Found a serverless tenant associated with this API key. Updating client configuration to use the tenant API endpoint."
+                )
+                self.endpoint = tenant_endpoint
+            return True
+        return False
 
     def get_api(
         self,
@@ -822,7 +845,7 @@ def configure_session(
     endpoint: Optional[str] = None,
     artifact_endpoint: Optional[str] = None,
     cache: str = "no",
-    validate: bool = False,
+    validate: bool = True,
     clear: bool = False,
 ):
     """Updates client config for the session
@@ -895,6 +918,9 @@ def configure_session(
         _session_client_config = config
 
     if validate:
+        is_using_serverless = config.set_serverless_api()
+        if is_using_serverless:
+            print("Serverless tenant detected.")
         print(f"Using endpoint {config.endpoint}")
         try:
             print(f"Logged in as {config.email} \u2705")

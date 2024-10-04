@@ -64,14 +64,18 @@ SIMPSONS_TABLE_DF = pd.DataFrame(SIMPSONS_TABLE)
 @pytest.fixture(scope="module")
 def llm():
     return NaturalLanguageInferenceAPI(
-        api_key=os.getenv("GRETEL_API_KEY"), endpoint="https://api-dev.gretel.cloud"
+        api_key=os.getenv("GRETEL_API_KEY"),
+        endpoint="https://api-dev.gretel.cloud",
+        validate=False,
     )
 
 
 @pytest.fixture(scope="module")
 def nav():
     return TabularInferenceAPI(
-        api_key=os.getenv("GRETEL_API_KEY"), endpoint="https://api-dev.gretel.cloud"
+        api_key=os.getenv("GRETEL_API_KEY"),
+        endpoint="https://api-dev.gretel.cloud",
+        validate=False,
     )
 
 
@@ -142,7 +146,7 @@ def test_nav_inference_api_edit_stream(nav):
 
 def test_nav_inference_api_invalid_backend_model():
     with pytest.raises(GretelInferenceAPIError):
-        TabularInferenceAPI(backend_model="invalid_model")
+        TabularInferenceAPI(backend_model="invalid_model", skip_configure_session=True)
 
 
 def test_nav_inference_api_edit_invalid_seed_data_type(nav):

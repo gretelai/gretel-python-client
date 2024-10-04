@@ -150,16 +150,18 @@ class BaseInferenceAPI(ABC):
         *,
         verify_ssl: bool = True,
         session: Optional[ClientConfig] = None,
+        skip_configure_session: Optional[bool] = False,
         **session_kwargs,
     ):
         if session is None:
-            if len(session_kwargs) > 0:
+            # Only used for unit tests
+            if not skip_configure_session:
                 configure_session(**session_kwargs)
             session = get_session_config()
         elif len(session_kwargs) > 0:
             raise ValueError("cannot specify session arguments when passing a session")
 
-        if session.default_runner != "cloud":
+        if session.default_runner != "cloud" and not ".serverless." in session.endpoint:
             raise GretelInferenceAPIError(
                 "Gretel's Inference API is currently only "
                 "available within Gretel Cloud. Your current runner "

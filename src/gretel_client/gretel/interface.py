@@ -5,7 +5,12 @@ import uuid
 from pathlib import Path
 from typing import Optional, Union
 
-from gretel_client.config import add_session_context, ClientConfig, configure_session
+from gretel_client.config import (
+    add_session_context,
+    ClientConfig,
+    configure_session,
+    get_session_config,
+)
 from gretel_client.dataframe import _DataFrameT
 from gretel_client.factories import GretelFactories
 from gretel_client.gretel.artifact_fetching import (
@@ -101,11 +106,14 @@ class Gretel:
         project_name: Optional[str] = None,
         project_display_name: Optional[str] = None,
         session: Optional[ClientConfig] = None,
+        skip_configure_session: Optional[bool] = False,
         **session_kwargs,
     ):
         if session is None:
-            if len(session_kwargs) > 0:
+            # Only used for unit tests
+            if not skip_configure_session:
                 configure_session(**session_kwargs)
+            session = get_session_config()
         elif len(session_kwargs) > 0:
             raise ValueError("cannot specify session arguments when passing a session")
 
@@ -114,7 +122,9 @@ class Gretel:
         )
         self._user_id: str = get_me(session=self._session)["_id"][9:]
         self._project: Optional[Project] = None
-        self.factories = GretelFactories(session=self._session)
+        self.factories = GretelFactories(
+            session=self._session, skip_configure_session=skip_configure_session
+        )
 
         if project_name is not None:
             self.set_project(name=project_name, display_name=project_display_name)

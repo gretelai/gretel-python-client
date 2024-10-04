@@ -86,6 +86,11 @@ def _check_endpoint(endpoint: str) -> str:
     metavar="PROJECT",
     help="Default Gretel project.",
 )
+@click.option(
+    "--skip-validate",
+    is_flag=True,
+    help="The API connection will be validated by default unless this flag is set.",
+)
 @pass_session
 def configure(
     sc: SessionContext,
@@ -94,6 +99,7 @@ def configure(
     api_key: str,
     project: str,
     default_runner: str,
+    skip_validate: bool,
 ):
     project_name = None if project == "none" else project
     endpoint = _check_endpoint(endpoint)
@@ -108,7 +114,7 @@ def configure(
         default_runner=default_runner,
     )
     config.update_default_project(project_id=project_name)
-    configure_session(config)
+    configure_session(config, validate=not skip_validate)
 
     config_path = write_config(config)
     sc.log.info(f"Configuration written to {config_path}. Done.")

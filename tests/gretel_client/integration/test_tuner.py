@@ -32,6 +32,7 @@ def gretel() -> Gretel:
         project_name=f"pytest-tuner-{uuid.uuid4().hex[:8]}",
         api_key=os.getenv("GRETEL_API_KEY"),
         endpoint="https://api-dev.gretel.cloud",
+        validate=False,
     )
     yield gretel
     gretel.get_project().delete()

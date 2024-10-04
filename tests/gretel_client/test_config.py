@@ -73,15 +73,15 @@ def test_does_set_session_factory(dev_ep):
         )
     try:
         assert get_session_config() != config
-        configure_session(config)
+        configure_session(config, validate=False)
         assert get_session_config() == config
     finally:
-        configure_session(_load_config())
+        configure_session(_load_config(), validate=False)
 
 
 @patch.dict(os.environ, {"GRETEL_API_KEY": "grtutest"})
 def test_can_get_api_bindings():
-    configure_session(ClientConfig.from_env())
+    configure_session(ClientConfig.from_env(), validate=False)
 
     client = get_session_config()
     assert isinstance(client.get_api(ProjectsApi), ProjectsApi)
@@ -91,7 +91,7 @@ def test_can_get_api_bindings():
     os.environ, {"GRETEL_API_KEY": "grtutest", "http_proxy": "http://localhost:8080"}
 )
 def test_proxy_set_http():
-    configure_session(ClientConfig.from_env())
+    configure_session(ClientConfig.from_env(), validate=False)
 
     config = get_session_config()
     client = config.get_api(ProjectsApi)
@@ -102,7 +102,7 @@ def test_proxy_set_http():
     os.environ, {"GRETEL_API_KEY": "grtutest", "https_proxy": "https://localhost:8080"}
 )
 def test_proxy_set_https():
-    configure_session(ClientConfig.from_env())
+    configure_session(ClientConfig.from_env(), validate=False)
 
     config = get_session_config()
     client = config.get_api(ProjectsApi)
@@ -118,7 +118,7 @@ def test_proxy_set_https():
     },
 )
 def test_proxy_set_all_proxy():
-    configure_session(ClientConfig.from_env())
+    configure_session(ClientConfig.from_env(), validate=False)
 
     config = get_session_config()
     client = config.get_api(ProjectsApi)
@@ -131,7 +131,8 @@ def test_configure_preview_features():
         {GRETEL_PREVIEW_FEATURES: PreviewFeatures.ENABLED.value},
     ):
         configure_session(
-            _load_config()
+            _load_config(),
+            validate=False,
         )  # ensure the session is reloaded with new env variables
         assert get_session_config().preview_features_enabled
 
@@ -151,14 +152,14 @@ def test_configure_session_with_cache(
     get_pass.return_value = "grtu..."
 
     with mock.patch.dict("os.environ", {}, clear=True):
-        configure_session(api_key="prompt", cache="yes")
+        configure_session(api_key="prompt", cache="yes", validate=False)
     get_pass.assert_called_once()
     write_config.assert_called_once()
     assert write_config.call_args[0][0].api_key == "grtu..."
 
     write_config.reset_mock()
 
-    configure_session(api_key="grtu...")
+    configure_session(api_key="grtu...", validate=False)
     write_config.assert_not_called()
 
 
@@ -166,7 +167,7 @@ def test_configure_session_with_cache(
 def test_clear_gretel_config(_get_config_path: MagicMock):
     _get_config_path.return_value.exists.return_value = False
     with mock.patch.dict("os.environ", {}, clear=True):
-        configure_session(clear=True)
+        configure_session(clear=True, validate=False)
     config_path = _get_config_path.return_value
     config_path.unlink.assert_called_once()
     config_path.parent.rmdir.assert_called_once()
@@ -181,6 +182,7 @@ def test_configure_hybrid_session(_get_config_path, dev_ep):
             endpoint=dev_ep,
             default_runner="hybrid",
             artifact_endpoint="s3://my-bucket",
+            validate=False,
         )
     config = get_session_config()
 
@@ -199,6 +201,7 @@ def test_custom_artifact_endpoint_strips_trailing_slash(_get_config_path, dev_ep
             endpoint=dev_ep,
             default_runner="hybrid",
             artifact_endpoint="s3://my-bucket/",
+            validate=False,
         )
     config = get_session_config()
 
@@ -227,6 +230,7 @@ def test_configure_session_cached_values_plus_overrides(
             artifact_endpoint="s3://bucket-xyz",
             api_key=api_key,
             cache=cache,
+            validate=False,
         )
         config = get_session_config()
 
@@ -273,6 +277,7 @@ def test_configure_session_cached_values_plus_invalid_overrides(
             configure_session(
                 api_key="grtu...",
                 artifact_endpoint="s3://bucket-xyz",
+                validate=False,
             )
 
         tmp.close()
@@ -287,7 +292,7 @@ def test_metrics_headers(dev_ep):
         api = session.get_api(ProjectsApi)
         return unquote_plus(_get_headers(api)[CLIENT_METRICS_HEADER_KEY])
 
-    configure_session(api_key="grtu...")
+    configure_session(api_key="grtu...", validate=False)
 
     common = f"python_sdk_version={_get_client_version()}"
 
