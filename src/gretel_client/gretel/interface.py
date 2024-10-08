@@ -25,12 +25,17 @@ from gretel_client.gretel.config_setup import (
     create_model_config_from_base,
     extract_model_config_section,
     get_model_docs_url,
+    smart_read_model_config,
 )
 from gretel_client.gretel.exceptions import (
     GretelJobSubmissionError,
     GretelProjectNotSetError,
 )
-from gretel_client.gretel.job_results import GenerateJobResults, TrainJobResults
+from gretel_client.gretel.job_results import (
+    GenerateJobResults,
+    TrainJobResults,
+    TransformResult,
+)
 from gretel_client.helpers import poll
 from gretel_client.projects import get_project, Project
 from gretel_client.projects.jobs import Status
@@ -51,6 +56,7 @@ logger.addHandler(logging.StreamHandler(sys.stdout))
 logger.setLevel(logging.INFO)
 
 HIGH_LEVEL_SESSION_METADATA = {"high_level_interface": "1"}
+TRANSFORM_DOCS_URL = "https://docs.gretel.ai/create-synthetic-data/models/transform/v2"
 
 
 def _convert_to_valid_data_source(
@@ -583,6 +589,108 @@ class Gretel:
         )
 
         return results
+
+    def submit_transform(
+        self,
+        config: Union[str, Path, dict],
+        *,
+        data_source: Union[str, Path, _DataFrameT, None],
+        job_label: Optional[str] = None,
+        wait: bool = True,
+        verbose_logging: bool = False,
+    ):
+        """Transform a dataset using Gretel Transform v2.
+
+        Args:
+            config: The transform config as a yaml file path, yaml string, or dict.
+            data_source: Training data source as a file path or pandas DataFrame.
+            job_label: Descriptive label to append to job the name.
+            wait: If True, wait for the job to complete before returning.
+            verbose_logging: If True, will print all logs from the job.
+
+        Raises:
+            GretelJobSubmissionError: If any model besides transform v2 is used or an error occurs during submission
+            ModelConfigReadError: If the model config is invalid
+
+        Returns:
+            Transform results dataclass with the transformed_dataframe, transform_logs
+            and  as attributes.
+
+        Example::
+
+            from gretel_client import Gretel
+            gretel = Gretel(api_key="prompt")
+
+            config = '''schema_version: "1.0"
+
+            name: "transform v2 test model"
+
+            models:
+              - transform_v2:
+                  data_source: "_"
+                  globals:
+                    seed: 123
+                  classify:
+                    enabled: false
+                  steps:
+                    - rows:
+                        update:
+                          - name: age
+                            value: fake(seed=this).bothify(text="##")
+            '''
+
+            data_source="https://gretel-public-website.s3-us-west-2.amazonaws.com/datasets/USAdultIncome5k.csv"
+
+            transform_result = gretel.submit_transform(
+                config=config,
+                data_source=tabular_data_source,
+                job_label="testing123",
+            )
+
+            # access resulted transform file
+            transformed_data = transform_result.transformed_df
+        """
+        job_config = smart_read_model_config(config)
+
+        model_type, _ = extract_model_config_section(job_config)
+        if model_type != "transform_v2":
+            raise GretelJobSubmissionError(
+                "Only transform_v2 is supported for 'submit_transform'"
+            )
+
+        if job_label is not None:
+            job_config["name"] = f"{job_config['name']}-{job_label}"
+
+        data_source = _convert_to_valid_data_source(data_source)
+        project = self.get_project()
+
+        model = project.create_model_obj(
+            model_config=job_config, data_source=data_source
+        )
+        project_url = project.get_console_url()
+        logger.info(
+            f"Submitting transform job...\nTransform Docs: {TRANSFORM_DOCS_URL}"
+        )
+
+        model.submit()
+
+        logger.info(
+            f"Console URL: {project_url}/models/{model.model_id}/activity\n"
+            f"Model ID: {model.model_id}"
+        )
+
+        transform_result = TransformResult(project=project, model=model)
+        if wait:
+            poll(model, verbose=verbose_logging)
+            if model.status != Status.COMPLETED:
+                logger.warning(
+                    "Transform didn't complete successfully. Job status was "
+                    f"'{model.status}', details: {model.errors}"
+                )
+            transform_result.refresh()
+
+        self._last_model = model
+        return transform_result
 
     def __repr__(self):
         name = self._project.name if self._project else None

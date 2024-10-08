@@ -1,6 +1,8 @@
-from abc import ABC, abstractproperty
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import List, Optional
+
+import yaml
 
 try:
     import pandas as pd
@@ -48,7 +50,8 @@ class GretelJobResults(ABC):
     def project_url(self) -> str:
         return self.project.get_console_url()
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def model_url(self) -> str: ...
 
 
@@ -172,6 +175,73 @@ class GenerateJobResults(GretelJobResults):
 
     def __repr__(self):
         p = ["project_id", "model_id", "record_id", "job_status"]
+        r = "\n".join([f"    {k}: {getattr(self, k)}" for k in p]) + "\n)\n"
+        r = "(\n" + r
+        return f"{self.__class__.__name__}{r}"
+
+
+@dataclass
+class TransformResult(GretelJobResults):
+    """
+    Should not be used directly.
+
+    Stores metadata and a transformed DataFrame
+    that was created from a Gretel Transforms job.
+    """
+
+    transform_logs: Optional[List[dict]] = None
+    """Logs created during Transform job."""
+
+    transformed_df: Optional[pd.DataFrame] = None
+    """A DataFrame of the transformed table. This will
+    not be populated until the trasnforms job succeeds."""
+
+    transformed_data_link: Optional[str] = None
+    """URI to the transformed data (as a flat file). This will 
+    not be populated until the transforms job succeeds."""
+
+    @property
+    def model_url(self) -> str:
+        """
+        The Gretel Console URL for the Transform model.
+        """
+        return f"{self.project_url}/models/{self.model_id}/data"
+
+    @property
+    def model_config(self) -> str:
+        """
+        The Transforms config that was used.
+        """
+        return yaml.safe_dump(self.model.model_config)
+
+    @property
+    def job_status(self) -> Status:
+        """The current status of the transform job."""
+        self.model.refresh()
+        return self.model.status
+
+    def refresh(self) -> None:
+        """Refresh the transform job result attributes."""
+        if self.job_status == Status.COMPLETED:
+            if self.transformed_data_link is None:
+                self.transformed_data_link = self.model.get_artifact_link(
+                    "data_preview"
+                )
+            if self.transformed_df is None and PANDAS_IS_INSTALLED:
+                with self.model.get_artifact_handle("data_preview") as fin:
+                    self.transformed_df = pd.read_csv(fin)
+
+        # We can fetch model logs no matter what
+        self.transform_logs = fetch_model_logs(self.model)
+
+    def wait_for_completion(self) -> None:
+        """Wait for transforms job to finish running."""
+        if self.job_status != Status.COMPLETED:
+            poll(self.model, verbose=False)
+            self.refresh()
+
+    def __repr__(self):
+        p = ["project_id", "model_id", "job_status"]
         r = "\n".join([f"    {k}: {getattr(self, k)}" for k in p]) + "\n)\n"
         r = "(\n" + r
         return f"{self.__class__.__name__}{r}"
