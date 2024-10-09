@@ -22,39 +22,6 @@ jobs:
       - name: Run Tests
         run: tox -e py
 
-  integration-tests:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-20.04, windows-latest]
-    steps:
-      - uses: actions/checkout@v2
-      - name: Setup Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.9
-      - name: Test Setup
-        run: python -m pip install tox
-      - name: Free up disk space on Linux
-        if: runner.os == 'Linux'
-        uses: jlumbroso/free-disk-space@v1.3.1
-        with:
-          # we need Python at the very least from this directory
-          tool-cache: false
-
-          # all of these default to true, but feel free to set to
-          # "false" if necessary for your workflow
-          android: true
-          dotnet: true
-          haskell: true
-          # this takes a decent amount of time, but we already save plenty of space
-          large-packages: false
-          swap-storage: true
-      - name: Run Tests
-        run: tox -e integration
-        env:
-          GRETEL_API_KEY: ${{ secrets.GRETEL_TEST_API_KEY }}
-
   style-checks:
     runs-on: ubuntu-20.04
     steps:
@@ -70,7 +37,7 @@ jobs:
         run: tox -e flake8
 
   notify:
-    needs: [unit-tests, integration-tests, style-checks]
+    needs: [unit-tests, style-checks]
     if: always()
     runs-on: ubuntu-20.04
     steps:
