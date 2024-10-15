@@ -12,17 +12,14 @@ from pathlib import Path
 from typing import Any, Dict, Generator, List, Optional, TYPE_CHECKING, Union
 
 import pandas as pd
-import yaml
 
 from gretel_client.analysis_utils import display_dataframe_in_notebook
-from gretel_client.gretel.artifact_fetching import fetch_model_logs
 from gretel_client.gretel.job_results import (
     GenerateJobResults,
-    GretelJobResults,
     TrainJobResults,
+    TransformResults,
 )
-from gretel_client.helpers import poll
-from gretel_client.projects.jobs import Status
+from gretel_client.inference_api.base import InferenceAPIModelType
 
 if TYPE_CHECKING:
     from gretel_client import Gretel
@@ -52,14 +49,11 @@ class JobLabel(Enum):
 def _bq_job_label(action: JobLabel) -> Generator[Any, Any, Any]:
     labels = {"application-name": "gretel-sdk"}
     labels["action"] = action.value
-    try:
-        with bpd.option_context("compute.extra_query_labels", labels):
-            yield
-    except Exception:
+    with bpd.option_context("compute.extra_query_labels", labels):
         yield
 
 
-class TransformsResult(GretelJobResults):
+class BigQueryTransformResults(TransformResults):
     """
     Should not be used directly.
 
@@ -67,58 +61,17 @@ class TransformsResult(GretelJobResults):
     that was created from a Gretel Transforms job.
     """
 
-    transform_logs: Optional[List[str]] = None
-    """Logs created during Transform job."""
-
     transformed_df: Optional[bpd.DataFrame] = None
     """A BigQuery DataFrame of the transformed table. This will
     not be populated until the trasnforms job succeeds."""
 
-    transformed_data_link: Optional[str] = None
-    """URI to the transformed data (as a flat file). This will 
-    not be populated until the transforms job succeeds."""
-
-    @property
-    def model_url(self) -> str:
-        """
-        The Gretel Console URL for the Transform model.
-        """
-        return f"{self.project_url}/models/{self.model_id}/data"
-
-    @property
-    def model_config(self) -> str:
-        """
-        The Transforms config that was used.
-        """
-        return yaml.safe_dump(self.model.model_config)
-
-    @property
-    def job_status(self) -> Status:
-        """The current status of the transform job."""
-        self.model.refresh()
-        return self.model.status
-
     def refresh(self) -> None:
         """Refresh the transform job result attributes."""
-        if self.job_status == Status.COMPLETED:
-            if self.transformed_data_link is None:
-                self.transformed_data_link = self.model.get_artifact_link(
-                    "data_preview"
-                )
-            if self.transformed_df is None:
-                with _bq_job_label(JobLabel.LOAD_TRANSFORMED):
-                    with self.model.get_artifact_handle("data_preview") as fin:
-                        dataframe = pd.read_csv(fin)
-                        self.transformed_df = bpd.read_pandas(dataframe)
-
-        # We can fetch model logs no matter what
-        self.transform_logs = fetch_model_logs(self.model)
-
-    def wait_for_completion(self) -> None:
-        """Wait for transforms job to finish running."""
-        if self.job_status != Status.COMPLETED:
-            poll(self.model, verbose=False)
-            self.refresh()
+        super().refresh()
+        if self.transformed_df is not None and isinstance(
+            self.transformed_df, pd.DataFrame
+        ):
+            self.transformed_df = bpd.read_pandas(self.transformed_df)  # type: ignore
 
 
 class ModelTrainResult(TrainJobResults):
@@ -129,7 +82,7 @@ class ModelTrainResult(TrainJobResults):
     a new synthetic model or retrieving an existing one.
     """
 
-    def fetch_report_synthetic_data(self) -> bpd.DataFrame:
+    def fetch_report_synthetic_data(self) -> bpd.DataFrame:  # type: ignore
         """
         Fetch the synthetic BigQuery DataFrame that was created
         as part of the model training process. This DataFrame
@@ -155,7 +108,7 @@ class ModelGenerationResult(GenerateJobResults):
         super().refresh()
         if self.synthetic_data is not None:
             with _bq_job_label(JobLabel.LOAD_GENERATED_DATA):
-                self.synthetic_data = bpd.read_pandas(self.synthetic_data)
+                self.synthetic_data = bpd.read_pandas(self.synthetic_data)  # type: ignore
 
 
 class BigFrames:
@@ -175,35 +128,57 @@ class BigFrames:
         self._gretel = gretel
         self._navigator_map = {}
 
-    def submit_transforms(
-        self, config: str, dataframe: bpd.DataFrame
-    ) -> TransformsResult:
+    def submit_transforms(self, *args, **kwargs) -> BigQueryTransformResults:
+        return self.submit_transform(*args, **kwargs)
+
+    def submit_transform(
+        self,
+        config: Union[str, Path, dict],
+        dataframe: bpd.DataFrame,
+        *,
+        wait: bool = False,
+        **kwargs,
+    ) -> BigQueryTransformResults:
         """
-        Run a Gretel Transforms job against the provided
-        dataframe. A Transforms model will be created and
+        Run a Gretel Transform job against the provided
+        dataframe. A Transform model will be created and
         then immediately used to apply row, column, or cell
         level transforms against a dataframe.
         """
-        config_yaml = yaml.safe_load(config)
         with _bq_job_label(JobLabel.RUN_TRANSFORMS):
             local_df = dataframe.to_pandas()
-            gretel_project = self._gretel.get_project()
-            model = gretel_project.create_model_obj(
-                model_config=config_yaml, data_source=local_df
+            results = self._gretel.submit_transform(
+                config, data_source=local_df, wait=wait, **kwargs
             )
-            model.submit()
-            return TransformsResult(project=gretel_project, model=model)
+            bq_results = BigQueryTransformResults(
+                project=results.project,
+                model=results.model,
+                transform_logs=results.transform_logs,
+                transformed_df=results.transformed_df,
+                transformed_data_link=results.transformed_data_link,
+            )
+            bq_results.refresh()
+            return bq_results
 
-    def fetch_transforms_results(self, model_id: str) -> TransformsResult:
+    def fetch_transforms_results(self, model_id: str) -> BigQueryTransformResults:
+        return self.fetch_transform_results(model_id)
+
+    def fetch_transform_results(self, model_id: str) -> BigQueryTransformResults:
         """
         Given a Transforms model ID, return a TransformsResult in order
         to retrieve transformed data and check job status.
         """
-        self._gretel._assert_project_is_set()
-        model = self._gretel.fetch_model(model_id)
-        results = TransformsResult(project=self._gretel.get_project(), model=model)
-        results.refresh()
-        return results
+        with _bq_job_label(JobLabel.LOAD_TRANSFORMED):
+            local_results = self._gretel.fetch_transform_results(model_id)
+            bq_results = BigQueryTransformResults(
+                project=local_results.project,
+                model=local_results.model,
+                transform_logs=local_results.transform_logs,
+                transformed_df=local_results.transformed_df,
+                transformed_data_link=local_results.transformed_data_link,
+            )
+            bq_results.refresh()
+            return bq_results
 
     def submit_train(
         self,
@@ -320,8 +295,8 @@ class BigFrames:
         in `Gretel.factories.initialize_navigator_api()`.
 
         """
-        self._navigator_map[name] = self._gretel.factories.initialize_navigator_api(
-            model_type="tabular", **kwargs
+        self._navigator_map[name] = self._gretel.factories.initialize_navigator_api(  # type: ignore
+            model_type=InferenceAPIModelType.TABULAR, **kwargs
         )
 
     def _check_navigator_instance(self, name: str) -> TabularInferenceAPI:
@@ -347,7 +322,7 @@ class BigFrames:
         with _bq_job_label(JobLabel.NAVIGATOR_GENERATE):
             nav_instance = self._check_navigator_instance(name)
             local_df = nav_instance.generate(*args, stream=False, **kwargs)
-            return bpd.read_pandas(local_df)
+            return bpd.read_pandas(local_df)  # type: ignore
 
     def navigator_edit(
         self,
@@ -366,14 +341,17 @@ class BigFrames:
         The other *args and **kwargs are what is supported by `TabularInferenceAPI.edit()`.
         Streaming responses are not supported at this time.
         """
+        local_seed_data = None
         with _bq_job_label(JobLabel.NAVIGATOR_EDIT):
             if isinstance(seed_data, bpd.DataFrame):
-                seed_data = seed_data.to_pandas()
+                local_seed_data = seed_data.to_pandas()
+            else:
+                local_seed_data = seed_data
             nav_instance = self._check_navigator_instance(name)
             local_df = nav_instance.edit(
-                *args, stream=False, seed_data=seed_data, **kwargs
+                *args, stream=False, seed_data=local_seed_data, **kwargs
             )
-            return bpd.read_pandas(local_df)
+            return bpd.read_pandas(local_df)  # type: ignore
 
     def display_dataframe_in_notebook(
         self, dataframe: bpd.DataFrame, settings: Optional[dict] = None

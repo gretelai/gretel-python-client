@@ -34,7 +34,7 @@ from gretel_client.gretel.exceptions import (
 from gretel_client.gretel.job_results import (
     GenerateJobResults,
     TrainJobResults,
-    TransformResult,
+    TransformResults,
 )
 from gretel_client.helpers import poll
 from gretel_client.projects import get_project, Project
@@ -155,7 +155,7 @@ class Gretel:
         if self._project is None:
             logger.info("No project set -> creating a new one...")
             self.set_project(**kwargs)
-        return self._project
+        return self._project  # type: ignore
 
     def set_project(
         self,
@@ -188,8 +188,8 @@ class Gretel:
             )
         except (ApiException, NotFoundException) as exception:
             if (
-                "Project name not available" not in exception.body
-                and "not found" not in exception.body
+                "Project name not available" not in exception.body  # type: ignore
+                and "not found" not in exception.body  # type: ignore
             ):
                 raise exception
             logger.warning(
@@ -330,7 +330,7 @@ class Gretel:
         data_source = _convert_to_valid_data_source(data_source)
 
         model_type, model_config_section = extract_model_config_section(job_config)
-        model_setup = CONFIG_SETUP_DICT[model_type]
+        model_setup = CONFIG_SETUP_DICT[model_type]  # type: ignore
         model_name = model_setup.model_name.replace("_", " ")
 
         if data_source is None:
@@ -455,7 +455,7 @@ class Gretel:
         )
 
         model_type, _ = extract_model_config_section(model.model_config)
-        model_name = CONFIG_SETUP_DICT[model_type].model_name.replace("_", " ")
+        model_name = CONFIG_SETUP_DICT[model_type].model_name.replace("_", " ")  # type: ignore
         project_url = project.get_console_url()
 
         logger.info(
@@ -574,12 +574,12 @@ class Gretel:
 
         study = non_default_config_settings.pop("study", None)
 
-        tuner = create_tuner_from_config(
+        tuner = create_tuner_from_config(  # type: ignore
             config=tuner_config, **non_default_config_settings
         )
 
         results = tuner.run(
-            data_source=_convert_to_valid_data_source(data_source),
+            data_source=_convert_to_valid_data_source(data_source),  # type: ignore
             project=self.get_project() if not use_temporary_project else None,
             n_jobs=n_jobs,
             n_trials=n_trials,
@@ -598,7 +598,7 @@ class Gretel:
         job_label: Optional[str] = None,
         wait: bool = True,
         verbose_logging: bool = False,
-    ):
+    ) -> TransformResults:
         """Transform a dataset using Gretel Transform v2.
 
         Args:
@@ -650,7 +650,7 @@ class Gretel:
             # access resulted transform file
             transformed_data = transform_result.transformed_df
         """
-        job_config = smart_read_model_config(config)
+        job_config = smart_read_model_config(config, config_name_prefix="transform_v2")
 
         model_type, _ = extract_model_config_section(job_config)
         if model_type != "transform_v2":
@@ -679,7 +679,7 @@ class Gretel:
             f"Model ID: {model.model_id}"
         )
 
-        transform_result = TransformResult(project=project, model=model)
+        transform_result = TransformResults(project=project, model=model)
         if wait:
             poll(model, verbose=verbose_logging)
             if model.status != Status.COMPLETED:
@@ -691,6 +691,24 @@ class Gretel:
 
         self._last_model = model
         return transform_result
+
+    def fetch_transform_results(self, model_id: str) -> TransformResults:
+        """Fetch the results object from a Gretel transform job.
+
+        Args:
+            model_id: The Gretel model ID.
+
+        Raises:
+            GretelProjectNotSetError: If a project has not been set.
+
+        Returns:
+            Job results including the model object, report, logs, and final config.
+        """
+        self._assert_project_is_set()
+        model = self.fetch_model(model_id)
+        results = TransformResults(project=self.get_project(), model=model)
+        results.refresh()
+        return results
 
     def __repr__(self):
         name = self._project.name if self._project else None

@@ -40,7 +40,7 @@ class GretelJobResults(ABC):
 
     @property
     def model_id(self) -> str:
-        return self.model.model_id
+        return self.model.model_id  # type: ignore
 
     @property
     def project_id(self) -> str:
@@ -74,7 +74,7 @@ class TrainJobResults(GretelJobResults):
 
     @property
     def model_config_section(self) -> dict:
-        return next(iter(self.model_config["models"][0].values()))
+        return next(iter(self.model_config["models"][0].values()))  # type: ignore
 
     def fetch_report_synthetic_data(self) -> _DataFrameT:
         """Fetch synthetic data generated for the report and return as a DataFrame.
@@ -99,7 +99,7 @@ class TrainJobResults(GretelJobResults):
         elif self.report is None:
             self.refresh()
         with self.model.get_artifact_handle("data_preview") as data_artifact:
-            dataframe = pd.read_csv(data_artifact)
+            dataframe = pd.read_csv(data_artifact)  # type: ignore
         return dataframe
 
     def refresh(self):
@@ -114,7 +114,7 @@ class TrainJobResults(GretelJobResults):
                 and self.model_config_section.get("data_source") is not None
             ):
                 model_type, _ = extract_model_config_section(self.model.model_config)
-                report_type = CONFIG_SETUP_DICT[model_type].report_type
+                report_type = CONFIG_SETUP_DICT[model_type].report_type  # type: ignore
                 if report_type is not None:
                     self.report = fetch_model_report(self.model, report_type)
 
@@ -157,7 +157,7 @@ class GenerateJobResults(GretelJobResults):
 
     @property
     def run_logs(self) -> List[dict]:
-        return self.record_handler.logs
+        return self.record_handler.logs  # type: ignore
 
     def refresh(self):
         """Refresh the generate job results attributes."""
@@ -181,7 +181,7 @@ class GenerateJobResults(GretelJobResults):
 
 
 @dataclass
-class TransformResult(GretelJobResults):
+class TransformResults(GretelJobResults):
     """
     Should not be used directly.
 
@@ -192,7 +192,7 @@ class TransformResult(GretelJobResults):
     transform_logs: Optional[List[dict]] = None
     """Logs created during Transform job."""
 
-    transformed_df: Optional[pd.DataFrame] = None
+    transformed_df: Optional[pd.DataFrame] = None  # type: ignore
     """A DataFrame of the transformed table. This will
     not be populated until the trasnforms job succeeds."""
 
@@ -229,7 +229,7 @@ class TransformResult(GretelJobResults):
                 )
             if self.transformed_df is None and PANDAS_IS_INSTALLED:
                 with self.model.get_artifact_handle("data_preview") as fin:
-                    self.transformed_df = pd.read_csv(fin)
+                    self.transformed_df = pd.read_csv(fin)  # type: ignore
 
         # We can fetch model logs no matter what
         self.transform_logs = fetch_model_logs(self.model)

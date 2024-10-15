@@ -8,9 +8,11 @@ import webbrowser
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import List, Union
+from typing import List, Optional, Union
 
 import yaml
+
+from requests import HTTPError
 
 try:
     import pandas as pd
@@ -36,7 +38,7 @@ class ReportType(str, Enum):
     TEXT = "text"
 
     @property
-    def artifact_name(self) -> str:
+    def artifact_name(self) -> str:  # type: ignore
         if self == ReportType.SQS:
             return "report"
         elif self == ReportType.TEXT:
@@ -88,9 +90,14 @@ def fetch_model_logs(model: Model) -> List[dict]:
         A list of log messages.
     """
     model_logs = []
-    with model.get_artifact_handle("model_logs") as file:
-        for line in file:
-            model_logs.append(json.loads(line))
+    try:
+        with model.get_artifact_handle("model_logs") as file:
+            for line in file:
+                model_logs.append(json.loads(line))  # type: ignore
+    except HTTPError as e:
+        # If the logs artifact is not found, return an empty list
+        if e.response.status_code in (404, 403):
+            return model_logs
     return model_logs
 
 
@@ -110,10 +117,10 @@ def fetch_model_report(
     report_type = ReportType(report_type)
 
     with model.get_artifact_handle(f"{report_type.artifact_name}_json") as file:
-        report_dict = json.load(file)
+        report_dict = json.load(file)  # type: ignore
 
     with model.get_artifact_handle(report_type.artifact_name) as file:
-        report_html = str(file.read(), encoding="utf-8")
+        report_html = str(file.read(), encoding="utf-8")  # type: ignore
 
     return GretelReport(as_dict=report_dict, as_html=report_html)
 
@@ -163,5 +170,5 @@ def fetch_synthetic_data(record_handler: RecordHandler) -> _DataFrameT:
             "Install it by running `pip install pandas`."
         )
     with record_handler.get_artifact_handle("data") as data_artifact:
-        dataframe = pd.read_csv(data_artifact)
+        dataframe = pd.read_csv(data_artifact)  # type: ignore
     return dataframe

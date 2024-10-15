@@ -1,4 +1,5 @@
 import os
+import uuid
 
 from dataclasses import dataclass
 from enum import Enum
@@ -270,7 +271,7 @@ def get_model_docs_url(model_type: str) -> str:
     Returns:
         The URL for the model docs.
     """
-    model_name = CONFIG_SETUP_DICT[model_type].model_name.replace("_", "-")
+    model_name = CONFIG_SETUP_DICT[model_type].model_name.replace("_", "-")  # type: ignore
     return f"https://docs.gretel.ai/create-synthetic-data/models/synthetics/gretel-{model_name}"
 
 
@@ -310,11 +311,15 @@ def smart_load_yaml(yaml_in: Union[str, Path, dict]) -> dict:
     return yaml_out
 
 
-def smart_read_model_config(config_in: Union[str, Path, dict]) -> dict:
+def smart_read_model_config(
+    config_in: Union[str, Path, dict], config_name_prefix: Optional[str] = None
+) -> dict:
     """Read a Gretel model config from a dict, yaml file, or yaml string.
 
     Args:
         config_in: The config as a dict, yaml string, or yaml file path.
+        config_name_prefix: If the config does not have a `name` attribute. One
+            will automatically be created using the prefix with a UUID slug at the end.
 
     Raises:
         ModelConfigReadError: If the input config format is not valid.
@@ -356,6 +361,10 @@ def smart_read_model_config(config_in: Union[str, Path, dict]) -> dict:
             "name of a template yaml config (without the extension) listed "
             f"here: {SYNTHETICS_BLUEPRINT_REPO}."
         )
+
+    if config_name_prefix is not None and "name" not in config_out:
+        config_name_prefix = config_name_prefix.removesuffix("-")
+        config_out["name"] = f"{config_name_prefix}-{uuid.uuid4().hex[:6]}"
 
     if any([p not in config_out for p in ["schema_version", "models", "name"]]):
         raise ModelConfigReadError(
