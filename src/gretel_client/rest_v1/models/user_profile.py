@@ -35,7 +35,7 @@ class UserProfile(BaseModel):
     firstname: Optional[StrictStr] = None
     lastname: Optional[StrictStr] = None
     image: Optional[UserProfileImage] = None
-    email: Optional[StrictStr] = None
+    email: StrictStr
     __properties: ClassVar[List[str]] = [
         "id",
         "firstname",
