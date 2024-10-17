@@ -20,8 +20,8 @@ import re  # noqa: F401
 
 from typing import Any, ClassVar, Dict, List, Optional, Set
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, StrictStr
-from typing_extensions import Annotated, Self
+from pydantic import BaseModel, ConfigDict
+from typing_extensions import Self
 
 from gretel_client.rest_v1.models.llm_config import LlmConfig
 
@@ -31,24 +31,8 @@ class UpdateServerlessTenantRequest(BaseModel):
     UpdateServerlessTenantRequest
     """  # noqa: E501
 
-    name: Optional[Annotated[str, Field(min_length=3, strict=True, max_length=63)]] = (
-        Field(default=None, description="A human-readable name to identify the tenant.")
-    )
-    domain_guid: Optional[StrictStr] = None
     enabled_llms: Optional[List[LlmConfig]] = None
-    __properties: ClassVar[List[str]] = ["name", "domain_guid", "enabled_llms"]
-
-    @field_validator("name")
-    def name_validate_regular_expression(cls, value):
-        """Validates the regular expression"""
-        if value is None:
-            return value
-
-        if not re.match(r"^[a-z](-?[a-z0-9]+)*$", value):
-            raise ValueError(
-                r"must validate the regular expression /^[a-z](-?[a-z0-9]+)*$/"
-            )
-        return value
+    __properties: ClassVar[List[str]] = ["enabled_llms"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -107,13 +91,11 @@ class UpdateServerlessTenantRequest(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "name": obj.get("name"),
-                "domain_guid": obj.get("domain_guid"),
                 "enabled_llms": (
                     [LlmConfig.from_dict(_item) for _item in obj["enabled_llms"]]
                     if obj.get("enabled_llms") is not None
                     else None
-                ),
+                )
             }
         )
         return _obj
