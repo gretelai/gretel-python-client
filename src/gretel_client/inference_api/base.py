@@ -8,7 +8,6 @@ from typing import Any, Dict, List, Optional
 
 from gretel_client.config import ClientConfig, configure_session, get_session_config
 from gretel_client.rest.api_client import ApiClient
-from gretel_client.rest.configuration import Configuration
 
 MODELS_API_PATH = "/v1/inference/models"
 
@@ -161,7 +160,7 @@ class BaseInferenceAPI(ABC):
         elif len(session_kwargs) > 0:
             raise ValueError("cannot specify session arguments when passing a session")
 
-        if session.default_runner != "cloud" and not ".serverless." in session.endpoint:
+        if session.default_runner != "cloud" and ".serverless." not in session.endpoint:
             raise GretelInferenceAPIError(
                 "Gretel's Inference API is currently only "
                 "available within Gretel Cloud. Your current runner "
