@@ -1547,7 +1547,7 @@ with gretel_client.rest.ApiClient(configuration) as api_client:
     api_instance = projects_api.ProjectsApi(api_client)
     project_id = "project_id_example" # str | Project id
     model_id = "model_id_example" # str | Model id
-    status = "completed" # str | 
+    status = "status_example" # str | 
     skip = 1 # int | The number of records being skipped before returning the next set. (optional)
     limit = 1 # int | The number of records returned in each result set. (optional)
     expand = [

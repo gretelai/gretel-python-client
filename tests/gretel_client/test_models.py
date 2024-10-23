@@ -301,11 +301,7 @@ def test_goes_through_records(
     m.submit(runner_mode=RunnerMode.LOCAL)
 
     def mock_record_handlers(status, skip, limit, *args, **kwargs):
-        handlers = (
-            [{"uid": 0} for _ in range(min(limit, num_records - skip))]
-            if status == "completed"
-            else []
-        )
+        handlers = [{"uid": 0} for _ in range(min(limit, num_records - skip))]
         return {"data": {"handlers": handlers}}
 
     m._projects_api.query_record_handlers.side_effect = mock_record_handlers

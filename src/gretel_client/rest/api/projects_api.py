@@ -2359,7 +2359,6 @@ class ProjectsApi(object):
                 ],
                 "nullable": [],
                 "enum": [
-                    "status",
                     "expand",
                 ],
                 "validation": [],
@@ -2367,15 +2366,6 @@ class ProjectsApi(object):
             root_map={
                 "validations": {},
                 "allowed_values": {
-                    ("status",): {
-                        "COMPLETED": "completed",
-                        "ERROR": "error",
-                        "PENDING": "pending",
-                        "ACTIVE": "active",
-                        "LOST": "lost",
-                        "CREATED": "created",
-                        "CANCELLED": "cancelled",
-                    },
                     ("expand",): {"ARTIFACTS": "artifacts"},
                 },
                 "openapi_types": {
