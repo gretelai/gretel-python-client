@@ -35,17 +35,3 @@ jobs:
           python -m pip install tox
       - name: flake8
         run: tox -e flake8
-
-  notify:
-    needs: [unit-tests, style-checks]
-    if: always()
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: technote-space/workflow-conclusion-action@v2
-      - uses: 8398a7/action-slack@v2
-        with:
-          status: ${{ env.WORKFLOW_CONCLUSION }}
-          author_name: Branch Checks
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
