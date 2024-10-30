@@ -342,7 +342,10 @@ def smart_read_model_config(
             try:
                 config_out = read_model_config(
                     config_in
-                    if config_in.startswith("synthetics/")
+                    if (
+                        config_in.startswith("synthetics/")
+                        or config_in.startswith("transform/")
+                    )
                     else f"synthetics/{config_in}"
                 )
             except ModelConfigError as e:

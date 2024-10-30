@@ -73,6 +73,9 @@ def test_smart_read_model_config(config_file_path):
     assert config_blueprint == smart_read_model_config("tabular-actgan")
     assert config_blueprint == smart_read_model_config("synthetics/tabular-actgan")
 
+    transform_blueprint = smart_read_model_config("transform/default")
+    assert isinstance(transform_blueprint, dict)
+
 
 def test_create_config_from_blueprint():
     """Test creating a Gretel model config from a synthetics blueprint."""
