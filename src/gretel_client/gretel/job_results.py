@@ -105,8 +105,6 @@ class TrainJobResults(GretelJobResults):
     def refresh(self):
         """Refresh the training job results attributes."""
         if self.job_status == Status.COMPLETED:
-            if self.model_logs is None:
-                self.model_logs = fetch_model_logs(self.model)
             if self.model_config is None:
                 self.model_config = fetch_final_model_config(self.model)
             if (
@@ -117,6 +115,8 @@ class TrainJobResults(GretelJobResults):
                 report_type = CONFIG_SETUP_DICT[model_type].report_type  # type: ignore
                 if report_type is not None:
                     self.report = fetch_model_report(self.model, report_type)
+        # Fetch model logs no matter what
+        self.model_logs = fetch_model_logs(self.model)
 
     def wait_for_completion(self):
         """Wait for the model to finish training."""
