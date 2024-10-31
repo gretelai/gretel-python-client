@@ -38,21 +38,31 @@ class ActionSummary(BaseModel):
         default=None,
         description="The ID of the workflow task for this action, if it exists",
     )
+    run_id: Optional[StrictStr] = Field(
+        default=None,
+        description="The ID of the workflow run for this action, if it exists",
+    )
     previous_run_manifest_id: Optional[StrictStr] = Field(
         default=None,
-        description="The ID of the workflow run that should be used for checkpoint data. This is usually the ID of the most recent successfully completed run (or empty if there are no previous completed runs for this workflow). However, in the case of retrying failures, this will be the ID of the run being retried for failed actions so that it can pick up partial state from the previous attempt.",
+        description="(V1 workflows only) The ID of the workflow run that should be used for checkpoint data. This is usually the ID of the most recent successfully completed run (or empty if there are no previous completed runs for this workflow). However, in the case of retrying failures, this will be the ID of the run being retried for failed actions so that it can pick up partial state from the previous attempt.",
     )
     input_run_manifest_id: Optional[StrictStr] = Field(
         default=None,
-        description='The ID of the workflow run containing the input action run manifest to use. This is usually the ID of the workflow run to which both "this" action being summarized and its input belong. However, in the case of retrying failures, this field will reference the ID of the workflow run being retried if "this" action\'s input was successful in that previous run and thus skipped in this one. This field is empty for actions that do not take any input.',
+        description='(V1 workflows only) The ID of the workflow run containing the input action run manifest to use. This is usually the ID of the workflow run to which both "this" action being summarized and its input belong. However, in the case of retrying failures, this field will reference the ID of the workflow run being retried if "this" action\'s input was successful in that previous run and thus skipped in this one. This field is empty for actions that do not take any input.',
+    )
+    step_checkpoint_source: Optional[StrictStr] = Field(
+        default=None,
+        description='(V2 workflows only) The ID of the workflow run containing partial output from a previous attempt of "this" step being summarized.',
     )
     __properties: ClassVar[List[str]] = [
         "name",
         "action_type",
         "status",
         "task_id",
+        "run_id",
         "previous_run_manifest_id",
         "input_run_manifest_id",
+        "step_checkpoint_source",
     ]
 
     @field_validator("status")
@@ -134,8 +144,10 @@ class ActionSummary(BaseModel):
                 "action_type": obj.get("action_type"),
                 "status": obj.get("status"),
                 "task_id": obj.get("task_id"),
+                "run_id": obj.get("run_id"),
                 "previous_run_manifest_id": obj.get("previous_run_manifest_id"),
                 "input_run_manifest_id": obj.get("input_run_manifest_id"),
+                "step_checkpoint_source": obj.get("step_checkpoint_source"),
             }
         )
         return _obj
