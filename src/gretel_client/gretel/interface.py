@@ -29,7 +29,7 @@ from gretel_client.gretel.config_setup import (
 )
 from gretel_client.gretel.exceptions import (
     GretelJobSubmissionError,
-    GretelProjectNotSetError,
+    GretelProjectNotSetError
 )
 from gretel_client.gretel.job_results import (
     GenerateJobResults,
@@ -113,6 +113,7 @@ class Gretel:
         project_display_name: Optional[str] = None,
         session: Optional[ClientConfig] = None,
         skip_configure_session: Optional[bool] = False,
+        create_if_missing: Optional[bool] = False,
         **session_kwargs,
     ):
         if session is None:
@@ -132,8 +133,10 @@ class Gretel:
             session=self._session, skip_configure_session=skip_configure_session
         )
 
+        self.create_if_missing = create_if_missing
+
         if project_name is not None:
-            self.set_project(name=project_name, display_name=project_display_name)
+            self.set_project(name=project_name, display_name=project_display_name, create_if_missing=create_if_missing)
 
     def _assert_project_is_set(self):
         """Raise an error if a project has not been set."""
@@ -162,16 +165,21 @@ class Gretel:
         name: Optional[str] = None,
         desc: Optional[str] = None,
         display_name: Optional[str] = None,
+        create_if_missing: Optional[bool] = False,
+
     ):
         """Set the current Gretel project.
 
-        If a project with the given name does not exist, it will be created. If
-        the name is not unique, the user id will be appended to the name.
+        If a project with the given name does not exist, and create_if_missing is set to true,
+        then it will be created.
+        
+        If the name is not unique, the user id will be appended to the name.
 
         Args:
             name: Name of new or existing project. If None, will create one.
             desc: Project description.
             display_name: Project display name. If None, will use project name.
+            create_if_missing: Whether to create a new project if one is missing
 
         Raises:
             ApiException: If an error occurs while creating the project.
@@ -183,7 +191,7 @@ class Gretel:
                 name=name,
                 display_name=display_name or name,
                 desc=desc,
-                create=True,
+                create=create_if_missing,
                 session=self._session,
             )
         except (ApiException, NotFoundException) as exception:
@@ -192,6 +200,7 @@ class Gretel:
                 and "not found" not in exception.body  # type: ignore
             ):
                 raise exception
+
             logger.warning(
                 f"Project name `{name}` is not unique -> "
                 "appending your user id to the name."
@@ -201,7 +210,7 @@ class Gretel:
                 name=unique_name,
                 display_name=display_name or name,
                 desc=desc,
-                create=True,
+                create=create_if_missing,
                 session=self._session,
             )
 
