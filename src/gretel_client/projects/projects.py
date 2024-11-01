@@ -353,7 +353,7 @@ def search_projects(
         query: String filter applied to project names.
         session: Can be used to override local Gretel config.
 
-    Returns:
+    Returnste
         A list of projects.
     """
     if session is None:
@@ -475,6 +475,8 @@ def get_project(
         resp = api.create_project(project=models.Project(**project_args))
         project = api.get_project(project_id=resp.get(DATA).get("id"))
 
+        print(f'No project found with that name. Creating new project {name}') 
+
     if name:
         try:
             project = api.get_project(project_id=name)
@@ -483,6 +485,8 @@ def get_project(
                 project_args["name"] = name
                 resp = api.create_project(project=models.Project(**project_args))
                 project = api.get_project(project_id=resp.get(DATA).get("id"))
+
+                print(f'No project found with that name. Creating new project {name}') 
             else:
                 raise GretelProjectError(f"Could not get project using '{name}'.")
 
