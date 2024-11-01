@@ -29,7 +29,7 @@ from gretel_client.gretel.config_setup import (
 )
 from gretel_client.gretel.exceptions import (
     GretelJobSubmissionError,
-    GretelProjectNotSetError
+    GretelProjectNotSetError,
 )
 from gretel_client.gretel.job_results import (
     GenerateJobResults,
@@ -149,16 +149,16 @@ class Gretel:
     def _generate_random_label(self) -> str:
         return f"{uuid.uuid4().hex[:5]}-{self._user_id}"
 
-    def get_project(self, **kwargs) -> Project:
+    def get_project(self) -> Project:
         """Returns the current Gretel project.
 
         If a project has not been set, a new one will be created. The optional
         kwargs are the same as those available for the `set_project` method.
         """
-        if self._project is None:
-            logger.info("No project set -> creating a new one...")
-            self.set_project(**kwargs)
-        return self._project  # type: ignore
+        if self._project:
+            return self._project  # type: ignore
+        
+        raise GretelProjectNotSetError("No Gretel Project Set")
 
     def set_project(
         self,
@@ -171,7 +171,7 @@ class Gretel:
         """Set the current Gretel project.
 
         If a project with the given name does not exist, and create_if_missing is set to true,
-        then it will be created.
+        then it will be created. 
         
         If the name is not unique, the user id will be appended to the name.
 
@@ -179,7 +179,7 @@ class Gretel:
             name: Name of new or existing project. If None, will create one.
             desc: Project description.
             display_name: Project display name. If None, will use project name.
-            create_if_missing: Whether to create a new project if one is missing
+            create_if_missing: Project display name. If None, will use project name.
 
         Raises:
             ApiException: If an error occurs while creating the project.
@@ -200,7 +200,6 @@ class Gretel:
                 and "not found" not in exception.body  # type: ignore
             ):
                 raise exception
-
             logger.warning(
                 f"Project name `{name}` is not unique -> "
                 "appending your user id to the name."
