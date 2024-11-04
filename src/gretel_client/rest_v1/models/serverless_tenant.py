@@ -21,7 +21,7 @@ import re  # noqa: F401
 from datetime import datetime
 from typing import Any, ClassVar, Dict, List, Optional, Set
 
-from pydantic import BaseModel, ConfigDict, StrictStr
+from pydantic import BaseModel, ConfigDict, Field, StrictStr
 from typing_extensions import Self
 
 from gretel_client.rest_v1.models.serverless_tenant_cloud_provider_info import (
@@ -41,7 +41,10 @@ class ServerlessTenant(BaseModel):
     created_at: datetime
     cloud_provider: ServerlessTenantCloudProviderInfo
     config: ServerlessTenantConfig
-    cluster_guid: StrictStr
+    cluster_guid: Optional[StrictStr] = Field(
+        default=None,
+        description="The GUID of the cluster that the tenant is associated with.",
+    )
     __properties: ClassVar[List[str]] = [
         "guid",
         "name",
