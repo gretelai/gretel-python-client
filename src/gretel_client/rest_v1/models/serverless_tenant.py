@@ -41,6 +41,7 @@ class ServerlessTenant(BaseModel):
     created_at: datetime
     cloud_provider: ServerlessTenantCloudProviderInfo
     config: ServerlessTenantConfig
+    cluster_guid: StrictStr
     __properties: ClassVar[List[str]] = [
         "guid",
         "name",
@@ -48,6 +49,7 @@ class ServerlessTenant(BaseModel):
         "created_at",
         "cloud_provider",
         "config",
+        "cluster_guid",
     ]
 
     model_config = ConfigDict(
@@ -120,6 +122,7 @@ class ServerlessTenant(BaseModel):
                     if obj.get("config") is not None
                     else None
                 ),
+                "cluster_guid": obj.get("cluster_guid"),
             }
         )
         return _obj

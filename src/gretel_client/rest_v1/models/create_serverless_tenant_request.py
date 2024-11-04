@@ -33,10 +33,12 @@ class CreateServerlessTenantRequest(BaseModel):
     CreateServerlessTenantRequest
     """  # noqa: E501
 
-    name: Annotated[str, Field(min_length=3, strict=True, max_length=63)] = Field(
+    name: Annotated[str, Field(min_length=3, strict=True, max_length=56)] = Field(
         description="A human-readable name to identify the tenant."
     )
-    domain_guid: StrictStr
+    domain_guid: StrictStr = Field(
+        description="domain_guid is the GUID of the domain that the tenant will belong to."
+    )
     cloud_provider: ServerlessTenantCloudProviderInfo
     __properties: ClassVar[List[str]] = ["name", "domain_guid", "cloud_provider"]
 
