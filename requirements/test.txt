@@ -1,5 +1,6 @@
 faker==20.1.0
 flake8==4.0.1
+openai==1.48.0
 pylint==2.14.3
 pytest-cov==2.11.1
 pytest==6.1.2
