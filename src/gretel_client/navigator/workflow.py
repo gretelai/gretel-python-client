@@ -14,7 +14,11 @@ from pydantic import BaseModel
 from typing_extensions import Self
 
 from gretel_client.config import ClientConfig
-from gretel_client.navigator.client.interface import Client, TaskOutput
+from gretel_client.navigator.client.interface import (
+    Client,
+    TaskOutput,
+    WorkflowInterruption,
+)
 from gretel_client.navigator.client.remote import Message
 from gretel_client.navigator.client.utils import get_navigator_client
 from gretel_client.navigator.data_designer.viz_tools import display_sample_record
@@ -77,7 +81,7 @@ class DataSpec:
 
 @dataclass
 class PreviewResults:
-    output: TaskOutput
+    output: Optional[TaskOutput]
     outputs_by_step: dict[str, TaskOutput]
     data_spec: Optional[DataSpec] = None
     evaluation_results: Optional[dict] = None
@@ -436,6 +440,9 @@ class NavigatorWorkflow:
         final_output = None
         outputs_by_step = {}
         for message in self._client.get_workflow_preview(self.to_dict()):
+            if isinstance(message, WorkflowInterruption):
+                logger.warning(message.message)
+                break
             if current_step != message.step:
                 current_step = message.step
                 task_name = self._steps[step_idx].task.replace("_", "-")
@@ -467,7 +474,8 @@ class NavigatorWorkflow:
                 outputs_by_step[message.step] = output
         # the final output is either the dataset produced by the last
         # task in the workflow, or, if no dataset is produced by the workflow
-        # the final output will be the output of the last task.
+        # the final output will be the output of the last task to complete
+        # (which may also be none)
         if final_output is None:
             final_output = outputs_by_step.get(current_step)
         evaluation_results = (
@@ -475,11 +483,12 @@ class NavigatorWorkflow:
             if self._last_evaluation_step is None
             else outputs_by_step.get(self._last_evaluation_step.name)
         )
-        return PreviewResults(
+        preview_results = PreviewResults(
             output=final_output,
             outputs_by_step=outputs_by_step,
             evaluation_results=evaluation_results,
         )
+        return preview_results
 
     def add_step(self, step: Step) -> None:
         self._steps.append(step)
@@ -518,7 +527,8 @@ class NavigatorWorkflow:
     ) -> PreviewResults:
         logger.info("🚀 Generating dataset preview")
         preview = self._generate_preview(verbose=verbose_logging)
-        logger.info("👀 Your dataset preview is ready for a peek!")
+        if preview.output is not None:
+            logger.info("👀 Your dataset preview is ready for a peek!")
         return preview
 
     def submit_batch_job(

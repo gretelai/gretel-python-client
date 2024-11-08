@@ -43,15 +43,12 @@ class Task(ABC):
         self._client = get_navigator_client(adapter)
 
     def _run(self, *inputs) -> TaskOutput:
-        try:
-            return self._client.run_task(
-                name=self.name,
-                config=self.config.model_dump(),
-                inputs=list(inputs),
-                globals=self._globals,
-            )
-        except Exception as e:
-            print(e)
+        return self._client.run_task(
+            name=self.name,
+            config=self.config.model_dump(),
+            inputs=list(inputs),
+            globals=self._globals,
+        )
 
     @property
     @abstractmethod

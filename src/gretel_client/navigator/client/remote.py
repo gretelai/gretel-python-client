@@ -17,7 +17,7 @@ import smart_open
 
 from inflection import underscore
 from requests import HTTPError
-from rich import print as rich_print
+from requests.exceptions import ChunkedEncodingError
 
 from gretel_client.config import ClientConfig
 from gretel_client.gretel.interface import Gretel
@@ -26,6 +26,7 @@ from gretel_client.navigator.client.interface import (
     SubmitBatchWorkflowResponse,
     TaskInput,
     TaskOutput,
+    WorkflowInterruption,
 )
 from gretel_client.navigator.log import get_logger
 
@@ -36,6 +37,39 @@ logger = get_logger(__name__, level=logging.INFO)
 
 
 Serializable = Union[pydantic.BaseModel, pd.DataFrame, dict]
+
+BROKEN_RESPONSE_STREAM_ERROR_MESSAGE = (
+    "Error consuming API response stream. "
+    "This error is likely temporary and we recommend retrying your request. "
+    "If this problem persists please contact support."
+)
+
+
+class NavigatorApiError(Exception):
+    """
+    Base error type for all errors related to
+    communicating with the API.
+    """
+
+
+class NavigatorApiClientError(NavigatorApiError):
+    """
+    Error type for 4xx error responses from the API.
+    """
+
+
+class NavigatorApiServerError(NavigatorApiError):
+    """
+    Error type for 5xx error responses from the API.
+    """
+
+
+class NavigatorApiStreamingResponseError(NavigatorApiError):
+    """
+    Error type for issues encountered while handling a
+    streaming response from the API, such as it being
+    incomplete or malformed.
+    """
 
 
 @dataclass
@@ -107,34 +141,25 @@ class RemoteClient(ClientAdapter[Serializable]):
 
         inputs = serialize_inputs(inputs)
 
-        response = requests.post(
+        with requests.post(
             f"{self._api_endpoint}/v2/workflows/tasks/exec",
             json={"name": name, "config": config, "inputs": inputs, "globals": globals},
             headers=self._req_headers,
             stream=True,
-        )
+        ) as response:
+            _check_for_error_response(response)
 
-        try:
-            response.raise_for_status()
-        except HTTPError as e:
-            rich_print(f"Got error: {str(e)}")
-            rich_print(response.json())
-            raise e
-
-        with response as messages:
             try:
-                for o in messages.iter_lines():
-                    message = json.loads(o)
-                    if message["stream"] == "step_outputs":
-                        if message["type"] == "dataset":
-                            return pd.DataFrame.from_records(
-                                message["payload"]["dataset"]
-                            )
-                        return message["payload"]
-            except Exception as e:
-                rich_print(e)
-
-        raise Exception("Did not receive output for task")
+                for output in response.iter_lines():
+                    message = Message.from_dict(json.loads(output))
+                    if message.stream == "step_outputs":
+                        if message.type == "dataset":
+                            return pd.DataFrame.from_records(message.payload["dataset"])
+                        return message.payload
+            except ChunkedEncodingError:
+                raise NavigatorApiStreamingResponseError(
+                    BROKEN_RESPONSE_STREAM_ERROR_MESSAGE
+                )
 
     def stream_workflow_outputs(
         self, workflow: dict, verbose: bool = False
@@ -144,11 +169,14 @@ class RemoteClient(ClientAdapter[Serializable]):
             json=workflow,
             headers=self._req_headers,
             stream=True,
-        ) as outputs:
-            outputs.raise_for_status()
+        ) as response:
+            _check_for_error_response(response)
 
-            for output in outputs.iter_lines():
-                yield Message.from_dict(json.loads(output))
+            try:
+                for output in response.iter_lines():
+                    yield Message.from_dict(json.loads(output))
+            except ChunkedEncodingError:
+                yield WorkflowInterruption(BROKEN_RESPONSE_STREAM_ERROR_MESSAGE)
 
     def submit_batch_workflow(
         self,
@@ -176,7 +204,7 @@ class RemoteClient(ClientAdapter[Serializable]):
             },
             headers=self._req_headers,
         )
-        response.raise_for_status()
+        _check_for_error_response(response)
         response_body = response.json()
         batch_response = SubmitBatchWorkflowResponse(
             project=project,
@@ -245,16 +273,32 @@ class RemoteClient(ClientAdapter[Serializable]):
             params=params,
             stream=True,
         ) as response:
-            response.raise_for_status()
-            yield response
+            _check_for_error_response(response)
+
+            try:
+                yield response
+            except ChunkedEncodingError:
+                raise NavigatorApiStreamingResponseError(
+                    BROKEN_RESPONSE_STREAM_ERROR_MESSAGE
+                )
 
     def registry(self) -> list[dict]:
         response = requests.get(
             f"{self._api_endpoint}/v2/workflows/registry", headers=self._req_headers
         )
-        response.raise_for_status()
+        _check_for_error_response(response)
 
         return response.json()["tasks"]
+
+
+def _check_for_error_response(response: requests.Response) -> None:
+    try:
+        response.raise_for_status()
+    except HTTPError:
+        if 400 <= response.status_code < 500:
+            raise NavigatorApiClientError(response.json())
+        else:
+            raise NavigatorApiServerError(response.json())
 
 
 def serialize_inputs(inputs: list[TaskInput]) -> list[dict]:

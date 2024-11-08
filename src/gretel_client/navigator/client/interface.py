@@ -17,6 +17,11 @@ def get_client(adapter: Union[Type[ClientAdapter], ClientAdapter]) -> Client:
 
 
 @dataclass
+class WorkflowInterruption:
+    message: str
+
+
+@dataclass
 class SubmitBatchWorkflowResponse:
     project: Project
     workflow_id: str

@@ -155,11 +155,12 @@ class DataDesigner:
     @property
     def categorical_seed_columns(self) -> CategoricalDataSeeds:
         """Return a CategoricalDataSeeds instance that contains the seed categories."""
-        if len(self._seed_categories) > 0:
-            return CategoricalDataSeeds(
-                seed_categories=list(self._seed_categories.values())
-            )
-        logger.warning("⚠️ No seed categories have been defined.")
+        if len(self._seed_categories) == 0:
+            raise ValueError("No seed categories have been defined.")
+
+        return CategoricalDataSeeds(
+            seed_categories=list(self._seed_categories.values())
+        )
 
     @property
     def data_spec(self) -> DataSpec:
@@ -462,6 +463,13 @@ class DataDesigner:
         )
         workflow.add_steps(workflow.create_steps_from_sequential_tasks([task]))
         seeds = workflow._generate_preview(verbose=verbose_logging).output
+        if seeds is None:
+            raise ValueError(
+                "An error occurred while generating your categorical seed values. "
+                "Please check that your configuration is as expected, restart your session, and try again. "
+                "If the problem persists, please contact support and/or submit a GitHub issue to the gretel-client repo."
+            )
+
         seeds["seed_categories"] = seeds["seed_categories"][::-1]
         return CategoricalDataSeeds(**seeds)
 
