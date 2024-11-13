@@ -7,6 +7,7 @@ import tempfile
 import uuid
 
 from contextlib import contextmanager
+from functools import cached_property
 from pathlib import Path
 from typing import Any, BinaryIO, Dict, IO, List, Optional, Protocol, Tuple, Type, Union
 from urllib.parse import urlparse
@@ -15,7 +16,6 @@ import requests
 import smart_open
 import urllib3
 
-from backports.cached_property import cached_property
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
 import gretel_client.projects.common as common

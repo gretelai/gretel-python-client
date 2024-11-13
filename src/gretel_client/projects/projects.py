@@ -5,11 +5,9 @@ High level API for interacting with a Gretel Project
 from __future__ import annotations
 
 from contextlib import contextmanager
-from functools import wraps
+from functools import cached_property, wraps
 from pathlib import Path
 from typing import Any, BinaryIO, Dict, Iterator, List, Optional, Type, TypeVar, Union
-
-from backports.cached_property import cached_property
 
 from gretel_client.cli.utils.parser_utils import (
     DataSourceTypes,
