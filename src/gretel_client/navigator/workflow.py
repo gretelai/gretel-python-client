@@ -443,6 +443,8 @@ class NavigatorWorkflow:
             if isinstance(message, WorkflowInterruption):
                 logger.warning(message.message)
                 break
+            if message.step == "":
+                continue
             if current_step != message.step:
                 current_step = message.step
                 task_name = self._steps[step_idx].task.replace("_", "-")
