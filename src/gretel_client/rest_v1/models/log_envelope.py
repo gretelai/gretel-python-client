@@ -37,7 +37,13 @@ class LogEnvelope(BaseModel):
     ts: Optional[datetime] = Field(
         default=None, description="The timestamp for the associated log message."
     )
-    __properties: ClassVar[List[str]] = ["msg", "ts"]
+    level: Optional[StrictStr] = Field(
+        default=None, description="The level for the log message."
+    )
+    marker: Optional[StrictStr] = Field(
+        default=None, description="An optional marker set on the message"
+    )
+    __properties: ClassVar[List[str]] = ["msg", "ts", "level", "marker"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -87,5 +93,12 @@ class LogEnvelope(BaseModel):
         if not isinstance(obj, dict):
             return cls.model_validate(obj)
 
-        _obj = cls.model_validate({"msg": obj.get("msg"), "ts": obj.get("ts")})
+        _obj = cls.model_validate(
+            {
+                "msg": obj.get("msg"),
+                "ts": obj.get("ts"),
+                "level": obj.get("level"),
+                "marker": obj.get("marker"),
+            }
+        )
         return _obj
