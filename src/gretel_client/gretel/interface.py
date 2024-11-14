@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import logging
 import sys
 import uuid
 
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, TYPE_CHECKING, Union
 
 from gretel_client.config import (
     add_session_context,
@@ -37,6 +39,8 @@ from gretel_client.gretel.job_results import (
     TransformResults,
 )
 from gretel_client.helpers import poll
+from gretel_client.inference_api.third_party.aws import SagemakerAdapter
+from gretel_client.inference_api.third_party.azure_openai import AzureOpenAIAdapter
 from gretel_client.projects import get_project, Project
 from gretel_client.projects.jobs import Status
 from gretel_client.projects.models import Model
@@ -49,6 +53,11 @@ try:
     HAS_TUNER = True
 except ImportError:
     HAS_TUNER = False
+
+if TYPE_CHECKING:
+    from mypy_boto3_sagemaker_runtime import SageMakerRuntimeClient
+    from openai import AzureOpenAI
+
 
 logger = logging.getLogger(__name__)
 logger.propagate = False
@@ -713,3 +722,36 @@ class Gretel:
     def __repr__(self):
         name = self._project.name if self._project else None
         return f"{self.__class__.__name__}(project_name={name})"
+
+    @staticmethod
+    def create_navigator_azure_oai_adapter(
+        open_ai_client: AzureOpenAI,
+    ) -> AzureOpenAIAdapter:
+        """
+        Create an adapter for using Gretel's Navigator Tabular API with Azure OpenAI endpoints.
+
+        Args:
+            open_ai_client: An instance of AzureOpenAI from the `openai` package.
+        """
+        if not PANDAS_IS_INSTALLED:
+            raise ImportError(
+                "This adapter requires pandas. To install, run `pip install pandas`"
+            )
+        return AzureOpenAIAdapter(open_ai_client)
+
+    @staticmethod
+    def create_navigator_sagemaker_adapter(
+        sagemaker_client: SageMakerRuntimeClient, endpoint_name: str
+    ) -> SagemakerAdapter:
+        """
+        Create an adapter for using Gretel's Navigator Tabular API with AWS SageMaker endpoints.
+
+        Args:
+            sagemaker_client: An instance of SageMakerRuntimeClient from the `mypy_boto3_sagemaker_runtime` package.
+            endpoint_name: The name of the SageMaker endpoint.
+        """
+        if not PANDAS_IS_INSTALLED:
+            raise ImportError(
+                "This adapter requires pandas. To install, run `pip install pandas`"
+            )
+        return SagemakerAdapter(sagemaker_client, endpoint_name)
