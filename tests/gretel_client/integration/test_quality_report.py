@@ -75,6 +75,7 @@ def test_report_initialization_with_defaults(
     assert report.output_dir
     assert report.model_config == {
         "schema_version": "1.0",
+        "name": "evaluate-quality-model",
         "models": [
             {
                 "evaluate": {
@@ -105,6 +106,8 @@ def test_report_initialization_with_custom_params(
         output_dir=tmpdir,
         runner_mode=RunnerMode.CLOUD,
         mandatory_columns=["foo", "bar", "baz"],
+        run_pii_replay=True,
+        pii_entities=["name", "email"],
     )
     assert report.project
     assert report.data_source
@@ -123,6 +126,10 @@ def test_report_initialization_with_custom_params(
                         "mandatory_columns": ["foo", "bar", "baz"],
                         "sqs_report_columns": 250,
                         "sqs_report_rows": 5000,
+                    },
+                    "pii_replay": {
+                        "skip": False,
+                        "entities": ["name", "email"],
                     },
                 }
             }

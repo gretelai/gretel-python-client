@@ -3,14 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List, Optional, Union
 
-from gretel_client.config import ClientConfig, get_session_config, RunnerMode
+from gretel_client.config import ClientConfig, RunnerMode
 from gretel_client.evaluation.reports import (
     BaseReport,
     DEFAULT_RECORD_COUNT,
     ReportDictType,
 )
 from gretel_client.projects.common import DataSourceTypes, RefDataTypes
-from gretel_client.projects.models import Model
 from gretel_client.projects.projects import Project
 
 
@@ -19,17 +18,18 @@ class DownstreamClassificationReport(BaseReport):
 
     Args:
         project: Optional project associated with the report. If no project is passed, a temp project (:obj:`gretel_client.projects.projects.tmp_project`) will be used.
+        name: Optional name of the model. If no name is provided, a default name will be used.
         data_source: Data source used for the report (generally your synthetic data).
         ref_data: Reference data used for the report (generally your real data, i.e. the training data for your gretel model).
         test_data: Optional data set used as a test set for training models used in report.
         output_dir: Optional directory path to write the report to. If the directory does not exist, the path will be created for you.
         runner_mode: Determines where to run the model. See :obj:`gretel_client.config.RunnerMode` for a list of valid modes. Manual mode is not explicitly supported.
-        target: The field which the downstream classifiers are trained to predict.  Must be present in both data_source and ref_data.
-        holdout: The ratio of data to hold out from ref_data (i.e., your real data) as a test set.  Must be between 0.0 and 1.0.
-        models: The list of classifier models to train.  If absent or an empty list, use all supported models.
-        metric: The metric used to sort classifier results.  "Accuracy" by default.
-        record_count: Number of rows to use from the data sets, 5000 by default.  A value of 0 means "use as many rows/columns
-            as possible."  We still attempt to maintain parity between the data sets for "fair" comparisons,
+        target: The field which the downstream classifiers are trained to predict. Must be present in both data_source and ref_data.
+        holdout: The ratio of data to hold out from ref_data (i.e., your real data) as a test set. Must be between 0.0 and 1.0.
+        models: The list of classifier models to train. If absent or an empty list, use all supported models.
+        metric: The metric used to sort classifier results. "Accuracy" by default.
+        record_count: Number of rows to use from the data sets, 5000 by default. A value of 0 means "use as many rows/columns
+            as possible." We still attempt to maintain parity between the data sets for "fair" comparisons,
             i.e. we will use min(len(train), len(synth)), e.g.
         session: The client session to use, or ``None`` to use the session associated with the project
             (if any), or the default session otherwise.

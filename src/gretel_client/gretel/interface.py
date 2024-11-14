@@ -378,6 +378,7 @@ class Gretel:
                 model_setup.report_type is not None
                 and model_config_section.get("data_source") is not None
                 and model.status == Status.COMPLETED
+                and not model_config_section.get("evaluate", {}).get("skip", False)
             ):
                 report = fetch_model_report(model, model_setup.report_type)
 
@@ -623,7 +624,7 @@ class Gretel:
 
         Returns:
             Transform results dataclass with the transformed_dataframe, transform_logs
-            and  as attributes.
+            and as attributes.
 
         Example::
 
