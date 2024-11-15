@@ -54,7 +54,13 @@ It is VERY IMPORTANT that you follow ALL instructions carefully.
 ### Response ###
 """
 
+DATA_DESIGNER_JUDGE_SYSTEM_PROMPT = """\
+You are a fair and experienced judge. \
+You are particularly adept at writing natural language. \
+You must judge in English only."""
+
 system_prompt_dict = {
     "natural_language": DATA_DESIGNER_NL_SYSTEM_PROMPT,
     "code": DATA_DESIGNER_CODE_SYSTEM_PROMPT,
+    "judge": DATA_DESIGNER_JUDGE_SYSTEM_PROMPT,
 }
