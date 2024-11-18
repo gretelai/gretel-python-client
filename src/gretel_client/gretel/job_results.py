@@ -245,3 +245,57 @@ class TransformResults(GretelJobResults):
         r = "\n".join([f"    {k}: {getattr(self, k)}" for k in p]) + "\n)\n"
         r = "(\n" + r
         return f"{self.__class__.__name__}{r}"
+
+
+@dataclass
+class EvaluateResults(GretelJobResults):
+    """
+    Stores report and logs for an Evaluate job.
+    """
+
+    evaluate_logs: Optional[List[dict]] = None
+    """Logs created during Evaluate job."""
+
+    evaluate_report: Optional[GretelReport] = None
+    """A report of the Evaluation job. This will not be populated until the Evaluate job succeeds."""
+
+    @property
+    def model_url(self) -> str:
+        """
+        The Gretel Console URL for the Evaluate model.
+        """
+        return f"{self.project_url}/models/{self.model_id}/data"
+
+    @property
+    def model_config(self) -> str:
+        """
+        The Evaluate config that was used.
+        """
+        return yaml.safe_dump(self.model.model_config)
+
+    @property
+    def job_status(self) -> Status:
+        """The current status of the Evaluate job."""
+        self.model.refresh()
+        return self.model.status
+
+    def refresh(self) -> None:
+        """Refresh the Evaluate job result attributes."""
+        if self.job_status == Status.COMPLETED:
+            if self.evaluate_report is None:
+                self.evaluate_report = fetch_model_report(self.model)
+
+        # We can fetch model logs no matter what
+        self.evaluate_logs = fetch_model_logs(self.model)
+
+    def wait_for_completion(self) -> None:
+        """Wait for Evaluate job to finish running."""
+        if self.job_status != Status.COMPLETED:
+            poll(self.model, verbose=False)
+            self.refresh()
+
+    def __repr__(self):
+        p = ["project_id", "model_id", "job_status"]
+        r = "\n".join([f"    {k}: {getattr(self, k)}" for k in p]) + "\n)\n"
+        r = "(\n" + r
+        return f"{self.__class__.__name__}{r}"

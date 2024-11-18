@@ -34,6 +34,7 @@ from gretel_client.gretel.exceptions import (
     GretelProjectNotSetError,
 )
 from gretel_client.gretel.job_results import (
+    EvaluateResults,
     GenerateJobResults,
     TrainJobResults,
     TransformResults,
@@ -66,6 +67,7 @@ logger.setLevel(logging.INFO)
 
 HIGH_LEVEL_SESSION_METADATA = {"high_level_interface": "1"}
 TRANSFORM_DOCS_URL = "https://docs.gretel.ai/create-synthetic-data/models/transform/v2"
+EVALUATE_DOCS_URL = "https://docs.gretel.ai/optimize-synthetic-data/evaluate"
 
 
 def _convert_to_valid_data_source(
@@ -719,6 +721,107 @@ class Gretel:
         results = TransformResults(project=self.get_project(), model=model)
         results.refresh()
         return results
+
+    def submit_evaluate(
+        self,
+        config: Union[str, Path, dict],
+        *,
+        data_source: Union[str, Path, _DataFrameT, None],
+        ref_data: Union[str, Path, _DataFrameT, None],
+        test_data: Optional[Union[str, Path, _DataFrameT, None]] = None,
+        job_label: Optional[str] = None,
+        wait: bool = True,
+        verbose_logging: bool = False,
+    ) -> EvaluateResults:
+        """Create an Evaluate Model.
+
+        Args:
+            config: The evaluate config as a yaml file path, yaml string, or dict.
+            data_source: Training data source as a file path or pandas DataFrame.
+            ref_data: Reference data source as a file path or pandas DataFrame.
+            test_data: Optional test data source as a file path or pandas DataFrame. This file will be used to calculate MIA, for more information about Data Privacy Metrics, please refer to our doc site, https://docs.gretel.ai/optimize-synthetic-data/evaluate/synthetic-data-quality-report.
+            job_label: Descriptive label to append to job the name.
+            wait: If True, wait for the job to complete before returning.
+            verbose_logging: If True, will print all logs from the job.
+
+        Raises:
+            GretelJobSubmissionError: If any model besides evaluate is used or an error occurs during submission
+            ModelConfigReadError: If the model config is invalid
+
+        Returns:
+            Evaluate results dataclass with evaluate_report and evaluate_logs.
+
+        Example::
+
+            from gretel_client import Gretel
+            gretel = Gretel(api_key="prompt")
+
+            config = '''schema_version: "1.0"
+
+            name: "evaluate test model"
+
+            models:
+              - evaluate:
+                  data_source: "_"
+            '''
+
+            data_source="https://gretel-public-website.s3-us-west-2.amazonaws.com/datasets/USAdultIncome4k.csv"
+            ref_data="https://gretel-public-website.s3-us-west-2.amazonaws.com/datasets/USAdultIncome5kGenerated.csv"
+            test_data="https://gretel-public-website.s3.us-west-2.amazonaws.com/datasets/USAdultIncome1k.csv"
+            evaluate_result = gretel.submit_evaluate(
+                config=config,
+                data_source=tabular_data_source,
+                ref_data=tabular_data_source,
+                job_label="testing123",
+            )
+
+            # access resulted evaluate report
+            evaluate_report = evaluate_result.evaluate_report
+        """
+        job_config = smart_read_model_config(config, config_name_prefix="evaluate")
+
+        model_type, _ = extract_model_config_section(job_config)
+        if model_type != "evaluate":
+            raise GretelJobSubmissionError(
+                "Only `evaluate` is supported for 'submit_evaluate'"
+            )
+
+        if job_label is not None:
+            job_config["name"] = f"{job_config['name']}-{job_label}"
+
+        data_source = _convert_to_valid_data_source(data_source)
+        ref_data = _convert_to_valid_data_source(ref_data)
+        if test_data is not None:
+            test_data = _convert_to_valid_data_source(test_data)
+            ref_data = [ref_data, test_data]
+
+        project = self.get_project()
+
+        model = project.create_model_obj(
+            model_config=job_config, data_source=data_source, ref_data=ref_data
+        )
+        project_url = project.get_console_url()
+        logger.info(f"Submitting evaluate job...\nEvaluate Docs: {EVALUATE_DOCS_URL}")
+
+        model.submit()
+
+        logger.info(
+            f"Console URL: {project_url}/models/{model.model_id}/activity\n"
+            f"Model ID: {model.model_id}"
+        )
+
+        evaluate_result = EvaluateResults(project=project, model=model)
+        if wait:
+            poll(model, verbose=verbose_logging)
+            if model.status != Status.COMPLETED:
+                logger.warning(
+                    "Evaluate didn't complete successfully. Job status was "
+                    f"'{model.status}', details: {model.errors}"
+                )
+            evaluate_result.refresh()
+
+        self._last_model = model
+        return evaluate_result
 
     def __repr__(self):
         name = self._project.name if self._project else None
