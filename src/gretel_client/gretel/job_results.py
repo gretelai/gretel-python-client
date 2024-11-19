@@ -18,6 +18,7 @@ from gretel_client.gretel.artifact_fetching import (
     fetch_model_report,
     fetch_synthetic_data,
     GretelReport,
+    ReportType,
 )
 from gretel_client.gretel.config_setup import (
     CONFIG_SETUP_DICT,
@@ -200,6 +201,8 @@ class TransformResults(GretelJobResults):
     """URI to the transformed data (as a flat file). This will 
     not be populated until the transforms job succeeds."""
 
+    report: Optional[GretelReport] = None
+
     @property
     def model_url(self) -> str:
         """
@@ -213,6 +216,10 @@ class TransformResults(GretelJobResults):
         The Transforms config that was used.
         """
         return yaml.safe_dump(self.model.model_config)
+
+    @property
+    def model_config_section(self) -> dict:
+        return next(iter(self.model.model_config["models"][0].values()))  # type: ignore
 
     @property
     def job_status(self) -> Status:
@@ -230,6 +237,11 @@ class TransformResults(GretelJobResults):
             if self.transformed_df is None and PANDAS_IS_INSTALLED:
                 with self.model.get_artifact_handle("data_preview") as fin:
                     self.transformed_df = pd.read_csv(fin)  # type: ignore
+            if (
+                self.report is None
+                and self.model_config_section.get("data_source") is not None
+            ):
+                self.report = fetch_model_report(self.model, ReportType.TRANSFORM)
 
         # We can fetch model logs no matter what
         self.transform_logs = fetch_model_logs(self.model)

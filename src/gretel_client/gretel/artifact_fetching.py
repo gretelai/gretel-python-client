@@ -36,25 +36,24 @@ class ReportType(str, Enum):
 
     SQS = "sqs"
     TEXT = "text"
+    TRANSFORM = "transform"
 
     @property
     def artifact_name(self) -> str:  # type: ignore
-        if self == ReportType.SQS:
-            return "report"
-        elif self == ReportType.TEXT:
-            return "text_metrics_report"
+        names = {
+            ReportType.SQS: "report",
+            ReportType.TRANSFORM: "report",
+            ReportType.TEXT: "text_metrics_report",
+        }
+        return names[self]
 
 
 @dataclass
 class GretelReport:
-    """Dataclass for a Gretel synthetic data quality report."""
+    """Dataclass base class for Gretel report artifacts."""
 
     as_dict: dict
     as_html: str
-
-    @property
-    def quality_scores(self) -> dict:
-        return {d["field"]: d["value"] for d in self.as_dict["summary"]}
 
     def display_in_browser(self):
         """Display the HTML report in a browser."""
@@ -73,6 +72,18 @@ class GretelReport:
         """Save the HTML report to a file at the given path."""
         with open(save_path, "w") as file:
             file.write(self.as_html)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}{self.as_dict}"
+
+
+@dataclass
+class GretelDataQualityReport(GretelReport):
+    """Dataclass for a Gretel synthetic data quality report."""
+
+    @property
+    def quality_scores(self) -> dict:
+        return {d["field"]: d["value"] for d in self.as_dict["summary"]}
 
     def __repr__(self):
         r = "\n".join([f"    {k}: {v}" for k, v in self.quality_scores.items()])
@@ -121,6 +132,9 @@ def fetch_model_report(
 
     with model.get_artifact_handle(report_type.artifact_name) as file:
         report_html = str(file.read(), encoding="utf-8")  # type: ignore
+
+    if report_type in [ReportType.SQS, ReportType.TEXT]:
+        return GretelDataQualityReport(as_dict=report_dict, as_html=report_html)
 
     return GretelReport(as_dict=report_dict, as_html=report_html)
 

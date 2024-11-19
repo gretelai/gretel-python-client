@@ -67,6 +67,10 @@ models:
         185,
         185,
     ]
+    assert transform.report is not None
+
+    # If the report type selection is broken this will fail
+    str(transform.report)
 
 
 def test_transform_errors(
