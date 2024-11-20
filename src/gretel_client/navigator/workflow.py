@@ -464,7 +464,7 @@ class NavigatorWorkflow:
             if message.stream == "logs":
                 level, msg = message.payload.get("level"), message.payload.get("msg")
                 if (level == "info" and verbose) or level in ["error", "warning"]:
-                    logger.info(f"    |-- {msg}")
+                    logger.info(f"  {'|' if '|--' in msg else '|--'} {msg}")
 
             if message.stream == "step_outputs":
                 logger.debug(f"Step output: {json.dumps(message.payload, indent=4)}")
