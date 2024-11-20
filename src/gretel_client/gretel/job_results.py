@@ -97,7 +97,9 @@ class TrainJobResults(GretelJobResults):
                 "The training job must be in a completed state "
                 "to fetch the report synthetic data."
             )
-        elif self.report is None:
+        if self.report is None and not self.model_config_section.get(
+            "evaluate", {}
+        ).get("skip", False):
             self.refresh()
         with self.model.get_artifact_handle("data_preview") as data_artifact:
             dataframe = pd.read_csv(data_artifact)  # type: ignore
