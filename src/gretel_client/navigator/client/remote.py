@@ -219,7 +219,6 @@ class RemoteClient(ClientAdapter[Serializable]):
         logger.info(f"▶️ Starting your workflow run to generate {num_records} records:")
         logger.info(f"  |-- project_name: {project.name}")
         logger.info(f"  |-- project_id: {project.project_guid}")
-        logger.info(f"  |-- workflow_id: {batch_response.workflow_id}")
         logger.info(f"  |-- workflow_run_id: {batch_response.workflow_run_id}")
         logger.info(f"🔗 -> {workflow_run_url}")
 

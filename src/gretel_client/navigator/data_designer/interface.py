@@ -23,6 +23,7 @@ from gretel_client.navigator.data_designer.viz_tools import (
 )
 from gretel_client.navigator.log import get_logger
 from gretel_client.navigator.tasks.base import Task
+from gretel_client.navigator.tasks.constants import PREVIEW_NUM_RECORDS
 from gretel_client.navigator.tasks.evaluate_dataset import EvaluateDataset
 from gretel_client.navigator.tasks.generate.generate_seed_category_values import (
     GenerateSeedCategoryValues,
@@ -51,10 +52,11 @@ from gretel_client.navigator.tasks.validate.validate_code import (
     ValidateCode,
 )
 from gretel_client.navigator.workflow import (
+    DataDesignerBatchJob,
+    DataDesignerWorkflow,
     DataSpec,
-    NavigatorBatchJob,
-    NavigatorWorkflow,
     PreviewResults,
+    Step,
 )
 
 logger = get_logger(__name__, level=logging.INFO)
@@ -69,17 +71,15 @@ class DataDesigner:
     to assemble a scalable synthetic data generation workflow.
 
     Args:
-        dataset_description: Optional description of the dataset to be generated. This description will
-            be used in prompts to provide high-level context about the dataset.
-        special_system_instructions: Optional instructions for the system to follow when generating
-            the dataset. These instructions will be added to the system prompts.
         model_suite: The model suite to use for generating synthetic data. Defaults to the
-            Apache-2.0 licensed model suite.
+            apache-2.0 licensed model suite.
         session: Optional Gretel session configuration object. If not provided, the session will be
             configured based on the provided session_kwargs or cached session configuration.
+        special_system_instructions: Optional instructions for the system to follow when generating
+            the dataset. These instructions will be added to the system prompts.
         **session_kwargs: kwargs for your Gretel session. See options below.
 
-    Keyword Args:
+    Allowed session keyword arguments:
         api_key (str): Your Gretel API key. If set to "prompt" and no API key
             is found on the system, you will be prompted for the key.
         endpoint (str): Specifies the Gretel API endpoint. This must be a fully
@@ -102,10 +102,9 @@ class DataDesigner:
     def __init__(
         self,
         *,
-        dataset_description: Optional[str] = None,
-        special_system_instructions: Optional[str] = None,
         model_suite: ModelSuite = DEFAULT_MODEL_SUITE,
         session: Optional[ClientConfig] = None,
+        special_system_instructions: Optional[str] = None,
         **session_kwargs,
     ):
 
@@ -113,22 +112,24 @@ class DataDesigner:
             configure_session(**session_kwargs)
             session = get_session_config()
 
+        logger.info(f"🦜 Using {model_suite} model suite")
         self._session = session
         self._client = get_navigator_client(session=session, **session_kwargs)
         self._seed_categories: dict[str, list[SeedCategory]] = {}
-        self._data_columns: dict[str, list[GeneratedDataColumn]] = {}
         self._seed_subcategory_names = defaultdict(list)
+        self._generated_data_columns: dict[str, list[GeneratedDataColumn]] = {}
         self._validators: dict[str, list[Task]] = {}
         self._evaluators: dict[str, Task] = {}
         self._eval_type: Optional[str] = None
+
+        self.special_system_instructions = special_system_instructions
+        datetime_label = datetime.now().isoformat(timespec="seconds")
         self._workflow_kwargs = {
             "model_suite": check_model_suite(model_suite),
             "session": self._session,
             "client": self._client,
-            "workflow_name": f"NavDD-{datetime.now().isoformat(timespec='seconds')}",
+            "workflow_name": f"{self.__class__.__name__}-{datetime_label}",
         }
-        self.dataset_description = dataset_description
-        self.special_system_instructions = special_system_instructions
 
     @property
     def _seed_category_names(self) -> list[str]:
@@ -136,79 +137,38 @@ class DataDesigner:
         return list(self._seed_categories.keys())
 
     @property
-    def data_column_names(self) -> list[str]:
-        """Return a list of the names of the data columns (note order matters)."""
-        return list(self._data_columns.keys())
-
-    @property
-    def seed_column_names(self) -> list[str]:
+    def categorical_seed_column_names(self) -> list[str]:
         """Return a list of the names of the seed columns, including subcategories."""
         return self._seed_category_names + [
             s for ss in self._seed_subcategory_names.values() for s in ss
         ]
 
     @property
+    def generated_data_column_names(self) -> list[str]:
+        """Return a list of the names of the data columns (note order matters)."""
+        return list(self._generated_data_columns.keys())
+
+    @property
     def all_column_names(self) -> list[str]:
         """Return a list of all seed (including seed subcategories) and data column names."""
-        return self.seed_column_names + self.data_column_names
+        return self.categorical_seed_column_names + self.generated_data_column_names
 
     @property
     def categorical_seed_columns(self) -> CategoricalDataSeeds:
         """Return a CategoricalDataSeeds instance that contains the seed categories."""
-        if len(self._seed_categories) == 0:
-            raise ValueError("No seed categories have been defined.")
-
-        return CategoricalDataSeeds(
-            seed_categories=list(self._seed_categories.values())
-        )
-
-    @property
-    def data_spec(self) -> DataSpec:
-        """Return a DataSpec instance that defines the schema and other relevant info."""
-        code_lang = None
-        code_columns = []
-        validation_columns = []
-        llm_judge_column_name = None
-        for validator in self._validators.values():
-            if validator.name == "validate_code":
-                column_suffix = (
-                    VALIDATE_SQL_COLUMN_SUFFIXES
-                    if validator.config.code_lang in SQL_DIALECTS
-                    else VALIDATE_PYTHON_COLUMN_SUFFIXES
-                )
-                code_lang = validator.config.code_lang
-                code_columns.extend(validator.config.code_columns)
-                for col in code_columns:
-                    for prefix in column_suffix:
-                        validation_columns.append(f"{col}{prefix}")
-                break
-        if self._eval_type in list(LLMJudgePromptTemplateType):
-            llm_judge_column_name = f"{self._eval_type}_llm_judge_results"
-        return DataSpec(
-            seed_category_names=self._seed_category_names,
-            seed_subcategory_names=dict(self._seed_subcategory_names),
-            data_column_names=self.data_column_names,
-            validation_column_names=validation_columns,
-            code_column_names=code_columns,
-            code_lang=code_lang,
-            eval_type=self._eval_type,
-            llm_judge_column_name=llm_judge_column_name,
-        )
+        if len(self._seed_categories) > 0:
+            return CategoricalDataSeeds(
+                seed_categories=list(self._seed_categories.values())
+            )
+        return CategoricalDataSeeds(seed_categories=[])
 
     @classmethod
-    def from_config(
-        cls,
-        config: Union[dict, str, Path],
-        session: Optional[ClientConfig] = None,
-        **session_kwargs,
-    ) -> Self:
+    def from_config(cls, config: Union[dict, str, Path], **kwargs) -> Self:
         """Instantiate a DataDesigner instance from a YAML configuration str, dict, or file.
 
         Args:
             config: A YAML configuration file, dict, or string.
-            session: Optional Gretel session configuration object. If not provided, the session will be
-              configured based on the provided session_kwargs or cached session configuration.
-            **session_kwargs: kwargs for your Gretel session.
+            **kwargs: Additional keyword arguments to pass to the DataDesigner constructor.
 
         Returns:
             An instance of DataDesigner configured with the settings from the provided YAML config.
@@ -220,12 +180,10 @@ class DataDesigner:
             config = requests.get(config).content.decode("utf-8")
         config = smart_load_yaml(config)
 
-        designer = cls(
-            dataset_description=config.get("dataset_description"),
+        dd = cls(
             special_system_instructions=config.get("special_system_instructions"),
             model_suite=config.get("model_suite", DEFAULT_MODEL_SUITE),
-            session=session,
-            **session_kwargs,
+            **kwargs,
         )
 
         if "categorical_seed_columns" not in config:
@@ -235,14 +193,14 @@ class DataDesigner:
             )
 
         for seed_category in config.get("categorical_seed_columns", []):
-            designer.add_categorical_seed_column(**seed_category)
+            dd.add_categorical_seed_column(**seed_category)
             logger.debug(f"🌱 Adding seed category: {seed_category['name']}")
 
         for data_column in config.get("generated_data_columns", []):
-            designer.add_generated_data_column(**data_column)
+            dd.add_generated_data_column(**data_column)
             logger.debug(f"💽 Adding data column: {data_column['name']}")
 
-        if len(designer.all_column_names) == 0:
+        if len(dd.all_column_names) == 0:
             raise ValueError("No seed or data columns were defined in the config.")
 
         # Post processors are applied after the data generation process
@@ -253,7 +211,7 @@ class DataDesigner:
             eval_type = None
             for processor in post_processors:
                 if "validator" in processor:
-                    designer.add_data_validator(
+                    dd.add_validator(
                         validator=ValidatorType(processor["validator"]),
                         **processor["settings"],
                     )
@@ -271,9 +229,7 @@ class DataDesigner:
                         eval_type = LLMJudgePromptTemplateType(
                             processor["evaluator"]
                         ).value
-                    designer.add_dataset_evaluation(
-                        eval_type=processor["evaluator"], **settings
-                    )
+                    dd.add_evaluator(eval_type=processor["evaluator"], **settings)
                 if code_lang and eval_type:
                     if (code_lang in SQL_DIALECTS and eval_type != "text_to_sql") or (
                         code_lang == "python" and eval_type != "text_to_python"
@@ -283,35 +239,46 @@ class DataDesigner:
                             f"the `{eval_type}` evaluator. Please ensure the code language "
                             "of the validator and evaluator are compatible."
                         )
-        designer._config = config
 
-        return designer
+        dd._config = config
 
-    def _create_sequential_task_list(
-        self, data_seeds: Optional[CategoricalDataSeeds] = None
-    ) -> list[Task]:
-        """Returns a list of tasks to be executed sequentially in the workflow.
+        return dd
+
+    def _create_workflow_steps(
+        self,
+        num_records: Optional[int] = None,
+        data_seeds: Optional[CategoricalDataSeeds] = None,
+        dataset_context: Optional[str] = None,
+        verbose_logging: bool = False,
+        **kwargs,
+    ) -> tuple[list[Step], Optional[CategoricalDataSeeds]]:
+        """Create workflow steps from a list of tasks.
 
         Args:
-            data_seeds: Data seeds to use in place of what was defined in the
-                configuration. This is useful if you have pre-generated data
-                seeds or want to experiment with different seed categories/values.
+            num_records: Number of records to be generated.
+            data_seeds: Data seeds to use in place of what was defined in the configuration.
+                This is useful if you have pre-generated data seeds or want to experiment with
+                different seed categories/values.
+            dataset_context: Context for the dataset to be used in the seed value generation task.
+            verbose_logging: If True, additional logging will be displayed.
 
         Returns:
-            A list of Task objects to be executed sequentially in the workflow.
+            A tuple that contains a list of workflow steps and the data seeds used in the workflow.
         """
         if len(self._seed_categories) == 0:
             raise ValueError("No seed columns have been defined.")
 
         task_list = []
+        num_records = num_records or PREVIEW_NUM_RECORDS
         data_seeds = data_seeds or self.categorical_seed_columns
+
         if data_seeds.needs_generation:
             # If any seed category / subcategory values need generation,
             # we start with the seed value generation task.
             task_list.append(
                 GenerateSeedCategoryValues(
                     seed_categories=list(self._seed_categories.values()),
-                    dataset_context=self.dataset_description,
+                    dataset_context=dataset_context,
                     client=self._client,
                 )
             )
@@ -327,10 +294,10 @@ class DataDesigner:
 
         # Given fully-specified data seeds, we next add a task to
         # sample them in to a seed dataset.
-        task_list.append(SampleDataSeeds(client=self._client))
+        task_list.append(SampleDataSeeds(num_records=num_records, client=self._client))
 
         # Iterate over the data columns and create generation tasks for each.
-        for column in self._data_columns.values():
+        for column in self._generated_data_columns.values():
             task = column.to_generation_task(
                 self.special_system_instructions, client=self._client
             )
@@ -344,30 +311,30 @@ class DataDesigner:
         for eval_task in self._evaluators.values():
             task_list.append(eval_task)
 
-        return task_list
-
-    def _create_workflow_steps(
-        self,
-        task_list: Optional[list[Task]] = None,
-        data_seeds: Optional[CategoricalDataSeeds] = None,
-        verbose_logging: bool = False,
-    ) -> list[dict]:
-        """Create workflow steps from a list of tasks.
-
-        Args:
-            task_list: List of tasks to be executed sequentially in the workflow.
-            data_seeds: Data seeds to use in place of what was defined in the configuration.
-                This is useful if you have pre-generated data seeds or want to experiment with
-                different seed categories/values.
-            verbose_logging: If True, additional logging will be displayed.
-
-        Returns:
-            A list of workflow steps that can be executed by the NavigatorWorkflow.
-        """
-        if task_list is None:
-            task_list = self._create_sequential_task_list(data_seeds)
-        return NavigatorWorkflow.create_steps_from_sequential_tasks(
+        steps = DataDesignerWorkflow.create_steps_from_sequential_tasks(
             task_list, verbose_logging=verbose_logging
+        )
+        return steps, data_seeds
+
+    def _get_data_seeds_task(
+        self, dataset_context: Optional[str] = None, **kwargs
+    ) -> Task:
+        """Get the task that generates seed category values."""
+
+        if len(self._seed_categories) == 0:
+            raise ValueError("No seed categories have been defined.")
+
+        if not self.categorical_seed_columns.needs_generation:
+            logger.warning("⚠️ Your categorical data seeds do not require generation.")
+            return LoadDataSeeds(
+                categorical_data_seeds=self.categorical_seed_columns,
+                client=self._client,
+            )
+
+        return GenerateSeedCategoryValues(
+            seed_categories=list(self._seed_categories.values()),
+            dataset_context=dataset_context,
+            client=self._client,
         )
 
     def _validate_generated_data_column_inputs(
@@ -388,7 +355,7 @@ class DataDesigner:
             A tuple containing the validated inputs for the data column.
         """
 
-        if name in self._data_columns:
+        if name in self._generated_data_columns:
             raise ValueError(f"Column name `{name}` already exists.")
         if name in self._seed_categories:
             raise ValueError(f"Column name `{name}` already exists as a seed category.")
@@ -401,22 +368,22 @@ class DataDesigner:
                 f"The `generation_prompt` field of `{name}` contains template keywords that "
                 "are not available as columns.\n"
                 f"* Template keywords found in `generation_prompt`: {template_kwargs}\n"
-                f"* Available seed columns: {self.seed_column_names}\n"
-                f"* Available data columns: {self.data_column_names}"
+                f"* Available seed columns: {self.categorical_seed_column_names}\n"
+                f"* Available data columns: {self.generated_data_column_names}"
             )
 
         if isinstance(columns_to_list_in_prompt, str):
             if columns_to_list_in_prompt == "all":
                 columns_to_list_in_prompt = self.all_column_names
             elif columns_to_list_in_prompt == "all_categorical_seed_columns":
-                columns_to_list_in_prompt = self.seed_column_names
+                columns_to_list_in_prompt = self.categorical_seed_column_names
             elif columns_to_list_in_prompt == "all_generated_data_columns":
-                if len(self.data_column_names) == 0:
+                if len(self.generated_data_column_names) == 0:
                     logger.warning(
                         f"⚠️ The generated data column `{name}` has set `columns_to_list_in_prompt` "
                         "to 'all_generated_data_columns', but no data columns have been defined."
                     )
-                columns_to_list_in_prompt = self.data_column_names
+                columns_to_list_in_prompt = self.generated_data_column_names
             else:
                 raise ValueError(
                     f"If not None, `columns_to_list_in_prompt` must be a list of column names or "
@@ -434,112 +401,11 @@ class DataDesigner:
                     f"The `columns_to_list_in_prompt` field of `{name}` contains invalid columns. "
                     "Only seed or data columns that have been defined before the current "
                     "column can be added as context.\n"
-                    f"* Available seed columns: {self.seed_column_names}\n"
-                    f"* Available data columns: {self.data_column_names}\n"
+                    f"* Available seed columns: {self.categorical_seed_column_names}\n"
+                    f"* Available data columns: {self.generated_data_column_names}\n"
                 )
 
         return name, generation_prompt, columns_to_list_in_prompt
-
-    def generate_seed_category_values(
-        self, verbose_logging: bool = False
-    ) -> CategoricalDataSeeds:
-        """Generate values for seed categories that require generation.
-
-        Args:
-            verbose_logging: If True, additional logging will be displayed during execution.
-        """
-        if len(self._seed_categories) == 0:
-            raise ValueError("No seed categories have been defined.")
-
-        if not self.categorical_seed_columns.needs_generation:
-            logger.warning("⚠️ Your categorical data seeds do not require generation.")
-            return self.categorical_seed_columns
-
-        workflow = NavigatorWorkflow(**self._workflow_kwargs)
-        task = GenerateSeedCategoryValues(
-            seed_categories=list(self._seed_categories.values()),
-            dataset_context=self.dataset_description,
-            client=self._client,
-        )
-        workflow.add_steps(workflow.create_steps_from_sequential_tasks([task]))
-        seeds = workflow._generate_preview(verbose=verbose_logging).output
-        if seeds is None:
-            raise ValueError(
-                "An error occurred while generating your categorical seed values. "
-                "Please check that your configuration is as expected, restart your session, and try again. "
-                "If the problem persists, please contact support and/or submit a GitHub issue to the gretel-client repo."
-            )
-
-        seeds["seed_categories"] = seeds["seed_categories"][::-1]
-        return CategoricalDataSeeds(**seeds)
-
-    def add_categorical_seed_column(
-        self,
-        name: str,
-        *,
-        description: Optional[str] = None,
-        values: Optional[list[Union[str, int, float]]] = None,
-        weights: Optional[list[float]] = None,
-        num_new_values_to_generate: Optional[int] = None,
-        subcategories: Optional[Union[list[SeedSubcategory], list[dict]]] = None,
-    ) -> None:
-        """Add a seed category to the data design.
-
-        All seed categories must be added *before* any generated data columns are added.
-
-        A seed category is a categorical column with values that can be user-provided or generated
-        by an LLM using the GenerateSeedCategoryValues Task. The purpose of categorical data
-        seeds is to steer the synthetic data generation process, injecting diversity along axes
-        that are important to the user.
-
-        Args:
-            name: The name of the seed category.
-            description: A clear and specific description of the seed category.
-            values: A list of values for the category.
-            weights: A list of weights for the values. If None, all values will have equal weight.
-                weights must be the same length as values.
-            num_new_values_to_generate: The number of new category values to generate.
-                If None, only the provided values will be used. You must provide *at least* one
-                of `values` or `num_new_values_to_generate`. If you provide both, then `values`
-                will be used as examples during generation.
-            subcategories: Subcategories for the seed category. Each subcategory must be a
-                SeedSubcategory instance or a dictionary with the same fields as a parent
-                seed category *except* for `weights` and `subcategories`.
-        """
-        if len(self._data_columns) > 0:
-            raise ValueError(
-                "Seed categories must be added *before* all data columns.\n"
-                f"* Current data columns: {self.data_column_names}"
-            )
-        if num_new_values_to_generate is None and values is None:
-            raise ValueError(
-                "You must provide *at least* one of `values` or `num_new_values_to_generate`."
-            )
-        if name in self._seed_category_names:
-            raise ValueError(f"Seed category `{name}` already exists.")
-
-        if len(subcategories or []) > 0:
-            for seed in subcategories:
-                if isinstance(seed, dict):
-                    seed = SeedSubcategory(**seed)
-                if seed.name in self._seed_category_names:
-                    raise ValueError(f"Seed category `{seed.name}` already exists.")
-                self._seed_subcategory_names[name].append(seed.name)
-
-        weights = weights or []
-        if len(weights) > 0 and len(weights) != len(values):
-            raise ValueError(
-                "The number of weights must be the same as the number of values."
-            )
-
-        self._seed_categories[name] = SeedCategory(
-            name=name,
-            description=description,
-            values=values or [],
-            weights=weights or [],
-            num_new_values_to_generate=num_new_values_to_generate,
-            subcategories=subcategories or [],
-        )
 
     def add_generated_data_column(
         self,
@@ -568,7 +434,7 @@ class DataDesigner:
                 name, generation_prompt, columns_to_list_in_prompt
             )
         )
-        self._data_columns[name] = GeneratedDataColumn(
+        self._generated_data_columns[name] = GeneratedDataColumn(
             name=name,
             generation_prompt=generation_prompt,
             columns_to_list_in_prompt=columns_to_list_in_prompt,
@@ -576,7 +442,74 @@ class DataDesigner:
             llm_type=llm_type,
         )
 
-    def add_data_validator(self, validator: ValidatorType, **settings) -> None:
+    def add_categorical_seed_column(
+        self,
+        name: str,
+        *,
+        description: Optional[str] = None,
+        values: Optional[list[Union[str, int, float]]] = None,
+        weights: Optional[list[float]] = None,
+        num_new_values_to_generate: Optional[int] = None,
+        subcategories: Optional[Union[list[SeedSubcategory], list[dict]]] = None,
+        **kwargs,
+    ) -> None:
+        """Add a seed category to the data design.
+
+        All seed categories must be added *before* any generated data columns are added. This is to enable
+        validation of any keyword arguments in the generation prompts, which can only reference existing
+        seed and data columns.
+
+        A seed category is a categorical column with values that can be user-provided or generated
+        by an LLM using the GenerateSeedCategoryValues Task. The purpose of categorical data
+        seeds is to steer the synthetic data generation process, injecting diversity along axes
+        that are important to the user.
+
+        Args:
+            name: The name of the seed category.
+            description: A clear and specific description of the seed category.
+            values: A list of values for the category.
+            weights: A list of weights for the values. If None, all values will have equal weight.
+                weights must be the same length as values.
+            num_new_values_to_generate: The number of new category values to generate.
+                If None, only the provided values will be used. You must provide *at least* one
+                of `values` or `num_new_values_to_generate`. If you provide both, then `values`
+                will be used as examples during generation.
+            subcategories: Subcategories for the seed category. Each subcategory must be a
+                SeedSubcategory instance or a dictionary with the same fields as a parent
+                seed category *except* for `weights` and `subcategories`.
+        """
+        if num_new_values_to_generate is None and values is None:
+            raise ValueError(
+                "You must provide *at least* one of `values` or `num_new_values_to_generate`."
+            )
+        if name in self._seed_category_names:
+            raise ValueError(f"Seed category `{name}` already exists.")
+
+        if len(subcategories or []) > 0:
+            for seed in subcategories:
+                if isinstance(seed, dict):
+                    seed = SeedSubcategory(**seed)
+                if seed.name in self._seed_category_names:
+                    raise ValueError(f"Seed category `{seed.name}` already exists.")
+                self._seed_subcategory_names[name].append(seed.name)
+
+        weights = weights or []
+        if len(weights) > 0 and len(weights) != len(values):
+            raise ValueError(
+                "The number of weights must be the same as the number of values."
+            )
+
+        self._seed_categories[name] = SeedCategory(
+            name=name,
+            description=description,
+            values=values or [],
+            weights=weights or [],
+            num_new_values_to_generate=num_new_values_to_generate,
+            subcategories=subcategories or [],
+            **kwargs,
+        )
+
+    def add_validator(self, validator: ValidatorType, **settings) -> None:
         """Add a data validator to the data design.
 
         Args:
@@ -606,7 +539,7 @@ class DataDesigner:
         else:
             raise ValueError(f"Unknown validator type: {validator}")
 
-    def add_dataset_evaluation(
+    def add_evaluator(
         self, eval_type: Union[EvaluationType, LLMJudgePromptTemplateType], **settings
     ) -> None:
         """Add a dataset evaluation task to the data design.
@@ -645,7 +578,7 @@ class DataDesigner:
             raise ValueError(f"Unknown evaluation type: {eval_type}")
 
         self._evaluators["evaluate_dataset"] = EvaluateDataset(
-            seed_columns=self.seed_column_names,
+            seed_columns=self.categorical_seed_column_names,
             ordered_list_like_columns=settings.get("ordered_list_like_columns", []),
             other_list_like_columns=settings.get("list_like_columns", []),
             llm_judge_column=settings.get("llm_judge_column", llm_judge_column),
@@ -654,10 +587,68 @@ class DataDesigner:
         )
         self._eval_type = eval_type
 
+    def get_generated_data_column(self, name: str) -> GeneratedDataColumn:
+        """Get a data column by name."""
+        return self._generated_data_columns[name]
+
+    def get_data_spec(
+        self, data_seeds: Optional[CategoricalDataSeeds] = None
+    ) -> DataSpec:
+        """Return a DataSpec instance that defines the schema and other relevant info."""
+        code_lang = None
+        code_columns = []
+        validation_columns = []
+        llm_judge_column_name = None
+        for validator in self._validators.values():
+            if validator.name == "validate_code":
+                column_suffix = (
+                    VALIDATE_SQL_COLUMN_SUFFIXES
+                    if validator.config.code_lang in SQL_DIALECTS
+                    else VALIDATE_PYTHON_COLUMN_SUFFIXES
+                )
+                code_lang = validator.config.code_lang
+                code_columns.extend(validator.config.code_columns)
+                for col in code_columns:
+                    for prefix in column_suffix:
+                        validation_columns.append(f"{col}{prefix}")
+                break
+        if self._eval_type in list(LLMJudgePromptTemplateType):
+            llm_judge_column_name = f"{self._eval_type}_llm_judge_results"
+
+        seed_category_names = (
+            self._seed_category_names
+            if data_seeds is None
+            else [s.name for s in data_seeds.seed_categories]
+        )
+
+        seed_subcategory_names = (
+            dict(self._seed_subcategory_names)
+            if data_seeds is None
+            else {
+                s.name: [ss.name for ss in s.subcategories]
+                for s in data_seeds.seed_categories
+            }
+        )
+
+        return DataSpec(
+            seed_category_names=seed_category_names,
+            seed_subcategory_names=seed_subcategory_names,
+            data_column_names=self.generated_data_column_names,
+            validation_column_names=validation_columns,
+            code_column_names=code_columns,
+            code_lang=code_lang,
+            eval_type=self._eval_type,
+            llm_judge_column_name=llm_judge_column_name,
+        )
+
     def export_as_workflow_config(
         self,
         path: Optional[Union[str, Path]] = None,
+        *,
+        num_records: Optional[int] = None,
+        dataset_context: Optional[str] = None,
         data_seeds: Optional[CategoricalDataSeeds] = None,
+        **kwargs,
     ) -> Union[dict, None]:
         """Export the data design as a Navigator workflow configuration.
 
@@ -666,6 +657,8 @@ class DataDesigner:
 
         Args:
             path: Optional JSON or YAML path to save the workflow configuration to.
+            num_records: Number of records to be generated.
+            dataset_context: Context for the dataset to be used in the seed generation task.
             data_seeds: Data seeds to use in place of what was defined
                 in the DataDesigner configuration. This is useful if, for example, you
                 generated category values using `generate_seed_category_values` and want to
@@ -674,9 +667,18 @@ class DataDesigner:
         Returns:
             If no path is provided, the configuration will be returned as a dict.
         """
-        workflow = NavigatorWorkflow(**self._workflow_kwargs)
-        workflow.add_steps(self._create_workflow_steps(data_seeds=data_seeds))
+        workflow = DataDesignerWorkflow(**self._workflow_kwargs)
+
+        steps, _ = self._create_workflow_steps(
+            num_records=num_records,
+            dataset_context=dataset_context,
+            data_seeds=data_seeds,
+            **kwargs,
+        )
+        workflow.add_steps(steps)
         config = workflow.to_dict()
+        config["globals"]["num_records"] = num_records
+
         if path is None:
             return config
         else:
@@ -693,19 +695,60 @@ class DataDesigner:
                     f"You provided: {path.suffix}"
                 )
 
-    def get_seed_category(self, name: str) -> SeedCategory:
-        """Get a seed category by name."""
-        return self._seed_categories[name]
+    def ingest_categorical_data_seeds(
+        self, data_seeds: Union[dict, CategoricalDataSeeds]
+    ) -> None:
+        """Ingest pre-generated data seeds into the data design.
 
-    def get_data_column(self, name: str) -> GeneratedDataColumn:
-        """Get a data column by name."""
-        return self._data_columns[name]
+        Args:
+            data_seeds: Ingest entire CategoricalDataSeeds instance into the data design.
+        """
+        if isinstance(data_seeds, dict):
+            data_seeds = CategoricalDataSeeds(**data_seeds)
+        logger.info("🌱 Ingesting categorical data seeds into data design")
+        for seed in data_seeds.seed_categories:
+            try:
+                self.add_categorical_seed_column(**seed.model_dump())
+            except NotImplementedError:
+                raise NotImplementedError(
+                    "Ingesting data seeds is not supported for the "
+                    f"{self.__class__.__name__} subclass."
+                )
+
+    def run_data_seeds_step(
+        self,
+        *,
+        dataset_context: Optional[str] = None,
+        verbose_logging: bool = False,
+        **kwargs,
+    ) -> CategoricalDataSeeds:
+        """Run workflow step that generates / extracts / defines data seeds.
+
+        Args:
+            dataset_context: Context for the dataset to be used in the seed value generation task.
+            verbose_logging: If True, additional logging will be displayed during execution.
+        """
+        task = self._get_data_seeds_task(dataset_context=dataset_context, **kwargs)
+        workflow = DataDesignerWorkflow(**self._workflow_kwargs)
+        workflow.add_steps(workflow.create_steps_from_sequential_tasks([task]))
+        seeds = workflow._generate_preview(verbose=verbose_logging).output
+
+        if seeds is None or "seed_categories" not in seeds:
+            raise ValueError(
+                "An error occurred while generating your categorical seed values. "
+                "Please check that your configuration is as expected, restart your "
+                "session, and try again. If the problem persists, please contact support "
+                "and/or submit a GitHub issue to the gretel-client repo."
+            )
+
+        return CategoricalDataSeeds(**seeds)
 
     def generate_dataset_preview(
         self,
         *,
         data_seeds: Optional[CategoricalDataSeeds] = None,
         verbose_logging: bool = False,
+        **kwargs,
     ) -> PreviewResults:
         """Generate a preview synthetic dataset using the current workflow steps.
 
@@ -718,10 +761,37 @@ class DataDesigner:
         Returns:
             A PreviewResults instance containing the outputs of the workflow.
         """
-        workflow = NavigatorWorkflow(**self._workflow_kwargs)
-        workflow.add_steps(self._create_workflow_steps(data_seeds=data_seeds))
+        workflow = DataDesignerWorkflow(**self._workflow_kwargs)
+
+        steps, data_seeds = self._create_workflow_steps(
+            data_seeds=data_seeds,
+            verbose_logging=False,
+            **kwargs,
+        )
+
+        workflow.add_steps(steps)
+
         preview = workflow.generate_dataset_preview(verbose_logging=verbose_logging)
-        preview.data_spec = self.data_spec
+
+        # In order to have a data spec, we need to know the final data seeds. We grab them
+        # from the Workflow outputs to be certain they are the same as the ones used in the preview.
+        seed_steps = [
+            s.name
+            for s in workflow._steps
+            if workflow.step_io_map[s.name]["output"] == "categorical_data_seeds"
+        ]
+        if len(seed_steps) == 0:
+            raise ValueError(
+                "The workflow does not contain a step that outputs categorical data seeds. "
+                "This is required to generate a preview dataset by upsampling sample records."
+            )
+        seed_step = seed_steps[-1]
+        data_seeds = CategoricalDataSeeds(**preview.outputs_by_step[seed_step])
+
+        # The data spec has info about all the various columns in the dataset.
+        # We use this to display the preview data in a more human-readable format.
+        preview.data_spec = self.get_data_spec(data_seeds)
+
         if preview.evaluation_results is not None and self._eval_type in list(
             LLMJudgePromptTemplateType
         ):
@@ -736,7 +806,8 @@ class DataDesigner:
         num_records: int,
         project_name: Optional[str] = None,
         data_seeds: Optional[CategoricalDataSeeds] = None,
-    ) -> NavigatorBatchJob:
+        **kwargs,
+    ) -> DataDesignerBatchJob:
         """Submit a batch job to generate a synthetic dataset.
 
         Args:
@@ -749,21 +820,21 @@ class DataDesigner:
                 configuration will be used, including generating new values if needed.
 
         Returns:
-            NavigatorBatchJob instance containing the workflow run details and helper
+            NavigatorWorkflowBatchJob instance containing the workflow run details and helper
             methods for fetching the results.
         """
-        workflow = NavigatorWorkflow(**self._workflow_kwargs)
-        workflow.add_steps(
-            self._create_workflow_steps(data_seeds=data_seeds, verbose_logging=True)
+        workflow = DataDesignerWorkflow(**self._workflow_kwargs)
+        steps, _ = self._create_workflow_steps(
+            num_records=num_records,
+            data_seeds=data_seeds,
+            verbose_logging=True,
+            **kwargs,
         )
-        workflow_run = workflow.submit_batch_job(
+        workflow.add_steps(steps)
+        batch_job = workflow.submit_batch_job(
             num_records=num_records, project_name=project_name
         )
-        return NavigatorBatchJob(
-            workflow_step_names=workflow.workflow_step_names,
-            workflow_run=workflow_run,
-            data_spec=self.data_spec,
-        )
+        return batch_job
 
     def __repr__(self):
         seed_categories = [
@@ -775,20 +846,34 @@ class DataDesigner:
             for name, s in self._seed_categories.items()
         ]
 
+        categorical_seed_columns = (
+            f"    categorical_seed_columns: {seed_categories}\n"
+            if len(seed_categories) > 0
+            else ""
+        )
+
+        generated_data_columns = (
+            f"    generated_data_columns: {self.generated_data_column_names}\n"
+            if len(self.generated_data_column_names) > 0
+            else ""
+        )
+
         validators = (
             f"    validator: {[f'{k}:{v.config.code_lang}' for k,v in self._validators.items()][0]}\n"
             if len(self._validators) > 0
             else ""
         )
 
-        evaluation = (
+        evaluator = (
             f"    evaluator: {self._eval_type}\n" if self._eval_type is not None else ""
         )
-        return (
-            f"{self.__class__.__name__}(\n"
-            f"    categorical_seed_columns: {seed_categories}\n"
-            f"    generated_data_columns: {self.data_column_names}\n"
+
+        column_repr = (
+            f"{categorical_seed_columns}"
+            f"{generated_data_columns}"
             f"{validators}"
-            f"{evaluation}"
-            ")"
+            f"{evaluator}"
         )
+        newline = "\n" if len(column_repr) > 0 else ""
+
+        return f"{self.__class__.__name__}({newline}{column_repr})"

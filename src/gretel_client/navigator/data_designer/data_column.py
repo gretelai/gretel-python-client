@@ -117,6 +117,25 @@ class GeneratedDataColumn(BaseModel):
             + "\n"
         )
 
+    def get_system_prompt(
+        self, special_system_instructions: Optional[str] = None
+    ) -> str:
+        """Get the system prompt for the column generation task.
+
+        Args:
+            special_instructions: Special instructions to be added to the system prompt.
+
+        Returns:
+            System prompt string.
+        """
+        return system_prompt_dict[self.llm_type].format(
+            special_instructions=(
+                ""
+                if special_system_instructions is None
+                else f"\n{special_system_instructions}\n"
+            )
+        )
+
     def to_generation_task(
         self,
         special_system_instructions: Optional[str] = None,
@@ -137,13 +156,7 @@ class GeneratedDataColumn(BaseModel):
             response_column_name=self.name,
             workflow_label=f"generating {self.name}",
             llm_type=self.llm_type,
-            system_prompt=system_prompt_dict[self.llm_type].format(
-                special_instructions=(
-                    ""
-                    if special_system_instructions is None
-                    else f"\n{special_system_instructions}\n"
-                )
-            ),
+            system_prompt=self.get_system_prompt(special_system_instructions),
             client=client,
         )
 

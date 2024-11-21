@@ -53,8 +53,8 @@ def create_rich_histogram_table(
 
 def display_sample_record(
     record: Union[dict, pd.Series, pd.DataFrame],
-    seed_categories: list[str],
     data_columns: list[str],
+    seed_categories: Optional[list[str]] = None,
     seed_subcategories: Optional[dict[str, list[str]]] = None,
     code_lang: Optional[CodeLang] = None,
     code_columns: Optional[list[str]] = None,
@@ -80,15 +80,17 @@ def display_sample_record(
         )
 
     code_columns = code_columns or []
+    seed_categories = seed_categories or []
     seed_subcategories = seed_subcategories or {}
     validation_columns = validation_columns or []
+
     code_lang = None if code_lang is None else CodeLang.validate(code_lang)
     table_kws = dict(show_lines=True, expand=True)
 
     render_list = []
 
     if len(seed_categories) > 0:
-        table = Table(title="Seed Columns", **table_kws)
+        table = Table(title="Categorical Seed Columns", **table_kws)
         table.add_column("Name")
         table.add_column("Value")
         for col in [c for c in seed_categories if c not in code_columns]:
@@ -99,7 +101,7 @@ def display_sample_record(
         render_list.append(_pad_console_element(table))
 
     if len(data_columns) > 0:
-        table = Table(title="Data Columns", **table_kws)
+        table = Table(title="Generated Data Columns", **table_kws)
         table.add_column("Name")
         table.add_column("Value")
         for col in [c for c in data_columns if c not in code_columns]:
@@ -160,7 +162,7 @@ def display_sample_record(
         index_label = Text(f"[index: {record_index}]", justify="center")
         render_list.append(index_label)
 
-    console.print(Group(*render_list))
+    console.print(Group(*render_list), markup=False)
 
 
 def display_preview_evaluation_summary(
@@ -249,4 +251,4 @@ def display_preview_evaluation_summary(
 
     render_list.append(dash_sep)
 
-    console.print(Group(*render_list))
+    console.print(Group(*render_list), markup=False)

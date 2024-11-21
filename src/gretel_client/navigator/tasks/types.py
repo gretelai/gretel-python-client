@@ -47,6 +47,11 @@ class OutputColumnType(str, Enum):
     CODE = "code"
 
 
+class SystemPromptType(str, Enum):
+    REFLECTION = "reflection"
+    COGNITION = "cognition"
+
+
 class LLMType(str, Enum):
     NATURAL_LANGUAGE = "natural_language"
     CODE = "code"
@@ -249,6 +254,8 @@ class SeedCategory(SeedColumn):
 class CategoricalDataSeeds(BaseModel):
     seed_categories: list[SeedCategory]
 
+    dataset_schema_map: Optional[dict] = None
+
     @property
     def needs_generation(self) -> bool:
         return any(cat.needs_generation for cat in self.seed_categories) or any(
@@ -263,8 +270,6 @@ class CategoricalDataSeeds(BaseModel):
             "name",
             "description",
             "values",
-            "generated_values",
-            "num_values_to_generate",
             "subcategories",
         ]
         console = Console()
