@@ -108,6 +108,7 @@ class TabularInferenceAPI(BaseInferenceAPI):
         self._last_stream_read = None
         self._next_iter = None
         self._generated_count = 0
+        self._set_response_metadata({})
 
     def _create_stream_if_needed(
         self,
@@ -181,8 +182,12 @@ class TabularInferenceAPI(BaseInferenceAPI):
         done_generation = False
 
         attempt_count = 0
+        response_metadata: dict = {}
 
-        while self._generated_count < num_records:
+        # Keep going until we've given the user all their records and the most recent
+        # stream has been closed. We need to ensure the last stream is closed because
+        # that's when we receive additional metadata (model_ids, billing, etc).
+        while self._generated_count < num_records or self._curr_stream_id:
             if history_buffer:
                 this_ref_data["sample_data"] = {
                     "table_headers": list(history_buffer[0].keys()),
@@ -215,18 +220,24 @@ class TabularInferenceAPI(BaseInferenceAPI):
             for record in data_list:
                 if record["data_type"] == "logger.info":
                     logger.debug("%s: %s", self.__class__.__name__, record["data"])
+                elif record["data_type"] == "ResponseMetadata":
+                    response_metadata = _combine_response_metadata(
+                        response_metadata, json.loads(record["data"])
+                    )
+                    self._set_response_metadata(response_metadata)
                 elif record["data_type"] == "TabularResponse":
                     row_data = record["data"]["table_data"]
                     for row in row_data:
                         self._generated_count += 1
                         self._last_stream_read = time.time()
+                        if self._generated_count > num_records:
+                            # If we've already sent the user back all of their requested results,
+                            # don't bother returning more data than they expect.
+                            continue
                         if sample_buffer_size > 0:
                             history_buffer.append(row)
                             history_buffer = history_buffer[-sample_buffer_size:]
                         yield row
-                    if self._generated_count >= num_records:
-                        done_generation = True
-                        break
                 elif record["data_type"] == "logger.error":
                     attempt_count += 1
                     err_string = record["data"]
@@ -522,3 +533,17 @@ class TabularInferenceAPI(BaseInferenceAPI):
             pbar_desc="Generating records",
             disable_pbar=disable_progress_bar,
         )
+
+
+def _combine_response_metadata(
+    response_metadata: dict, new_response_data: dict
+) -> dict:
+    if not response_metadata:
+        return new_response_data
+
+    for k, v in new_response_data["usage"].items():
+        if not isinstance(v, int):
+            continue
+        response_metadata["usage"][k] += v
+
+    return response_metadata

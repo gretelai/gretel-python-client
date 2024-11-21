@@ -1,3 +1,5 @@
+import json
+
 from contextlib import nullcontext
 from unittest.mock import Mock, patch
 
@@ -9,6 +11,21 @@ import gretel_client.inference_api.tabular as tabular
 from gretel_client.inference_api.tabular import GretelInferenceAPIError
 
 tabular.STREAM_SLEEP_TIME = 0
+
+# two data points to cap off the end of the stream
+ENDING_STREAM_DATA = [
+    {
+        "data": [
+            {
+                "data_type": "ResponseMetadata",
+                "data": json.dumps(
+                    {"gretel": "a_model_id", "usage": {"input_bytes": 42}}
+                ),
+            }
+        ]
+    },
+    {"stream_state": {"status": "closed"}, "data": []},
+]
 
 
 @patch.object(api_base, "get_full_navigator_model_list")
@@ -121,7 +138,9 @@ def test_generate_timeout(
             # this new stream ID which is what we assert
             if len(records) == target_count - 5:
                 api._call_api = Mock(
-                    side_effect=[{"stream_id": "new_stream_123"}] + [api_response] * 15
+                    side_effect=[{"stream_id": "new_stream_123"}]
+                    + [api_response] * 15
+                    + ENDING_STREAM_DATA
                 )
                 api._last_stream_read -= timeout + 1
 
@@ -130,10 +149,15 @@ def test_generate_timeout(
 
     assert len(records) == target_count
     assert records[0] == {"foo": "bar"}
-    assert api._curr_stream_id == "new_stream_123"
+
+    # Because we've closed the stream, the stream_id should be reset
+    assert api._curr_stream_id == None
 
     # We should have a history buffer that was sent as well
     stream_body = api._call_api.call_args_list[0].kwargs["body"]
     assert stream_body["ref_data"]["sample_data"]["table_headers"] == ["foo"]
     assert len(stream_body["ref_data"]["sample_data"]["table_data"]) == 5
     assert stream_body["ref_data"]["sample_data"]["table_data"][0] == {"foo": "bar"}
+
+    # Since the last stream closed, we should be able to get the metadata
+    assert api.get_response_metadata()["usage"]["input_bytes"] == 42

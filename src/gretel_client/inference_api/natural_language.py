@@ -86,4 +86,5 @@ class NaturalLanguageInferenceAPI(BaseInferenceAPI):
                 },
             },
         )
+        self._set_response_metadata(response["metadata"])
         return response["text"]

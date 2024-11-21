@@ -1,11 +1,13 @@
 import os
 
+from unittest.mock import patch
+
 import pandas as pd
 import pytest
 
+from gretel_client.inference_api import tabular
 from gretel_client.inference_api.base import GretelInferenceAPIError
 from gretel_client.inference_api.natural_language import NaturalLanguageInferenceAPI
-from gretel_client.inference_api.tabular import TabularInferenceAPI
 
 PROMPT = """\
 Generate a dataset of characters from the Simpsons.
@@ -72,7 +74,7 @@ def llm():
 
 @pytest.fixture(scope="module")
 def nav():
-    return TabularInferenceAPI(
+    return tabular.TabularInferenceAPI(
         api_key=os.getenv("GRETEL_API_KEY"),
         endpoint="https://api-dev.gretel.cloud",
         validate=False,
@@ -91,17 +93,40 @@ def test_llm_inference_api_generate(llm):
 
 
 def test_nav_inference_api_generate(nav):
+    with pytest.raises(GretelInferenceAPIError):
+        nav.get_response_metadata()
+
     df = nav.generate(PROMPT, num_records=NUM_RECORDS)
     assert isinstance(df, pd.DataFrame)
     assert len(df) == NUM_RECORDS
+    metadata = nav.get_response_metadata()
+    assert metadata["usage"]["input_bytes"] == len(PROMPT)
 
 
-def test_nav_inference_api_generate_stream(nav):
+def test_nav_inference_api_generate_stream(nav: tabular.TabularInferenceAPI):
     record_list = []
     for record in nav.generate(PROMPT, num_records=NUM_RECORDS, stream=True):
         assert isinstance(record, dict)
         record_list.append(record)
     assert len(record_list) == NUM_RECORDS
+    metadata = nav.get_response_metadata()
+    assert metadata["usage"]["input_bytes"] == len(PROMPT)
+
+
+@patch.object(tabular, "MAX_ROWS_PER_STREAM", 3)
+def test_nav_inference_api_generate_multiple_streams(nav: tabular.TabularInferenceAPI):
+    # request 10 records, where the max a stream can return is 3.
+    # This should require 4 unique streams to accomplish.
+    num_records = 10
+    expected_stream_count = 4
+
+    record_list = []
+    for record in nav.generate(PROMPT, num_records=num_records, stream=True):
+        assert isinstance(record, dict)
+        record_list.append(record)
+    assert len(record_list) == num_records
+    metadata = nav.get_response_metadata()
+    assert metadata["usage"]["input_bytes"] == len(PROMPT) * expected_stream_count
 
 
 @pytest.mark.parametrize(
@@ -146,7 +171,9 @@ def test_nav_inference_api_edit_stream(nav):
 
 def test_nav_inference_api_invalid_backend_model():
     with pytest.raises(GretelInferenceAPIError):
-        TabularInferenceAPI(backend_model="invalid_model", skip_configure_session=True)
+        tabular.TabularInferenceAPI(
+            backend_model="invalid_model", skip_configure_session=True
+        )
 
 
 def test_nav_inference_api_edit_invalid_seed_data_type(nav):

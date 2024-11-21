@@ -8,7 +8,6 @@ from typing import Any, Dict, List, Optional
 
 from gretel_client.config import ClientConfig, configure_session, get_session_config
 from gretel_client.rest.api_client import ApiClient
-from gretel_client.rest.configuration import Configuration
 
 MODELS_API_PATH = "/v1/inference/models"
 
@@ -143,6 +142,7 @@ class BaseInferenceAPI(ABC):
 
     _available_backend_models: list[str]
     _model_type: str
+    _response_metadata: dict
 
     def __init__(
         self,
@@ -170,6 +170,7 @@ class BaseInferenceAPI(ABC):
         self.endpoint = session.endpoint
         self._api_client = session._get_api_client(verify_ssl=verify_ssl)
         self._available_backend_models = get_full_navigator_model_list(self._api_client)
+        self._response_metadata = {}
         self.backend_model = backend_model
 
     @abstractproperty
@@ -240,3 +241,13 @@ class BaseInferenceAPI(ABC):
             body=body,
             headers=headers,
         )
+
+    def _set_response_metadata(self, response_metadata: dict) -> None:
+        self._response_metadata = response_metadata
+
+    def get_response_metadata(self) -> dict:
+        if not self._response_metadata:
+            raise GretelInferenceAPIError(
+                "Response metadata is only set after a request has completed."
+            )
+        return self._response_metadata
