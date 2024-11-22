@@ -72,6 +72,16 @@ class NavigatorApiStreamingResponseError(NavigatorApiError):
     """
 
 
+class WorkflowTaskError(Exception):
+    """
+    Represents an error returned by the Task. This error
+    is most likely related to an issue with the Task
+    itself. If you see this error check your Task config
+    first. If the issue persists, the error might be a bug
+    in the remote Task implementation.
+    """
+
+
 @dataclass
 class Message:
 
@@ -95,15 +105,20 @@ class Message:
     """The date and time the message was created"""
 
     @classmethod
-    def from_dict(cls, message: dict) -> Message:
+    def from_dict(cls, message: dict, raise_on_error: bool = False) -> Message:
         message["ts"] = datetime.fromisoformat(message["ts"])
-        return cls(**message)
+        deserialized_message = cls(**message)
+
+        if raise_on_error:
+            _raise_on_task_error(deserialized_message)
+
+        return deserialized_message
 
 
 def workflow_preview(workflow_outputs: Iterator, verbose: bool = False) -> TaskOutput:
     terminal_output = None
     for message_dict in workflow_outputs:
-        message = Message.from_dict(message_dict)
+        message = Message.from_dict(message_dict, raise_on_error=True)
         if message.stream == "step_outputs":
             if message.type == "dataset":
                 terminal_output = pd.DataFrame.from_records(
@@ -112,6 +127,22 @@ def workflow_preview(workflow_outputs: Iterator, verbose: bool = False) -> TaskO
             else:
                 terminal_output = message.payload
     return terminal_output
+
+
+def _raise_on_task_error(message: Message):
+    """
+    Inspects a message for messages known to contain
+    fatal errors, and raises an exception from those
+    messages.
+    """
+    if (
+        message.type == "step_state_change"
+        and message.payload.get("state", "") == "error"
+    ):
+        raise WorkflowTaskError(
+            f"Step {message.step!r} failed: {message.payload.get('msg')}. Please check your Workflow config. "
+            "If the issue persists please contact support."
+        )
 
 
 class RemoteClient(ClientAdapter[Serializable]):
@@ -151,7 +182,7 @@ class RemoteClient(ClientAdapter[Serializable]):
 
             try:
                 for output in response.iter_lines():
-                    message = Message.from_dict(json.loads(output))
+                    message = Message.from_dict(json.loads(output), raise_on_error=True)
                     if message.stream == "step_outputs":
                         if message.type == "dataset":
                             return pd.DataFrame.from_records(message.payload["dataset"])
@@ -174,7 +205,7 @@ class RemoteClient(ClientAdapter[Serializable]):
 
             try:
                 for output in response.iter_lines():
-                    yield Message.from_dict(json.loads(output))
+                    yield Message.from_dict(json.loads(output), raise_on_error=True)
             except ChunkedEncodingError:
                 yield WorkflowInterruption(BROKEN_RESPONSE_STREAM_ERROR_MESSAGE)
 
