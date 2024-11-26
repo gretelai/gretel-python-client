@@ -696,15 +696,28 @@ class DataDesigner:
                 )
 
     def ingest_categorical_data_seeds(
-        self, data_seeds: Union[dict, CategoricalDataSeeds]
+        self, data_seeds: Union[dict, CategoricalDataSeeds, str, Path]
     ) -> None:
         """Ingest pre-generated data seeds into the data design.
 
         Args:
-            data_seeds: Ingest entire CategoricalDataSeeds instance into the data design.
+            data_seeds: Ingest categorical data seeds from a CategoricalDataSeeds instance, dict,
+                or YAML/JSON file.
         """
-        if isinstance(data_seeds, dict):
-            data_seeds = CategoricalDataSeeds(**data_seeds)
+        if isinstance(data_seeds, (str, Path)):
+            data_seeds = Path(data_seeds)
+            if data_seeds.suffix.lower() in [".yaml", ".yml"]:
+                with open(data_seeds, "r") as f:
+                    data_seeds = yaml.safe_load(f)
+            elif data_seeds.suffix.lower() == ".json":
+                with open(data_seeds, "r") as f:
+                    data_seeds = json.load(f)
+            else:
+                raise ValueError(
+                    "The file extension must be one of .yaml, .yml, or .json. "
+                    f"You provided: {data_seeds.suffix}"
+                )
+        data_seeds = CategoricalDataSeeds.model_validate(data_seeds)
         logger.info("🌱 Ingesting categorical data seeds into data design")
         for seed in data_seeds.seed_categories:
             try:
