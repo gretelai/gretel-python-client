@@ -345,6 +345,7 @@ def smart_read_model_config(
                     if (
                         config_in.startswith("synthetics/")
                         or config_in.startswith("transform/")
+                        or config_in.startswith("evaluate/")
                     )
                     else f"synthetics/{config_in}"
                 )

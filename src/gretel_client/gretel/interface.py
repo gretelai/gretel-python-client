@@ -732,6 +732,7 @@ class Gretel:
         job_label: Optional[str] = None,
         wait: bool = True,
         verbose_logging: bool = False,
+        **non_default_config_settings,
     ) -> EvaluateResults:
         """Create an Evaluate Model.
 
@@ -780,11 +781,15 @@ class Gretel:
         """
         job_config = smart_read_model_config(config, config_name_prefix="evaluate")
 
-        model_type, _ = extract_model_config_section(job_config)
+        model_type, model_config_section = extract_model_config_section(job_config)
+
         if model_type != "evaluate":
             raise GretelJobSubmissionError(
                 "Only `evaluate` is supported for 'submit_evaluate'"
             )
+
+        if non_default_config_settings:
+            model_config_section.update(non_default_config_settings)
 
         if job_label is not None:
             job_config["name"] = f"{job_config['name']}-{job_label}"
