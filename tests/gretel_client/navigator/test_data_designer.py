@@ -1,7 +1,8 @@
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from gretel_client.config import get_session_config
 from gretel_client.navigator import DataDesigner
+from gretel_client.navigator.workflow import DataDesignerBatchJob
 
 config = """\
 model_suite: apache-2.0
@@ -67,10 +68,27 @@ post_processors:
 """
 
 
-def test_data_designer_entrypoint():
-    with patch(
-        "gretel_client.navigator.data_designer.interface.get_navigator_client"
-    ) as get_navigator_client:
-        DataDesigner.from_config(config, session=get_session_config())
-
+@patch("gretel_client.navigator.data_designer.interface.get_navigator_client")
+def test_data_designer_entrypoint(get_navigator_client):
+    DataDesigner.from_config(config, session=get_session_config())
     get_navigator_client.assert_called_once()
+
+
+@patch("gretel_client.navigator.data_designer.interface.DataDesignerWorkflow")
+def test_data_designer_reuses_workflow_for_session(dd_workflow):
+    mock_batch_job = MagicMock(workflow_id="w_1", project_id="proj_1")
+    dd_workflow.return_value.submit_batch_job.return_value = mock_batch_job
+
+    dd_session = DataDesigner.from_config(config, session=get_session_config())
+    dd_session.submit_batch_workflow(num_records=100)
+
+    print(dd_workflow.call_args)
+
+    dd_workflow.return_value.submit_batch_job.assert_called_with(
+        num_records=100, project_name=None, workflow_id=None
+    )
+
+    dd_session.submit_batch_workflow(num_records=200)
+    dd_workflow.return_value.submit_batch_job.assert_called_with(
+        num_records=200, project_name="proj_1", workflow_id="w_1"
+    )

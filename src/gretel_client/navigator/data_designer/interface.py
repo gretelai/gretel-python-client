@@ -121,6 +121,8 @@ class DataDesigner:
         self._validators: dict[str, list[Task]] = {}
         self._evaluators: dict[str, Task] = {}
         self._eval_type: Optional[str] = None
+        self._workflow_id: Optional[str] = None
+        self._project_id: Optional[str] = None
 
         self.special_system_instructions = special_system_instructions
         datetime_label = datetime.now().isoformat(timespec="seconds")
@@ -844,9 +846,32 @@ class DataDesigner:
             **kwargs,
         )
         workflow.add_steps(steps)
+
+        # try and reuse existing project and workflows if they have
+        # already been created. in the case that these are None, they
+        # will get created on first run.
+        project_id = self._project_id
+        workflow_id = self._workflow_id
+
+        if project_name is not None:
+            # the following block handles the case where a new project_name
+            # is passed to the same session. in this case, we assume that
+            # we'll need to create a new Workflow for the new project.
+            if project_name != project_id:
+                workflow_id = None
+                project_id = project_name
+
         batch_job = workflow.submit_batch_job(
-            num_records=num_records, project_name=project_name
+            num_records=num_records,
+            project_name=project_id,
+            workflow_id=workflow_id,
         )
+
+        # cache the project and workflow ids so we can reuse it
+        # on subsequent calls within the session.
+        self._workflow_id = batch_job.workflow_id
+        self._project_id = batch_job.project_id
+
         return batch_job
 
     def __repr__(self):

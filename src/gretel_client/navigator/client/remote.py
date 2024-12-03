@@ -214,6 +214,7 @@ class RemoteClient(ClientAdapter[Serializable]):
         workflow_config: dict,
         num_records: int,
         project_name: Optional[str] = None,
+        workflow_id: Optional[str] = None,
     ) -> SubmitBatchWorkflowResponse:
 
         for step in workflow_config["steps"]:
@@ -232,6 +233,7 @@ class RemoteClient(ClientAdapter[Serializable]):
             json={
                 "workflow_config": workflow_config,
                 "project_id": project.project_guid,
+                "workflow_id": workflow_id,
             },
             headers=self._req_headers,
         )

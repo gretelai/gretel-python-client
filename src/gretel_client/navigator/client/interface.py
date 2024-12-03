@@ -57,9 +57,10 @@ class Client:
         workflow_config: dict,
         num_records: int,
         project_name: Optional[str] = None,
+        workflow_id: Optional[str] = None,
     ) -> SubmitBatchWorkflowResponse:
         return self._adapter.submit_batch_workflow(
-            workflow_config, num_records, project_name
+            workflow_config, num_records, project_name, workflow_id
         )
 
     def get_step_output(
@@ -114,6 +115,7 @@ class ClientAdapter(ABC, Generic[TaskInput]):
         workflow_config: dict,
         num_records: int,
         project_name: Optional[str] = None,
+        workflow_id: Optional[str] = None,
     ) -> SubmitBatchWorkflowResponse:
         raise NotImplementedError("Cannot submit batch Workflows")
 

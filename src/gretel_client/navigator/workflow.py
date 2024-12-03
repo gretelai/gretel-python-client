@@ -175,6 +175,7 @@ class DataDesignerBatchJob:
 
         run = self._get_run()
         self.workflow_id = run.workflow_id
+        self.project_id = run.project_id
         self.workflow_step_names = [step.name for step in run.actions]
         self._project = get_project(name=run.project_id, session=self._session)
         self._step_io = {
@@ -381,6 +382,11 @@ class DataDesignerWorkflow:
         }
         self._task_io = get_task_io_map(self._client)
 
+        # we track the workflow and project id to ensure that we can tie
+        # multiple batch workflow calls within a session to the same workflow
+        self.workflow_id = None
+        self.project_id = None
+
     @staticmethod
     def create_steps_from_sequential_tasks(
         task_list: list[Task], *, verbose_logging: bool = False
@@ -552,12 +558,27 @@ class DataDesignerWorkflow:
         return preview
 
     def submit_batch_job(
-        self, num_records: int, *, project_name: Optional[str] = None
+        self,
+        num_records: int,
+        *,
+        project_name: Optional[str] = None,
+        workflow_id: Optional[str] = None,
     ) -> DataDesignerBatchJob:
         self._globals.update({"num_records": num_records})
+
+        # multiple calls to submit_batch_workflow within a session
+        # should produce workflow runs that are a part of the same
+        # project and workflow.
         response = self._client.submit_batch_workflow(
-            self.to_dict(), num_records, project_name
+            self.to_dict(),
+            num_records,
+            project_name or self.project_id,
+            workflow_id or self.workflow_id,
         )
+
+        self.workflow_id = response.workflow_id
+        self.project_id = response.project.name
+
         return DataDesignerBatchJob(
             workflow_run_id=response.workflow_run_id,
             client=self._client,
