@@ -40,7 +40,7 @@ from gretel_client.gretel.job_results import (
     TransformResults,
 )
 from gretel_client.helpers import poll
-from gretel_client.inference_api.third_party.aws import SagemakerAdapter
+from gretel_client.inference_api.third_party.aws import BedrockAdapter, SagemakerAdapter
 from gretel_client.inference_api.third_party.azure_openai import AzureOpenAIAdapter
 from gretel_client.projects import get_project, Project
 from gretel_client.projects.jobs import Status
@@ -56,6 +56,7 @@ except ImportError:
     HAS_TUNER = False
 
 if TYPE_CHECKING:
+    from botocore.client import BaseClient
     from mypy_boto3_sagemaker_runtime import SageMakerRuntimeClient
     from openai import AzureOpenAI
 
@@ -864,3 +865,20 @@ class Gretel:
                 "This adapter requires pandas. To install, run `pip install pandas`"
             )
         return SagemakerAdapter(sagemaker_client, endpoint_name)
+
+    @staticmethod
+    def create_navigator_bedrock_adapter(
+        client: BaseClient, endpoint_arn: str
+    ) -> BedrockAdapter:
+        """
+        Create an adapter for using Gretel's Navigator Tabular API with Bedrock endpoints.
+
+        Args:
+            client: An instance of the bedrock client from the `boto3` package.
+            endpoint_arn: The ARN of the Bedrock (Sagemaker) endpoint.
+        """
+        if not PANDAS_IS_INSTALLED:
+            raise ImportError(
+                "This adapter requires pandas. To install, run `pip install pandas`"
+            )
+        return BedrockAdapter(client, endpoint_arn)
