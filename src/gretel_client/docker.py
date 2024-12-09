@@ -242,7 +242,7 @@ class DataVolume:
         with tarfile.open(fileobj=copy_stream, mode="w") as tar_archive:
             for file in files:
                 with smart_open.open(
-                    file.source, "rb", ignore_ext=True
+                    file.source, "rb", compression="disable"
                 ) as src:  # type:ignore
                     src.seek(0, 2)
                     info = tarfile.TarInfo(name=self._extract_file_name(file.target))

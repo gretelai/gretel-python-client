@@ -210,7 +210,7 @@ class CloudArtifactsHandler:
 
         with _get_artifact_path_and_file_name(artifact_path) as art_path_and_file:
             artifact_path, file_name = art_path_and_file
-            with smart_open.open(artifact_path, "rb", ignore_ext=True) as src:
+            with smart_open.open(artifact_path, "rb", compression="disable") as src:
                 art_resp = self.projects_api.create_artifact(
                     project_id=self.project_guid, artifact=Artifact(filename=file_name)
                 )
@@ -372,7 +372,7 @@ class HybridArtifactsHandler:
                 open_artifact(
                     artifact_path,
                     "rb",
-                    ignore_ext=True,
+                    compression="disable",
                 ) as in_stream,
                 open_artifact(target_out, "wb") as out_stream,
             ):
@@ -523,8 +523,8 @@ def _download(
     target_out = output_path / Path(urlparse(download_link).path).name
     try:
         with (
-            open_artifact(download_link, "rb", ignore_ext=True) as src,
-            open_artifact(target_out, "wb", ignore_ext=True) as dest,
+            open_artifact(download_link, "rb", compression="disable") as src,
+            open_artifact(target_out, "wb", compression="disable") as dest,
         ):
             shutil.copyfileobj(src, dest)
         log.info(f"Downloaded '{artifact_type}' artifact")
