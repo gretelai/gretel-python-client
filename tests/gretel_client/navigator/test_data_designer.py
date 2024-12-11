@@ -1,10 +1,14 @@
 from unittest.mock import MagicMock, patch
 
-from gretel_client.config import get_session_config
-from gretel_client.navigator import DataDesigner
-from gretel_client.navigator.workflow import DataDesignerBatchJob
+import pytest
 
-config = """\
+from gretel_client.config import get_session_config
+from gretel_client.navigator import DataDesigner, DataDesignerFromSampleRecords
+
+
+@pytest.fixture()
+def fixture_config() -> str:
+    return """\
 model_suite: apache-2.0
 
 special_system_instructions: >-
@@ -68,18 +72,61 @@ post_processors:
 """
 
 
+@pytest.fixture()
+def fixture_samples() -> list[dict]:
+    return [
+        {
+            "property_type": "town-house",
+            "bedrooms": 2,
+            "description": "Amazing propertyd centrally located.",
+        },
+        {
+            "property_type": "apartment",
+            "bedrooms": 1,
+            "description": "New build that is only a 5 minute walk from downtown.",
+        },
+    ]
+
+
+@pytest.fixture()
+def fixture_seeds_from_samples() -> dict:
+    return {
+        "seed_categories": [
+            {
+                "name": "property_condition",
+                "description": "The condition of the property as new, good, fair, or poor",
+                "values": ["excellent", "very good", "good", "satisfactory"],
+                "quality_rank": 2,
+            }
+        ],
+    }
+
+
+@pytest.fixture()
+def fixture_seeds_from_categorical_seed_column() -> dict:
+    return {
+        "seed_categories": [
+            {
+                "name": "wall_texture",
+                "description": "Texture of the walls in the property",
+                "values": ["orange peel", "smooth", "knock down", "popcorn"],
+            }
+        ],
+    }
+
+
 @patch("gretel_client.navigator.data_designer.interface.get_navigator_client")
-def test_data_designer_entrypoint(get_navigator_client):
-    DataDesigner.from_config(config, session=get_session_config())
+def test_data_designer_entrypoint(get_navigator_client, fixture_config):
+    DataDesigner.from_config(fixture_config, session=get_session_config())
     get_navigator_client.assert_called_once()
 
 
 @patch("gretel_client.navigator.data_designer.interface.DataDesignerWorkflow")
-def test_data_designer_reuses_workflow_for_session(dd_workflow):
+def test_data_designer_reuses_workflow_for_session(dd_workflow, fixture_config):
     mock_batch_job = MagicMock(workflow_id="w_1", project_id="proj_1")
     dd_workflow.return_value.submit_batch_job.return_value = mock_batch_job
 
-    dd_session = DataDesigner.from_config(config, session=get_session_config())
+    dd_session = DataDesigner.from_config(fixture_config, session=get_session_config())
     dd_session.submit_batch_workflow(num_records=100)
 
     print(dd_workflow.call_args)
@@ -92,3 +139,61 @@ def test_data_designer_reuses_workflow_for_session(dd_workflow):
     dd_workflow.return_value.submit_batch_job.assert_called_with(
         num_records=200, project_name="proj_1", workflow_id="w_1"
     )
+
+
+@patch("gretel_client.navigator.data_designer.interface.get_navigator_client")
+@patch("gretel_client.navigator.workflow.DataDesignerWorkflow.generate_preview")
+def test_data_designer_s2d_run_data_seeds_step(
+    mock_generate_preview, mock_client, fixture_samples, fixture_seeds_from_samples
+):
+    # seeds should only be generated based on the samples provided
+    mock_s2d_preview_result = MagicMock()
+    mock_s2d_preview_result.output = fixture_seeds_from_samples
+    mock_generate_preview.return_value = mock_s2d_preview_result
+    mock_client.registry.return_value = []
+
+    dd_from_samples = DataDesignerFromSampleRecords(
+        sample_records=fixture_samples, session=MagicMock()
+    )
+    seeds = dd_from_samples.run_data_seeds_step()
+    mock_generate_preview.assert_called_once()
+    assert len(seeds.seed_categories) == 1
+    assert seeds.seed_categories[0].name == "property_condition"
+
+
+@patch("gretel_client.navigator.data_designer.interface.get_navigator_client")
+@patch("gretel_client.navigator.workflow.DataDesignerWorkflow.generate_preview")
+def test_data_designer_s2d_run_data_seeds_step_with_categorical_seeds(
+    mock_generate_preview,
+    mock_client,
+    fixture_samples,
+    fixture_seeds_from_samples,
+    fixture_seeds_from_categorical_seed_column,
+):
+    # seeds should be a union of the ones generated from samples and those from
+    # seed categories added by the user manually
+    mock_s2d_preview_result = MagicMock()
+    mock_s2d_preview_result.output = fixture_seeds_from_samples
+
+    mock_cat_seed_preview_result = MagicMock()
+    mock_cat_seed_preview_result.output = fixture_seeds_from_categorical_seed_column
+
+    mock_generate_preview.side_effect = [
+        mock_cat_seed_preview_result,
+        mock_s2d_preview_result,
+    ]
+    dd_from_samples_with_cat_seeds = DataDesignerFromSampleRecords(
+        sample_records=fixture_samples, session=MagicMock()
+    )
+    seed_category = fixture_seeds_from_categorical_seed_column["seed_categories"][0]
+    dd_from_samples_with_cat_seeds.add_categorical_seed_column(
+        name=seed_category["name"],
+        description=seed_category["description"],
+        values=seed_category["values"],
+    )
+    seeds = dd_from_samples_with_cat_seeds.run_data_seeds_step()
+    assert mock_generate_preview.call_count == 2
+    assert len(seeds.seed_categories) == 2
+
+    assert seeds.seed_categories[0].name == "wall_texture"
+    assert seeds.seed_categories[1].name == "property_condition"

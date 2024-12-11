@@ -1,13 +1,12 @@
 import logging
 
-from typing import Optional, Union
+from typing import Optional
 
 import pandas as pd
 
 from gretel_client.config import ClientConfig
 from gretel_client.navigator.data_designer.interface import DataDesigner
 from gretel_client.navigator.log import get_logger
-from gretel_client.navigator.tasks.base import Task
 from gretel_client.navigator.tasks.constants import S2D_PREVIEW_NUM_RECORDS
 from gretel_client.navigator.tasks.extract_data_seeds_from_sample_records import (
     ExtractDataSeedsFromSampleRecords,
@@ -23,7 +22,6 @@ from gretel_client.navigator.tasks.types import (
     LLMJudgePromptTemplateType,
     ModelSuite,
     RecordsT,
-    SeedSubcategory,
     SQL_DIALECTS,
 )
 from gretel_client.navigator.tasks.utils import process_sample_records
@@ -204,35 +202,42 @@ class DataDesignerFromSampleRecords(DataDesigner):
 
         return steps, data_seeds
 
-    def _get_data_seeds_task(self, dataset_context=None, **kwargs) -> Task:
-        """Get the task that extracts data seeds from the sample records."""
-        return ExtractDataSeedsFromSampleRecords(
+    def run_data_seeds_step(
+        self,
+        *,
+        dataset_context: Optional[str] = None,
+        verbose_logging: bool = False,
+        **kwargs,
+    ) -> CategoricalDataSeeds:
+        """Run workflow step that generates / extracts / defines data seeds.
+
+        Args:
+            dataset_context: Context for the dataset to be used in the seed value generation task.
+            verbose_logging: If True, additional logging will be displayed during execution.
+        """
+        if self.has_seed_categories:
+            data_seeds = super().run_data_seeds_step(
+                dataset_context=dataset_context,
+                verbose_logging=verbose_logging,
+                kwargs=kwargs,
+            )
+        else:
+            data_seeds = CategoricalDataSeeds(seed_categories=[])
+
+        # Extract seeds from samples
+        task = ExtractDataSeedsFromSampleRecords(
             sample_records=self._sample_records,
             client=self._client,
             dataset_context=dataset_context,
             **kwargs,
         )
-
-    def add_categorical_seed_column(
-        self,
-        name: str,
-        *,
-        description: Optional[str] = None,
-        values: Optional[list[Union[str, int, float]]] = None,
-        weights: Optional[list[float]] = None,
-        num_new_values_to_generate: Optional[int] = None,
-        subcategories: Optional[Union[list[SeedSubcategory], list[dict]]] = None,
-        **kwargs,
-    ) -> None:
-        """Add a seed category to the data design.
-
-        This method is not supported for DataDesignerFromSampleRecords instances.
-        If you want to add categorical seed columns, please use the base DataDesigner class.
-        """
-        raise NotImplementedError(
-            f"Categorical seed columns cannot be added to a {self.__class__.__name__} instance. "
-            "If you want to add categorical seed columns, please use the base DataDesigner class."
-        )
+        workflow = DataDesignerWorkflow(**self._workflow_kwargs)
+        workflow.add_steps(workflow.create_steps_from_sequential_tasks([task]))
+        seeds = workflow.generate_preview(verbose_logging=verbose_logging).output
+        self._validate_seeds(seeds)
+        seeds_from_samples = CategoricalDataSeeds(**seeds)
+        data_seeds.add(seeds_from_samples.seed_categories)
+        return data_seeds
 
     def get_data_spec(
         self, data_seeds: Optional[CategoricalDataSeeds] = None

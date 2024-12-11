@@ -457,7 +457,7 @@ class DataDesignerWorkflow:
         eval_steps = [s for s in self._steps if s.task == "evaluate_dataset"]
         return None if len(eval_steps) == 0 else eval_steps[-1]
 
-    def _generate_preview(self, verbose: bool = False) -> PreviewResults:
+    def generate_preview(self, verbose_logging: bool = False) -> PreviewResults:
         step_idx = 0
         message: Message
         current_step = None
@@ -487,7 +487,10 @@ class DataDesignerWorkflow:
             # todo: make this log level aware
             if message.stream == "logs":
                 level, msg = message.payload.get("level"), message.payload.get("msg")
-                if (level == "info" and verbose) or level in ["error", "warning"]:
+                if (level == "info" and verbose_logging) or level in [
+                    "error",
+                    "warning",
+                ]:
                     logger.info(f"  {'|' if '|--' in msg else '|--'} {msg}")
 
             if message.stream == "step_outputs":
@@ -547,15 +550,6 @@ class DataDesignerWorkflow:
             return yaml_str
         with open(file_path, "w") as f:
             f.write(yaml_str)
-
-    def generate_dataset_preview(
-        self, *, verbose_logging: bool = False
-    ) -> PreviewResults:
-        logger.info("🚀 Generating dataset preview")
-        preview = self._generate_preview(verbose=verbose_logging)
-        if preview.output is not None:
-            logger.info("👀 Your dataset preview is ready for a peek!")
-        return preview
 
     def submit_batch_job(
         self,

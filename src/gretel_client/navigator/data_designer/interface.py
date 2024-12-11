@@ -156,9 +156,13 @@ class DataDesigner:
         return self.categorical_seed_column_names + self.generated_data_column_names
 
     @property
+    def has_seed_categories(self) -> bool:
+        return len(self._seed_categories) > 0
+
+    @property
     def categorical_seed_columns(self) -> CategoricalDataSeeds:
         """Return a CategoricalDataSeeds instance that contains the seed categories."""
-        if len(self._seed_categories) > 0:
+        if self.has_seed_categories:
             return CategoricalDataSeeds(
                 seed_categories=list(self._seed_categories.values())
             )
@@ -746,16 +750,8 @@ class DataDesigner:
         task = self._get_data_seeds_task(dataset_context=dataset_context, **kwargs)
         workflow = DataDesignerWorkflow(**self._workflow_kwargs)
         workflow.add_steps(workflow.create_steps_from_sequential_tasks([task]))
-        seeds = workflow._generate_preview(verbose=verbose_logging).output
-
-        if seeds is None or "seed_categories" not in seeds:
-            raise ValueError(
-                "An error occurred while generating your categorical seed values. "
-                "Please check that your configuration is as expected, restart your "
-                "session, and try again. If the problem persists, please contact support "
-                "and/or submit a GitHub issue to the gretel-client repo."
-            )
-
+        seeds = workflow.generate_preview(verbose_logging=verbose_logging).output
+        self._validate_seeds(seeds)
         return CategoricalDataSeeds(**seeds)
 
     def generate_dataset_preview(
@@ -786,7 +782,10 @@ class DataDesigner:
 
         workflow.add_steps(steps)
 
-        preview = workflow.generate_dataset_preview(verbose_logging=verbose_logging)
+        logger.info("🚀 Generating dataset preview")
+        preview = workflow.generate_preview(verbose_logging=verbose_logging)
+        if preview.output is not None:
+            logger.info("👀 Your dataset preview is ready for a peek!")
 
         # In order to have a data spec, we need to know the final data seeds. We grab them
         # from the Workflow outputs to be certain they are the same as the ones used in the preview.
@@ -874,6 +873,15 @@ class DataDesigner:
 
         return batch_job
 
+    def _validate_seeds(self, seeds: dict) -> None:
+        if seeds is None or "seed_categories" not in seeds:
+            raise ValueError(
+                "An error occurred while generating your categorical seed values. "
+                "Please check that your configuration is as expected, restart your "
+                "session, and try again. If the problem persists, please contact support "
+                "and/or submit a GitHub issue to the gretel-client repo."
+            )
+
     def __repr__(self):
         seed_categories = [
             (
@@ -886,7 +894,7 @@ class DataDesigner:
 
         categorical_seed_columns = (
             f"    categorical_seed_columns: {seed_categories}\n"
-            if len(seed_categories) > 0
+            if self.has_seed_categories
             else ""
         )
 

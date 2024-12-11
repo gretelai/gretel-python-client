@@ -264,6 +264,9 @@ class CategoricalDataSeeds(BaseModel):
             for sub_cat in cat.subcategories
         )
 
+    def add(self, seed_cateories: list[SeedCategory]) -> None:
+        self.seed_categories.extend(seed_cateories)
+
     def inspect(self) -> None:
         """Pretty print the seed categories and their values."""
         columns_to_print = [

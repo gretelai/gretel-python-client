@@ -66,7 +66,7 @@ class DataDesignerFactory:
         return DataDesigner(model_suite=model_suite, **kwargs)
 
     @classmethod
-    def from_config(cls, config: dict, **kwargs) -> DataDesigner:
+    def from_config(cls, config: Union[dict, str, Path], **kwargs) -> DataDesigner:
         """Instantiate a DataDesigner instance from a configuration dictionary.
 
         This method allows you to specify your data design using a YAML configuration file,
