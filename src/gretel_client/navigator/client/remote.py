@@ -154,6 +154,10 @@ class RemoteClient(ClientAdapter[Serializable]):
 
         logger.debug(f"🌎 Connecting to {self._api_endpoint}")
 
+    @property
+    def client_session(self) -> Optional[ClientConfig]:
+        return self._session
+
     # todo: pass an event handler and log non task outputs
     def run_task(
         self,

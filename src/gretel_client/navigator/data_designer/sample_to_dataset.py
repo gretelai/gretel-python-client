@@ -48,10 +48,10 @@ class DataDesignerFromSampleRecords(DataDesigner):
             the full sample will be used.
         model_suite: The model suite to use for generating synthetic data. Defaults to the
             apache-2.0 licensed model suite.
-        session: Optional Gretel session configuration object. If not provided, the session will be
-            configured based on the provided session_kwargs or cached session configuration.
         special_system_instructions: Optional instructions for the system to follow when generating
             the dataset. These instructions will be added to the system prompts.
+        session: Optional Gretel session configuration object. If not provided, the session will be
+            configured based on the provided session_kwargs or cached session configuration.
         **session_kwargs: kwargs for your Gretel session. See options below.
 
     Keyword Args:
@@ -83,11 +83,7 @@ class DataDesignerFromSampleRecords(DataDesigner):
         session: Optional[ClientConfig] = None,
         **session_kwargs,
     ):
-        super().__init__(
-            model_suite=model_suite,
-            session=session,
-            **session_kwargs,
-        )
+        super().__init__(model_suite=model_suite, session=session, **session_kwargs)
 
         processed_sample_records = process_sample_records(
             sample_records,

@@ -11,8 +11,9 @@ import yaml
 
 from typing_extensions import Self
 
-from gretel_client.config import ClientConfig, configure_session, get_session_config
+from gretel_client.config import ClientConfig
 from gretel_client.gretel.config_setup import smart_load_yaml
+from gretel_client.navigator.client.interface import TaskOutput
 from gretel_client.navigator.client.utils import get_navigator_client
 from gretel_client.navigator.data_designer.data_column import GeneratedDataColumn
 from gretel_client.navigator.data_designer.prompt_templates import (
@@ -28,6 +29,7 @@ from gretel_client.navigator.tasks.evaluate_dataset import EvaluateDataset
 from gretel_client.navigator.tasks.generate.generate_seed_category_values import (
     GenerateSeedCategoryValues,
 )
+from gretel_client.navigator.tasks.io import Dataset
 from gretel_client.navigator.tasks.judge_with_llm import JudgeWithLLM
 from gretel_client.navigator.tasks.load_data_seeds import LoadDataSeeds
 from gretel_client.navigator.tasks.seed.sample_data_seeds import SampleDataSeeds
@@ -99,77 +101,100 @@ class DataDesigner:
             The default is `False.`
     """
 
-    def __init__(
-        self,
+    @staticmethod
+    def fetch_dataset(
+        workflow_run_id: str,
         *,
-        model_suite: ModelSuite = DEFAULT_MODEL_SUITE,
+        wait_for_completion: bool = True,
         session: Optional[ClientConfig] = None,
-        special_system_instructions: Optional[str] = None,
         **session_kwargs,
-    ):
+    ) -> Dataset:
+        """Utility method to fetch the synthetic dataset generated in a previously run batch job.
 
-        if session is None:
-            configure_session(**session_kwargs)
-            session = get_session_config()
+        Args:
+            workflow_run_id: Unique id of the batch job.
+            wait_for_completion: Boolean to indicate to wait for the the batch job to complete
+                if it is still running. Defaults to True.
+            session: Optional Gretel session configuration object. If not provided, the session
+                will be configured based on the provided session_kwargs or cached session
+                configuration.
+            **session_kwargs: kwargs for your Gretel session. See options in the class
+                docstring above.
+        """
+        batch_job = DataDesignerBatchJob(
+            workflow_run_id=workflow_run_id,
+            client=get_navigator_client(session=session, **session_kwargs),
+        )
+        return batch_job.fetch_dataset(wait_for_completion=wait_for_completion)
 
-        logger.info(f"🦜 Using {model_suite} model suite")
-        self._session = session
-        self._client = get_navigator_client(session=session, **session_kwargs)
-        self._seed_categories: dict[str, list[SeedCategory]] = {}
-        self._seed_subcategory_names = defaultdict(list)
-        self._generated_data_columns: dict[str, list[GeneratedDataColumn]] = {}
-        self._validators: dict[str, list[Task]] = {}
-        self._evaluators: dict[str, Task] = {}
-        self._eval_type: Optional[str] = None
-        self._workflow_id: Optional[str] = None
-        self._project_id: Optional[str] = None
+    @staticmethod
+    def download_evaluation_report(
+        workflow_run_id: str,
+        *,
+        wait_for_completion: bool = True,
+        output_dir: Union[str, Path] = Path("."),
+        session: Optional[ClientConfig] = None,
+        **session_kwargs,
+    ) -> None:
+        """Utility method to download the evaluation report generated in a previously run batch job.
 
-        self.special_system_instructions = special_system_instructions
-        datetime_label = datetime.now().isoformat(timespec="seconds")
-        self._workflow_kwargs = {
-            "model_suite": check_model_suite(model_suite),
-            "session": self._session,
-            "client": self._client,
-            "workflow_name": f"{self.__class__.__name__}-{datetime_label}",
-        }
+        Args:
+            workflow_run_id: Unique id of the batch job.
+            wait_for_completion: Boolean to indicate to wait for the the batch job to complete
+                if it is still running. Defaults to True.
+            outpu_dir: A string or a Path denoting the local directory where the report should be saved.
+            session: Optional Gretel session configuration object. If not provided, the session
+                will be configured based on the provided session_kwargs or cached session
+                configuration.
+            **session_kwargs: kwargs for your Gretel session. See options in the class
+                docstring above.
+        """
+        batch_job = DataDesignerBatchJob(
+            workflow_run_id=workflow_run_id,
+            client=get_navigator_client(session=session, **session_kwargs),
+        )
+        return batch_job.download_evaluation_report(
+            wait_for_completion=wait_for_completion, output_dir=output_dir
+        )
 
-    @property
-    def _seed_category_names(self) -> list[str]:
-        """Return a list of the names of parent seed categories."""
-        return list(self._seed_categories.keys())
+    @staticmethod
+    def fetch_step_output(
+        workflow_run_id: str,
+        *,
+        step_name: str,
+        wait_for_completion: bool = True,
+        session: Optional[ClientConfig] = None,
+        **session_kwargs,
+    ) -> TaskOutput:
+        """Utility method to fetch the output from a specific step in a previously run batch job.
 
-    @property
-    def categorical_seed_column_names(self) -> list[str]:
-        """Return a list of the names of the seed columns, including subcategories."""
-        return self._seed_category_names + [
-            s for ss in self._seed_subcategory_names.values() for s in ss
-        ]
-
-    @property
-    def generated_data_column_names(self) -> list[str]:
-        """Return a list of the names of the data columns (note order matters)."""
-        return list(self._generated_data_columns.keys())
-
-    @property
-    def all_column_names(self) -> list[str]:
-        """Return a list of all seed (including seed subcategories) and data column names."""
-        return self.categorical_seed_column_names + self.generated_data_column_names
-
-    @property
-    def has_seed_categories(self) -> bool:
-        return len(self._seed_categories) > 0
-
-    @property
-    def categorical_seed_columns(self) -> CategoricalDataSeeds:
-        """Return a CategoricalDataSeeds instance that contains the seed categories."""
-        if self.has_seed_categories:
-            return CategoricalDataSeeds(
-                seed_categories=list(self._seed_categories.values())
-            )
-        return CategoricalDataSeeds(seed_categories=[])
+        Args:
+            workflow_run_id: Unique id of the batch job.
+            step_name: The name of the step.
+            wait_for_completion: Boolean to indicate to wait for the the batch job to complete
+                if it is still running. Defaults to True.
+            session: Optional Gretel session configuration object. If not provided, the session
+                will be configured based on the provided session_kwargs or cached session
+                configuration.
+            **session_kwargs: kwargs for your Gretel session. See options in the class
+                docstring above.
+        """
+        batch_job = DataDesignerBatchJob(
+            workflow_run_id=workflow_run_id,
+            client=get_navigator_client(session=session, **session_kwargs),
+        )
+        return batch_job.fetch_step_output(
+            step_name=step_name,
+            wait_for_completion=wait_for_completion,
+        )
 
     @classmethod
-    def from_config(cls, config: Union[dict, str, Path], **kwargs) -> Self:
+    def from_config(
+        cls,
+        config: Union[dict, str, Path],
+        session: Optional[ClientConfig] = None,
+        **session_kwargs,
+    ) -> Self:
         """Instantiate a DataDesigner instance from a YAML configuration str, dict, or file.
 
         Args:
@@ -185,11 +210,11 @@ class DataDesigner:
         ):
             config = requests.get(config).content.decode("utf-8")
         config = smart_load_yaml(config)
-
         dd = cls(
             special_system_instructions=config.get("special_system_instructions"),
             model_suite=config.get("model_suite", DEFAULT_MODEL_SUITE),
-            **kwargs,
+            session=session,
+            **session_kwargs,
         )
 
         if "categorical_seed_columns" not in config:
@@ -250,168 +275,67 @@ class DataDesigner:
 
         return dd
 
-    def _create_workflow_steps(
+    def __init__(
         self,
-        num_records: Optional[int] = None,
-        data_seeds: Optional[CategoricalDataSeeds] = None,
-        dataset_context: Optional[str] = None,
-        verbose_logging: bool = False,
-        **kwargs,
-    ) -> tuple[list[Step], Optional[CategoricalDataSeeds]]:
-        """Create workflow steps from a list of tasks.
+        *,
+        model_suite: ModelSuite = DEFAULT_MODEL_SUITE,
+        special_system_instructions: Optional[str] = None,
+        session: Optional[ClientConfig] = None,
+        **session_kwargs,
+    ):
+        logger.info(f"🦜 Using {model_suite} model suite")
+        self._client = get_navigator_client(session=session, **session_kwargs)
+        self._seed_categories: dict[str, list[SeedCategory]] = {}
+        self._seed_subcategory_names = defaultdict(list)
+        self._generated_data_columns: dict[str, list[GeneratedDataColumn]] = {}
+        self._validators: dict[str, list[Task]] = {}
+        self._evaluators: dict[str, Task] = {}
+        self._eval_type: Optional[str] = None
+        self._workflow_id: Optional[str] = None
+        self._project_id: Optional[str] = None
 
-        Args:
-            num_records: Number of records to be generated.
-            data_seeds: Data seeds to use in place of what was defined in the configuration.
-                This is useful if you have pre-generated data seeds or want to experiment with
-                different seed categories/values.
-            dataset_context: Context for the dataset to be used in the seed value generation task.
-            verbose_logging: If True, additional logging will be displayed.
+        self.special_system_instructions = special_system_instructions
+        datetime_label = datetime.now().isoformat(timespec="seconds")
+        self._workflow_kwargs = {
+            "model_suite": check_model_suite(model_suite),
+            "client": self._client,
+            "workflow_name": f"{self.__class__.__name__}-{datetime_label}",
+        }
 
-        Returns:
-            A tuple that contains a list of workflow steps and the data seeds used in the workflow.
-        """
-        if len(self._seed_categories) == 0:
-            raise ValueError("No seed columns have been defined.")
+    @property
+    def categorical_seed_column_names(self) -> list[str]:
+        """Return a list of the names of the seed columns, including subcategories."""
+        return self._seed_category_names + [
+            s for ss in self._seed_subcategory_names.values() for s in ss
+        ]
 
-        task_list = []
-        num_records = num_records or PREVIEW_NUM_RECORDS
-        data_seeds = data_seeds or self.categorical_seed_columns
+    @property
+    def generated_data_column_names(self) -> list[str]:
+        """Return a list of the names of the data columns (note order matters)."""
+        return list(self._generated_data_columns.keys())
 
-        if data_seeds.needs_generation:
-            # If any seed category / subcategory values need generation,
-            # we start with the seed value generation task.
-            task_list.append(
-                GenerateSeedCategoryValues(
-                    seed_categories=list(self._seed_categories.values()),
-                    dataset_context=dataset_context,
-                    client=self._client,
-                )
+    @property
+    def all_column_names(self) -> list[str]:
+        """Return a list of all seed (including seed subcategories) and data column names."""
+        return self.categorical_seed_column_names + self.generated_data_column_names
+
+    @property
+    def has_seed_categories(self) -> bool:
+        return len(self._seed_categories) > 0
+
+    @property
+    def categorical_seed_columns(self) -> CategoricalDataSeeds:
+        """Return a CategoricalDataSeeds instance that contains the seed categories."""
+        if self.has_seed_categories:
+            return CategoricalDataSeeds(
+                seed_categories=list(self._seed_categories.values())
             )
-        else:
-            # If no seed category / subcategory values need generation, we start
-            # with a task that directly loads them into the workflow.
-            task_list.append(
-                LoadDataSeeds(
-                    categorical_data_seeds=data_seeds,
-                    client=self._client,
-                )
-            )
+        return CategoricalDataSeeds(seed_categories=[])
 
-        # Given fully-specified data seeds, we next add a task to
-        # sample them in to a seed dataset.
-        task_list.append(SampleDataSeeds(num_records=num_records, client=self._client))
-
-        # Iterate over the data columns and create generation tasks for each.
-        for column in self._generated_data_columns.values():
-            task = column.to_generation_task(
-                self.special_system_instructions, client=self._client
-            )
-            task_list.append(task)
-
-        # Add data validators to the workflow.
-        for validator in self._validators.values():
-            task_list.append(validator)
-
-        # Finally, add evaluation tasks to the workflow.
-        for eval_task in self._evaluators.values():
-            task_list.append(eval_task)
-
-        steps = DataDesignerWorkflow.create_steps_from_sequential_tasks(
-            task_list, verbose_logging=verbose_logging
-        )
-        return steps, data_seeds
-
-    def _get_data_seeds_task(
-        self, dataset_context: Optional[str] = None, **kwargs
-    ) -> Task:
-        """Get the task that generates seed category values."""
-
-        if len(self._seed_categories) == 0:
-            raise ValueError("No seed categories have been defined.")
-
-        if not self.categorical_seed_columns.needs_generation:
-            logger.warning("⚠️ Your categorical data seeds do not require generation.")
-            return LoadDataSeeds(
-                categorical_data_seeds=self.categorical_seed_columns,
-                client=self._client,
-            )
-
-        return GenerateSeedCategoryValues(
-            seed_categories=list(self._seed_categories.values()),
-            dataset_context=dataset_context,
-            client=self._client,
-        )
-
-    def _validate_generated_data_column_inputs(
-        self,
-        name: str,
-        generation_prompt: str,
-        columns_to_list_in_prompt: Optional[list[str]] = None,
-    ) -> tuple[str, str, list[str]]:
-        """Validate that the inputs for a generated data column.
-
-        Args:
-            name: The name of the data column.
-            generation_prompt: The prompt that will be used to generate the data column.
-            columns_to_list_in_prompt: List of seed and/or data columns to add as
-                context for the generation prompt.
-
-        Returns:
-            A tuple containing the validated inputs for the data column.
-        """
-
-        if name in self._generated_data_columns:
-            raise ValueError(f"Column name `{name}` already exists.")
-        if name in self._seed_categories:
-            raise ValueError(f"Column name `{name}` already exists as a seed category.")
-
-        # Keywords in templates can only reference seed columns *or* data columns that
-        # have been defined *before* the column that references them.
-        template_kwargs = get_prompt_template_keywords(generation_prompt)
-        if not template_kwargs.issubset(self.all_column_names):
-            raise ValueError(
-                f"The `generation_prompt` field of `{name}` contains template keywords that "
-                "are not available as columns.\n"
-                f"* Template keywords found in `generation_prompt`: {template_kwargs}\n"
-                f"* Available seed columns: {self.categorical_seed_column_names}\n"
-                f"* Available data columns: {self.generated_data_column_names}"
-            )
-
-        if isinstance(columns_to_list_in_prompt, str):
-            if columns_to_list_in_prompt == "all":
-                columns_to_list_in_prompt = self.all_column_names
-            elif columns_to_list_in_prompt == "all_categorical_seed_columns":
-                columns_to_list_in_prompt = self.categorical_seed_column_names
-            elif columns_to_list_in_prompt == "all_generated_data_columns":
-                if len(self.generated_data_column_names) == 0:
-                    logger.warning(
-                        f"⚠️ The generated data column `{name}` has set `columns_to_list_in_prompt` "
-                        "to 'all_generated_data_columns', but no data columns have been defined."
-                    )
-                columns_to_list_in_prompt = self.generated_data_column_names
-            else:
-                raise ValueError(
-                    f"If not None, `columns_to_list_in_prompt` must be a list of column names or "
-                    "one of ['all', 'all_categorical_seed_columns', 'all_generated_data_columns']. "
-                    f"You provided: {columns_to_list_in_prompt}"
-                )
-        else:
-            columns_to_list_in_prompt = columns_to_list_in_prompt or []
-            # Context can only reference columns that have been
-            # defined *before* the current column.
-            if any(
-                col not in self.all_column_names for col in columns_to_list_in_prompt
-            ):
-                raise ValueError(
-                    f"The `columns_to_list_in_prompt` field of `{name}` contains invalid columns. "
-                    "Only seed or data columns that have been defined before the current "
-                    "column can be added as context.\n"
-                    f"* Available seed columns: {self.categorical_seed_column_names}\n"
-                    f"* Available data columns: {self.generated_data_column_names}\n"
-                )
-
-        return name, generation_prompt, columns_to_list_in_prompt
+    @property
+    def _seed_category_names(self) -> list[str]:
+        """Return a list of the names of parent seed categories."""
+        return list(self._seed_categories.keys())
 
     def add_generated_data_column(
         self,
@@ -791,7 +715,7 @@ class DataDesigner:
         # from the Workflow outputs to be certain they are the same as the ones used in the preview.
         seed_steps = [
             s.name
-            for s in workflow._steps
+            for s in workflow.steps
             if workflow.step_io_map[s.name]["output"] == "categorical_data_seeds"
         ]
         if len(seed_steps) == 0:
@@ -881,6 +805,169 @@ class DataDesigner:
                 "session, and try again. If the problem persists, please contact support "
                 "and/or submit a GitHub issue to the gretel-client repo."
             )
+
+    def _create_workflow_steps(
+        self,
+        num_records: Optional[int] = None,
+        data_seeds: Optional[CategoricalDataSeeds] = None,
+        dataset_context: Optional[str] = None,
+        verbose_logging: bool = False,
+        **kwargs,
+    ) -> tuple[list[Step], Optional[CategoricalDataSeeds]]:
+        """Create workflow steps from a list of tasks.
+
+        Args:
+            num_records: Number of records to be generated.
+            data_seeds: Data seeds to use in place of what was defined in the configuration.
+                This is useful if you have pre-generated data seeds or want to experiment with
+                different seed categories/values.
+            dataset_context: Context for the dataset to be used in the seed value generation task.
+            verbose_logging: If True, additional logging will be displayed.
+
+        Returns:
+            A tuple that contains a list of workflow steps and the data seeds used in the workflow.
+        """
+        if len(self._seed_categories) == 0:
+            raise ValueError("No seed columns have been defined.")
+
+        task_list = []
+        num_records = num_records or PREVIEW_NUM_RECORDS
+        data_seeds = data_seeds or self.categorical_seed_columns
+
+        if data_seeds.needs_generation:
+            # If any seed category / subcategory values need generation,
+            # we start with the seed value generation task.
+            task_list.append(
+                GenerateSeedCategoryValues(
+                    seed_categories=list(self._seed_categories.values()),
+                    dataset_context=dataset_context,
+                    client=self._client,
+                )
+            )
+        else:
+            # If no seed category / subcategory values need generation, we start
+            # with a task that directly loads them into the workflow.
+            task_list.append(
+                LoadDataSeeds(
+                    categorical_data_seeds=data_seeds,
+                    client=self._client,
+                )
+            )
+
+        # Given fully-specified data seeds, we next add a task to
+        # sample them in to a seed dataset.
+        task_list.append(SampleDataSeeds(num_records=num_records, client=self._client))
+
+        # Iterate over the data columns and create generation tasks for each.
+        for column in self._generated_data_columns.values():
+            task = column.to_generation_task(
+                self.special_system_instructions, client=self._client
+            )
+            task_list.append(task)
+
+        # Add data validators to the workflow.
+        for validator in self._validators.values():
+            task_list.append(validator)
+
+        # Finally, add evaluation tasks to the workflow.
+        for eval_task in self._evaluators.values():
+            task_list.append(eval_task)
+
+        steps = DataDesignerWorkflow.create_steps_from_sequential_tasks(
+            task_list, verbose_logging=verbose_logging
+        )
+        return steps, data_seeds
+
+    def _get_data_seeds_task(
+        self, dataset_context: Optional[str] = None, **kwargs
+    ) -> Task:
+        """Get the task that generates seed category values."""
+
+        if len(self._seed_categories) == 0:
+            raise ValueError("No seed categories have been defined.")
+
+        if not self.categorical_seed_columns.needs_generation:
+            logger.warning("⚠️ Your categorical data seeds do not require generation.")
+            return LoadDataSeeds(
+                categorical_data_seeds=self.categorical_seed_columns,
+                client=self._client,
+            )
+
+        return GenerateSeedCategoryValues(
+            seed_categories=list(self._seed_categories.values()),
+            dataset_context=dataset_context,
+            client=self._client,
+        )
+
+    def _validate_generated_data_column_inputs(
+        self,
+        name: str,
+        generation_prompt: str,
+        columns_to_list_in_prompt: Optional[list[str]] = None,
+    ) -> tuple[str, str, list[str]]:
+        """Validate that the inputs for a generated data column.
+
+        Args:
+            name: The name of the data column.
+            generation_prompt: The prompt that will be used to generate the data column.
+            columns_to_list_in_prompt: List of seed and/or data columns to add as
+                context for the generation prompt.
+
+        Returns:
+            A tuple containing the validated inputs for the data column.
+        """
+
+        if name in self._generated_data_columns:
+            raise ValueError(f"Column name `{name}` already exists.")
+        if name in self._seed_categories:
+            raise ValueError(f"Column name `{name}` already exists as a seed category.")
+
+        # Keywords in templates can only reference seed columns *or* data columns that
+        # have been defined *before* the column that references them.
+        template_kwargs = get_prompt_template_keywords(generation_prompt)
+        if not template_kwargs.issubset(self.all_column_names):
+            raise ValueError(
+                f"The `generation_prompt` field of `{name}` contains template keywords that "
+                "are not available as columns.\n"
+                f"* Template keywords found in `generation_prompt`: {template_kwargs}\n"
+                f"* Available seed columns: {self.categorical_seed_column_names}\n"
+                f"* Available data columns: {self.generated_data_column_names}"
+            )
+
+        if isinstance(columns_to_list_in_prompt, str):
+            if columns_to_list_in_prompt == "all":
+                columns_to_list_in_prompt = self.all_column_names
+            elif columns_to_list_in_prompt == "all_categorical_seed_columns":
+                columns_to_list_in_prompt = self.categorical_seed_column_names
+            elif columns_to_list_in_prompt == "all_generated_data_columns":
+                if len(self.generated_data_column_names) == 0:
+                    logger.warning(
+                        f"⚠️ The generated data column `{name}` has set `columns_to_list_in_prompt` "
+                        "to 'all_generated_data_columns', but no data columns have been defined."
+                    )
+                columns_to_list_in_prompt = self.generated_data_column_names
+            else:
+                raise ValueError(
+                    f"If not None, `columns_to_list_in_prompt` must be a list of column names or "
+                    "one of ['all', 'all_categorical_seed_columns', 'all_generated_data_columns']. "
+                    f"You provided: {columns_to_list_in_prompt}"
+                )
+        else:
+            columns_to_list_in_prompt = columns_to_list_in_prompt or []
+            # Context can only reference columns that have been
+            # defined *before* the current column.
+            if any(
+                col not in self.all_column_names for col in columns_to_list_in_prompt
+            ):
+                raise ValueError(
+                    f"The `columns_to_list_in_prompt` field of `{name}` contains invalid columns. "
+                    "Only seed or data columns that have been defined before the current "
+                    "column can be added as context.\n"
+                    f"* Available seed columns: {self.categorical_seed_column_names}\n"
+                    f"* Available data columns: {self.generated_data_column_names}\n"
+                )
+
+        return name, generation_prompt, columns_to_list_in_prompt
 
     def __repr__(self):
         seed_categories = [

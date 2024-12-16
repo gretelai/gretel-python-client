@@ -144,17 +144,19 @@ def test_data_designer_reuses_workflow_for_session(dd_workflow, fixture_config):
 @patch("gretel_client.navigator.data_designer.interface.get_navigator_client")
 @patch("gretel_client.navigator.workflow.DataDesignerWorkflow.generate_preview")
 def test_data_designer_s2d_run_data_seeds_step(
-    mock_generate_preview, mock_client, fixture_samples, fixture_seeds_from_samples
+    mock_generate_preview,
+    mock_get_navigator_client,
+    fixture_samples,
+    fixture_seeds_from_samples,
 ):
     # seeds should only be generated based on the samples provided
+    mock_client = MagicMock()
     mock_s2d_preview_result = MagicMock()
     mock_s2d_preview_result.output = fixture_seeds_from_samples
     mock_generate_preview.return_value = mock_s2d_preview_result
     mock_client.registry.return_value = []
-
-    dd_from_samples = DataDesignerFromSampleRecords(
-        sample_records=fixture_samples, session=MagicMock()
-    )
+    mock_get_navigator_client.return_value = mock_client
+    dd_from_samples = DataDesignerFromSampleRecords(sample_records=fixture_samples)
     seeds = dd_from_samples.run_data_seeds_step()
     mock_generate_preview.assert_called_once()
     assert len(seeds.seed_categories) == 1
@@ -165,13 +167,14 @@ def test_data_designer_s2d_run_data_seeds_step(
 @patch("gretel_client.navigator.workflow.DataDesignerWorkflow.generate_preview")
 def test_data_designer_s2d_run_data_seeds_step_with_categorical_seeds(
     mock_generate_preview,
-    mock_client,
+    mock_get_navigator_client,
     fixture_samples,
     fixture_seeds_from_samples,
     fixture_seeds_from_categorical_seed_column,
 ):
     # seeds should be a union of the ones generated from samples and those from
     # seed categories added by the user manually
+    mock_client = MagicMock()
     mock_s2d_preview_result = MagicMock()
     mock_s2d_preview_result.output = fixture_seeds_from_samples
 
@@ -182,8 +185,9 @@ def test_data_designer_s2d_run_data_seeds_step_with_categorical_seeds(
         mock_cat_seed_preview_result,
         mock_s2d_preview_result,
     ]
+    mock_get_navigator_client.return_value = mock_client
     dd_from_samples_with_cat_seeds = DataDesignerFromSampleRecords(
-        sample_records=fixture_samples, session=MagicMock()
+        sample_records=fixture_samples
     )
     seed_category = fixture_seeds_from_categorical_seed_column["seed_categories"][0]
     dd_from_samples_with_cat_seeds.add_categorical_seed_column(

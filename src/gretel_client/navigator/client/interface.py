@@ -7,6 +7,7 @@ from typing import Generic, Iterator, Optional, Type, TypeVar, Union
 
 import pandas as pd
 
+from gretel_client.config import ClientConfig
 from gretel_client.projects import Project
 
 
@@ -34,6 +35,10 @@ class Client:
 
     def __init__(self, adapter: ClientAdapter):
         self._adapter = adapter
+
+    @property
+    def client_session(self) -> Optional[ClientConfig]:
+        return self._adapter.client_session
 
     def run_task(
         self,
@@ -109,6 +114,10 @@ class ClientAdapter(ABC, Generic[TaskInput]):
 
     @abstractmethod
     def registry(self) -> list[dict]: ...
+
+    @property
+    def client_session(self) -> Optional[ClientConfig]:
+        return None
 
     def submit_batch_workflow(
         self,

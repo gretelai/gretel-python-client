@@ -5,6 +5,8 @@ from typing import Optional, Union
 
 import pandas as pd
 
+from gretel_client.config import ClientConfig
+from gretel_client.navigator.client.utils import get_navigator_client
 from gretel_client.navigator.data_designer.interface import DataDesigner
 from gretel_client.navigator.data_designer.sample_to_dataset import (
     DataDesignerFromSampleRecords,
@@ -47,7 +49,10 @@ class DataDesignerFactory:
 
     @classmethod
     def from_blank_canvas(
-        cls, model_suite: ModelSuite = DEFAULT_MODEL_SUITE, **kwargs
+        cls,
+        model_suite: ModelSuite = DEFAULT_MODEL_SUITE,
+        session: Optional[ClientConfig] = None,
+        **session_kwargs,
     ) -> DataDesigner:
         """Instantiate an empty DataDesigner instance that can be built up programmatically.
 
@@ -56,17 +61,25 @@ class DataDesignerFactory:
         Args:
             model_suite: The model suite to use for generating synthetic data. Defaults to the
                 apache-2.0 licensed model suite.
-            **kwargs: Additional keyword arguments to pass to the DataDesigner constructor.
+            session: Optional Gretel session configuration object. If not provided, the session
+                will be configured based on the provided session_kwargs or cached session
+                configuration.
+            **session_kwargs: kwargs for your Gretel session. See options in the class
+                docstring above.
 
         Returns:
             An instance of DataDesigner with a blank canvas.
         """
         logger.info("🎨 Creating DataDesigner instance from blank canvas")
-
-        return DataDesigner(model_suite=model_suite, **kwargs)
+        return DataDesigner(model_suite=model_suite, session=session, **session_kwargs)
 
     @classmethod
-    def from_config(cls, config: Union[dict, str, Path], **kwargs) -> DataDesigner:
+    def from_config(
+        cls,
+        config: Union[dict, str, Path],
+        session: Optional[ClientConfig] = None,
+        **session_kwargs,
+    ) -> DataDesigner:
         """Instantiate a DataDesigner instance from a configuration dictionary.
 
         This method allows you to specify your data design using a YAML configuration file,
@@ -74,15 +87,18 @@ class DataDesignerFactory:
 
         Args:
             config: A YAML configuration file, dict, or string that fully specifies the data design.
-            **kwargs: Additional keyword arguments to pass to the DataDesigner constructor.
+            session: Optional Gretel session configuration object. If not provided, the session
+                will be configured based on the provided session_kwargs or cached session
+                configuration.
+            **session_kwargs: kwargs for your Gretel session. See options in the class
+                docstring above.
 
         Returns:
             An instance of DataDesigner configured with the data seeds and generated data columns
             defined in the configuration dictionary.
         """
         logger.info("🎨 Creating DataDesigner instance from config")
-
-        return DataDesigner.from_config(config, **kwargs)
+        return DataDesigner.from_config(config, session=session, **session_kwargs)
 
     @classmethod
     def from_sample_records(
@@ -91,7 +107,8 @@ class DataDesignerFactory:
         *,
         subsample_size: Optional[int] = None,
         model_suite: ModelSuite = DEFAULT_MODEL_SUITE,
-        **kwargs,
+        session: Optional[ClientConfig] = None,
+        **session_kwargs,
     ) -> DataDesigner:
         """Instantiate a DataDesigner instance from sample records.
 
@@ -106,7 +123,11 @@ class DataDesignerFactory:
                 the full sample will be used.
             model_suite: The model suite to use for generating synthetic data. Defaults to the
                 apache-2.0 licensed model suite.
-
+            session: Optional Gretel session configuration object. If not provided, the session
+                will be configured based on the provided session_kwargs or cached session
+                configuration.
+            **session_kwargs: kwargs for your Gretel session. See options in the class
+                docstring above.
         Returns:
             An instance of DataDesigner configured to extract data seeds from the sample records
             and optionally create generated data columns for each field in the sample records.
@@ -117,5 +138,6 @@ class DataDesignerFactory:
             sample_records=sample_records,
             subsample_size=subsample_size,
             model_suite=model_suite,
-            **kwargs,
+            session=session,
+            **session_kwargs,
         )

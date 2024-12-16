@@ -74,6 +74,11 @@ def get_task_io_map(client: Client) -> dict:
     return task_io
 
 
+def get_last_evaluation_step_name(workflow_step_names: list[str]) -> Optional[str]:
+    eval_steps = [s for s in workflow_step_names if s.startswith("evaluate-dataset")]
+    return None if len(eval_steps) == 0 else eval_steps[-1]
+
+
 @dataclass
 class DataSpec:
     """Specification for dataset created by DataDesigner.
@@ -159,17 +164,12 @@ class DataDesignerBatchJob:
         self,
         workflow_run_id: str,
         client: Client,
-        *,
-        last_dataset_step: Optional[Step] = None,
-        last_evaluate_step: Optional[Step] = None,
     ):
 
         self.workflow_run_id = workflow_run_id
 
         self._client = client
-        self._session = client._adapter._session
-        self._last_dataset_step = last_dataset_step
-        self._last_evaluate_step = last_evaluate_step
+        self._session = client.client_session
         self._workflow_api = self._session.get_v1_api(WorkflowsApi)
         self._data_spec: Optional[DataSpec] = None
 
@@ -177,11 +177,25 @@ class DataDesignerBatchJob:
         self.workflow_id = run.workflow_id
         self.project_id = run.project_id
         self.workflow_step_names = [step.name for step in run.actions]
+
         self._project = get_project(name=run.project_id, session=self._session)
         self._step_io = {
             step.name: get_task_io_map(self._client)[step.action_type]
             for step in run.actions
         }
+
+    @property
+    def last_dataset_step_name(self) -> Optional[str]:
+        dataset_steps = [
+            s
+            for s in self.workflow_step_names
+            if self._step_io[s]["output"] == "dataset"
+        ]
+        return None if len(dataset_steps) == 0 else dataset_steps[-1]
+
+    @property
+    def last_evaluation_step_name(self) -> Optional[str]:
+        return get_last_evaluation_step_name(self.workflow_step_names)
 
     @property
     def console_url(self) -> str:
@@ -325,10 +339,10 @@ class DataDesignerBatchJob:
         )
 
     def fetch_dataset(self, *, wait_for_completion: bool = False) -> Dataset:
-        if self._last_dataset_step is None:
+        if self.last_dataset_step_name is None:
             raise ValueError("The Workflow did not contain a dataset.")
         return self._fetch_artifact(
-            step_name=self._last_dataset_step.name,
+            step_name=self.last_dataset_step_name,
             output_format="parquet",
             wait_for_completion=wait_for_completion,
         )
@@ -339,10 +353,10 @@ class DataDesignerBatchJob:
         wait_for_completion: bool = False,
         output_dir: Union[str, Path] = Path("."),
     ) -> None:
-        if self._last_evaluate_step is None:
+        if self.last_evaluation_step_name is None:
             raise ValueError("The Workflow did not contain an evaluation step.")
         return self._fetch_artifact(
-            step_name=self._last_evaluate_step.name,
+            step_name=self.last_evaluation_step_name,
             output_format="pdf",
             wait_for_completion=wait_for_completion,
             output_dir=output_dir,
@@ -359,33 +373,6 @@ class DataDesignerBatchJob:
 
 
 class DataDesignerWorkflow:
-    def __init__(
-        self,
-        *,
-        steps: Optional[list[Step]] = None,
-        model_suite: ModelSuite = DEFAULT_MODEL_SUITE,
-        workflow_name: Optional[str] = None,
-        session: Optional[ClientConfig] = None,
-        client: Optional[Client] = None,
-        **session_kwargs,
-    ):
-        self._workflow_name = (
-            workflow_name
-            or f"{DEFAULT_WORKFLOW_NAME}-{datetime.now().isoformat(timespec='seconds')}"
-        )
-        self._steps = steps or []
-        self._client = client or get_navigator_client(session=session, **session_kwargs)
-        self._model_suite = check_model_suite(model_suite)
-        self._globals = {
-            "num_records": 10,
-            "model_suite": self._model_suite,
-        }
-        self._task_io = get_task_io_map(self._client)
-
-        # we track the workflow and project id to ensure that we can tie
-        # multiple batch workflow calls within a session to the same workflow
-        self.workflow_id = None
-        self.project_id = None
 
     @staticmethod
     def create_steps_from_sequential_tasks(
@@ -419,43 +406,60 @@ class DataDesignerWorkflow:
     @classmethod
     def from_sequential_tasks(
         cls,
+        client: Client,
         task_list: list[Task],
         *,
         workflow_name: str = None,
-        session: Optional[ClientConfig] = None,
-        **session_kwargs,
     ) -> Self:
-        workflow = cls(workflow_name=workflow_name, session=session, **session_kwargs)
+        workflow = cls(client=client, workflow_name=workflow_name)
         workflow.add_steps(cls.create_steps_from_sequential_tasks(task_list))
         return workflow
 
     @classmethod
-    def from_yaml(cls, yaml_str: str) -> Self:
+    def from_yaml(cls, client: Client, yaml_str: str) -> Self:
         yaml_dict = yaml.safe_load(yaml_str)
-        workflow = cls(workflow_name=yaml_dict["name"])
+        workflow = cls(client=client, workflow_name=yaml_dict["name"])
         workflow.add_steps([Step(**step) for step in yaml_dict["steps"]])
         workflow.set_globals(yaml_dict.get("globals", None))
         return workflow
 
+    def __init__(
+        self,
+        client: Client,
+        *,
+        steps: Optional[list[Step]] = None,
+        model_suite: ModelSuite = DEFAULT_MODEL_SUITE,
+        workflow_name: Optional[str] = None,
+    ):
+        self._workflow_name = (
+            workflow_name
+            or f"{DEFAULT_WORKFLOW_NAME}-{datetime.now().isoformat(timespec='seconds')}"
+        )
+        self._steps = steps or []
+        self._client = client
+        self._model_suite = check_model_suite(model_suite)
+        self._globals = {
+            "num_records": 10,
+            "model_suite": self._model_suite,
+        }
+        self._task_io = get_task_io_map(self._client)
+
+        # we track the workflow and project id to ensure that we can tie
+        # multiple batch workflow calls within a session to the same workflow
+        self.workflow_id = None
+        self.project_id = None
+
+    @property
+    def steps(self) -> list[Step]:
+        return self._steps
+
     @property
     def workflow_step_names(self) -> list[str]:
-        return [s.name for s in self._steps]
+        return [s.name or "" for s in self._steps]
 
     @property
     def step_io_map(self) -> dict[str, dict[str, str]]:
         return {s.name: self._task_io[s.task] for s in self._steps}
-
-    @property
-    def _last_dataset_step(self) -> Optional[Step]:
-        dataset_steps = [
-            s for s in self._steps if self._task_io[s.task]["output"] == "dataset"
-        ]
-        return None if len(dataset_steps) == 0 else dataset_steps[-1]
-
-    @property
-    def _last_evaluation_step(self) -> Optional[Step]:
-        eval_steps = [s for s in self._steps if s.task == "evaluate_dataset"]
-        return None if len(eval_steps) == 0 else eval_steps[-1]
 
     def generate_preview(self, verbose_logging: bool = False) -> PreviewResults:
         step_idx = 0
@@ -505,12 +509,15 @@ class DataDesignerWorkflow:
         # task in the workflow, or, if no dataset is produced by the workflow
         # the final output will be the output of the last task to complete
         # (which may also be none)
+        last_evaluation_step_name = get_last_evaluation_step_name(
+            workflow_step_names=self.workflow_step_names
+        )
         if final_output is None:
             final_output = outputs_by_step.get(current_step)
         evaluation_results = (
             None
-            if self._last_evaluation_step is None
-            else outputs_by_step.get(self._last_evaluation_step.name)
+            if last_evaluation_step_name is None
+            else outputs_by_step.get(last_evaluation_step_name)
         )
         preview_results = PreviewResults(
             output=final_output,
@@ -574,8 +581,5 @@ class DataDesignerWorkflow:
         self.project_id = response.project.name
 
         return DataDesignerBatchJob(
-            workflow_run_id=response.workflow_run_id,
-            client=self._client,
-            last_dataset_step=self._last_dataset_step,
-            last_evaluate_step=self._last_evaluation_step,
+            workflow_run_id=response.workflow_run_id, client=self._client
         )
