@@ -434,6 +434,7 @@ def get_project(
     display_name: Optional[str] = None,
     runner_mode: Optional[Union[RunnerMode, str]] = None,
     session: Optional[ClientConfig] = None,
+    hybrid_environment_guid: Optional[str] = None,
 ) -> Project:
     """Used to get or create a Gretel project.
 
@@ -468,6 +469,12 @@ def get_project(
             project_args["display_name"] = display_name
         if runner_mode:
             project_args["runner_mode"] = runner_mode.value
+        if hybrid_environment_guid:
+            if runner_mode != RunnerMode.HYBRID:
+                raise ValueError(
+                    "cannot specify a hybrid environment for non-hybrid projects"
+                )
+            project_args["cluster_guid"] = hybrid_environment_guid
 
     if not name and create:
         resp = api.create_project(project=models.Project(**project_args))
@@ -502,12 +509,18 @@ def get_project(
         desc=p.get("description"),
         display_name=p.get("display_name"),
         runner_mode=proj_runner_mode,
+        cluster_guid=p.get("cluster_guid"),
         session=session,
     )
 
 
 @contextmanager
-def tmp_project(*, session: Optional[ClientConfig] = None):
+def tmp_project(
+    *,
+    session: Optional[ClientConfig] = None,
+    runner_mode: Optional[Union[RunnerMode, str]] = None,
+    hybrid_environment_guid: Optional[str] = None,
+):
     """A temporary project context manager.  Create a new project
     that can be used inside of a "with" statement for temporary purposes.
     The project will be deleted from Gretel Cloud when the scope is exited.
@@ -522,7 +535,12 @@ def tmp_project(*, session: Optional[ClientConfig] = None):
     """
     if session is None:
         session = get_session_config()
-    project = get_project(create=True, session=session)
+    project = get_project(
+        create=True,
+        session=session,
+        runner_mode=runner_mode,
+        hybrid_environment_guid=hybrid_environment_guid,
+    )
     try:
         yield project
     finally:
