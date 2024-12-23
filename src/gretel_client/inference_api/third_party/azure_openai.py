@@ -44,6 +44,10 @@ def _create_stream_from_oai_endpoint(
         extra_body={
             "gretel": params.gretel_metadata,
         },
+        extra_headers={
+            "azureml-maas-model": params.model,
+            "extra-parameters": "pass-through",
+        },
     )
 
     metadata = ResponseMetadata()
