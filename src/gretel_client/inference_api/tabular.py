@@ -391,19 +391,7 @@ class TabularInferenceAPI(BaseInferenceAPI):
 
             df = tabular.edit(prompt=prompt, seed_data=seed_data)
         """
-        if isinstance(seed_data, list) and isinstance(seed_data[0], dict):
-            table_headers = list(seed_data[0].keys())
-            table_data = seed_data
-        elif PANDAS_IS_INSTALLED and isinstance(seed_data, pd.DataFrame):
-            table_headers = list(seed_data.columns)
-            # By using `to_json()` we serialize out any Pandas specific data types
-            # to scalar values first
-            table_data = json.loads(seed_data.to_json(orient="records"))
-        else:
-            raise GretelInferenceAPIError(
-                "Seed data must be a `pandas` DataFrame or a list of dicts."
-            )
-
+        table_headers, table_data = _data_input_to_api_data(seed_data, "Seed data")
         total_record_count = len(table_data)
 
         # Replace our list of records to edit with a list of lists
@@ -460,6 +448,7 @@ class TabularInferenceAPI(BaseInferenceAPI):
         temperature: float = NavigatorDefaultParams.temperature,
         top_k: int = NavigatorDefaultParams.top_k,
         top_p: float = NavigatorDefaultParams.top_p,
+        sample_data: Optional[Union[_DataFrameT, List[dict[str, Any]]]] = None,
         stream: bool = False,
         as_dataframe: bool = True,
         disable_progress_bar: bool = False,
@@ -480,14 +469,19 @@ class TabularInferenceAPI(BaseInferenceAPI):
         LLM will use that as context for record generation. This is useful
         for keeping continuity in fields between requests (such as monotonic values, etc).
 
-
-
         Args:
             prompt: The prompt for generating synthetic tabular data.
             num_records: The number of records to generate.
             temperature: Sampling temperature. Higher values make output more random.
             top_k: Number of highest probability tokens to keep for top-k filtering.
             top_p: The cumulative probability cutoff for sampling tokens.
+            sample_data: The sample data to guide the initial generation process.
+                Things to keep in mind when using this parameter:
+                - The generated data will use exact column names from "sample_data".
+                - It's important for the prompt and "sample_data" match.
+                  For example, they should refer to the same columns.
+                - Use sample data to provide examples of the data you want generated,
+                  E.g. if you need specific data formats.
             stream: If True, stream the generated data.
             as_dataframe: If True, return the data as a pandas DataFrame. This
                 parameter is ignored if `stream` is True.
@@ -513,7 +507,31 @@ class TabularInferenceAPI(BaseInferenceAPI):
             tabular = TabularInferenceAPI(api_key="prompt")
 
             df = tabular.generate(prompt=prompt, num_records=10)
+
+            # Another example with sample data
+            sample_data = [
+                {
+                    "review_date": "2021-01-01",
+                    "product_name": "red travel mug",
+                    "stars": 5,
+                    "review": "I love this mug!",
+                    "customer_id": 123,
+                }
+            ]
+            df = tabular.generate(prompt=prompt, num_records=10, sample_data=sample_data)
         """
+        ref_data = {}
+        if sample_data:
+            table_headers, table_data = _data_input_to_api_data(
+                sample_data, "Sample data"
+            )
+            ref_data = {
+                "sample_data": {
+                    "table_headers": table_headers,
+                    "table_data": table_data,
+                }
+            }
+
         stream_iterator = self._stream(
             prompt=prompt,
             num_records=num_records,
@@ -523,6 +541,7 @@ class TabularInferenceAPI(BaseInferenceAPI):
                 "top_p": top_p,
             },
             sample_buffer_size=sample_buffer_size,
+            ref_data=ref_data,
         )
 
         return self._get_stream_results(
@@ -533,6 +552,33 @@ class TabularInferenceAPI(BaseInferenceAPI):
             pbar_desc="Generating records",
             disable_pbar=disable_progress_bar,
         )
+
+
+def _data_input_to_api_data(
+    data: Union[_DataFrameT, List[dict[str, Any]]], data_type: str
+) -> tuple[list[str], list[dict[str, Any]]]:
+    """
+    Converts data input from the high level SDK to the format that our API expects:
+    - table_headers: contains list of columns
+    - table_data: contains list of records
+
+    Raises:
+        GretelInferenceAPIError: If the data input is invalid.
+    """
+    if isinstance(data, list) and isinstance(data[0], dict):
+        table_headers = list(data[0].keys())
+        table_data = data
+    elif PANDAS_IS_INSTALLED and isinstance(data, pd.DataFrame):
+        table_headers = list(data.columns)
+        # By using `to_json()` we serialize out any Pandas specific data types
+        # to scalar values first
+        table_data = json.loads(data.to_json(orient="records"))
+    else:
+        raise GretelInferenceAPIError(
+            f"{data_type} must be a `pandas` DataFrame or a list of dicts."
+        )
+
+    return table_headers, table_data
 
 
 def _combine_response_metadata(
