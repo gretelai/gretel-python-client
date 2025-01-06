@@ -1741,10 +1741,12 @@ class ProjectsApi(object):
 
             Keyword Args:
                 limit (int): Limit number of models to return. [optional]
+                skip (int): Number of models to skip before applying limit. [optional]
                 model_name (str): Model name to match on. [optional]
                 workflow_run_id (str): WorkflowRun ID to match on. [optional]
                 sort_by (str): Direction to sort by. Defaults to \"asc\". [optional]
                 sort_field (str): field to sort on. Defaults to \"last_modified\". [optional]
+                status (str): [optional]
                 _return_http_data_only (bool): response data without head status
                     code and headers. Default is True.
                 _preload_content (bool): if False, the urllib3.HTTPResponse object
@@ -1809,10 +1811,12 @@ class ProjectsApi(object):
                 "all": [
                     "project_id",
                     "limit",
+                    "skip",
                     "model_name",
                     "workflow_run_id",
                     "sort_by",
                     "sort_field",
+                    "status",
                 ],
                 "required": [
                     "project_id",
@@ -1821,6 +1825,7 @@ class ProjectsApi(object):
                 "enum": [
                     "sort_by",
                     "sort_field",
+                    "status",
                 ],
                 "validation": [],
             },
@@ -1833,30 +1838,45 @@ class ProjectsApi(object):
                         "STATUS_HISTORY.CREATED": "status_history.created",
                         "MODEL_NAME": "model_name",
                     },
+                    ("status",): {
+                        "CREATED": "created",
+                        "PENDING": "pending",
+                        "ACTIVE": "active",
+                        "COMPLETED": "completed",
+                        "CANCELLED": "cancelled",
+                        "ERROR": "error",
+                        "LOST": "lost",
+                    },
                 },
                 "openapi_types": {
                     "project_id": (str,),
                     "limit": (int,),
+                    "skip": (int,),
                     "model_name": (str,),
                     "workflow_run_id": (str,),
                     "sort_by": (str,),
                     "sort_field": (str,),
+                    "status": (str,),
                 },
                 "attribute_map": {
                     "project_id": "project_id",
                     "limit": "limit",
+                    "skip": "skip",
                     "model_name": "model_name",
                     "workflow_run_id": "workflow_run_id",
                     "sort_by": "sort_by",
                     "sort_field": "sort_field",
+                    "status": "status",
                 },
                 "location_map": {
                     "project_id": "path",
                     "limit": "query",
+                    "skip": "query",
                     "model_name": "query",
                     "workflow_run_id": "query",
                     "sort_by": "query",
                     "sort_field": "query",
+                    "status": "query",
                 },
                 "collection_format_map": {},
             },
