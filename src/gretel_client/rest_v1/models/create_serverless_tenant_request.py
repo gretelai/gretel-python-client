@@ -20,7 +20,7 @@ import re  # noqa: F401
 
 from typing import Any, ClassVar, Dict, List, Optional, Set
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, StrictStr
+from pydantic import BaseModel, ConfigDict, Field, field_validator, StrictInt, StrictStr
 from typing_extensions import Annotated, Self
 
 from gretel_client.rest_v1.models.serverless_tenant_cloud_provider_info import (
@@ -40,7 +40,17 @@ class CreateServerlessTenantRequest(BaseModel):
         description="domain_guid is the GUID of the domain that the tenant will belong to."
     )
     cloud_provider: ServerlessTenantCloudProviderInfo
-    __properties: ClassVar[List[str]] = ["name", "domain_guid", "cloud_provider"]
+    tier: Optional[StrictInt] = None
+    revision: Optional[StrictStr] = None
+    tenant_type: Optional[StrictStr] = None
+    __properties: ClassVar[List[str]] = [
+        "name",
+        "domain_guid",
+        "cloud_provider",
+        "tier",
+        "revision",
+        "tenant_type",
+    ]
 
     @field_validator("name")
     def name_validate_regular_expression(cls, value):
@@ -48,6 +58,18 @@ class CreateServerlessTenantRequest(BaseModel):
         if not re.match(r"^[a-z](-?[a-z0-9]+)*$", value):
             raise ValueError(
                 r"must validate the regular expression /^[a-z](-?[a-z0-9]+)*$/"
+            )
+        return value
+
+    @field_validator("tenant_type")
+    def tenant_type_validate_enum(cls, value):
+        """Validates the enum"""
+        if value is None:
+            return value
+
+        if value not in set(["UNKNOWN", "CUSTOMER", "DEMO", "TESTING", "SANDBOX"]):
+            raise ValueError(
+                "must be one of enum values ('UNKNOWN', 'CUSTOMER', 'DEMO', 'TESTING', 'SANDBOX')"
             )
         return value
 
@@ -111,6 +133,9 @@ class CreateServerlessTenantRequest(BaseModel):
                     if obj.get("cloud_provider") is not None
                     else None
                 ),
+                "tier": obj.get("tier"),
+                "revision": obj.get("revision"),
+                "tenant_type": obj.get("tenant_type"),
             }
         )
         return _obj

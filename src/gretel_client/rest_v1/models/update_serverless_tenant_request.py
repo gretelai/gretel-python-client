@@ -20,7 +20,7 @@ import re  # noqa: F401
 
 from typing import Any, ClassVar, Dict, List, Optional, Set
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator, StrictInt, StrictStr
 from typing_extensions import Self
 
 from gretel_client.rest_v1.models.llm_config import LlmConfig
@@ -32,7 +32,27 @@ class UpdateServerlessTenantRequest(BaseModel):
     """  # noqa: E501
 
     enabled_llms: Optional[List[LlmConfig]] = None
-    __properties: ClassVar[List[str]] = ["enabled_llms"]
+    tier: Optional[StrictInt] = None
+    revision: Optional[StrictStr] = None
+    tenant_type: Optional[StrictStr] = None
+    __properties: ClassVar[List[str]] = [
+        "enabled_llms",
+        "tier",
+        "revision",
+        "tenant_type",
+    ]
+
+    @field_validator("tenant_type")
+    def tenant_type_validate_enum(cls, value):
+        """Validates the enum"""
+        if value is None:
+            return value
+
+        if value not in set(["UNKNOWN", "CUSTOMER", "DEMO", "TESTING", "SANDBOX"]):
+            raise ValueError(
+                "must be one of enum values ('UNKNOWN', 'CUSTOMER', 'DEMO', 'TESTING', 'SANDBOX')"
+            )
+        return value
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -95,7 +115,10 @@ class UpdateServerlessTenantRequest(BaseModel):
                     [LlmConfig.from_dict(_item) for _item in obj["enabled_llms"]]
                     if obj.get("enabled_llms") is not None
                     else None
-                )
+                ),
+                "tier": obj.get("tier"),
+                "revision": obj.get("revision"),
+                "tenant_type": obj.get("tenant_type"),
             }
         )
         return _obj
