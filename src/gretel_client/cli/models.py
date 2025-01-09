@@ -1,7 +1,7 @@
 import json
 
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Optional
 
 import click
 
@@ -304,13 +304,48 @@ def get(sc: SessionContext, project: str, model_id: dict, output: str):
 
 @models.command(help="Search for models of the project.")
 @project_option
-@click.option("--limit", help="Limit the number of projects.", default=100)
-@click.option("--model-name", help="Model name to match on", default="")
+@click.option("--limit", help="Limit the number of projects.", default=100, type=int)
+@click.option("--model-name", help="Model name to match on.", default="")
+@click.option(
+    "--skip",
+    help="Number of models to skip before applying limit.",
+    default=None,
+    type=int,
+)
+@click.option(
+    "--sort-by",
+    help="Direction to sort by. Uses 'asc' if not provided.",
+    type=click.Choice(["asc", "desc"], case_sensitive=False),
+    default=None,
+)
+@click.option(
+    "--sort-field",
+    help="Field to sort on. Uses 'last_modified' if not provided.",
+    default=None,
+)
+@click.option("--status", help="Filter to models with specific status.", default=None)
 @pass_session
-def search(sc: SessionContext, project: str, limit: int, model_name: str):
+def search(
+    sc: SessionContext,
+    project: str,
+    limit: int,
+    model_name: str,
+    skip: Optional[int],
+    sort_by: Optional[str],
+    sort_field: Optional[str],
+    status: Optional[str],
+):
     sc.print(
         data=list(
-            sc.project.search_models(factory=dict, limit=limit, model_name=model_name)
+            sc.project.search_models(
+                factory=dict,
+                limit=limit,
+                model_name=model_name,
+                skip=skip,
+                sort_by=sort_by,
+                sort_field=sort_field,
+                status=status,
+            )
         )
     )
 

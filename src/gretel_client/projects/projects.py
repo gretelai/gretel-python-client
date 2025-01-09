@@ -202,7 +202,11 @@ class Project:
         self,
         factory: Type[MT] = Model,
         limit: int = 100,
+        skip: Optional[int] = None,
         model_name: str = "",
+        sort_by: Optional[str] = None,
+        sort_field: Optional[str] = None,
+        status: Optional[str] = None,
     ) -> Iterator[MT]:
         """Search for project models.
 
@@ -212,14 +216,26 @@ class Project:
                 is passed, a dictionary representation of the search results
                 will be returned.
             limit: Limits the number of project models to return
+            skip: Number of models to skip before applying limit
             model_name: Name of the model to try and match on (partial match)
+            sort_by: Direction to sort. Uses 'asc' if not provided
+            sort_field: Field to sort on. Uses 'last_modified' if not provided
+            status: Filter to models with specific status.
         """
         if factory not in (dict, Model):
             raise ValueError("factory must be one of ``dict`` or ``Model``.")
 
         api_args = {"project_id": self.name, "limit": limit}
+        if skip is not None:
+            api_args["skip"] = skip
         if model_name:
             api_args["model_name"] = model_name
+        if sort_by:
+            api_args["sort_by"] = sort_by
+        if sort_field:
+            api_args["sort_field"] = sort_field
+        if status:
+            api_args["status"] = status
 
         result = self.projects_api.get_models(**api_args)
         searched_models = result.get(DATA).get(MODELS)
