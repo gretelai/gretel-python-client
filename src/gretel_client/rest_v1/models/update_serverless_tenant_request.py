@@ -35,11 +35,13 @@ class UpdateServerlessTenantRequest(BaseModel):
     tier: Optional[StrictInt] = None
     revision: Optional[StrictStr] = None
     tenant_type: Optional[StrictStr] = None
+    branch: Optional[StrictStr] = None
     __properties: ClassVar[List[str]] = [
         "enabled_llms",
         "tier",
         "revision",
         "tenant_type",
+        "branch",
     ]
 
     @field_validator("tenant_type")
@@ -119,6 +121,7 @@ class UpdateServerlessTenantRequest(BaseModel):
                 "tier": obj.get("tier"),
                 "revision": obj.get("revision"),
                 "tenant_type": obj.get("tenant_type"),
+                "branch": obj.get("branch"),
             }
         )
         return _obj

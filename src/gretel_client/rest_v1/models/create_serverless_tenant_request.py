@@ -43,6 +43,7 @@ class CreateServerlessTenantRequest(BaseModel):
     tier: Optional[StrictInt] = None
     revision: Optional[StrictStr] = None
     tenant_type: Optional[StrictStr] = None
+    branch: Optional[StrictStr] = None
     __properties: ClassVar[List[str]] = [
         "name",
         "domain_guid",
@@ -50,6 +51,7 @@ class CreateServerlessTenantRequest(BaseModel):
         "tier",
         "revision",
         "tenant_type",
+        "branch",
     ]
 
     @field_validator("name")
@@ -136,6 +138,7 @@ class CreateServerlessTenantRequest(BaseModel):
                 "tier": obj.get("tier"),
                 "revision": obj.get("revision"),
                 "tenant_type": obj.get("tenant_type"),
+                "branch": obj.get("branch"),
             }
         )
         return _obj
