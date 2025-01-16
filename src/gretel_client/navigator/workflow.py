@@ -417,11 +417,14 @@ class DataDesignerWorkflow:
 
     @classmethod
     def from_yaml(cls, client: Client, yaml_str: str) -> Self:
-        yaml_dict = yaml.safe_load(yaml_str)
+        yaml_dict: dict = yaml.safe_load(yaml_str)
         workflow = cls(client=client, workflow_name=yaml_dict["name"])
         workflow.add_steps([Step(**step) for step in yaml_dict["steps"]])
         workflow.set_globals(yaml_dict.get("globals", None))
         return workflow
+
+    def set_globals(self, new_globals: dict):
+        self._globals.update(new_globals)
 
     def __init__(
         self,
