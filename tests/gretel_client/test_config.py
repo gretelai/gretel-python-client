@@ -31,6 +31,9 @@ from gretel_client.config import (
 )
 from gretel_client.rest.api.projects_api import ProjectsApi
 from gretel_client.rest.exceptions import ForbiddenException
+from gretel_client.rest_v1.models.list_serverless_tenants_response import (
+    ListServerlessTenantsResponse,
+)
 
 
 def test_custom_artifact_endpoint_requires_hybrid_runner():
@@ -390,3 +393,83 @@ def test_retry_throttling_403s():
         )
 
     assert e.value.reason == error
+
+
+# Test when a user configures an enterprise tenant that it should call set_serverless_api
+def test_configure_enterprise():
+    cfg = ClientConfig(
+        endpoint="localhost:8080",
+        api_key="grtu...",
+        tenant_name="enterprise",
+    )
+    with patch.object(ClientConfig, "set_serverless_api") as set_serverless_api:
+        with patch.object(ClientConfig, "email"):
+            set_serverless_api.return_value = True
+            configure_session(cfg)
+            set_serverless_api.assert_called_once()
+
+
+# Test when tenant name is provided and validate is false, should throw a client config error
+def test_configure_enterprise_validate_false():
+    cfg = ClientConfig(
+        endpoint="localhost:8080",
+        api_key="grtu...",
+        tenant_name="enterprise",
+    )
+    with patch.object(ClientConfig, "set_serverless_api") as set_serverless_api:
+        with patch.object(ClientConfig, "email"):
+            set_serverless_api.return_value = True
+            with pytest.raises(GretelClientConfigurationError):
+                configure_session(cfg, validate=False)
+            set_serverless_api.assert_not_called
+
+
+# Test when a list is returned and a matching tenant name is found
+def test_set_serverless_api_tenant_found_match():
+    cfg = ClientConfig(
+        endpoint="localhost:8080",
+        api_key="grtu...",
+        tenant_name="enterprise",
+    )
+    cfg.get_v1_api = MagicMock()
+    cfg.get_v1_api.return_value = MagicMock()
+    data = '{"tenants":[{"guid":"1","domain_guid":"fake","created_at":"2024-11-18T17:45:27.189+00:00","cloud_provider":{"provider":"AWS","region":"us-west-2"},"config":{"cell_id":"1","api_endpoint":"gretelhost:8080"},"name":"enterprise"}]}'
+    cfg.get_v1_api.return_value.list_serverless_tenants.return_value = (
+        ListServerlessTenantsResponse.from_json(data)
+    )
+    assert cfg.set_serverless_api()
+    assert cfg.endpoint == "https://gretelhost:8080"
+
+
+# Test when no tenants are returned
+def test_set_serverless_api_tenant_no_tenants():
+    cfg = ClientConfig(
+        endpoint="localhost:8080",
+        api_key="grtu...",
+        tenant_name="enterprise",
+    )
+    cfg.get_v1_api = MagicMock()
+    cfg.get_v1_api.return_value = MagicMock()
+    data = '{"tenants":[]}'
+    cfg.get_v1_api.return_value.list_serverless_tenants.return_value = (
+        ListServerlessTenantsResponse.from_json(data)
+    )
+    assert not cfg.set_serverless_api()
+    assert cfg.endpoint == "localhost:8080"
+
+
+# Test when a list is returned but no matching tenant name
+def test_set_serverless_api_tenant_no_match():
+    cfg = ClientConfig(
+        endpoint="localhost:8080",
+        api_key="grtu...",
+        tenant_name="enterprise",
+    )
+    cfg.get_v1_api = MagicMock()
+    cfg.get_v1_api.return_value = MagicMock()
+    data = '{"tenants":[{"guid":"1","domain_guid":"fake","created_at":"2024-11-18T17:45:27.189+00:00","cloud_provider":{"provider":"AWS","region":"us-west-2"},"config":{"cell_id":"1","api_endpoint":"gretelhost:8080"},"name":"other"}]}'
+    cfg.get_v1_api.return_value.list_serverless_tenants.return_value = (
+        ListServerlessTenantsResponse.from_json(data)
+    )
+    assert not cfg.set_serverless_api()
+    assert cfg.endpoint == "localhost:8080"

@@ -26,6 +26,7 @@ def configure_session_client():
         MagicMock(
             default_runner=DEFAULT_RUNNER,
             artifact_endpoint=DEFAULT_GRETEL_ARTIFACT_ENDPOINT,
+            tenant_name=None,
         ),
         validate=False,
     )

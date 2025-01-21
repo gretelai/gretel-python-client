@@ -14,10 +14,12 @@ from gretel_client.config import (
     ClientConfig,
     configure_session,
     get_session_config,
+    GRETEL_TENANT_UNSET,
     RunnerMode,
     write_config,
 )
 from gretel_client.projects.common import f
+from gretel_client.rest_v1.api.serverless_api import ServerlessApi
 from gretel_client.users import users
 
 
@@ -43,6 +45,40 @@ def _check_endpoint(endpoint: str) -> str:
     if not endpoint.startswith("https://"):
         endpoint = f"https://{endpoint.split('/')[-1]}"
     return endpoint
+
+
+def prompt_enterprise_tenant(endpoint, api_key, default_tenant_name):
+    """Prompt the user for the enterprise tenant name."""
+    # Create a session based on the user's endpoint and API key
+    # to retrieve the list of available tenants the user has
+    session = ClientConfig.from_dict(
+        {
+            "endpoint": endpoint,
+            "api_key": api_key,
+        }
+    )
+    serverless: ServerlessApi = session.get_v1_api(ServerlessApi)
+    serverless_tenants_resp = serverless.list_serverless_tenants()
+    if (
+        isinstance(serverless_tenants_resp.tenants, list)
+        and len(serverless_tenants_resp.tenants) > 0
+    ):
+        # Add the option to unset a tenant to the list of options
+        tenants = [GRETEL_TENANT_UNSET] + [
+            t.name for t in serverless_tenants_resp.tenants
+        ]
+        tenant_name = click.prompt(
+            "Enterprise Tenant Name",
+            default=default_tenant_name,
+            type=click.Choice(tenants),
+        )
+        if tenant_name == GRETEL_TENANT_UNSET:
+            tenant_name = ""
+        return tenant_name
+    else:
+        print("No tenants found for this user")
+
+    return ""
 
 
 @cli.command(help="Configures the Gretel CLI.")
@@ -91,6 +127,23 @@ def _check_endpoint(endpoint: str) -> str:
     is_flag=True,
     help="The API connection will be validated by default unless this flag is set.",
 )
+@click.option(
+    "--enable-enterprise",
+    is_flag=True,
+    help="Enable enterprise features.",
+    metavar="ENTERPRISE",
+    default=False,
+    hidden=True,
+)
+@click.option(
+    "--tenant-name",
+    prompt="Enterprise Tenant Name",
+    default=lambda: get_session_config().tenant_name or "none",
+    metavar="TENANT",
+    help="The Enterprise tenant name.",
+    hidden=True,
+    prompt_required=False,
+)
 @pass_session
 def configure(
     sc: SessionContext,
@@ -100,6 +153,8 @@ def configure(
     project: str,
     default_runner: str,
     skip_validate: bool,
+    enable_enterprise: bool,
+    tenant_name: str,
 ):
     project_name = None if project == "none" else project
     endpoint = _check_endpoint(endpoint)
@@ -107,11 +162,23 @@ def configure(
     # already read in from the config and not updated
     if api_key.endswith("****"):
         api_key = sc.session.api_key
+
+    if enable_enterprise:
+        # Use explicitly wants to unset the tenant, so don't prompt for the list
+        if tenant_name == GRETEL_TENANT_UNSET:
+            tenant_name = ""
+        else:
+            tenant_name = prompt_enterprise_tenant(endpoint, api_key, tenant_name)
+    else:
+        # Ensure tenant_name is always empty if enterprise features are not enabled
+        tenant_name = ""
+
     config = ClientConfig(
         endpoint=endpoint,
         artifact_endpoint=artifact_endpoint,
         api_key=api_key,
         default_runner=default_runner,
+        tenant_name=tenant_name,
     )
     config.update_default_project(project_id=project_name)
     configure_session(config, validate=not skip_validate)

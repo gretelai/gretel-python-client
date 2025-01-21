@@ -63,7 +63,13 @@ DEFAULT_GRETEL_ARTIFACT_ENDPOINT = "cloud"
 GRETEL_PREVIEW_FEATURES = "GRETEL_PREVIEW_FEATURES"
 """Env variable to manage preview features"""
 
-GRETEL_ENVS = [GRETEL_API_KEY, GRETEL_PROJECT]
+GRETEL_TENANT_NAME = "GRETEL_TENANT_NAME"
+"""Enterprise tenant name"""
+
+GRETEL_TENANT_UNSET = "none"
+"""Value to indicate that a tenant name should be unset"""
+
+GRETEL_ENVS = [GRETEL_API_KEY, GRETEL_PROJECT, GRETEL_TENANT_NAME]
 
 CLIENT_METRICS_HEADER_KEY = "X-Gretel-Client-Metrics"
 
@@ -287,6 +293,10 @@ class ClientConfig(ABC):
     @abstractmethod
     def preview_features(self) -> str: ...
 
+    @property
+    @abstractmethod
+    def tenant_name(self) -> Optional[str]: ...
+
     @cached_property
     def email(self) -> str:
         return self.get_api(UsersApi).users_me()["data"]["me"]["email"]
@@ -327,16 +337,18 @@ class ClientConfig(ABC):
             isinstance(serverless_tenants_resp.tenants, list)
             and len(serverless_tenants_resp.tenants) > 0
         ):
-            tenant = serverless_tenants_resp.tenants[0]
-            tenant_endpoint = tenant.config.api_endpoint
-            if not tenant_endpoint.startswith("https://"):
-                tenant_endpoint = f"https://{tenant_endpoint}"
-            if tenant_endpoint != self.endpoint:
-                print(
-                    "Found a serverless tenant associated with this API key. Updating client configuration to use the tenant API endpoint."
-                )
-                self.endpoint = tenant_endpoint
-            return True
+            for tenant in serverless_tenants_resp.tenants:
+                if tenant.name != self.tenant_name:
+                    continue
+                tenant_endpoint = tenant.config.api_endpoint
+                if not tenant_endpoint.startswith("https://"):
+                    tenant_endpoint = f"https://{tenant_endpoint}"
+                if tenant_endpoint != self.endpoint:
+                    print(
+                        "Found a serverless tenant associated with this API key. Updating client configuration to use the tenant API endpoint."
+                    )
+                    self.endpoint = tenant_endpoint
+                return True
         return False
 
     def get_api(
@@ -430,6 +442,9 @@ class DefaultClientConfig(ClientConfig):
     preview_features: str = PreviewFeatures.DISABLED.value
     """Preview features enabled"""
 
+    tenant_name: Optional[str] = None
+    """Enterprise tenant name"""
+
     def __init__(
         self,
         endpoint: Optional[str] = None,
@@ -438,6 +453,7 @@ class DefaultClientConfig(ClientConfig):
         default_project_name: Optional[str] = None,
         default_runner: Optional[Union[str, RunnerMode]] = None,
         preview_features: Optional[str] = None,
+        tenant_name: Optional[str] = None,
     ):
         self.endpoint = (
             endpoint or os.getenv(GRETEL_ENDPOINT) or DEFAULT_GRETEL_ENDPOINT
@@ -457,6 +473,7 @@ class DefaultClientConfig(ClientConfig):
             or os.getenv(GRETEL_PREVIEW_FEATURES)
             or PreviewFeatures.DISABLED.value
         )
+        self.tenant_name = tenant_name or os.getenv(GRETEL_TENANT_NAME)
         self._validate()
 
     def _validate(self) -> None:
@@ -610,6 +627,10 @@ class DelegatingClientConfig(ClientConfig):
     @property
     def preview_features(self) -> str:
         return self._delegate.preview_features
+
+    @property
+    def tenant_name(self) -> str:
+        return self._delegate.tenant_name
 
     def _get_api_client_generic(
         self,
@@ -846,6 +867,7 @@ def configure_session(
     artifact_endpoint: Optional[str] = None,
     cache: str = "no",
     validate: bool = True,
+    tenant_name: Optional[str] = None,
     clear: bool = False,
 ):
     """Updates client config for the session
@@ -867,6 +889,7 @@ def configure_session(
             configuration doesn't exist.
         validate: If set to ``True`` this will check that login credentials
             are valid.
+        tenant_name: Specifies the Gretel Enterprise tenant name.
         clear: If set to ``True`` any existing Gretel credentials will be
             removed from the host.
 
@@ -887,6 +910,7 @@ def configure_session(
     default_runner = RunnerMode.parse(default_runner)
 
     artifact_endpoint = artifact_endpoint or config.artifact_endpoint
+    tenant_name = tenant_name or config.tenant_name
 
     api_key = api_key or config.api_key
     if api_key == "prompt":
@@ -904,6 +928,7 @@ def configure_session(
             api_key=api_key,
             default_runner=default_runner,
             default_project_name=config.default_project_name,
+            tenant_name=tenant_name,
         )
 
     if cache == "yes":
@@ -917,11 +942,20 @@ def configure_session(
     if isinstance(config, ClientConfig):
         _session_client_config = config
 
+    if not validate and tenant_name:
+        raise GretelClientConfigurationError(
+            "Cannot run without validation when specifying a tenant name."
+        )
+
+    if tenant_name:
+        if config.set_serverless_api():
+            print(f"Using endpoint {config.endpoint}")
+        else:
+            raise GretelClientConfigurationError(
+                f"Could not find serverless tenant {tenant_name} associated with this API key."
+            )
+
     if validate:
-        is_using_serverless = config.set_serverless_api()
-        if is_using_serverless:
-            print("Serverless tenant detected.")
-        print(f"Using endpoint {config.endpoint}")
         try:
             print(f"Logged in as {config.email} \u2705")
         except Exception as ex:
