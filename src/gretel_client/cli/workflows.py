@@ -89,10 +89,19 @@ def create(
 
 
 @workflows.command(help="List workflows.")
+@click.option(
+    "--limit", metavar="LIMIT", help="Limit the number of returned", default=25
+)
+@click.option(
+    "--skip",
+    metavar="SKIP",
+    help="Skip the specified number of Workflows in the response list",
+    default=0,
+)
 @pass_session
-def list(sc: SessionContext):
+def list(sc: SessionContext, limit: int, skip: int):
     workflow_api = _get_workflows_api(session=sc.session)
-    wfls = workflow_api.get_workflows().workflows
+    wfls = workflow_api.search_workflows(limit=limit, skip=skip).workflows
     if not wfls:
         sc.log.info("No workflows found.")
         return
