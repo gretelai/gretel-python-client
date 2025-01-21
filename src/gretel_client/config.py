@@ -930,6 +930,20 @@ def configure_session(
             ) from ex
 
 
+def get_data_plane_endpoint(session: Optional[ClientConfig] = None) -> str:
+
+    if session is None:
+        session = get_session_config()
+
+    api_endpoint = "https://dataplane.gretel.cloud"
+    if "api-dev" in session.endpoint:
+        api_endpoint = "https://dataplane.dev.gretel.cloud"
+    if any(token in session.endpoint for token in ["enterprise", "serverless"]):
+        api_endpoint = session.endpoint
+
+    return api_endpoint
+
+
 def _create_mode_opener(mode):
     """Returns an opener to be used with open() that sets the file mode."""
     return lambda path, flags: os.open(path, flags, mode=mode)
