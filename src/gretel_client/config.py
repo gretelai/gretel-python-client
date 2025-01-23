@@ -965,17 +965,23 @@ def configure_session(
 
 
 def get_data_plane_endpoint(session: Optional[ClientConfig] = None) -> str:
-
     if session is None:
         session = get_session_config()
 
-    api_endpoint = "https://dataplane.gretel.cloud"
-    if "api-dev" in session.endpoint:
-        api_endpoint = "https://dataplane.dev.gretel.cloud"
-    if any(token in session.endpoint for token in ["enterprise", "serverless"]):
-        api_endpoint = session.endpoint
+    if any(
+        session.endpoint.endswith(token)
+        for token in [
+            "sandbox.dev.gretel.ai",
+            "enterprise.dev.gretel.ai",
+            "serverless.dev.gretel.ai",
+        ]
+    ):
+        return session.endpoint
 
-    return api_endpoint
+    if "api-dev" in session.endpoint:
+        return "https://dataplane.dev.gretel.cloud"
+
+    return "https://dataplane.gretel.cloud"
 
 
 def _create_mode_opener(mode):
