@@ -47,9 +47,17 @@ class ServerlessTenantProvisioningState(BaseModel):
         if value is None:
             return value
 
-        if value not in set(["UNPROVISIONED", "INPROGRESS", "COMPLETED", "ERROR"]):
+        if value not in set(
+            [
+                "PROVISIONING_STATUS_UNKNOWN",
+                "UNPROVISIONED",
+                "INPROGRESS",
+                "COMPLETED",
+                "ERROR",
+            ]
+        ):
             raise ValueError(
-                "must be one of enum values ('UNPROVISIONED', 'INPROGRESS', 'COMPLETED', 'ERROR')"
+                "must be one of enum values ('PROVISIONING_STATUS_UNKNOWN', 'UNPROVISIONED', 'INPROGRESS', 'COMPLETED', 'ERROR')"
             )
         return value
 
@@ -59,9 +67,11 @@ class ServerlessTenantProvisioningState(BaseModel):
         if value is None:
             return value
 
-        if value not in set(["GRETEL_MANAGED", "CUSTOMER_KEY", "INVALID_KEY"]):
+        if value not in set(
+            ["KEY_UNKNOWN", "GRETEL_MANAGED", "CUSTOMER_KEY", "INVALID_KEY"]
+        ):
             raise ValueError(
-                "must be one of enum values ('GRETEL_MANAGED', 'CUSTOMER_KEY', 'INVALID_KEY')"
+                "must be one of enum values ('KEY_UNKNOWN', 'GRETEL_MANAGED', 'CUSTOMER_KEY', 'INVALID_KEY')"
             )
         return value
 

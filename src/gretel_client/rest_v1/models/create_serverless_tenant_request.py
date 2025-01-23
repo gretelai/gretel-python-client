@@ -88,8 +88,10 @@ class CreateServerlessTenantRequest(BaseModel):
         if value is None:
             return value
 
-        if value not in set(["ACTIVE", "SUSPENDED"]):
-            raise ValueError("must be one of enum values ('ACTIVE', 'SUSPENDED')")
+        if value not in set(["TENANT_STATE_UNKNOWN", "ACTIVE", "SUSPENDED"]):
+            raise ValueError(
+                "must be one of enum values ('TENANT_STATE_UNKNOWN', 'ACTIVE', 'SUSPENDED')"
+            )
         return value
 
     model_config = ConfigDict(
