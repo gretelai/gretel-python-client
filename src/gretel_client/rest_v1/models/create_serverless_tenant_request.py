@@ -23,6 +23,7 @@ from typing import Any, ClassVar, Dict, List, Optional, Set
 from pydantic import BaseModel, ConfigDict, Field, field_validator, StrictInt, StrictStr
 from typing_extensions import Annotated, Self
 
+from gretel_client.rest_v1.models.config_tenant_key import ConfigTenantKey
 from gretel_client.rest_v1.models.serverless_tenant_cloud_provider_info import (
     ServerlessTenantCloudProviderInfo,
 )
@@ -44,6 +45,9 @@ class CreateServerlessTenantRequest(BaseModel):
     revision: Optional[StrictStr] = None
     tenant_type: Optional[StrictStr] = None
     branch: Optional[StrictStr] = None
+    state: Optional[StrictStr] = None
+    disk_size_gb: Optional[StrictInt] = None
+    keys: Optional[List[ConfigTenantKey]] = None
     __properties: ClassVar[List[str]] = [
         "name",
         "domain_guid",
@@ -52,6 +56,9 @@ class CreateServerlessTenantRequest(BaseModel):
         "revision",
         "tenant_type",
         "branch",
+        "state",
+        "disk_size_gb",
+        "keys",
     ]
 
     @field_validator("name")
@@ -73,6 +80,16 @@ class CreateServerlessTenantRequest(BaseModel):
             raise ValueError(
                 "must be one of enum values ('UNKNOWN', 'CUSTOMER', 'DEMO', 'TESTING', 'SANDBOX')"
             )
+        return value
+
+    @field_validator("state")
+    def state_validate_enum(cls, value):
+        """Validates the enum"""
+        if value is None:
+            return value
+
+        if value not in set(["ACTIVE", "SUSPENDED"]):
+            raise ValueError("must be one of enum values ('ACTIVE', 'SUSPENDED')")
         return value
 
     model_config = ConfigDict(
@@ -115,6 +132,13 @@ class CreateServerlessTenantRequest(BaseModel):
         # override the default output from pydantic by calling `to_dict()` of cloud_provider
         if self.cloud_provider:
             _dict["cloud_provider"] = self.cloud_provider.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of each item in keys (list)
+        _items = []
+        if self.keys:
+            for _item in self.keys:
+                if _item:
+                    _items.append(_item.to_dict())
+            _dict["keys"] = _items
         return _dict
 
     @classmethod
@@ -139,6 +163,13 @@ class CreateServerlessTenantRequest(BaseModel):
                 "revision": obj.get("revision"),
                 "tenant_type": obj.get("tenant_type"),
                 "branch": obj.get("branch"),
+                "state": obj.get("state"),
+                "disk_size_gb": obj.get("disk_size_gb"),
+                "keys": (
+                    [ConfigTenantKey.from_dict(_item) for _item in obj["keys"]]
+                    if obj.get("keys") is not None
+                    else None
+                ),
             }
         )
         return _obj

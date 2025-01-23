@@ -28,6 +28,9 @@ from gretel_client.rest_v1.models.serverless_tenant_cloud_provider_info import (
     ServerlessTenantCloudProviderInfo,
 )
 from gretel_client.rest_v1.models.serverless_tenant_config import ServerlessTenantConfig
+from gretel_client.rest_v1.models.serverless_tenant_provisioning_state import (
+    ServerlessTenantProvisioningState,
+)
 
 
 class ServerlessTenant(BaseModel):
@@ -45,6 +48,7 @@ class ServerlessTenant(BaseModel):
         default=None,
         description="The GUID of the cluster that the tenant is associated with.",
     )
+    provisioning_state: Optional[ServerlessTenantProvisioningState] = None
     __properties: ClassVar[List[str]] = [
         "guid",
         "name",
@@ -53,6 +57,7 @@ class ServerlessTenant(BaseModel):
         "cloud_provider",
         "config",
         "cluster_guid",
+        "provisioning_state",
     ]
 
     model_config = ConfigDict(
@@ -98,6 +103,9 @@ class ServerlessTenant(BaseModel):
         # override the default output from pydantic by calling `to_dict()` of config
         if self.config:
             _dict["config"] = self.config.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of provisioning_state
+        if self.provisioning_state:
+            _dict["provisioning_state"] = self.provisioning_state.to_dict()
         return _dict
 
     @classmethod
@@ -126,6 +134,13 @@ class ServerlessTenant(BaseModel):
                     else None
                 ),
                 "cluster_guid": obj.get("cluster_guid"),
+                "provisioning_state": (
+                    ServerlessTenantProvisioningState.from_dict(
+                        obj["provisioning_state"]
+                    )
+                    if obj.get("provisioning_state") is not None
+                    else None
+                ),
             }
         )
         return _obj

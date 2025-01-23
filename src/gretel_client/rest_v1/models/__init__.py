@@ -25,6 +25,7 @@ from gretel_client.rest_v1.models.cluster_status import ClusterStatus
 from gretel_client.rest_v1.models.config_asymmetric_key_metadata import (
     ConfigAsymmetricKeyMetadata,
 )
+from gretel_client.rest_v1.models.config_tenant_key import ConfigTenantKey
 from gretel_client.rest_v1.models.connection import Connection
 from gretel_client.rest_v1.models.create_connection_request import (
     CreateConnectionRequest,
@@ -86,6 +87,9 @@ from gretel_client.rest_v1.models.serverless_tenant_cloud_provider_info import (
     ServerlessTenantCloudProviderInfo,
 )
 from gretel_client.rest_v1.models.serverless_tenant_config import ServerlessTenantConfig
+from gretel_client.rest_v1.models.serverless_tenant_provisioning_state import (
+    ServerlessTenantProvisioningState,
+)
 from gretel_client.rest_v1.models.status import Status
 from gretel_client.rest_v1.models.status_details import StatusDetails
 from gretel_client.rest_v1.models.update_connection_request import (

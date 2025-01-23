@@ -23,7 +23,11 @@ from typing import Any, ClassVar, Dict, List, Optional, Set
 from pydantic import BaseModel, ConfigDict, field_validator, StrictInt, StrictStr
 from typing_extensions import Self
 
+from gretel_client.rest_v1.models.config_tenant_key import ConfigTenantKey
 from gretel_client.rest_v1.models.llm_config import LlmConfig
+from gretel_client.rest_v1.models.serverless_tenant_provisioning_state import (
+    ServerlessTenantProvisioningState,
+)
 
 
 class UpdateServerlessTenantRequest(BaseModel):
@@ -36,12 +40,20 @@ class UpdateServerlessTenantRequest(BaseModel):
     revision: Optional[StrictStr] = None
     tenant_type: Optional[StrictStr] = None
     branch: Optional[StrictStr] = None
+    state: Optional[StrictStr] = None
+    disk_size_gb: Optional[StrictInt] = None
+    keys: Optional[List[ConfigTenantKey]] = None
+    provisioning_state: Optional[ServerlessTenantProvisioningState] = None
     __properties: ClassVar[List[str]] = [
         "enabled_llms",
         "tier",
         "revision",
         "tenant_type",
         "branch",
+        "state",
+        "disk_size_gb",
+        "keys",
+        "provisioning_state",
     ]
 
     @field_validator("tenant_type")
@@ -54,6 +66,16 @@ class UpdateServerlessTenantRequest(BaseModel):
             raise ValueError(
                 "must be one of enum values ('UNKNOWN', 'CUSTOMER', 'DEMO', 'TESTING', 'SANDBOX')"
             )
+        return value
+
+    @field_validator("state")
+    def state_validate_enum(cls, value):
+        """Validates the enum"""
+        if value is None:
+            return value
+
+        if value not in set(["ACTIVE", "SUSPENDED"]):
+            raise ValueError("must be one of enum values ('ACTIVE', 'SUSPENDED')")
         return value
 
     model_config = ConfigDict(
@@ -100,6 +122,16 @@ class UpdateServerlessTenantRequest(BaseModel):
                 if _item:
                     _items.append(_item.to_dict())
             _dict["enabled_llms"] = _items
+        # override the default output from pydantic by calling `to_dict()` of each item in keys (list)
+        _items = []
+        if self.keys:
+            for _item in self.keys:
+                if _item:
+                    _items.append(_item.to_dict())
+            _dict["keys"] = _items
+        # override the default output from pydantic by calling `to_dict()` of provisioning_state
+        if self.provisioning_state:
+            _dict["provisioning_state"] = self.provisioning_state.to_dict()
         return _dict
 
     @classmethod
@@ -122,6 +154,20 @@ class UpdateServerlessTenantRequest(BaseModel):
                 "revision": obj.get("revision"),
                 "tenant_type": obj.get("tenant_type"),
                 "branch": obj.get("branch"),
+                "state": obj.get("state"),
+                "disk_size_gb": obj.get("disk_size_gb"),
+                "keys": (
+                    [ConfigTenantKey.from_dict(_item) for _item in obj["keys"]]
+                    if obj.get("keys") is not None
+                    else None
+                ),
+                "provisioning_state": (
+                    ServerlessTenantProvisioningState.from_dict(
+                        obj["provisioning_state"]
+                    )
+                    if obj.get("provisioning_state") is not None
+                    else None
+                ),
             }
         )
         return _obj
