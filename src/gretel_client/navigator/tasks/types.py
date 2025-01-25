@@ -1,8 +1,11 @@
+import json
+
 from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any, Optional, Type, Union
 
 from annotated_types import Len
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_serializer, model_validator
+from pydantic.functional_serializers import SerializeAsAny
 from rich.console import Console, Group
 from rich.pretty import Pretty
 from rich.text import Text
@@ -40,11 +43,64 @@ def check_model_suite(model_suite: Union[ModelSuite, str]) -> str:
 
 
 class OutputColumnType(str, Enum):
-    AUTO = "auto"
     TEXT = "text"
-    DICT = "dict"
-    LIST = "list"
     CODE = "code"
+    STRUCTURED = "structured"
+
+
+class ColumnType(BaseModel): ...
+
+
+class TextColumnType(ColumnType): ...
+
+
+class CodeColumnType(ColumnType):
+    syntax: str
+
+
+class StructuredColumnType(ColumnType):
+    model: Annotated[Optional[Type[BaseModel]], Field(exclude=True)] = None
+    json_schema: dict
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_json_schema(cls, data: Any) -> Any:
+        if "json_schema" not in data:
+            model = data.get("model")
+            if model is not None:
+                data["json_schema"] = model.model_json_schema()
+        elif isinstance(data["json_schema"], str):
+            data["json_schema"] = json.loads(data["json_schema"])
+        return data
+
+
+_COLUMN_TYPES = {
+    OutputColumnType.CODE: CodeColumnType,
+    OutputColumnType.TEXT: TextColumnType,
+    OutputColumnType.STRUCTURED: StructuredColumnType,
+}
+
+
+class DataConfig(BaseModel):
+    type: OutputColumnType
+    params: SerializeAsAny[ColumnType]
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_params(cls, data: dict) -> dict:
+        t, p = data.get("type"), data.get("params", {})
+        if not t:
+            raise KeyError("No type specified.")
+
+        if t not in _COLUMN_TYPES:
+            raise ValueError(f"Unknown column type {t}")
+
+        data["params"] = _COLUMN_TYPES[t].model_validate(p)
+        return data
+
+    @field_serializer("type")
+    def serialize_type(self, type: OutputColumnType, _) -> str:
+        return str(type.value)
 
 
 class SystemPromptType(str, Enum):

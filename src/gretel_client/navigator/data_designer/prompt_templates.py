@@ -49,8 +49,7 @@ It is VERY IMPORTANT that you follow ALL instructions carefully.
     * Generate the `{name}` column as described by the Generation Prompt.
     * Remember to generate all output in English.
     * Base your response on the above information.
-    * {parser_instructions}
-    
+
 ### Response ###
 """
 

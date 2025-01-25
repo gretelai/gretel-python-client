@@ -1,15 +1,15 @@
 from typing import Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_serializer
 
 from gretel_client.navigator.client.interface import Client, TaskOutput
 from gretel_client.navigator.tasks.base import Task
 from gretel_client.navigator.tasks.io import Dataset
 from gretel_client.navigator.tasks.types import (
+    DataConfig,
     DEFAULT_MODEL_SUITE,
     LLMType,
     ModelSuite,
-    TextParserType,
 )
 
 DEFAULT_RESPONSE_COLUMN_NAME = "response"
@@ -18,9 +18,13 @@ DEFAULT_RESPONSE_COLUMN_NAME = "response"
 class GenerateColumnFromTemplateConfig(BaseModel):
     prompt_template: str
     response_column_name: str = DEFAULT_RESPONSE_COLUMN_NAME
-    output_parser: TextParserType = TextParserType.PASS_THROUGH
     llm_type: LLMType = LLMType.NATURAL_LANGUAGE
     system_prompt: Optional[str] = None
+    data_config: DataConfig
+
+    @field_serializer("llm_type")
+    def serialize_llm_type(self, llm_type: LLMType, _) -> str:
+        return llm_type.value
 
 
 class GenerateColumnFromTemplate(Task):
@@ -45,13 +49,16 @@ class GenerateColumnFromTemplate(Task):
             be helpful if you use the same task multiple times within a single workflow.
         client: Client object to use when running the task.
         model_suite: Suite of models to use. Must be a member of the ModelSuite enum.
+        data_config: A DataConfig object which specifies the type of data that will
+            be genreated for the column as well as additional parameters for controlling
+            that generation.
     """
 
     def __init__(
         self,
         prompt_template: str,
+        data_config: DataConfig,
         response_column_name: str = DEFAULT_RESPONSE_COLUMN_NAME,
-        output_parser: TextParserType = TextParserType.PASS_THROUGH,
         llm_type: LLMType = LLMType.NATURAL_LANGUAGE,
         system_prompt: Optional[str] = None,
         workflow_label: Optional[str] = None,
@@ -62,9 +69,9 @@ class GenerateColumnFromTemplate(Task):
             config=GenerateColumnFromTemplateConfig(
                 prompt_template=prompt_template,
                 response_column_name=response_column_name,
-                output_parser=output_parser,
                 llm_type=llm_type,
                 system_prompt=system_prompt,
+                data_config=data_config,
             ),
             workflow_label=workflow_label,
             client=client,

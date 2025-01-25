@@ -1,3 +1,4 @@
+import json
 import numbers
 
 from typing import Optional, Union
@@ -10,6 +11,7 @@ from rich.columns import Columns
 from rich.console import Console, Group
 from rich.padding import Padding
 from rich.panel import Panel
+from rich.pretty import Pretty
 from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
@@ -105,7 +107,14 @@ def display_sample_record(
         table.add_column("Name")
         table.add_column("Value")
         for col in [c for c in data_columns if c not in code_columns]:
-            table.add_row(col, str(record[col]))
+            ## Pretty-print for structured outputs
+            _element = record[col]
+            try:
+                _element = Pretty(json.loads(_element))
+            except (TypeError, json.JSONDecodeError):
+                pass
+
+            table.add_row(col, _element)
         render_list.append(_pad_console_element(table))
 
     for col in code_columns:
