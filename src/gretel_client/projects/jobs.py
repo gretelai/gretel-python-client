@@ -38,6 +38,7 @@ from gretel_client.projects.artifact_handlers import (
 from gretel_client.projects.common import f, ModelArtifact, WAIT_UNTIL_DONE
 from gretel_client.projects.exceptions import (
     CreditExhaustException,
+    DiscontinuedModelException,
     GretelJobNotFound,
     MaxConcurrentJobsException,
     WaitTimeExceeded,
@@ -616,4 +617,10 @@ class Job(ABC):
             raise CreditExhaustException(
                 status=apix.status, reason=apix.reason
             ) from apix
+        if "has been discontinued" in str(apix).lower():
+            # For discontinued models, include the `body` to
+            # ensure we give the user a specific error message.
+            exc = DiscontinuedModelException(status=apix.status, reason=apix.reason)
+            exc.body = apix.body
+            raise exc from apix
         raise apix

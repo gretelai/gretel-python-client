@@ -16,6 +16,7 @@ from gretel_client.projects.artifact_handlers import (
 )
 from gretel_client.projects.exceptions import (
     DataSourceError,
+    DiscontinuedModelException,
     MaxConcurrentJobsException,
 )
 from gretel_client.projects.models import Model, ModelConfigError, read_model_config
@@ -194,6 +195,18 @@ def test_model_submit_max_jobs_limit(m: Model):
         m.submit(runner_mode="cloud")
     assert other_reason in str(err.value)
     assert err.value.reason == other_reason
+    assert err.value.status == 400
+
+
+def test_model_submit_discontinued_model(m: Model):
+    discontinued_reason = "has been discontinued"
+    m.project.projects_api.create_model.side_effect = ApiException(
+        status=400, reason=discontinued_reason
+    )
+    with pytest.raises(DiscontinuedModelException) as err:
+        m.submit(runner_mode="cloud")
+    assert discontinued_reason in str(err.value)
+    assert err.value.reason == discontinued_reason
     assert err.value.status == 400
 
 

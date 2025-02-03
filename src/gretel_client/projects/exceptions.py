@@ -85,6 +85,14 @@ class CreditExhaustException(ApiException):
     ...
 
 
+class DiscontinuedModelException(ApiException):
+    """
+    The chosen model has been discontinued and is no longer available.
+    """
+
+    ...
+
+
 # Model Config
 
 
