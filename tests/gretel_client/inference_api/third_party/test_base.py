@@ -51,7 +51,7 @@ def test_inference_params():
                 "content": "prompty mcprompt face",
             }
         ],
-        "model": "gretelai-azure/gpt-3.5-turbo",
+        "model": "gretelai-azure/gpt-4o-mini",
         "n": 20,
         "stream": True,
         "temperature": None,
@@ -60,7 +60,7 @@ def test_inference_params():
     }
 
     params = InferenceParams(
-        model="gretelai-azure/gpt-3.5-turbo",
+        model="gretelai-azure/gpt-4o-mini",
         prompt="prompty mcprompt face",
         num_records=20,
         temperature=None,
@@ -102,7 +102,7 @@ def test_handle_non_streaming_response():
             }
         ],
         "created": 1730499763,
-        "model": "gretelai-azure/gpt-3.5-turbo",
+        "model": "gretelai-azure/gpt-4o-mini",
         "object": "chat.completion",
         "service_tier": None,
         "system_fingerprint": None,
@@ -164,7 +164,7 @@ def test_handle_streaming_chunk():
             }
         ],
         "created": 1730500462,
-        "model": "gretelai-azure/gpt-3.5-turbo",
+        "model": "gretelai-azure/gpt-4o-mini",
         "object": "chat.completion.chunk",
         "service_tier": None,
         "system_fingerprint": None,
@@ -200,7 +200,7 @@ def test_handle_streaming_chunk():
             }
         ],
         "created": 1730500462,
-        "model": "gretelai-azure/gpt-3.5-turbo",
+        "model": "gretelai-azure/gpt-4o-mini",
         "object": "chat.completion.chunk",
         "service_tier": None,
         "system_fingerprint": None,
