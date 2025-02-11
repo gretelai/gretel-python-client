@@ -9,13 +9,11 @@ def get_prompt_template_keywords(template: str) -> set[str]:
 
 
 DATA_DESIGNER_BASE_SYSTEM_PROMPT = """\
-You are an expert data practioner, skilled in the creation of diverse, high-quality datasets, \
-leveraging deep expertise across domains in both the academic and industry sectors. \
 You always carefully consider all information provided to you, and you always follow all \
 instructions. \
+Unless requested, be as concise as possible in your responses; do not over explain. \
 {llm_type_specific_instructions} \
 {{special_instructions}}
-You always provide your response after the '### Response ###' section header.
 
 YOU MUST GENERATE ALL OUTPUT IN ENGLISH ONLY.
 """
@@ -38,19 +36,7 @@ Importantly, you ALWAYS write self-contained code.
 )
 
 COLUMN_GENERATION_PROMPT = """\
-Your task is to generate the `{name}` column in a dataset based on the Generation Prompt below. \
-It is VERY IMPORTANT that you follow ALL instructions carefully.
-
-### Generation Prompt ###
-{generation_prompt}
-{context}\
-
-### General Instructions ###
-    * Generate the `{name}` column as described by the Generation Prompt.
-    * Remember to generate all output in English.
-    * Base your response on the above information.
-
-### Response ###
+{context}{generation_prompt}\
 """
 
 DATA_DESIGNER_JUDGE_SYSTEM_PROMPT = """\

@@ -45,7 +45,6 @@ class GeneratedDataColumn(BaseModel):
             Full prompt template string.
         """
         return COLUMN_GENERATION_PROMPT.format(
-            name=self.name,
             generation_prompt=self.generation_prompt,
             context=self.generate_context_column_string(),
         )
@@ -64,9 +63,11 @@ class GeneratedDataColumn(BaseModel):
         if len(set(self.columns_to_list_in_prompt) - exclude) == 0:
             return ""
 
-        section_title = "\n### Relevant Context ###\n"
+        prefix = "<context>\n"
+        suffix = "\n</context>\n\n"
+
         return (
-            section_title
+            prefix
             + "\n".join(
                 [
                     f"    * {c.replace('_', ' ').capitalize()}: {{{c}}}"
@@ -74,7 +75,7 @@ class GeneratedDataColumn(BaseModel):
                     if c not in exclude
                 ]
             )
-            + "\n"
+            + suffix
         )
 
     def get_system_prompt(
@@ -125,7 +126,7 @@ class GeneratedDataColumn(BaseModel):
             f"{self.__class__.__name__}(\n"
             f"    name: {self.name}\n"
             f"    llm_type: {self.llm_type}\n"
-            f"    column_type: {self.column_type}\n"
+            f"    data_config: {self.data_config}\n"
             f"    columns_to_list_in_prompt: {self.columns_to_list_in_prompt}\n"
             ")"
         )
