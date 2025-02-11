@@ -54,6 +54,9 @@ class ActionSummary(BaseModel):
         default=None,
         description='(V2 workflows only) The ID of the workflow run containing partial output from a previous attempt of "this" step being summarized.',
     )
+    execution_summary: Optional[Dict[str, Any]] = Field(
+        default=None, description="Metadata provided by the task as an output"
+    )
     __properties: ClassVar[List[str]] = [
         "name",
         "action_type",
@@ -63,6 +66,7 @@ class ActionSummary(BaseModel):
         "previous_run_manifest_id",
         "input_run_manifest_id",
         "step_checkpoint_source",
+        "execution_summary",
     ]
 
     @field_validator("status")
@@ -148,6 +152,7 @@ class ActionSummary(BaseModel):
                 "previous_run_manifest_id": obj.get("previous_run_manifest_id"),
                 "input_run_manifest_id": obj.get("input_run_manifest_id"),
                 "step_checkpoint_source": obj.get("step_checkpoint_source"),
+                "execution_summary": obj.get("execution_summary"),
             }
         )
         return _obj
