@@ -4,6 +4,8 @@ High level API for interacting with a Gretel Project
 
 from __future__ import annotations
 
+import re
+
 from contextlib import contextmanager
 from functools import cached_property, wraps
 from pathlib import Path
@@ -410,6 +412,7 @@ def create_project(
 
     payload = {}
     if name:
+        _validate_project_name(name)
         payload["name"] = name
     if desc:
         payload["description"] = desc
@@ -502,6 +505,7 @@ def get_project(
         except (UnauthorizedException, ForbiddenException):
             if create:
                 project_args["name"] = name
+                _validate_project_name(name)
                 resp = api.create_project(project=models.Project(**project_args))
                 project = api.get_project(project_id=resp.get(DATA).get("id"))
             else:
@@ -528,6 +532,16 @@ def get_project(
         cluster_guid=p.get("cluster_guid"),
         session=session,
     )
+
+
+def _validate_project_name(name: str) -> None:
+    PROJECT_PATTERN = r"^(?![0-9]+$)(?!-)[a-zA-Z0-9-]{5,63}(?<!-)$"
+    if not re.match(PROJECT_PATTERN, name):
+        raise GretelProjectError(
+            f"Project name '{name}' is invalid, it must be "
+            "between 5 and 63 alphanumeric characters and dashes, "
+            "and cannot not start with a dash"
+        ) from None
 
 
 @contextmanager

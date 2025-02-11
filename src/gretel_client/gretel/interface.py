@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import re
 import sys
 import uuid
 
@@ -191,13 +190,6 @@ class Gretel:
         """
         name = name or f"gretel-sdk-{self._generate_random_label()}"
 
-        PROJECT_PATTERN = r"^(?![0-9]+$)(?!-)[a-zA-Z0-9-]{5,63}(?<!-)$"
-        if not re.match(PROJECT_PATTERN, name):
-            raise Exception(
-                f"Project name '{name}' is invalid, it must be "
-                "between 5 and 63 alphanumeric characters and dashes, "
-                "and cannot not start with a dash"
-            )
         try:
             project = get_project(
                 name=name,
