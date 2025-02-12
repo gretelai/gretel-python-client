@@ -104,9 +104,6 @@ class AgentConfig:
     disable_job_cleanup: bool = False
     """Disable the automatic cleanup of jobs that are finished"""
 
-    volumes: Optional[List[DataVolumeDef]] = None
-    """A list of volumes to mount into the worker container"""
-
     env_vars: Optional[dict] = None
     """A list of environment variables to mount into the container"""
 

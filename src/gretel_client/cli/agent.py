@@ -159,7 +159,6 @@ def start(
         disable_cloud_logging=disable_cloud_logging,
         disable_cloud_report_scores=disable_cloud_report_scores,
         env_vars=env_dict,
-        volumes=[],
         capabilities=capabilities,
         enable_prometheus=enable_prometheus,
         runner_modes=runner_modes_as_enum,
