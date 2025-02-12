@@ -20,8 +20,6 @@ from gretel_client.config import (
 )
 from gretel_client.models.config import get_status_description, StatusDescriptions
 from gretel_client.projects.common import WAIT_UNTIL_DONE
-from gretel_client.projects.docker import check_docker_env
-from gretel_client.projects.exceptions import DockerEnvironmentError
 from gretel_client.projects.jobs import Job, WaitTimeExceeded
 from gretel_client.projects.models import Model
 from gretel_client.projects.projects import get_project, Project
@@ -382,12 +380,7 @@ class SessionContext(object):
             )
 
             if self._runner == RunnerMode.LOCAL:
-                try:
-                    check_docker_env()
-                except DockerEnvironmentError as ex:
-                    raise DockerEnvironmentError(
-                        "Runner is local, but docker is not running. Please check that docker is installed and running."
-                    ) from ex
+                raise Exception("RunnerMode 'local' no longer supported")
 
     @property
     def session(self) -> ClientConfig:

@@ -19,7 +19,6 @@ from gretel_client.config import (
     get_session_config,
     RunnerMode,
 )
-from gretel_client.helpers import submit_docker_local
 from gretel_client.projects.common import DataSourceTypes, RefDataTypes
 from gretel_client.projects.jobs import END_STATES, Job, Status
 from gretel_client.projects.models import Model
@@ -174,16 +173,7 @@ class BaseReport(ABC):
             self._report_html = f.read()
 
     def _run_local(self, model: Model):
-        submit_docker_local(model, output_dir=self.output_dir)
-        with gzip.open(
-            f"{self.output_dir}/{self.base_artifact_name}_json.json.gz", "rt"
-        ) as f:
-            lines = [json.loads(line) for line in f.readlines()]
-        self._report_dict = lines[0]
-        with gzip.open(
-            f"{self.output_dir}/{self.base_artifact_name}.html.gz", "rt"
-        ) as f:
-            self._report_html = f.read()
+        raise Exception("Local mode not supported")
 
     def _run_in_project(self, project: Project):
         if self.test_data is not None:

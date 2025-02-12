@@ -1,5 +1,5 @@
 """
-Support for running local docker workers.
+Support for running workers in k8s.
 """
 
 from __future__ import annotations
@@ -26,8 +26,8 @@ from kubernetes.utils.quantity import parse_quantity
 from kubernetes.watch.watch import Watch
 
 from gretel_client.agents.drivers.driver import Driver
+from gretel_client.agents.drivers.reg_auth import get_container_auth
 from gretel_client.config import ClientConfig, get_logger
-from gretel_client.docker import get_container_auth
 
 logger = get_logger(__name__)
 

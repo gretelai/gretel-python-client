@@ -22,9 +22,7 @@ from gretel_client.cli.models import models
 from gretel_client.cli.utils.parser_utils import ref_data_factory, RefData
 from gretel_client.config import RunnerMode
 from gretel_client.models.config import get_model_type_config, GPU
-from gretel_client.projects.docker import ContainerRun, ContainerRunError
 from gretel_client.projects.jobs import Status
-from gretel_client.projects.models import Model
 from gretel_client.projects.records import RecordHandler
 
 LOCAL = "__local__"
@@ -170,29 +168,6 @@ def create_and_run_record_handler(
         sc.print(data=printable_record_handler)
 
     run = None
-    if runner == RunnerMode.LOCAL.value:
-        run = ContainerRun.from_job(record_handler)
-        if sc.debug:
-            sc.log.debug("Enabling debug for the container run.")
-            run.enable_debug()
-        if output:
-            run.configure_output_dir(output)
-        if in_data:
-            run.configure_input_data(in_data)
-        if model_path:
-            run.configure_model(model_path)
-        if ref_data:
-            run.configure_ref_data(ref_data)
-        if record_handler.instance_type == GPU:
-            sc.log.info("Configuring GPU for running model.")
-            try:
-                run.configure_gpu()
-                sc.log.info("GPU device found!")
-            except ContainerRunError:
-                sc.log.warn("Could not configure GPU. Continuing with CPU.")
-        run.start()
-        sc.register_cleanup(lambda: run.graceful_shutdown())
-
     # Poll for the latest container status
     poll_and_print(
         record_handler, sc, runner, status_strings, callback=run.is_ok if run else None

@@ -6,10 +6,8 @@ from typing import Callable, List, Optional
 import click
 
 from gretel_client.agents.agent import AgentConfig, get_agent
-from gretel_client.agents.drivers.driver import GPU
 from gretel_client.cli.common import pass_session, SessionContext
 from gretel_client.config import get_session_config, RunnerMode
-from gretel_client.docker import AwsCredFile, CaCertFile, check_gpu, DataVolumeDef
 
 
 @click.group(
@@ -29,7 +27,7 @@ def build_logger(job_id: str) -> Callable:
     "--driver",
     metavar="NAME",
     help="Specify driver used to launch new workers.",
-    default="docker",
+    default="k8s",
 )
 @click.option(
     "--max-workers", metavar="COUNT", help="Max number of workers to launch.", default=2
@@ -58,11 +56,6 @@ def build_logger(job_id: str) -> Callable:
     type=bool,
 )
 @click.option(
-    "--aws-cred-path",
-    metavar="PATH",
-    help="Path to AWS credential file. These will be propagated to each worker.",
-)
-@click.option(
     "--artifact-endpoint",
     metavar="ENDPOINT",
     help="Path to artifact endpoint. If none is provided Gretel Cloud will be used.",
@@ -82,17 +75,6 @@ def build_logger(job_id: str) -> Callable:
     metavar="KEY=VALUE",
     help="Pass environment variables into the worker container.",
     multiple=True,
-)
-@click.option(
-    "--volume",
-    metavar="HOST:CONTAINER",
-    help="Mount single file into the worker container. HOST and CONTAINER must be files.",
-    multiple=True,
-)
-@click.option(
-    "--ca-bundle",
-    metavar="PATH",
-    help="Mount custom CA into each worker container.",
 )
 @click.option(
     "--disable-cloud-logging",
@@ -138,11 +120,8 @@ def start(
     project: Optional[str] = None,
     same_org_only: bool = False,
     auto_accept_project_invites: bool = False,
-    aws_cred_path: Optional[str] = None,
     artifact_endpoint: Optional[str] = None,
     env: Optional[List[str]] = None,
-    volume: Optional[List[str]] = None,
-    ca_bundle: Optional[str] = None,
     disable_cloud_logging: bool = False,
     disable_cloud_report_scores: bool = False,
     enable_prometheus: bool = False,
@@ -150,36 +129,13 @@ def start(
     cluster_id: Optional[str] = None,
     disable_job_cleanup: bool = False,
     app_version: Optional[str] = None,
-    image_version: Optional[str] = False,
+    image_version: Optional[str] = None,
 ):
     sc.log.info(f"Starting Gretel agent using driver {driver}.")
-    creds = []
-
-    if aws_cred_path:
-        creds.append(AwsCredFile(cred_from_agent=aws_cred_path))
-
-    if ca_bundle:
-        creds.append(CaCertFile(cred_from_agent=ca_bundle))
-
-    volumes = []
-    if volume:
-        for vol in volume:
-            host_path, target = vol.split(":", maxsplit=1)
-            target_path = Path(target)
-            volumes.append(
-                DataVolumeDef(str(target_path.parent), [(host_path, target_path.name)])
-            )
 
     env_dict = dict(e.split("=", maxsplit=1) for e in env) if env else None
 
     capabilities = []
-    if driver == "docker":
-        sc.log.info("Checking for GPU.")
-        if check_gpu():
-            capabilities.append(GPU)
-            sc.log.info("GPU found.")
-        else:
-            sc.log.info("No GPU found. Continuing without one.")
     runner_modes_as_enum = None
     if runner_modes:
         runner_modes_as_enum = [
@@ -198,13 +154,12 @@ def start(
         auto_accept_project_invites=auto_accept_project_invites,
         max_workers=max_workers,
         driver=driver,
-        creds=creds,
         log_factory=build_logger,
         artifact_endpoint=artifact_endpoint,
         disable_cloud_logging=disable_cloud_logging,
         disable_cloud_report_scores=disable_cloud_report_scores,
         env_vars=env_dict,
-        volumes=volumes,
+        volumes=[],
         capabilities=capabilities,
         enable_prometheus=enable_prometheus,
         runner_modes=runner_modes_as_enum,

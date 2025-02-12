@@ -14,10 +14,9 @@ from gretel_client.cli.common import (
     runner_option,
     SessionContext,
 )
-from gretel_client.cli.utils.parser_utils import ref_data_factory, RefData
+from gretel_client.cli.utils.parser_utils import ref_data_factory
 from gretel_client.models.config import get_model_type_config, GPU
 from gretel_client.projects.common import ModelArtifact, WAIT_UNTIL_DONE
-from gretel_client.projects.docker import ContainerRun, ContainerRunError
 from gretel_client.projects.jobs import Status
 from gretel_client.projects.models import Model, RunnerMode
 
@@ -167,39 +166,6 @@ def create(
 
     if dry_run:
         sc.exit(0)
-
-    # Start a local container when --runner is LOCAL
-    #
-    # The submit call above will have triggered the model to have been created in manual mode
-    # so at this point the model instance is hydrated with the data from the Cloud API
-    run = None
-    if runner == RunnerMode.LOCAL.value:
-        run = ContainerRun.from_job(model)
-        if sc.debug:
-            sc.log.debug("Enabling debug logs for the local container.")
-            run.enable_debug()
-        if output:
-            run.configure_output_dir(output)
-        if model.external_data_source:
-            run.configure_input_data(model.data_source)
-        if model.external_ref_data:
-            run.configure_ref_data(model.ref_data)
-        if upload_model:
-            sc.log.info("Uploads to Gretel Cloud are enabled.")
-            run.enable_cloud_uploads()
-        if model.instance_type == GPU:
-            sc.log.info("Configuring GPU for model training.")
-            try:
-                run.configure_gpu()
-                sc.log.info("GPU device found!")
-            except ContainerRunError:
-                sc.log.warn("Could not configure GPU. Continuing with CPU.")
-        sc.log.info(
-            f"This model is configured to run locally using the container {run.image}."
-        )
-        sc.log.info("Pulling the container and starting local model training.")
-        run.start()
-        sc.register_cleanup(lambda: run.graceful_shutdown())  # type:ignore
 
     # Poll for the latest container status
     poll_and_print(

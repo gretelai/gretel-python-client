@@ -10,9 +10,7 @@ from unittest.mock import call, MagicMock, patch
 import pytest
 
 from gretel_client.agents.agent import Agent, AgentConfig, AgentError, Job, Poller
-from gretel_client.agents.drivers.docker import Docker
-from gretel_client.agents.drivers.driver import GPU
-from gretel_client.docker import CaCertFile, DEFAULT_GPU_CONFIG
+from gretel_client.agents.drivers.driver import DriverError, GPU
 from gretel_client.projects.exceptions import GretelProjectError
 from gretel_client.rest.apis import JobsApi, ProjectsApi
 
@@ -55,11 +53,10 @@ def patch_auth_api_calls(func):
 
 def default_agent_config() -> AgentConfig:
     return AgentConfig(
-        driver="docker",
+        driver="k8s",
         max_workers=2,
         projects=["my-project-name"],
         log_factory=MagicMock(),
-        creds=None,
     )
 
 
@@ -101,11 +98,10 @@ def test_agent_server_does_start(
         {"data": {"job": get_mock_job()}},
     ]
     agent_config = AgentConfig(
-        driver="docker",
+        driver="k8s",
         max_workers=0,
         projects=["my-project-name"],
         log_factory=MagicMock(),
-        creds=None,
     )
     server = Agent(agent_config)
     assert server._rate_limiter._max_active_jobs == 5
@@ -189,41 +185,6 @@ def test_agent_job_poller_without_project_specified():
 
 
 @patch_auth_api_calls
-@patch("gretel_client.agents.agent.get_session_config")
-@patch("gretel_client.agents.drivers.docker.build_container")
-def test_job_with_ca_bundle(docker_client: MagicMock, get_session_config: MagicMock):
-    cert = CaCertFile(cred_from_agent="/bundle/path")
-    config = AgentConfig(
-        driver="docker",
-        creds=[cert],
-    )
-    job = Job.from_dict(get_mock_job(), config)
-
-    assert job.env["REQUESTS_CA_BUNDLE"] == "/etc/ssl/agent_ca.crt"
-
-    docker = Docker.from_config(config)
-    docker.schedule(job)
-
-    assert cert.volume in docker_client.mock_calls[0][2]["volumes"]
-
-
-@patch_auth_api_calls
-@patch("gretel_client.agents.drivers.docker.build_container")
-def test_job_needs_gpu(build_container: MagicMock):
-    config = AgentConfig(driver="docker", capabilities=[GPU])
-    job = Job.from_dict(get_mock_job(instance_type="gpu-standard"), config)
-
-    assert job.needs_gpu
-
-    docker = Docker.from_config(config)
-    docker.schedule(job)
-
-    assert build_container.call_args_list[0][1]["device_requests"] == [
-        DEFAULT_GPU_CONFIG
-    ]
-
-
-@patch_auth_api_calls
 @patch("gretel_client.agents.agent.get_project")
 def test_get_project_ids(get_project: MagicMock):
     @dataclass
@@ -231,7 +192,7 @@ def test_get_project_ids(get_project: MagicMock):
         project_id: str
 
     config = AgentConfig(
-        driver="docker",
+        driver="k8s",
         capabilities=[GPU],
         projects=["p1", "p2", "p3"],
         project_retry_limit=1,
@@ -297,15 +258,16 @@ def test_get_project_ids(get_project: MagicMock):
 
 @patch_auth_api_calls
 def test_job_disables_cloud_logging():
-    config = AgentConfig(driver="docker", disable_cloud_logging=True)
+    config = AgentConfig(driver="k8s", disable_cloud_logging=True)
     job = Job.from_dict(get_mock_job(instance_type="gpu-standard"), config)
     assert job.params == {"--disable-cloud-logging": "", "--worker-token": worker_token}
     assert job.secret_env == {"GRETEL_WORKER_TOKEN": worker_token}
 
 
 @patch("requests.patch")
+@patch("gretel_client.agents.drivers.k8s.config")
 def test_update_job_status_fails_no_error(
-    requests_patch: MagicMock, agent_config: AgentConfig
+    kubernetes_patch: MagicMock, requests_patch: MagicMock, agent_config: AgentConfig
 ):
     expected_exception = Exception("Whoopsie")
     requests_patch.side_effect = expected_exception
@@ -321,8 +283,14 @@ def test_update_job_status_fails_no_error(
 
 @patch_auth_api_calls
 def test_agent_config_over_max():
-    config = AgentConfig(driver="docker", max_workers=6)
+    config = AgentConfig(driver="k8s", max_workers=6)
     assert config.max_workers == 5
+
+
+@patch_auth_api_calls
+def test_agent_docker_invalid():
+    with pytest.raises(DriverError):
+        Agent(AgentConfig(driver="docker"))
 
 
 @patch_auth_api_calls
@@ -330,7 +298,7 @@ def test_agent_config_wrong_data_shape():
     with patch("gretel_client.agents.agent.do_api_call") as do_api_call:
         do_api_call.return_value = {}
         with pytest.raises(AgentError):
-            AgentConfig(driver="docker", max_workers=10)
+            AgentConfig(driver="k8s", max_workers=10)
 
 
 @patch_auth_api_calls
@@ -338,12 +306,12 @@ def test_agent_config_errors_out():
     with patch("gretel_client.agents.agent.do_api_call") as do_api_call:
         do_api_call.side_effect = Exception("nooooo")
         with pytest.raises(AgentError):
-            AgentConfig(driver="docker", max_workers=10)
+            AgentConfig(driver="k8s", max_workers=10)
 
 
 @patch_auth_api_calls
 def test_agent_config_automatic():
-    config = AgentConfig(driver="docker", max_workers=0)
+    config = AgentConfig(driver="k8s", max_workers=0)
     assert config.max_workers == 5
 
 

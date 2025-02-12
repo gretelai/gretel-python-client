@@ -206,7 +206,6 @@ class TestKubernetesDriver(TestCase):
         }
         self.config = AgentConfig(
             driver="k8s",
-            creds=[],
             env_vars={"MY_KEY": "MY_VALUE", "OTHER_KEY": "OTHER_VALUE"},
             session=session,
         )

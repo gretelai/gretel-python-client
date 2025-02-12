@@ -122,18 +122,6 @@ class DataValidationError(Exception):
 # Run Errors
 
 
-class ContainerRunError(Exception):
-    """There was a problem running the job from a local container."""
-
-    ...
-
-
-class DockerEnvironmentError(Exception):
-    """The host docker environment isn't configured correctly."""
-
-    ...
-
-
 class WaitTimeExceeded(Exception):
     """
     Thrown when the wait time specified by the user has expired.

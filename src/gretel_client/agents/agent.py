@@ -30,7 +30,6 @@ from gretel_client.config import (
     get_session_config,
     RunnerMode,
 )
-from gretel_client.docker import CloudCreds, DataVolumeDef
 from gretel_client.helpers import do_api_call
 from gretel_client.projects import get_project
 from gretel_client.projects.exceptions import GretelProjectError
@@ -92,9 +91,6 @@ class AgentConfig:
     users to make their projects available to the agent without having to manually
     accept invites.
     """
-
-    creds: Optional[List[CloudCreds]] = None
-    """Provide credentials to propagate to the worker"""
 
     artifact_endpoint: Optional[str] = None
     """Configure an artifact endpoint for workers to store intermediate data on."""
@@ -282,7 +278,6 @@ class Job:
     instance_type: str
     model_type: str
     log: Optional[Callable] = None
-    cloud_creds: Optional[List[CloudCreds]] = None
     artifact_endpoint: Optional[str] = None
     disable_cloud_logging: bool = False
     disable_cloud_report_scores: bool = False
@@ -301,7 +296,6 @@ class Job:
             log=agent_config.log_factory(
                 source.get("run_id") or source.get("model_id")
             ),
-            cloud_creds=agent_config.creds,
             artifact_endpoint=agent_config.artifact_endpoint,
             disable_cloud_logging=agent_config.disable_cloud_logging,
             disable_cloud_report_scores=agent_config.disable_cloud_report_scores,

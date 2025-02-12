@@ -16,5 +16,4 @@ Module Reference
    projects
    models
    records
-   docker
    exceptions

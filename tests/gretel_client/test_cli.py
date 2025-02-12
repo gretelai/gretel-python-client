@@ -11,7 +11,6 @@ from gretel_client.cli.cli import cli
 from gretel_client.cli.hybrid import ClusterError
 from gretel_client.cli.utils.parser_utils import RefData
 from gretel_client.config import (
-    add_session_context,
     ClientConfig,
     configure_session,
     get_session_config,
@@ -21,9 +20,7 @@ from gretel_client.config import (
     GRETEL_PROJECT,
     RunnerMode,
 )
-from gretel_client.projects.exceptions import DockerEnvironmentError
 from gretel_client.projects.jobs import Status
-from gretel_client.projects.projects import Project
 from gretel_client.rest_v1.models.cluster import Cluster
 from gretel_client.rest_v1.models.user_profile import UserProfile
 
@@ -92,12 +89,6 @@ def get_project() -> MagicMock:
         model.submit.return_value = model
 
         yield get_project
-
-
-@pytest.fixture
-def container_run() -> MagicMock:
-    with patch("gretel_client.cli.models.ContainerRun") as container_run:
-        yield container_run
 
 
 @patch("gretel_client.cli.projects.create_project")
@@ -449,54 +440,6 @@ def test_create_project_with_none_hybrid_env_succeeds(
     )
 
 
-def test_local_model_upload_flag(
-    container_run: MagicMock, get_project: MagicMock, runner: CliRunner
-):
-    cmd = runner.invoke(
-        cli,
-        [
-            "models",
-            "create",
-            "--upload-model",
-            "--runner",
-            "local",
-            "--config",
-            "synthetics/default",
-            "--output",
-            "tmp",
-            "--project",
-            "mocked",
-        ],
-    )
-    print(cmd.output)
-    assert cmd.exit_code == 0
-    assert container_run.from_job.return_value.start.call_count == 1
-    assert container_run.from_job.return_value.enable_cloud_uploads.call_count == 1
-
-
-def test_local_model_upload_disabled_by_default(
-    container_run: MagicMock, get_project: MagicMock, runner: CliRunner
-):
-    cmd = runner.invoke(
-        cli,
-        [
-            "models",
-            "create",
-            "--runner",
-            "local",
-            "--config",
-            "synthetics/default",
-            "--output",
-            "tmp",
-            "--project",
-            "mocked",
-        ],
-    )
-    assert cmd.exit_code == 0
-    assert container_run.from_job.return_value.start.call_count == 1
-    assert container_run.from_job.return_value.enable_cloud_uploads.call_count == 0
-
-
 def test_does_read_model_json(
     runner: CliRunner, get_fixture: Callable, get_project: MagicMock
 ):
@@ -683,33 +626,6 @@ def test_default_session_project(
     )
     assert cmd.exit_code == 0
     get_project.assert_called_once_with(name="default-session-project", session=ANY)
-
-
-@patch("gretel_client.cli.common.check_docker_env")
-def test_does_gracefully_handle_docker_errors(
-    check_docker_env: MagicMock,
-    runner: CliRunner,
-    get_project: MagicMock,
-):
-    check_docker_env.side_effect = DockerEnvironmentError()
-    cmd = runner.invoke(
-        cli,
-        [
-            "models",
-            "create",
-            "--runner",
-            "local",
-            "--config",
-            "synthetics/default",
-            "--output",
-            "tmp",
-            "--project",
-            "mocked",
-        ],
-    )
-    check_docker_env.assert_called_once()
-    assert cmd.exit_code == 1
-    assert "docker is not running" in cmd.output
 
 
 def test_can_name_model(get_project: MagicMock, runner: CliRunner):
