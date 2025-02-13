@@ -83,7 +83,7 @@ def read_model_config(
 
     Args:
         model_config: This argument may be a string to a file on disk or a Gretel configuration template
-            string such as "synthetics/default". First, this function will treat string input as a
+            string such as "synthetics/navigator-ft". First, this function will treat string input as a
             location on disk and attempt to read the file and parse it as YAML or JSON. If this is
             successful, a dict of the config is returned. If the provided `model_config` str is not
             a file on disk, the function will attempt to resolve the config as a shortcut-path

@@ -635,7 +635,7 @@ def test_can_name_model(get_project: MagicMock, runner: CliRunner):
             "models",
             "create",
             "--config",
-            "synthetics/default",
+            "synthetics/navigator-ft",
             "--name",
             "test-project",
         ],
