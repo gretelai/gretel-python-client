@@ -1,6 +1,5 @@
 import click
 
-from gretel_client.cli.agent import agent
 from gretel_client.cli.artifacts import artifacts
 from gretel_client.cli.common import pass_session, SessionContext
 from gretel_client.cli.connections import connections
@@ -203,7 +202,6 @@ cli.add_command(artifacts)
 cli.add_command(connections)
 cli.add_command(workflows)
 cli.add_command(hybrid)
-cli.add_command(agent)
 
 
 if __name__ == "__main__":
