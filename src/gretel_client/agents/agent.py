@@ -42,7 +42,6 @@ configure_logging()
 _CLUSTERID_HEADER_KEY = "X-Gretel-Clusterid"
 _APP_VERSION_KEY = "X-Gretel-AppVersion"
 _IMAGE_VERSION_KEY = "X-Gretel-ImageVersion"
-USE_COMBINED_MODELS_IMAGE_ENV_NAME = "USE_COMBINED_MODELS_IMAGE"
 
 
 class AgentError(Exception): ...
@@ -479,10 +478,6 @@ class Poller(Iterator):
             ]
         if self._agent_config.cluster_guid:
             api_kwargs["cluster_guid"] = self._agent_config.cluster_guid
-        # This feature flag exists so that we're backward compatible with hybrid deployments
-        # We can hard code this to True so that new releases get the updated combined image
-        if os.getenv(USE_COMBINED_MODELS_IMAGE_ENV_NAME) == "true":
-            api_kwargs["use_combined_models_image"] = True
         next_job = self._jobs_api.receive_one(**api_kwargs)
         if next_job["data"]["job"] is not None:
             return Job.from_dict(next_job["data"]["job"], self._agent_config)
