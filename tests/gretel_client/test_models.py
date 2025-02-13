@@ -248,14 +248,14 @@ def test_provenance(m: Model, transform_model_path):
 
 
 def test_does_read_remote_model():
-    synthetics_blueprint_raw_path = "https://raw.githubusercontent.com/gretelai/gretel-blueprints/main/config_templates/gretel/synthetics/default.yml"  # noqa
+    synthetics_blueprint_raw_path = "https://raw.githubusercontent.com/gretelai/gretel-blueprints/main/config_templates/gretel/synthetics/tabular-actgan.yml"  # noqa
     assert read_model_config(synthetics_blueprint_raw_path)
     with pytest.raises(ModelConfigError):
         read_model_config(f"{synthetics_blueprint_raw_path}/dsfljk")
 
 
 def test_does_read_model_short_path():
-    synthetics_blueprint_short_path = "synthetics/default"
+    synthetics_blueprint_short_path = "synthetics/tabular-actgan"
     assert read_model_config(synthetics_blueprint_short_path)
     with pytest.raises(ModelConfigError):
         read_model_config("notfound")
