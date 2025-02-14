@@ -974,6 +974,8 @@ def get_data_plane_endpoint(session: Optional[ClientConfig] = None) -> str:
             "sandbox.dev.gretel.ai",
             "enterprise.dev.gretel.ai",
             "serverless.dev.gretel.ai",
+            "enterprise.gretel.ai",
+            "serverless.gretel.ai",
         ]
     ):
         return session.endpoint
