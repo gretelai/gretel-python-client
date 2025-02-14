@@ -18,6 +18,7 @@ from gretel_client.navigator.client.interface import TaskOutput
 from gretel_client.navigator.client.utils import get_navigator_client
 from gretel_client.navigator.data_designer.data_column import GeneratedDataColumn
 from gretel_client.navigator.data_designer.prompt_templates import (
+    assert_valid_template,
     get_prompt_template_keywords,
 )
 from gretel_client.navigator.data_designer.viz_tools import (
@@ -974,6 +975,9 @@ class DataDesigner:
             raise ValueError(f"Column name `{name}` already exists.")
         if name in self._seed_categories:
             raise ValueError(f"Column name `{name}` already exists as a seed category.")
+
+        # Make sure the prompt follows our generic templating rules.
+        assert_valid_template(generation_prompt)
 
         # Keywords in templates can only reference seed columns *or* data columns that
         # have been defined *before* the column that references them.
