@@ -6,7 +6,12 @@ from pydantic import BaseModel
 from gretel_client.navigator.client.interface import Client, TaskOutput
 from gretel_client.navigator.tasks.base import Task
 from gretel_client.navigator.tasks.io import Dataset
-from gretel_client.navigator.tasks.types import LLMJudgePromptTemplateType, RecordsT
+from gretel_client.navigator.tasks.types import (
+    DEFAULT_MODEL_SUITE,
+    LLMJudgePromptTemplateType,
+    ModelSuite,
+    RecordsT,
+)
 
 
 class JudgeWithLLMConfig(BaseModel):
@@ -54,6 +59,7 @@ class JudgeWithLLM(Task):
         num_samples_to_judge: Optional[int] = 100,
         workflow_label: Optional[str] = None,
         client: Optional[Client] = None,
+        model_suite: ModelSuite = DEFAULT_MODEL_SUITE,
     ):
         super().__init__(
             config=JudgeWithLLMConfig(
@@ -65,6 +71,7 @@ class JudgeWithLLM(Task):
             ),
             workflow_label=workflow_label,
             client=client,
+            model_suite=model_suite,
         )
 
     @property
