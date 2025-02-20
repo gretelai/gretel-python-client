@@ -24,18 +24,19 @@ class JudgeWithLLMConfig(BaseModel):
 
 @dataclass(frozen=True)
 class JudgeRubric:
+    # When adding new rubrics, ensure all rubric names are capitalized to match jarvis
     text_to_python = {
-        "relevance": "Adherence to INSTRUCTIONS",
-        "readability": "Readability and Maintainability (Is the Python code easy to understand and maintain?)",
-        "efficiency": "Efficiency and Performance (Is the code optimized for performance?)",
-        "pythonic": "Pythonic Code and Best Practices (Does the code follow Python conventions and best practices?)",
+        "Relevance": "Adherence to INSTRUCTIONS",
+        "Readability": "Readability and Maintainability (Is the Python code easy to understand and maintain?)",
+        "Efficiency": "Efficiency and Performance (Is the code optimized for performance?)",
+        "Pythonic": "Pythonic Code and Best Practices (Does the code follow Python conventions and best practices?)",
     }
 
     text_to_sql = {
-        "relevance": "Adherence to INSTRUCTIONS and CONTEXT",
-        "readability": "Readability and Maintainability (Is the SQL code easy to understand and maintain?)",
-        "scalability": "Scalability (Does the solution scale well with larger datasets or more complex queries?)",
-        "standards": "Compliance with Standards (Does the SQL query follow SQL standards and best practices?)",
+        "Relevance": "Adherence to INSTRUCTIONS and CONTEXT",
+        "Readability": "Readability and Maintainability (Is the SQL code easy to understand and maintain?)",
+        "Scalability": "Scalability (Does the solution scale well with larger datasets or more complex queries?)",
+        "Standards": "Compliance with Standards (Does the SQL query follow SQL standards and best practices?)",
     }
 
     @classmethod
