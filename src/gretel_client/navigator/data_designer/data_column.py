@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -33,7 +33,7 @@ class GeneratedDataColumn(BaseModel):
 
     name: str
     generation_prompt: str
-    columns_to_list_in_prompt: list[str] = Field(default_factory=list)
+    columns_to_list_in_prompt: Union[str, list[str]] = Field(default_factory=list)
     llm_type: LLMType = LLMType.NATURAL_LANGUAGE
     data_config: DataConfig
 
