@@ -173,7 +173,6 @@ def create(
         sc,
         runner,
         get_model_type_config(model.model_type).train_status_descriptions,
-        callback=run.is_ok if run else None,
         wait=wait,
     )
 

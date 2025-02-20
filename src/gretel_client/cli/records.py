@@ -169,9 +169,7 @@ def create_and_run_record_handler(
 
     run = None
     # Poll for the latest container status
-    poll_and_print(
-        record_handler, sc, runner, status_strings, callback=run.is_ok if run else None
-    )
+    poll_and_print(record_handler, sc, runner, status_strings)
 
     if output and runner == RunnerMode.CLOUD.value:
         record_handler.download_artifacts(output)
