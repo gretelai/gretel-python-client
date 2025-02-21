@@ -17,7 +17,7 @@ from gretel_client.config import (
 
 
 class File(pydantic.BaseModel):
-    """Represents a file that has been uploaded/being intreacted within the Gretel ecosystem."""
+    """Represents a file that has been uploaded/interacted with in the Gretel ecosystem."""
 
     id: str
     """The unique identifier for this file."""
@@ -121,6 +121,34 @@ class FileClient:
 
         with open(file, "rb") as file_handle:
             return self.upload(file_handle, purpose)
+
+    def get(self, file_id: str) -> File:
+        """
+        Get a file from Gretel.
+
+        Args:
+            file_id: The unique identifier of the file to retrieve from the File object
+
+        Returns:
+            File: The File object
+        """
+        response = requests.get(
+            f"{self.api_endpoint}/v1/files/{file_id}",
+            headers={"Authorization": self.session.api_key},
+        )
+
+        response.raise_for_status()
+
+        response_body = response.json()
+
+        return File(
+            id=response_body["file_id"],
+            object="file",
+            bytes=int(response_body["bytes"]),
+            created_at=int(response_body["created_at"]),
+            filename=response_body["filename"],
+            purpose=response_body["purpose"],
+        )
 
     def delete(self, file_id: str) -> None:
         """
