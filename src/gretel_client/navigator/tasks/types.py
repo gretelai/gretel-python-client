@@ -1,6 +1,6 @@
 import json
 
-from enum import Enum
+from enum import StrEnum
 from typing import Any, Optional, Type, Union
 
 from annotated_types import Len
@@ -20,7 +20,7 @@ RecordsT = list[dict[str, Any]]
 SeedValueT = Union[str, int, bool]
 
 
-class ModelSuite(str, Enum):
+class ModelSuite(StrEnum):
     APACHE_2_0 = "apache-2.0"
     LLAMA_3_x = "llama-3.x"
 
@@ -42,7 +42,7 @@ def check_model_suite(model_suite: Union[ModelSuite, str]) -> str:
     return model_suite
 
 
-class OutputColumnType(str, Enum):
+class OutputColumnType(StrEnum):
     TEXT = "text"
     CODE = "code"
     STRUCTURED = "structured"
@@ -103,34 +103,34 @@ class DataConfig(BaseModel):
         return str(type.value)
 
 
-class SystemPromptType(str, Enum):
+class SystemPromptType(StrEnum):
     REFLECTION = "reflection"
     COGNITION = "cognition"
 
 
-class LLMType(str, Enum):
+class LLMType(StrEnum):
     NATURAL_LANGUAGE = "natural_language"
     CODE = "code"
     JUDGE = "judge"
 
 
-class TextParserType(str, Enum):
+class TextParserType(StrEnum):
     EXTRACT_CODE = "extract_code"
     JSON = "json"
     JSON_ARRAY = "json_array"
     PASS_THROUGH = "pass_through"
 
 
-class EvaluationType(str, Enum):
+class EvaluationType(StrEnum):
     GENERAL = "general"
 
 
-class LLMJudgePromptTemplateType(str, Enum):
+class LLMJudgePromptTemplateType(StrEnum):
     TEXT_TO_PYTHON = "text_to_python"
     TEXT_TO_SQL = "text_to_sql"
 
 
-class CodeLang(str, Enum):
+class CodeLang(StrEnum):
     PYTHON = "python"
 
     # SQL dialects match the SQLFluff naming conventions.
@@ -192,7 +192,7 @@ class EvaluationOutputs(BaseModel):
     dataset_overview_statistics: dict
 
 
-class ValidatorType(str, Enum):
+class ValidatorType(StrEnum):
     CODE = "code"
 
 

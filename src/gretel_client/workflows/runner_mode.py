@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import Dict
 
 
-class RunnerMode(str, Enum):
+class RunnerMode(StrEnum):
     RUNNER_MODE_UNSET = "RUNNER_MODE_UNSET"
     RUNNER_MODE_CLOUD = "RUNNER_MODE_CLOUD"
     RUNNER_MODE_HYBRID = "RUNNER_MODE_HYBRID"

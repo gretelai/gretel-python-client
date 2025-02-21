@@ -6,7 +6,7 @@ import time
 import webbrowser
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import List, Optional, Union
 
@@ -31,7 +31,7 @@ logger.addHandler(logging.StreamHandler(sys.stdout))
 logger.setLevel(logging.INFO)
 
 
-class ReportType(str, Enum):
+class ReportType(StrEnum):
     """The kind of report to fetch."""
 
     SQS = "sqs"

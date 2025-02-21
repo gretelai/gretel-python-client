@@ -2,7 +2,7 @@ import json
 
 from collections import defaultdict
 from copy import copy, deepcopy
-from enum import Enum
+from enum import StrEnum
 from numbers import Number
 from pathlib import Path
 from typing import Any, Callable, Optional, Union
@@ -22,7 +22,7 @@ from gretel_client.tuner.exceptions import (
 )
 
 
-class _TunerEnum(str, Enum):
+class _TunerEnum(StrEnum):
     @classmethod
     def values(cls):
         return [n.value for n in cls]

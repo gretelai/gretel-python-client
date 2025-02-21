@@ -27,7 +27,7 @@ setup(
     author="Gretel Labs, Inc.",
     author_email="support@gretel.ai",
     use_scm_version=True,
-    setup_requires=["setuptools_scm==8.1.0"],
+    setup_requires=["setuptools_scm"],
     description="Balance, anonymize, and share your data. With privacy guarantees.",
     url="https://github.com/gretelai/gretel-python-client",
     long_description=long_description,

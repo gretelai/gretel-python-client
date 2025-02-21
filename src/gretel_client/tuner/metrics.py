@@ -1,7 +1,7 @@
 import json
 
 from abc import ABC, abstractmethod
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import List, Optional, Union
 
@@ -18,7 +18,7 @@ from gretel_client.helpers import poll
 from gretel_client.projects.models import Model
 
 
-class GretelMetricName(str, Enum):
+class GretelMetricName(StrEnum):
     SQS = "synthetic_data_quality_score"
     FCS = "field_correlation_stability"
     PCS = "principal_component_stability"
@@ -54,7 +54,7 @@ class GretelMetricName(str, Enum):
             return [ModelType.GPT_X]
 
 
-class MetricDirection(str, Enum):
+class MetricDirection(StrEnum):
     MAXIMIZE = "maximize"
     MINIMIZE = "minimize"
 

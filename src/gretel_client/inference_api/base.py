@@ -2,8 +2,8 @@ import json
 import logging
 import sys
 
-from abc import ABC, abstractproperty
-from enum import Enum
+from abc import ABC, abstractmethod
+from enum import StrEnum
 from typing import Any, Dict, List, Optional
 
 from gretel_client.config import ClientConfig, configure_session, get_session_config
@@ -21,7 +21,7 @@ class GretelInferenceAPIError(Exception):
     """Raised when an error occurs with the Inference API."""
 
 
-class InferenceAPIModelType(str, Enum):
+class InferenceAPIModelType(StrEnum):
     TABULAR = "tabular"
     NATURAL_LANGUAGE = "natural_language"
 
@@ -173,10 +173,12 @@ class BaseInferenceAPI(ABC):
         self._response_metadata = {}
         self.backend_model = backend_model
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def api_path(self) -> str: ...
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def model_type(self) -> str: ...
 
     @property

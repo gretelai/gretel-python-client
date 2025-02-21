@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Iterable, Iterator, Union
 
@@ -55,11 +55,14 @@ def validate_data_source(data_source: Pathlike) -> bool:
 
 
 def _has_any_extension(data_source: Pathlike, extensions: Iterable[str]) -> bool:
+    base_name = ""
     try:
         if isinstance(data_source, str):
             base_name = Path(data_source).name
         elif isinstance(data_source, Path):
             base_name = data_source.name
+        else:
+            pass
     except Exception:
         return False
 
@@ -93,7 +96,7 @@ def _validate_from_reader(peek: Iterator, sample_size: int = 1) -> bool:
 MANUAL = "manual"
 
 
-class ModelArtifact(str, Enum):
+class ModelArtifact(StrEnum):
     MODEL = "model"
     REPORT = "report"
     REPORT_JSON = "report_json"
@@ -107,7 +110,7 @@ class ModelArtifact(str, Enum):
     MODEL_LOGS = "model_logs"
 
 
-class ModelRunArtifact(str, Enum):
+class ModelRunArtifact(StrEnum):
     RUN_REPORT_JSON = "run_report_json"
     DATA = "data"
     RUN_LOGS = "run_logs"

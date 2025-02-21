@@ -2,7 +2,7 @@ import os
 import uuid
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
 
@@ -40,7 +40,7 @@ class NaturalLanguageDefaultParams:
     max_tokens: int = 512
 
 
-class ModelType(str, Enum):
+class ModelType(StrEnum):
     """Name of the model parameter dict in the config.
 
     Note: The values are the names used in the model configs.

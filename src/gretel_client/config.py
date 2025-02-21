@@ -7,7 +7,7 @@ import platform
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, replace
-from enum import Enum
+from enum import Enum, StrEnum
 from functools import cached_property
 from getpass import getpass
 from importlib.metadata import PackageNotFoundError, version
@@ -140,7 +140,7 @@ ClientT = TypeVar("ClientT", bound=Union[ApiClient, V1ApiClient])
 ConfigT = TypeVar("ConfigT", bound=Union[Configuration, V1Configuration])
 
 
-class RunnerMode(str, Enum):
+class RunnerMode(StrEnum):
     LOCAL = "local"
     CLOUD = "cloud"
     MANUAL = "manual"
