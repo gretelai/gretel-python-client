@@ -10,17 +10,15 @@ from typing import Optional, Union
 import pandas as pd
 import yaml
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 from typing_extensions import Self
 
-from gretel_client.config import ClientConfig
 from gretel_client.navigator.client.interface import (
     Client,
     TaskOutput,
     WorkflowInterruption,
 )
 from gretel_client.navigator.client.remote import Message
-from gretel_client.navigator.client.utils import get_navigator_client
 from gretel_client.navigator.data_designer.viz_tools import display_sample_record
 from gretel_client.navigator.log import get_logger
 from gretel_client.navigator.tasks.base import Task
@@ -79,16 +77,16 @@ def get_last_evaluation_step_name(workflow_step_names: list[str]) -> Optional[st
     return None if len(eval_steps) == 0 else eval_steps[-1]
 
 
-@dataclass
-class DataSpec:
+class DataSpec(BaseModel):
     """Specification for dataset created by DataDesigner.
 
     We pass this object around to enable streamlined helper methods like
     `display_sample_record`, `fetch_dataset`, and `download_evaluation_report`.
     """
 
-    seed_category_names: list[str]
     data_column_names: list[str]
+    seed_category_names: list[str] = None
+    seed_dataset_column_names: list[str] = None
     seed_subcategory_names: Optional[dict[str, list[str]]] = None
     validation_column_names: Optional[list[str]] = None
     evaluation_column_names: Optional[list[str]] = None
@@ -96,6 +94,23 @@ class DataSpec:
     code_lang: Optional[CodeLang] = None
     eval_type: Optional[LLMJudgePromptTemplateType] = None
     llm_judge_column_name: Optional[str] = None
+
+    @model_validator(mode="after")
+    def validate_one_of_dataset_or_category_seeds_provided(self) -> Self:
+        if self.seed_category_names is None and self.seed_dataset_column_names is None:
+            raise ValueError(
+                "At least one of `seed_category_names` or `seed_dataset_column_names` must be provided."
+            )
+        elif (
+            self.seed_category_names is not None and len(self.seed_category_names) > 0
+        ) and (
+            self.seed_dataset_column_names is not None
+            and len(self.seed_dataset_column_names) > 0
+        ):
+            raise ValueError(
+                "Only one of `seed_category_names` or `seed_dataset_column_names` should be provided."
+            )
+        return self
 
 
 @dataclass
@@ -129,6 +144,7 @@ class PreviewResults:
             record=self.dataset.iloc[i],
             seed_categories=self.data_spec.seed_category_names,
             data_columns=self.data_spec.data_column_names,
+            seed_dataset_columns=self.data_spec.seed_dataset_column_names,
             seed_subcategories=self.data_spec.seed_subcategory_names,
             background_color=background_color,
             code_columns=self.data_spec.code_column_names,
@@ -376,7 +392,10 @@ class DataDesignerWorkflow:
 
     @staticmethod
     def create_steps_from_sequential_tasks(
-        task_list: list[Task], *, verbose_logging: bool = False
+        task_list: list[Task],
+        *,
+        verbose_logging: bool = False,
+        first_input: Optional[str] = None,
     ) -> list[Step]:
         steps = []
         step_names = []
@@ -393,6 +412,8 @@ class DataDesignerWorkflow:
             if i > 0:
                 prev_name = step_names[i - 1]
                 inputs = [prev_name]
+            elif first_input is not None:
+                inputs = [first_input]
             steps.append(
                 Step(
                     name=step_names[i],

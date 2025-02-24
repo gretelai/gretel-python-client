@@ -58,6 +58,7 @@ def display_sample_record(
     data_columns: list[str],
     seed_categories: Optional[list[str]] = None,
     seed_subcategories: Optional[dict[str, list[str]]] = None,
+    seed_dataset_columns: Optional[list[str]] = None,
     code_lang: Optional[CodeLang] = None,
     code_columns: Optional[list[str]] = None,
     validation_columns: Optional[list[str]] = None,
@@ -85,6 +86,7 @@ def display_sample_record(
     seed_categories = seed_categories or []
     seed_subcategories = seed_subcategories or {}
     validation_columns = validation_columns or []
+    seed_dataset_columns = seed_dataset_columns or []
 
     code_lang = None if code_lang is None else CodeLang.validate(code_lang)
     table_kws = dict(show_lines=True, expand=True)
@@ -100,6 +102,14 @@ def display_sample_record(
             if col in seed_subcategories:
                 for nested_col in seed_subcategories[col]:
                     table.add_row(f"  |- {nested_col}", str(record[nested_col]))
+        render_list.append(_pad_console_element(table))
+
+    if len(seed_dataset_columns) > 0:
+        table = Table(title="Seed Dataset Columns", **table_kws)
+        table.add_column("Name")
+        table.add_column("Value")
+        for col in [c for c in seed_dataset_columns if c not in code_columns]:
+            table.add_row(col, str(record[col]))
         render_list.append(_pad_console_element(table))
 
     if len(data_columns) > 0:

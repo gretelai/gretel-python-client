@@ -1,17 +1,14 @@
 import json
-import os
 import sys
 
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
-from gretel_client.cli.utils.parser_utils import ref_data_factory
+import pandas as pd
+
 from gretel_client.config import ClientConfig, get_logger, get_session_config
-from gretel_client.models.config import (
-    get_model_type_config,
-    get_status_description,
-    GPU,
-)
+from gretel_client.dataframe import _DataFrameT
+from gretel_client.models.config import get_model_type_config, get_status_description
 from gretel_client.projects.common import WAIT_UNTIL_DONE
 from gretel_client.projects.jobs import Job, WaitTimeExceeded
 from gretel_client.projects.models import Model
@@ -250,3 +247,30 @@ def do_api_call(
 
     resp_dict = json.loads(response.data.decode())
     return resp_dict.get("data")
+
+
+def smart_load_dataframe(dataframe: Union[str, Path, _DataFrameT]) -> _DataFrameT:
+    """Load a dataframe from a file path or passthrough if already a dataframe.
+
+    Supported file formats are CSV, Parquet, and JSON. They will be loaded using
+    the appropriate pandas reader.
+    """
+
+    if isinstance(dataframe, _DataFrameT):
+        return dataframe
+
+    if isinstance(dataframe, (str, Path)):
+        dataframe = Path(dataframe)
+        if not dataframe.exists():
+            raise FileNotFoundError(f"Dataframe file not found: {dataframe}")
+
+        if dataframe.suffix == ".csv":
+            return pd.read_csv(dataframe)
+        elif dataframe.suffix == ".parquet":
+            return pd.read_parquet(dataframe)
+        elif dataframe.suffix == ".json":
+            return pd.read_json(dataframe)
+        else:
+            raise ValueError(f"Unsupported dataframe file format: {dataframe.suffix}")
+
+    raise ValueError(f"Unsupported dataframe type: {type(dataframe)}")
