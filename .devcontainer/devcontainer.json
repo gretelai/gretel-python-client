@@ -1,0 +1,4 @@
+{
+  "name": "Python 3.9",
+  "image": "python:3.9.18-slim-bullseye"
+}
