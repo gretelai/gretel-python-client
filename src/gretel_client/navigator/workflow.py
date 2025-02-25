@@ -433,6 +433,7 @@ class DataDesignerWorkflow:
         steps: Optional[list[Step]] = None,
         model_suite: ModelSuite = DEFAULT_MODEL_SUITE,
         workflow_name: Optional[str] = None,
+        fetch_task_io: bool = True,
     ):
         self._workflow_name = (
             workflow_name
@@ -445,7 +446,9 @@ class DataDesignerWorkflow:
             "num_records": 10,
             "model_suite": self._model_suite,
         }
-        self._task_io = get_task_io_map(self._client)
+        self._task_io = {}
+        if fetch_task_io:
+            self._task_io = get_task_io_map(self._client)
 
         # we track the workflow and project id to ensure that we can tie
         # multiple batch workflow calls within a session to the same workflow

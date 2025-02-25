@@ -26,16 +26,16 @@ class GeneratedDataColumn(BaseModel):
             contain template keywords that reference seed columns or other existing data columns.
         columns_to_list_in_prompt: List of seed and/or data columns to list as context in the generation prompt.
         llm_type: LLM type for generation of the column. Must be one of ["natural_language", "code", "judge"].
-        output_type: Specifies the nature of the column data. Must be one of ["text", "code", "structured"].
-        output_type_params: Provides extra arguments used when interpreting the output type. See
-            docstring notes for more information.
+        data_config: Configuration specifying how the data in the generated column should
+            be interpreted. Augments generation, parsing, and validation.
+            See `DataDesigner.add_generated_data_column` for more details.
     """
 
     name: str
     generation_prompt: str
     columns_to_list_in_prompt: Union[str, list[str]] = Field(default_factory=list)
     llm_type: LLMType = LLMType.NATURAL_LANGUAGE
-    data_config: DataConfig
+    data_config: DataConfig = Field(default_factory=lambda: DataConfig(type="text"))
 
     @property
     def prompt_template(self) -> str:
