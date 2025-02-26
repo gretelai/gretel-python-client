@@ -27,6 +27,7 @@ class Registry(metaclass=RegistryMeta):
     TestOptionalArgTask = tasks.TestOptionalArgTask
     TestRequiredAndOptionalArgsTask = tasks.TestRequiredAndOptionalArgsTask
     TestTaskCallingTask = tasks.TestTaskCallingTask
+    Holdout = tasks.Holdout
     JudgeWithLlm = tasks.JudgeWithLlm
     GenerateColumnsUsingSamplers = tasks.GenerateColumnsUsingSamplers
     ValidateCode = tasks.ValidateCode

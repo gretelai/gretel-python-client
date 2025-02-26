@@ -53,7 +53,7 @@ class ExtractDataSeedsFromSampleRecords(BaseModel):
     num_samples: Annotated[Optional[int], Field(title="Num Samples")] = 25
 
 
-class LLMType(str, Enum):
+class LLMAlias(str, Enum):
     natural_language = "natural_language"
     code = "code"
     judge = "judge"
@@ -134,6 +134,12 @@ class SeedSubcategory(BaseModel):
 
 class GetGretelDataset(BaseModel):
     name: Annotated[str, Field(title="Name")]
+
+
+class Holdout(BaseModel):
+    holdout: Annotated[Optional[Union[float, int]], Field(title="Holdout")] = 0.05
+    max_holdout: Annotated[Optional[int], Field(title="Max Holdout")] = 2000
+    group_by: Annotated[Optional[str], Field(title="Group By")] = None
 
 
 class IdGenerator(BaseModel):
@@ -631,7 +637,7 @@ class GenerateColumnFromTemplate(BaseModel):
         Optional[str], Field(title="Response Column Name")
     ] = "response"
     system_prompt: Annotated[Optional[str], Field(title="System Prompt")] = None
-    llm_type: Optional[LLMType] = "natural_language"
+    llm_type: Optional[LLMAlias] = "natural_language"
     data_config: DataConfig
 
 
@@ -704,7 +710,7 @@ class LoadDataSeeds(BaseModel):
     ] = None
 
 
-class NavigatorFTGenerateParams(BaseModel):
+class GenerateFromTabularFTConfig(BaseModel):
     num_records: Annotated[
         Optional[int],
         Field(
@@ -752,6 +758,11 @@ class NavigatorFTGenerateParams(BaseModel):
             title="use_structured_generation",
         ),
     ] = False
+
+
+class TabularFt(BaseModel):
+    train: Optional[TrainTabularFTConfig] = None
+    generate: Optional[GenerateFromTabularFTConfig] = None
 
 
 class ActganModelHyperparams(BaseModel):
@@ -809,8 +820,8 @@ class TrainTabularGANConfig(BaseModel):
 
 
 class TabularGan(BaseModel):
-    train: TrainTabularGANConfig
-    generate: GenerateFromTabularGANConfig
+    train: Optional[TrainTabularGANConfig] = None
+    generate: Optional[GenerateFromTabularGANConfig] = None
 
 
 class Globals(BaseModel):
@@ -873,12 +884,3 @@ class Transform(BaseModel):
             title="Steps",
         ),
     ]
-
-
-class GenerateFromTabularFTConfig(BaseModel):
-    params: Optional[NavigatorFTGenerateParams] = None
-
-
-class TabularFt(BaseModel):
-    train: TrainTabularFTConfig
-    generate: GenerateFromTabularFTConfig
