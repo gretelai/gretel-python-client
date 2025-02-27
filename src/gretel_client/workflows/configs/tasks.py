@@ -869,7 +869,7 @@ class PeftParams(BaseModel):
         ),
     ] = 1
     target_modules: Annotated[
-        Optional[Union[List[str], str]],
+        Optional[Union[str, List[str]]],
         Field(
             description="List of module names or regex expression of the module names to replace with LoRA. For example, ['q', 'v'] or '.*decoder.*(SelfAttention|EncDecAttention).*(q|v)$'. This can also be a wildcard 'all-linear' which matches all linear/Conv1D layers except the output layer. If not specified, modules will be chosen according to the model architecture. If the architecture is not known, an error will be raised -- in this case, you should specify the target modules manually.",
             title="Target Modules",
@@ -941,23 +941,23 @@ class PrivacyParams(BaseModel):
     ] = False
 
 
-class Validation(RootModel[float]):
-    root: Annotated[
-        float,
-        Field(
-            description="Proportion of the training dataset to use for model validation. This value needs to be between 0.0 and 1.0. Defaults to `None`.",
-            gt=0.0,
-            title="validation",
-        ),
-    ]
-
-
-class Validation1(RootModel[int]):
+class Validation(RootModel[int]):
     root: Annotated[
         int,
         Field(
             description="Proportion of the training dataset to use for model validation. This value needs to be between 0.0 and 1.0. Defaults to `None`.",
             gt=0,
+            title="validation",
+        ),
+    ]
+
+
+class Validation1(RootModel[float]):
+    root: Annotated[
+        float,
+        Field(
+            description="Proportion of the training dataset to use for model validation. This value needs to be between 0.0 and 1.0. Defaults to `None`.",
+            gt=0.0,
             title="validation",
         ),
     ]
@@ -995,23 +995,23 @@ class TextFt(BaseModel):
     generate: GenerateFromTextFTConfig
 
 
-class Validation2(RootModel[float]):
-    root: Annotated[
-        float,
-        Field(
-            description="Proportion of the training dataset to use for model validation. This value needs to be between 0.0 and 1.0. Defaults to `None`.",
-            gt=0.0,
-            title="validation",
-        ),
-    ]
-
-
-class Validation3(RootModel[int]):
+class Validation2(RootModel[int]):
     root: Annotated[
         int,
         Field(
             description="Proportion of the training dataset to use for model validation. This value needs to be between 0.0 and 1.0. Defaults to `None`.",
             gt=0,
+            title="validation",
+        ),
+    ]
+
+
+class Validation3(RootModel[float]):
+    root: Annotated[
+        float,
+        Field(
+            description="Proportion of the training dataset to use for model validation. This value needs to be between 0.0 and 1.0. Defaults to `None`.",
+            gt=0.0,
             title="validation",
         ),
     ]
