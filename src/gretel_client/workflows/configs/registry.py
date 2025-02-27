@@ -38,5 +38,9 @@ class Registry(metaclass=RegistryMeta):
     TabularGan = tasks.TabularGan
     TabularFt = tasks.TabularFt
     Transform = tasks.Transform
+    GenerateFromTextFt = tasks.GenerateFromTextFt
+    TextFt = tasks.TextFt
+    TrainTextFt = tasks.TrainTextFt
+    PromptPretrainedModel = tasks.PromptPretrainedModel
 
 

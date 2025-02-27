@@ -113,6 +113,102 @@ class GenerateDatasetFromSampleRecords(BaseModel):
     dataset_context: Annotated[Optional[str], Field(title="Dataset Context")] = ""
 
 
+class GenerateFromTextFt(BaseModel):
+    seed_records_multiplier: Annotated[
+        Optional[int],
+        Field(
+            description="For conditional generation, emit this number of records consecutively for each prompt record in the seed dataset. Defaults to `1`, which means generating exactly one record per seed record. Ignored for unconditional generation.",
+            gt=0,
+            title="seed_records_multiplier",
+        ),
+    ] = 1
+    maximum_text_length: Annotated[
+        Optional[int],
+        Field(
+            description="Maximum number of tokens to generate (not including the prompt) in output text. Defaults to `42`.",
+            gt=0,
+            title="maximum_text_length",
+        ),
+    ] = 42
+    top_p: Annotated[
+        Optional[float],
+        Field(
+            description="Defaults to 0.8987. If set to float < 1, only the most probable tokens with probabilities that add up to ``top_p`` or higher are kept for generation.",
+            ge=0.0,
+            le=1.0,
+            title="top_p",
+        ),
+    ] = 0.8987601335810778
+    top_k: Annotated[
+        Optional[int],
+        Field(
+            description="The number of highest probability vocabulary tokens to keep for top-k-filtering. Defaults to `43`.",
+            ge=0,
+            title="top_k",
+        ),
+    ] = 43
+    num_beams: Annotated[
+        Optional[int],
+        Field(
+            description="Number of beams for beam search. 1 means no beam search. Defaults to `1`.",
+            ge=1,
+            title="num_beams",
+        ),
+    ] = 1
+    do_sample: Annotated[
+        Optional[bool],
+        Field(
+            description="Whether or not to use sampling; use greedy decoding otherwise. Defaults to `True`.",
+            title="do_sample",
+        ),
+    ] = True
+    do_early_stopping: Annotated[
+        Optional[bool],
+        Field(
+            description="Whether to stop the beam search when at least ``num_beams`` sentences are finished per batch or not. Defaults to `True`.",
+            title="do_early_stopping",
+        ),
+    ] = True
+    typical_p: Annotated[
+        Optional[float],
+        Field(
+            description="The amount of probability mass from the original distribution that we wish to consider. Defaults to `0.8`.",
+            ge=0.0,
+            le=1.0,
+            title="typical_p",
+        ),
+    ] = 0.8
+    temperature: Annotated[
+        Optional[float],
+        Field(
+            description="Passed as `temperature` argument to the generator. The value used to module the next token probabilities. It defaults to `None`, in which casemodels' default temperature is used or 1.0.",
+            gt=0.0,
+            title="temperature",
+        ),
+    ] = None
+    use_vllm: Annotated[
+        Optional[bool],
+        Field(
+            description="If True, load the generator using vLLM. Defaults to `False`.",
+            title="use_vllm",
+        ),
+    ] = False
+    num_records: Annotated[
+        Optional[int],
+        Field(
+            description="Number of text outputs to generate.", gt=0, title="num_records"
+        ),
+    ] = None
+    num_records_multiplier: Annotated[
+        Optional[float],
+        Field(
+            description="Calculate the number of text outputs to generate by applying this multiplier to the number of records in the training data. For example, use 1.0 to generate synthetic data of the same size as the training data.",
+            gt=0.0,
+            title="num_records_multiplier",
+        ),
+    ] = None
+
+
 class NumNewValuesToGenerate(RootModel[int]):
     root: Annotated[int, Field(gt=0, le=25, title="Num New Values To Generate")]
 
@@ -169,6 +265,106 @@ class NameGenerator(BaseModel):
     num_records: Annotated[Optional[int], Field(title="Num Records")] = 5
     seed: Annotated[Optional[int], Field(title="Seed")] = None
     should_fail: Annotated[Optional[bool], Field(title="Should Fail")] = False
+
+
+class GenerateParams(BaseModel):
+    seed_records_multiplier: Annotated[
+        Optional[int],
+        Field(
+            description="For conditional generation, emit this number of records consecutively for each prompt record in the seed dataset. Defaults to `1`, which means generating exactly one record per seed record. Ignored for unconditional generation.",
+            gt=0,
+            title="seed_records_multiplier",
+        ),
+    ] = 1
+    maximum_text_length: Annotated[
+        Optional[int],
+        Field(
+            description="Maximum number of tokens to generate (not including the prompt) in output text. Defaults to `42`.",
+            gt=0,
+            title="maximum_text_length",
+        ),
+    ] = 42
+    top_p: Annotated[
+        Optional[float],
+        Field(
+            description="Defaults to 0.8987. If set to float < 1, only the most probable tokens with probabilities that add up to ``top_p`` or higher are kept for generation.",
+            ge=0.0,
+            le=1.0,
+            title="top_p",
+        ),
+    ] = 0.8987601335810778
+    top_k: Annotated[
+        Optional[int],
+        Field(
+            description="The number of highest probability vocabulary tokens to keep for top-k-filtering. Defaults to `43`.",
+            ge=0,
+            title="top_k",
+        ),
+    ] = 43
+    num_beams: Annotated[
+        Optional[int],
+        Field(
+            description="Number of beams for beam search. 1 means no beam search. Defaults to `1`.",
+            ge=1,
+            title="num_beams",
+        ),
+    ] = 1
+    do_sample: Annotated[
+        Optional[bool],
+        Field(
+            description="Whether or not to use sampling; use greedy decoding otherwise. Defaults to `True`.",
+            title="do_sample",
+        ),
+    ] = True
+    do_early_stopping: Annotated[
+        Optional[bool],
+        Field(
+            description="Whether to stop the beam search when at least ``num_beams`` sentences are finished per batch or not. Defaults to `True`.",
+            title="do_early_stopping",
+        ),
+    ] = True
+    typical_p: Annotated[
+        Optional[float],
+        Field(
+            description="The amount of probability mass from the original distribution that we wish to consider. Defaults to `0.8`.",
+            ge=0.0,
+            le=1.0,
+            title="typical_p",
+        ),
+    ] = 0.8
+    temperature: Annotated[
+        Optional[float],
+        Field(
+            description="Passed as `temperature` argument to the generator. The value used to module the next token probabilities. It defaults to `None`, in which casemodels' default temperature is used or 1.0.",
+            gt=0.0,
+            title="temperature",
+        ),
+    ] = None
+    use_vllm: Annotated[
+        Optional[bool],
+        Field(
+            description="If True, load the generator using vLLM. Defaults to `False`.",
+            title="use_vllm",
+        ),
+    ] = False
+
+
+class PromptPretrainedModel(BaseModel):
+    pretrained_model: Annotated[
+        Optional[str],
+        Field(
+            description="Select the text generation model to fine-tune from HuggingFace. Defaults to `EleutherAI/gpt-neo-125m`.",
+            title="Pretrained Model",
+        ),
+    ] = "EleutherAI/gpt-neo-125m"
+    prompt_template: Annotated[
+        Optional[str],
+        Field(
+            description="All prompt inputs are formatted according to this template. The template must either start with '@' and reference the name of a pre-defined template, or contain a single '%s' formatting verb.",
+            title="Prompt Template",
+        ),
+    ] = None
+    generate: Optional[GenerateParams] = None
 
 
 class SampleDataSeeds(BaseModel):
@@ -471,6 +667,381 @@ class TestRequiredAndOptionalArgsTask(BaseModel):
 
 class TestTaskCallingTask(BaseModel):
     pass
+
+
+class GenerateFromTextFTConfig(BaseModel):
+    seed_records_multiplier: Annotated[
+        Optional[int],
+        Field(
+            description="For conditional generation, emit this number of records consecutively for each prompt record in the seed dataset. Defaults to `1`, which means generating exactly one record per seed record. Ignored for unconditional generation.",
+            gt=0,
+            title="seed_records_multiplier",
+        ),
+    ] = 1
+    maximum_text_length: Annotated[
+        Optional[int],
+        Field(
+            description="Maximum number of tokens to generate (not including the prompt) in output text. Defaults to `42`.",
+            gt=0,
+            title="maximum_text_length",
+        ),
+    ] = 42
+    top_p: Annotated[
+        Optional[float],
+        Field(
+            description="Defaults to 0.8987. If set to float < 1, only the most probable tokens with probabilities that add up to ``top_p`` or higher are kept for generation.",
+            ge=0.0,
+            le=1.0,
+            title="top_p",
+        ),
+    ] = 0.8987601335810778
+    top_k: Annotated[
+        Optional[int],
+        Field(
+            description="The number of highest probability vocabulary tokens to keep for top-k-filtering. Defaults to `43`.",
+            ge=0,
+            title="top_k",
+        ),
+    ] = 43
+    num_beams: Annotated[
+        Optional[int],
+        Field(
+            description="Number of beams for beam search. 1 means no beam search. Defaults to `1`.",
+            ge=1,
+            title="num_beams",
+        ),
+    ] = 1
+    do_sample: Annotated[
+        Optional[bool],
+        Field(
+            description="Whether or not to use sampling; use greedy decoding otherwise. Defaults to `True`.",
+            title="do_sample",
+        ),
+    ] = True
+    do_early_stopping: Annotated[
+        Optional[bool],
+        Field(
+            description="Whether to stop the beam search when at least ``num_beams`` sentences are finished per batch or not. Defaults to `True`.",
+            title="do_early_stopping",
+        ),
+    ] = True
+    typical_p: Annotated[
+        Optional[float],
+        Field(
+            description="The amount of probability mass from the original distribution that we wish to consider. Defaults to `0.8`.",
+            ge=0.0,
+            le=1.0,
+            title="typical_p",
+        ),
+    ] = 0.8
+    temperature: Annotated[
+        Optional[float],
+        Field(
+            description="Passed as `temperature` argument to the generator. The value used to module the next token probabilities. It defaults to `None`, in which casemodels' default temperature is used or 1.0.",
+            gt=0.0,
+            title="temperature",
+        ),
+    ] = None
+    use_vllm: Annotated[
+        Optional[bool],
+        Field(
+            description="If True, load the generator using vLLM. Defaults to `False`.",
+            title="use_vllm",
+        ),
+    ] = False
+    num_records: Annotated[
+        Optional[int],
+        Field(
+            description="Number of text outputs to generate.", gt=0, title="num_records"
+        ),
+    ] = None
+    num_records_multiplier: Annotated[
+        Optional[float],
+        Field(
+            description="Calculate the number of text outputs to generate by applying this multiplier to the number of records in the training data. For example, use 1.0 to generate synthetic data of the same size as the training data.",
+            gt=0.0,
+            title="num_records_multiplier",
+        ),
+    ] = None
+
+
+class GptXModelHyperparams(BaseModel):
+    batch_size: Annotated[
+        Optional[int],
+        Field(
+            description="The batch size per GPU/TPU core/CPU for training. Defaults to `4`.",
+            gt=0,
+            title="batch_size",
+        ),
+    ] = 4
+    epochs: Annotated[
+        Optional[float],
+        Field(
+            description="Total number of training epochs to perform on fine-tuning the model. Either this or the steps parameter must be set, but not both.",
+            gt=0.0,
+            title="epochs",
+        ),
+    ] = None
+    steps: Annotated[
+        Optional[int],
+        Field(
+            description="Total number of training steps to perform on fine-tuning the model. Either this or the epochs parameter must be set, but not both.",
+            gt=0,
+            title="steps",
+        ),
+    ] = None
+    weight_decay: Annotated[
+        Optional[float],
+        Field(
+            description="The weight decay to apply (if not zero) to all layers except all bias and LayerNorm weights in AdamW optimizer. Defaults to `0.01`.",
+            ge=0.0,
+            le=1.0,
+            title="weight_decay",
+        ),
+    ] = 0.01
+    warmup_steps: Annotated[
+        Optional[int],
+        Field(
+            description="Number of steps used for a linear warmup from `0` to `learning_rate`. Defaults to `100`.",
+            gt=0,
+            title="warmup_steps",
+        ),
+    ] = 100
+    lr_scheduler: Annotated[
+        Optional[LRScheduler],
+        Field(
+            description="The scheduler type to use. See the HuggingFace documentation of `SchedulerType` for all possible values. Defaults to `linear`.",
+            title="lr_scheduler",
+        ),
+    ] = "linear"
+    learning_rate: Annotated[
+        Optional[float],
+        Field(
+            description="The initial learning rate for `AdamW` optimizer. Defaults to `0.0002`.",
+            gt=0.0,
+            lt=1.0,
+            title="learning_rate",
+        ),
+    ] = 0.0002
+    max_tokens: Annotated[
+        Optional[int],
+        Field(
+            description="The maximum length (in number of tokens) for any input record.The tokenizer used corresponds to the pretrained model selected.Defaults to `512`.",
+            gt=0,
+            title="max_tokens",
+        ),
+    ] = 512
+    gradient_accumulation_steps: Annotated[
+        Optional[int],
+        Field(
+            description="Number of update steps to accumulate the gradients for, before performing a backward/update pass. This technique increases the effective batch size that will fit into GPU memory.",
+            gt=0,
+            title="gradient_accumulation_steps",
+        ),
+    ] = 8
+    seed: Annotated[
+        Optional[int],
+        Field(
+            description="Random number generator seed passed to HF's Trainer. A null value will result on a random seed being generated.",
+            ge=0,
+            lt=4294967296,
+            title="seed",
+        ),
+    ] = None
+
+
+class PeftParams(BaseModel):
+    lora_r: Annotated[
+        Optional[int],
+        Field(
+            description="LoRA makes fine-tuning more efficient by drastically reducing the number of trainable parameters by updating weights through two smaller matrices through low-rank decomposition. `lora_r` is the rank of the matrices that are updated. Lower value means fewer trainable parameters.",
+            gt=1,
+            title="lora_r",
+        ),
+    ] = 8
+    lora_alpha_over_r: Annotated[
+        Optional[float],
+        Field(
+            description="The ratio of the LoRA scaling factor (alpha) to the LoRA rank. Empirically, this value works well when set to 0.5, 1, or 2.",
+            ge=0.1,
+            le=4.0,
+            title="lora_alpha_over_r",
+        ),
+    ] = 1
+    target_modules: Annotated[
+        Optional[Union[List[str], str]],
+        Field(
+            description="List of module names or regex expression of the module names to replace with LoRA. For example, ['q', 'v'] or '.*decoder.*(SelfAttention|EncDecAttention).*(q|v)$'. This can also be a wildcard 'all-linear' which matches all linear/Conv1D layers except the output layer. If not specified, modules will be chosen according to the model architecture. If the architecture is not known, an error will be raised -- in this case, you should specify the target modules manually.",
+            title="Target Modules",
+        ),
+    ] = None
+
+
+class Delta2(RootModel[float]):
+    root: Annotated[
+        float,
+        Field(
+            description="Probability of accidentally leaking information. Setting to 'auto' usesdelta of 1/n^1.2, where n is the number of training records. The value `1.2` is set in /python/src/gretel_skynet/runtime/model_auto_config/gpt_x.py:L15",
+            gt=0.0,
+            lt=1.0,
+            title="delta",
+        ),
+    ]
+
+
+class Delta3(str, Enum):
+    auto = "auto"
+
+
+class PrivacyParams(BaseModel):
+    dp: Annotated[
+        Optional[bool],
+        Field(
+            description="Flag to turn on differentially private fine tuning when a data source is provided.",
+            title="dp",
+        ),
+    ] = False
+    epsilon: Annotated[
+        Optional[float],
+        Field(
+            description="Target for epsilon when training completes.",
+            ge=0.1,
+            le=100.0,
+            title="epsilon",
+        ),
+    ] = 8
+    delta: Annotated[
+        Optional[Union[Delta2, Delta3]],
+        Field(
+            description="Probability of accidentally leaking information. Setting to 'auto' usesdelta of 1/n^1.2, where n is the number of training records. The value `1.2` is set in /python/src/gretel_skynet/runtime/model_auto_config/gpt_x.py:L15",
+            title="delta",
+        ),
+    ] = "auto"
+    per_sample_max_grad_norm: Annotated[
+        Optional[float],
+        Field(
+            description="Maximum L2 norm of per sample gradients.",
+            gt=0.0,
+            title="per_sample_max_grad_norm",
+        ),
+    ] = 1.0
+    entity_column_name: Annotated[
+        Optional[str],
+        Field(
+            description="Column representing unit of privacy. e.g. `name` or `id`.",
+            title="entity_column_name",
+        ),
+    ] = None
+    poisson_sampling: Annotated[
+        Optional[bool],
+        Field(
+            description="Enables Poisson sampling for proper DP accounting",
+            title="poisson_sampling",
+        ),
+    ] = False
+
+
+class Validation(RootModel[float]):
+    root: Annotated[
+        float,
+        Field(
+            description="Proportion of the training dataset to use for model validation. This value needs to be between 0.0 and 1.0. Defaults to `None`.",
+            gt=0.0,
+            title="validation",
+        ),
+    ]
+
+
+class Validation1(RootModel[int]):
+    root: Annotated[
+        int,
+        Field(
+            description="Proportion of the training dataset to use for model validation. This value needs to be between 0.0 and 1.0. Defaults to `None`.",
+            gt=0,
+            title="validation",
+        ),
+    ]
+
+
+class TrainTextFTConfig(BaseModel):
+    pretrained_model: Annotated[
+        Optional[str],
+        Field(
+            description="Select the text generation model to fine-tune from HuggingFace. Defaults to `EleutherAI/gpt-neo-125m`.",
+            title="pretrained_model",
+        ),
+    ] = "EleutherAI/gpt-neo-125m"
+    column_name: Annotated[
+        Optional[str],
+        Field(
+            description="The name of the column to use for training. Defaults to `None`.",
+            title="column_name",
+        ),
+    ] = None
+    validation: Annotated[
+        Optional[Union[Validation, Validation1]],
+        Field(
+            description="Proportion of the training dataset to use for model validation. This value needs to be between 0.0 and 1.0. Defaults to `None`.",
+            title="validation",
+        ),
+    ] = None
+    params: Optional[GptXModelHyperparams] = None
+    peft_params: Optional[PeftParams] = None
+    privacy_params: Optional[PrivacyParams] = None
+
+
+class TextFt(BaseModel):
+    train: TrainTextFTConfig
+    generate: GenerateFromTextFTConfig
+
+
+class Validation2(RootModel[float]):
+    root: Annotated[
+        float,
+        Field(
+            description="Proportion of the training dataset to use for model validation. This value needs to be between 0.0 and 1.0. Defaults to `None`.",
+            gt=0.0,
+            title="validation",
+        ),
+    ]
+
+
+class Validation3(RootModel[int]):
+    root: Annotated[
+        int,
+        Field(
+            description="Proportion of the training dataset to use for model validation. This value needs to be between 0.0 and 1.0. Defaults to `None`.",
+            gt=0,
+            title="validation",
+        ),
+    ]
+
+
+class TrainTextFt(BaseModel):
+    pretrained_model: Annotated[
+        Optional[str],
+        Field(
+            description="Select the text generation model to fine-tune from HuggingFace. Defaults to `EleutherAI/gpt-neo-125m`.",
+            title="pretrained_model",
+        ),
+    ] = "EleutherAI/gpt-neo-125m"
+    column_name: Annotated[
+        Optional[str],
+        Field(
+            description="The name of the column to use for training. Defaults to `None`.",
+            title="column_name",
+        ),
+    ] = None
+    validation: Annotated[
+        Optional[Union[Validation2, Validation3]],
+        Field(
+            description="Proportion of the training dataset to use for model validation. This value needs to be between 0.0 and 1.0. Defaults to `None`.",
+            title="validation",
+        ),
+    ] = None
+    params: Optional[GptXModelHyperparams] = None
+    peft_params: Optional[PeftParams] = None
+    privacy_params: Optional[PrivacyParams] = None
 
 
 class ClassifyConfig(BaseModel):
