@@ -37,7 +37,6 @@ class Registry(metaclass=RegistryMeta):
     GenerateSeedCategoryValues = tasks.GenerateSeedCategoryValues
     TabularGan = tasks.TabularGan
     TabularFt = tasks.TabularFt
-    Transform = tasks.Transform
     GenerateFromTextFt = tasks.GenerateFromTextFt
     TextFt = tasks.TextFt
     TrainTextFt = tasks.TrainTextFt
