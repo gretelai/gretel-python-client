@@ -2,7 +2,7 @@ import json
 import logging
 import sys
 
-from abc import ABC, abstractproperty
+from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -173,10 +173,12 @@ class BaseInferenceAPI(ABC):
         self._response_metadata = {}
         self.backend_model = backend_model
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def api_path(self) -> str: ...
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def model_type(self) -> str: ...
 
     @property

@@ -4,7 +4,7 @@ import base64
 import json
 import time
 
-from abc import ABC, abstractmethod, abstractproperty
+from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum
@@ -204,7 +204,8 @@ class Job(ABC):
     @abstractmethod
     def _submit(self, runner_mode: RunnerMode, **kwargs) -> Job: ...
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def model_type(self) -> str: ...
 
     @abstractmethod
@@ -216,10 +217,12 @@ class Job(ABC):
     @abstractmethod
     def delete(self): ...
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def instance_type(self): ...
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def artifact_types(self) -> List[str]: ...
 
     @abstractmethod
@@ -603,7 +606,8 @@ class Job(ABC):
         """Get billing details for the current job."""
         return self._data.get("billing_data", {})
 
-    @abstractproperty
+    @property
+    @abstractmethod
     def container_image(self) -> str:
         """Return the container image for the job."""
         ...

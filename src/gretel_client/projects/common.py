@@ -55,11 +55,14 @@ def validate_data_source(data_source: Pathlike) -> bool:
 
 
 def _has_any_extension(data_source: Pathlike, extensions: Iterable[str]) -> bool:
+    base_name = ""
     try:
         if isinstance(data_source, str):
             base_name = Path(data_source).name
         elif isinstance(data_source, Path):
             base_name = data_source.name
+        else:
+            pass
     except Exception:
         return False
 
