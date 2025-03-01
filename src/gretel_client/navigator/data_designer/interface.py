@@ -455,8 +455,6 @@ class DataDesigner:
             raise ValueError(
                 "You must provide *at least* one of `values` or `num_new_values_to_generate`."
             )
-        if name in self._seed_category_names:
-            raise ValueError(f"Seed category `{name}` already exists.")
 
         if len(subcategories or []) > 0:
             for seed in subcategories:
@@ -464,7 +462,8 @@ class DataDesigner:
                     seed = SeedSubcategory(**seed)
                 if seed.name in self._seed_category_names:
                     raise ValueError(f"Seed category `{seed.name}` already exists.")
-                self._seed_subcategory_names[name].append(seed.name)
+                if seed.name not in self._seed_subcategory_names[name]:
+                    self._seed_subcategory_names[name].append(seed.name)
 
         weights = weights or []
         if len(weights) > 0 and len(weights) != len(values):
@@ -971,8 +970,6 @@ class DataDesigner:
             A tuple containing the validated inputs for the data column.
         """
 
-        if name in self._generated_data_columns:
-            raise ValueError(f"Column name `{name}` already exists.")
         if name in self._seed_categories:
             raise ValueError(f"Column name `{name}` already exists as a seed category.")
 

@@ -23,6 +23,7 @@ SeedValueT = Union[str, int, bool]
 class ModelSuite(str, Enum):
     APACHE_2_0 = "apache-2.0"
     LLAMA_3_x = "llama-3.x"
+    LLAMA_3_x_LARGE = "llama-3.x-large"
 
 
 DEFAULT_MODEL_SUITE = ModelSuite.APACHE_2_0
