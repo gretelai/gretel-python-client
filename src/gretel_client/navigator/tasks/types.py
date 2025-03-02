@@ -11,8 +11,6 @@ from rich.pretty import Pretty
 from rich.text import Text
 from typing_extensions import Annotated, Self
 
-from gretel_client.config import get_session_config
-
 MAX_NUM_DATA_SEED_VALUES = 25
 MAX_NUM_NESTED_DATA_SEED_SUBCATEGORIES = 5
 
@@ -29,12 +27,13 @@ DEFAULT_MODEL_SUITE = ModelSuite.APACHE_2_0
 
 
 def check_model_suite(model_suite: Union[ModelSuite, str]) -> str:
-    is_gretel_dev = get_session_config().stage == "dev"
+    # Temporarily disable this check for now.
+    # is_gretel_dev = get_session_config().stage == "dev"
 
-    if not is_gretel_dev:
-        # Make sure that the model_suite is a valid ModelSuite enum.
-        # Why? Faster feedback for users who are using the wrong model suite.
-        return ModelSuite(model_suite).value
+    # if not is_gretel_dev:
+    # Make sure that the model_suite is a valid ModelSuite enum.
+    # Why? Faster feedback for users who are using the wrong model suite.
+    # return ModelSuite(model_suite).value
 
     # Allow for more flexibility in dev mode.
     if isinstance(model_suite, ModelSuite):
