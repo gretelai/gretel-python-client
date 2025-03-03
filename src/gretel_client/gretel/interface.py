@@ -739,7 +739,7 @@ class Gretel:
 
         Args:
             config: The evaluate config as a yaml file path, yaml string, or dict.
-            data_source: Training data source as a file path or pandas DataFrame.
+            data_source: Data source as a file path or pandas DataFrame to train on and produce synthetic data.
             ref_data: Reference data source as a file path or pandas DataFrame.
             test_data: Optional test data source as a file path or pandas DataFrame. This file will be used to calculate MIA, for more information about Data Privacy Metrics, please refer to our doc site, https://docs.gretel.ai/optimize-synthetic-data/evaluate/synthetic-data-quality-report.
             job_label: Descriptive label to append to job the name.
@@ -767,13 +767,14 @@ class Gretel:
                   data_source: "_"
             '''
 
-            data_source="https://gretel-public-website.s3-us-west-2.amazonaws.com/datasets/USAdultIncome4k.csv"
-            ref_data="https://gretel-public-website.s3-us-west-2.amazonaws.com/datasets/USAdultIncome5kGenerated.csv"
-            test_data="https://gretel-public-website.s3.us-west-2.amazonaws.com/datasets/USAdultIncome1k.csv"
+            synth_data_source = "https://gretel-public-website.s3-us-west-2.amazonaws.com/datasets/USAdultIncome5kGenerated.csv"
+            train_ref_data = "https://gretel-public-website.s3-us-west-2.amazonaws.com/datasets/USAdultIncome4k.csv"
+            test_data = "https://gretel-public-website.s3.us-west-2.amazonaws.com/datasets/USAdultIncome1k.csv"
             evaluate_result = gretel.submit_evaluate(
                 config=config,
-                data_source=tabular_data_source,
-                ref_data=tabular_data_source,
+                data_source=synth_data_source,
+                ref_data=train_ref_data,
+                test_data=test_data,
                 job_label="testing123",
             )
 
