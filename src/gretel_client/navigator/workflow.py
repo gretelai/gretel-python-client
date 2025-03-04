@@ -477,7 +477,7 @@ class DataDesignerWorkflow:
             if isinstance(message, WorkflowInterruption):
                 logger.warning(message.message)
                 break
-            if message.step == "":
+            if not message.step:
                 continue
             if current_step != message.step:
                 current_step = message.step

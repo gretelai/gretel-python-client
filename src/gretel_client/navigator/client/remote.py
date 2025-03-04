@@ -85,8 +85,12 @@ class WorkflowTaskError(Exception):
 @dataclass
 class Message:
 
-    step: str
-    """The name of the step"""
+    step: Optional[str]
+    """
+    The name of the step.
+    
+    If the message is not associated with a step, this value will be `None`.
+    """
 
     stream: str
     """
@@ -107,6 +111,9 @@ class Message:
     @classmethod
     def from_dict(cls, message: dict, raise_on_error: bool = False) -> Message:
         message["ts"] = datetime.fromisoformat(message["ts"])
+
+        if "step" not in message:
+            message["step"] = None
         deserialized_message = cls(**message)
 
         if raise_on_error:
