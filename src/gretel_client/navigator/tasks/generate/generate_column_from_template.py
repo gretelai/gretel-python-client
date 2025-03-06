@@ -1,7 +1,5 @@
 from typing import Optional, Union
 
-from pydantic import BaseModel, field_serializer
-
 from gretel_client.navigator.client.interface import Client, TaskOutput
 from gretel_client.navigator.tasks.base import Task
 from gretel_client.navigator.tasks.io import Dataset
@@ -10,21 +8,17 @@ from gretel_client.navigator.tasks.types import (
     DEFAULT_MODEL_SUITE,
     LLMType,
     ModelSuite,
+    TaskConfigWithModelAlias,
 )
 
 DEFAULT_RESPONSE_COLUMN_NAME = "response"
 
 
-class GenerateColumnFromTemplateConfig(BaseModel):
+class GenerateColumnFromTemplateConfig(TaskConfigWithModelAlias):
     prompt_template: str
     response_column_name: str = DEFAULT_RESPONSE_COLUMN_NAME
-    llm_type: LLMType = LLMType.NATURAL_LANGUAGE
     system_prompt: Optional[str] = None
     data_config: DataConfig
-
-    @field_serializer("llm_type")
-    def serialize_llm_type(self, llm_type: LLMType, _) -> str:
-        return llm_type.value
 
 
 class GenerateColumnFromTemplate(Task):
@@ -42,7 +36,8 @@ class GenerateColumnFromTemplate(Task):
         response_column_name: Name of the column to be generated.
         output_parser: The type of parser apply to the LLMs output. Must be a
             member of the TextParserType enum.
-        llm_type: LLM type to use for generation. Must be a member of the LLMType enum.
+        model_alias: LLM type to use for generation. Must be a member of the LLMType enum
+            or an alias defined in model_configs global parameter.
         system_prompt: System prompt to use for generation. If not provided,
             a generic system prompt will be used.
         workflow_label: Label to append to the task name within a workflow. This can
@@ -59,7 +54,7 @@ class GenerateColumnFromTemplate(Task):
         prompt_template: str,
         data_config: DataConfig,
         response_column_name: str = DEFAULT_RESPONSE_COLUMN_NAME,
-        llm_type: LLMType = LLMType.NATURAL_LANGUAGE,
+        model_alias: Union[str, LLMType] = LLMType.NATURAL_LANGUAGE,
         system_prompt: Optional[str] = None,
         workflow_label: Optional[str] = None,
         client: Optional[Client] = None,
@@ -69,7 +64,7 @@ class GenerateColumnFromTemplate(Task):
             config=GenerateColumnFromTemplateConfig(
                 prompt_template=prompt_template,
                 response_column_name=response_column_name,
-                llm_type=llm_type,
+                model_alias=model_alias,
                 system_prompt=system_prompt,
                 data_config=data_config,
             ),

@@ -34,7 +34,7 @@ class GeneratedDataColumn(BaseModel):
     name: str
     generation_prompt: str
     columns_to_list_in_prompt: Union[str, list[str]] = Field(default_factory=list)
-    llm_type: LLMType = LLMType.NATURAL_LANGUAGE
+    llm_type: Union[str, LLMType] = LLMType.NATURAL_LANGUAGE
     data_config: DataConfig = Field(default_factory=lambda: DataConfig(type="text"))
 
     @property
@@ -89,12 +89,16 @@ class GeneratedDataColumn(BaseModel):
         Returns:
             System prompt string.
         """
-        return system_prompt_dict[self.llm_type].format(
-            special_instructions=(
-                ""
-                if special_system_instructions is None
-                else f"\n{special_system_instructions}\n"
+        return (
+            system_prompt_dict[self.llm_type].format(
+                special_instructions=(
+                    ""
+                    if special_system_instructions is None
+                    else f"\n{special_system_instructions}\n"
+                )
             )
+            if self.llm_type in system_prompt_dict
+            else system_prompt_dict["base"]
         )
 
     def to_generation_task(
@@ -115,7 +119,7 @@ class GeneratedDataColumn(BaseModel):
             prompt_template=self.prompt_template,
             response_column_name=self.name,
             workflow_label=f"generating {self.name}",
-            llm_type=self.llm_type,
+            model_alias=self.llm_type,
             system_prompt=self.get_system_prompt(special_system_instructions),
             data_config=self.data_config,
             client=client,

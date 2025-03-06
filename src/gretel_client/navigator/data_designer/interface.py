@@ -42,8 +42,10 @@ from gretel_client.navigator.tasks.types import (
     DataConfig,
     DEFAULT_MODEL_SUITE,
     EvaluationType,
+    GenerationParameters,
     LLMJudgePromptTemplateType,
     LLMType,
+    ModelConfig,
     ModelSuite,
     SeedCategory,
     SeedSubcategory,
@@ -215,6 +217,7 @@ class DataDesigner:
         dd = cls(
             special_system_instructions=config.get("special_system_instructions"),
             model_suite=config.get("model_suite", DEFAULT_MODEL_SUITE),
+            model_configs=config.get("model_configs"),
             session=session,
             **session_kwargs,
         )
@@ -250,6 +253,7 @@ class DataDesigner:
                     )
                     code_lang = processor["settings"].get("code_lang")
                 elif "evaluator" in processor:
+                    model_alias = processor.get("model_alias", LLMType.JUDGE)
                     settings = processor["settings"].copy()
                     if processor["evaluator"] in list(LLMJudgePromptTemplateType):
                         settings["instruction_column_name"] = settings.pop(
@@ -262,7 +266,11 @@ class DataDesigner:
                         eval_type = LLMJudgePromptTemplateType(
                             processor["evaluator"]
                         ).value
-                    dd.add_evaluator(eval_type=processor["evaluator"], **settings)
+                    dd.add_evaluator(
+                        eval_type=processor["evaluator"],
+                        model_alias=model_alias,
+                        **settings,
+                    )
                 if code_lang and eval_type:
                     if (code_lang in SQL_DIALECTS and eval_type != "text_to_sql") or (
                         code_lang == "python" and eval_type != "text_to_python"
@@ -281,6 +289,7 @@ class DataDesigner:
         self,
         *,
         model_suite: ModelSuite = DEFAULT_MODEL_SUITE,
+        model_configs: Optional[list[ModelConfig]] = None,
         special_system_instructions: Optional[str] = None,
         session: Optional[ClientConfig] = None,
         **session_kwargs,
@@ -300,6 +309,7 @@ class DataDesigner:
         datetime_label = datetime.now().isoformat(timespec="seconds")
         self._workflow_kwargs = {
             "model_suite": check_model_suite(model_suite),
+            "model_configs": model_configs,
             "client": self._client,
             "workflow_name": f"{self.__class__.__name__}-{datetime_label}",
         }
@@ -512,7 +522,10 @@ class DataDesigner:
             raise ValueError(f"Unknown validator type: {validator}")
 
     def add_evaluator(
-        self, eval_type: Union[EvaluationType, LLMJudgePromptTemplateType], **settings
+        self,
+        eval_type: Union[EvaluationType, LLMJudgePromptTemplateType],
+        model_alias: Union[str, LLMType],
+        **settings,
     ) -> None:
         """Add a dataset evaluation task to the data design.
 
@@ -533,6 +546,7 @@ class DataDesigner:
             instruction_column_name = settings.get("instruction_column_name")
             response_column_name = settings.get("response_column_name")
             self._evaluators["judge_with_llm"] = JudgeWithLLM(
+                model_alias=model_alias,
                 judge_template_type=eval_type,
                 instruction_column_name=instruction_column_name,
                 response_column_name=response_column_name,
