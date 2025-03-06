@@ -30,6 +30,7 @@ from gretel_client.navigator.tasks.types import (
     CodeLang,
     DEFAULT_MODEL_SUITE,
     LLMJudgePromptTemplateType,
+    ModelConfig,
     ModelSuite,
 )
 from gretel_client.projects.projects import get_project
@@ -432,6 +433,7 @@ class DataDesignerWorkflow:
         *,
         steps: Optional[list[Step]] = None,
         model_suite: ModelSuite = DEFAULT_MODEL_SUITE,
+        model_configs: Optional[ModelConfig] = None,
         workflow_name: Optional[str] = None,
         fetch_task_io: bool = True,
     ):
@@ -446,6 +448,8 @@ class DataDesignerWorkflow:
             "num_records": 10,
             "model_suite": self._model_suite,
         }
+        if model_configs is not None:
+            self._globals["model_configs"] = model_configs
         self._task_io = {}
         if fetch_task_io:
             self._task_io = get_task_io_map(self._client)

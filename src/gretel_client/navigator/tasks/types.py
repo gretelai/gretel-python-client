@@ -41,6 +41,31 @@ def check_model_suite(model_suite: Union[ModelSuite, str]) -> str:
     return model_suite
 
 
+class GenerationParameters(BaseModel):
+    temperature: float
+    top_p: float
+
+
+class ModelConfig(BaseModel):
+    alias: str
+    model_name: str
+    generation_parameters: GenerationParameters
+
+
+class LLMType(str, Enum):
+    NATURAL_LANGUAGE = "natural_language"
+    CODE = "code"
+    JUDGE = "judge"
+
+
+class TaskConfigWithModelAlias(BaseModel):
+    model_alias: Union[str, LLMType] = LLMType.NATURAL_LANGUAGE
+
+    @field_serializer("model_alias")
+    def serialize_model_alias(self, model_alias: Union[str, LLMType]) -> str:
+        return model_alias.value if isinstance(model_alias, LLMType) else model_alias
+
+
 class OutputColumnType(str, Enum):
     TEXT = "text"
     CODE = "code"
@@ -105,12 +130,6 @@ class DataConfig(BaseModel):
 class SystemPromptType(str, Enum):
     REFLECTION = "reflection"
     COGNITION = "cognition"
-
-
-class LLMType(str, Enum):
-    NATURAL_LANGUAGE = "natural_language"
-    CODE = "code"
-    JUDGE = "judge"
 
 
 class TextParserType(str, Enum):

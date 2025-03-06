@@ -93,6 +93,7 @@ You are particularly adept at writing natural language. \
 You must judge in English only."""
 
 system_prompt_dict = {
+    "base": DATA_DESIGNER_BASE_SYSTEM_PROMPT,
     "natural_language": DATA_DESIGNER_NL_SYSTEM_PROMPT,
     "code": DATA_DESIGNER_CODE_SYSTEM_PROMPT,
     "judge": DATA_DESIGNER_JUDGE_SYSTEM_PROMPT,
