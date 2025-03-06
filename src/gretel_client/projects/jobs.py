@@ -462,29 +462,20 @@ class Job(ABC):
         if report_path:
             report_contents = self._get_report_contents(report_path=report_path)
         else:
-            try:
-                if self.model_type == "gpt_x":
+            for artifact_type in [
+                "report_json",
+                "text_metrics_report_json",
+                "classification_report_json",
+                "regression_report_json",
+            ]:
+                try:
                     report_contents = self._get_report_contents(
-                        artifact_type="text_metrics_report_json"
+                        artifact_type=artifact_type
                     )
-                elif self.model_type == "evaluate":
-                    for artifact_type in [
-                        "report_json",
-                        "classification_report_json",
-                        "regression_report_json",
-                        "text_metrics_report_json",
-                    ]:
-                        report_contents = self._get_report_contents(
-                            artifact_type=artifact_type
-                        )
-                        if report_contents:
-                            break
-                else:
-                    report_contents = self._get_report_contents(
-                        artifact_type="report_json"
-                    )
-            except Exception:
-                pass
+                    if report_contents:
+                        break
+                except Exception:
+                    pass
         return report_contents
 
     def _peek_report(self, report_contents: dict) -> Optional[dict]:
