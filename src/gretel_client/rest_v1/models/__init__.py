@@ -114,6 +114,9 @@ from gretel_client.rest_v1.models.validate_workflow_config_request import (
 )
 from gretel_client.rest_v1.models.workflow import Workflow
 from gretel_client.rest_v1.models.workflow_run import WorkflowRun
+from gretel_client.rest_v1.models.workflow_run_billing_summary import (
+    WorkflowRunBillingSummary,
+)
 from gretel_client.rest_v1.models.workflow_run_cancellation_request import (
     WorkflowRunCancellationRequest,
 )
