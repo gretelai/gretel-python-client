@@ -169,7 +169,7 @@ class DataDesigner:
         wait_for_completion: bool = True,
         session: Optional[ClientConfig] = None,
         **session_kwargs,
-    ) -> TaskOutput:
+    ) -> Optional[TaskOutput]:
         """Utility method to fetch the output from a specific step in a previously run batch job.
 
         Args:
