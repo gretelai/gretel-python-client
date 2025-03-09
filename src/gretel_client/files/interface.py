@@ -8,6 +8,7 @@ from typing import BinaryIO, IO, Optional, Union
 import pandas as pd
 import pydantic
 import requests
+import smart_open
 
 from gretel_client.config import (
     ClientConfig,
@@ -45,7 +46,9 @@ class FileClient:
     Provides methods for uploading, deleting files.
     """
 
-    def __init__(self, session: Optional[ClientConfig] = None):
+    def __init__(
+        self, session: Optional[ClientConfig] = None, api_endpoint: Optional[str] = None
+    ):
         """
         Initializes the FileClient.
 
@@ -53,8 +56,9 @@ class FileClient:
             session: The client session to use for API interactions, or ``None`` to use the
             default session.
         """
+        # todo: we can replace both these with the GretelApiFactory
         self.session = session or get_session_config()
-        self.api_endpoint = get_data_plane_endpoint(self.session)
+        self.api_endpoint = api_endpoint or get_data_plane_endpoint(self.session)
 
     def upload(
         self, file: Union[IO[bytes], BinaryIO, pd.DataFrame, Path, str], purpose: str
@@ -110,16 +114,7 @@ class FileClient:
             return self.upload(tmp_file, purpose)
 
     def _upload_file_path(self, file: Union[Path, str], purpose: str):
-        if isinstance(file, (Path, str)):
-            file = Path(file)
-
-        if not file.is_file():
-            raise FileNotFoundError(
-                f"Could not find file at path: {file}, please check the path and try again. If you want to upload the "
-                "string contents as a file, please encode that string as bytes."
-            )
-
-        with open(file, "rb") as file_handle:
+        with smart_open.open(file, "rb") as file_handle:
             return self.upload(file_handle, purpose)
 
     def get(self, file_id: str) -> File:

@@ -1,7 +1,6 @@
 # AUTO-GENERATED FILE, DO NOT EDIT DIRECTLY
-import inspect
 
-from typing import Any, cast, Type, TypeVar
+from typing import Any
 
 from gretel_client.workflows.configs import tasks
 
@@ -27,6 +26,7 @@ class Registry(metaclass=RegistryMeta):
     TestOptionalArgTask = tasks.TestOptionalArgTask
     TestRequiredAndOptionalArgsTask = tasks.TestRequiredAndOptionalArgsTask
     TestTaskCallingTask = tasks.TestTaskCallingTask
+    EvaluateSsDataset = tasks.EvaluateSsDataset
     Holdout = tasks.Holdout
     JudgeWithLlm = tasks.JudgeWithLlm
     GenerateColumnsUsingSamplers = tasks.GenerateColumnsUsingSamplers
@@ -37,9 +37,9 @@ class Registry(metaclass=RegistryMeta):
     GenerateSeedCategoryValues = tasks.GenerateSeedCategoryValues
     TabularGan = tasks.TabularGan
     TabularFt = tasks.TabularFt
+    Transform = tasks.Transform
     GenerateFromTextFt = tasks.GenerateFromTextFt
     TextFt = tasks.TextFt
     TrainTextFt = tasks.TrainTextFt
     PromptPretrainedModel = tasks.PromptPretrainedModel
-
 

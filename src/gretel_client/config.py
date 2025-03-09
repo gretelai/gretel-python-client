@@ -21,6 +21,8 @@ from urllib3 import HTTPResponse
 from urllib3.exceptions import MaxRetryError
 from urllib3.util import Retry
 
+from gretel_client._api.api_client import ApiClient as V2ApiClient
+from gretel_client._api.configuration import Configuration as V2Configuration
 from gretel_client.rest.api.projects_api import ProjectsApi
 from gretel_client.rest.api.users_api import UsersApi
 from gretel_client.rest.api_client import ApiClient
@@ -135,9 +137,11 @@ class PreviewFeatures(Enum):
 class GretelClientConfigurationError(Exception): ...
 
 
-T = TypeVar("T", bound=Type)
-ClientT = TypeVar("ClientT", bound=Union[ApiClient, V1ApiClient])
-ConfigT = TypeVar("ConfigT", bound=Union[Configuration, V1Configuration])
+T = TypeVar("T")
+ClientT = TypeVar("ClientT", bound=Union[ApiClient, V1ApiClient, V2ApiClient])
+ConfigT = TypeVar(
+    "ConfigT", bound=Union[Configuration, V1Configuration, V2Configuration]
+)
 
 
 class RunnerMode(str, Enum):

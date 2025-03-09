@@ -5,22 +5,24 @@ from __future__ import annotations
 from enum import Enum
 from typing import Annotated, Any, Dict, List, Optional, Union
 
-from pydantic import BaseModel, Field, RootModel
+from pydantic import Field, RootModel
+
+from gretel_client.workflows.configs.base import ConfigBase
 
 
-class Combiner(BaseModel):
+class Combiner(ConfigBase):
     pass
 
 
-class DummyTaskWithInputs(BaseModel):
+class DummyTaskWithInputs(ConfigBase):
     num_records: Annotated[Optional[int], Field(title="Num Records")] = 5
 
 
-class DummyTaskWithListOfInputs(BaseModel):
+class DummyTaskWithListOfInputs(ConfigBase):
     num_records: Annotated[Optional[int], Field(title="Num Records")] = 5
 
 
-class EvaluateDataset(BaseModel):
+class EvaluateDataset(ConfigBase):
     seed_columns: Annotated[List[str], Field(title="Seed Columns")]
     ordered_list_like_columns: Annotated[
         Optional[List[str]], Field(title="Ordered List Like Columns")
@@ -34,12 +36,28 @@ class EvaluateDataset(BaseModel):
     ] = None
 
 
+class EvaluateSsDataset(ConfigBase):
+    skip_aia: Annotated[Optional[bool], Field(title="Skip Aia")] = False
+    aia_quasi_identifier_count: Annotated[
+        Optional[int], Field(gt=0, title="Aia Quasi Identifier Count")
+    ] = 3
+    skip_mia: Annotated[Optional[bool], Field(title="Skip Mia")] = False
+    mia_column_name: Annotated[Optional[str], Field(title="Mia Column Name")] = None
+    skip_pii_replay: Annotated[Optional[bool], Field(title="Skip Pii Replay")] = False
+    pii_replay_entities: Annotated[
+        Optional[List[str]], Field(title="Pii Replay Entities")
+    ] = None
+    pii_replay_columns: Annotated[
+        Optional[List[str]], Field(title="Pii Replay Columns")
+    ] = None
+
+
 class SystemPromptType(str, Enum):
     reflection = "reflection"
     cognition = "cognition"
 
 
-class ExtractDataSeedsFromSampleRecords(BaseModel):
+class ExtractDataSeedsFromSampleRecords(ConfigBase):
     model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
     sample_records: Annotated[List[Dict[str, Any]], Field(title="Sample Records")]
     max_num_seeds: Annotated[
@@ -53,10 +71,21 @@ class ExtractDataSeedsFromSampleRecords(BaseModel):
     num_samples: Annotated[Optional[int], Field(title="Num Samples")] = 25
 
 
-class LLMAlias(str, Enum):
+class GenerationParameters(ConfigBase):
+    temperature: Annotated[float, Field(title="Temperature")]
+    top_p: Annotated[float, Field(title="Top P")]
+
+
+class ModelAlias(str, Enum):
     natural_language = "natural_language"
     code = "code"
     judge = "judge"
+
+
+class ModelConfig(ConfigBase):
+    alias: Annotated[str, Field(title="Alias")]
+    model_name: Annotated[str, Field(title="Model Name")]
+    generation_parameters: GenerationParameters
 
 
 class OutputType(str, Enum):
@@ -70,11 +99,11 @@ class ConstraintType(str, Enum):
     column_inequality = "column_inequality"
 
 
-class DataSourceParams(BaseModel):
+class DataSourceParams(ConfigBase):
     pass
 
 
-class SerializableConstraint(BaseModel):
+class SerializableConstraint(ConfigBase):
     column_name: Annotated[str, Field(title="Column Name")]
     constraint_type: ConstraintType
     params: Annotated[Dict[str, Union[float, str]], Field(title="Params")]
@@ -95,7 +124,7 @@ class SourceType(str, Enum):
     uuid = "uuid"
 
 
-class GenerateDatasetFromSampleRecords(BaseModel):
+class GenerateDatasetFromSampleRecords(ConfigBase):
     model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
     sample_records: Annotated[List[Dict[str, Any]], Field(title="Sample Records")]
     target_num_records: Annotated[
@@ -114,7 +143,7 @@ class GenerateDatasetFromSampleRecords(BaseModel):
     dataset_context: Annotated[Optional[str], Field(title="Dataset Context")] = ""
 
 
-class GenerateFromTextFt(BaseModel):
+class GenerateFromTextFt(ConfigBase):
     seed_records_multiplier: Annotated[
         Optional[int],
         Field(
@@ -214,7 +243,7 @@ class NumNewValuesToGenerate(RootModel[int]):
     root: Annotated[int, Field(gt=0, le=25, title="Num New Values To Generate")]
 
 
-class SeedSubcategory(BaseModel):
+class SeedSubcategory(ConfigBase):
     name: Annotated[str, Field(title="Name")]
     description: Annotated[Optional[str], Field(title="Description")] = None
     num_new_values_to_generate: Annotated[
@@ -229,17 +258,17 @@ class SeedSubcategory(BaseModel):
     ] = {}
 
 
-class GetGretelDataset(BaseModel):
+class GetGretelDataset(ConfigBase):
     name: Annotated[str, Field(title="Name")]
 
 
-class Holdout(BaseModel):
+class Holdout(ConfigBase):
     holdout: Annotated[Optional[Union[float, int]], Field(title="Holdout")] = 0.05
     max_holdout: Annotated[Optional[int], Field(title="Max Holdout")] = 2000
     group_by: Annotated[Optional[str], Field(title="Group By")] = None
 
 
-class IdGenerator(BaseModel):
+class IdGenerator(ConfigBase):
     num_records: Annotated[Optional[int], Field(title="Num Records")] = 5
 
 
@@ -248,8 +277,14 @@ class LLMJudgePromptTemplateType(str, Enum):
     text_to_sql = "text_to_sql"
 
 
-class JudgeWithLlm(BaseModel):
+class JudgeWithLlm(ConfigBase):
     model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
+    model_configs: Annotated[
+        Optional[List[ModelConfig]], Field(title="Model Configs")
+    ] = None
+    model_alias: Annotated[
+        Optional[Union[str, ModelAlias]], Field(title="Model Alias")
+    ] = "judge"
     judge_template_type: LLMJudgePromptTemplateType
     instruction_column_name: Annotated[str, Field(title="Instruction Column Name")]
     response_column_name: Annotated[str, Field(title="Response Column Name")]
@@ -261,14 +296,14 @@ class JudgeWithLlm(BaseModel):
     ] = 100
 
 
-class NameGenerator(BaseModel):
+class NameGenerator(ConfigBase):
     column_name: Annotated[Optional[str], Field(title="Column Name")] = "name"
     num_records: Annotated[Optional[int], Field(title="Num Records")] = 5
     seed: Annotated[Optional[int], Field(title="Seed")] = None
     should_fail: Annotated[Optional[bool], Field(title="Should Fail")] = False
 
 
-class GenerateParams(BaseModel):
+class GenerateParams(ConfigBase):
     seed_records_multiplier: Annotated[
         Optional[int],
         Field(
@@ -350,7 +385,7 @@ class GenerateParams(BaseModel):
     ] = False
 
 
-class PromptPretrainedModel(BaseModel):
+class PromptPretrainedModel(ConfigBase):
     pretrained_model: Annotated[
         Optional[str],
         Field(
@@ -368,11 +403,11 @@ class PromptPretrainedModel(BaseModel):
     generate: Optional[GenerateParams] = None
 
 
-class SampleDataSeeds(BaseModel):
+class SampleDataSeeds(ConfigBase):
     num_records: Annotated[Optional[int], Field(title="Num Records")] = 10
 
 
-class SeedFromRecords(BaseModel):
+class SeedFromRecords(ConfigBase):
     records: Annotated[List[Dict[str, Any]], Field(title="Records")]
 
 
@@ -385,7 +420,7 @@ class LRScheduler(str, Enum):
     constant_with_warmup = "constant_with_warmup"
 
 
-class NavigatorFTGenerateStopParams(BaseModel):
+class NavigatorFTGenerateStopParams(ConfigBase):
     patience: Annotated[
         Optional[int],
         Field(
@@ -421,7 +456,7 @@ class Delta1(str, Enum):
     auto = "auto"
 
 
-class NavigatorFTPrivacyParams(BaseModel):
+class NavigatorFTPrivacyParams(ConfigBase):
     dp: Annotated[
         Optional[bool],
         Field(
@@ -470,7 +505,7 @@ class NumInputRecordsToSample1(str, Enum):
     auto = "auto"
 
 
-class NavigatorFTTrainingParams(BaseModel):
+class NavigatorFTTrainingParams(ConfigBase):
     num_input_records_to_sample: Annotated[
         Optional[Union[NumInputRecordsToSample, NumInputRecordsToSample1]],
         Field(
@@ -570,7 +605,7 @@ class MaxSequencesPerExample(str, Enum):
     auto = "auto"
 
 
-class TrainTabularFTConfig(BaseModel):
+class TrainTabularFTConfig(ConfigBase):
     group_training_examples_by: Annotated[
         Optional[Union[str, List[str]]],
         Field(
@@ -623,7 +658,7 @@ class FilterLevel(str, Enum):
     auto = "auto"
 
 
-class GenerateFromTabularGANConfig(BaseModel):
+class GenerateFromTabularGANConfig(ConfigBase):
     num_records: Annotated[
         Optional[int],
         Field(
@@ -648,29 +683,29 @@ class GenerateFromTabularGANConfig(BaseModel):
     ] = 10
 
 
-class PrivacyFilters(BaseModel):
+class PrivacyFilters(ConfigBase):
     outliers: Optional[FilterLevel] = "medium"
     similarity: Optional[FilterLevel] = "medium"
     max_iterations: Annotated[Optional[int], Field(title="Max Iterations")] = 10
 
 
-class TestFailingTask(BaseModel):
+class TestFailingTask(ConfigBase):
     num_records: Annotated[Optional[int], Field(title="Num Records")] = 5
 
 
-class TestOptionalArgTask(BaseModel):
+class TestOptionalArgTask(ConfigBase):
     pass
 
 
-class TestRequiredAndOptionalArgsTask(BaseModel):
+class TestRequiredAndOptionalArgsTask(ConfigBase):
     pass
 
 
-class TestTaskCallingTask(BaseModel):
+class TestTaskCallingTask(ConfigBase):
     pass
 
 
-class GenerateFromTextFTConfig(BaseModel):
+class GenerateFromTextFTConfig(ConfigBase):
     seed_records_multiplier: Annotated[
         Optional[int],
         Field(
@@ -766,7 +801,7 @@ class GenerateFromTextFTConfig(BaseModel):
     ] = None
 
 
-class GptXModelHyperparams(BaseModel):
+class GptXModelHyperparams(ConfigBase):
     batch_size: Annotated[
         Optional[int],
         Field(
@@ -851,7 +886,7 @@ class GptXModelHyperparams(BaseModel):
     ] = None
 
 
-class PeftParams(BaseModel):
+class PeftParams(ConfigBase):
     lora_r: Annotated[
         Optional[int],
         Field(
@@ -894,7 +929,7 @@ class Delta3(str, Enum):
     auto = "auto"
 
 
-class PrivacyParams(BaseModel):
+class PrivacyParams(ConfigBase):
     dp: Annotated[
         Optional[bool],
         Field(
@@ -964,7 +999,7 @@ class Validation1(RootModel[float]):
     ]
 
 
-class TrainTextFTConfig(BaseModel):
+class TrainTextFTConfig(ConfigBase):
     pretrained_model: Annotated[
         Optional[str],
         Field(
@@ -991,7 +1026,7 @@ class TrainTextFTConfig(BaseModel):
     privacy_params: Optional[PrivacyParams] = None
 
 
-class TextFt(BaseModel):
+class TextFt(ConfigBase):
     train: TrainTextFTConfig
     generate: GenerateFromTextFTConfig
 
@@ -1018,7 +1053,7 @@ class Validation3(RootModel[float]):
     ]
 
 
-class TrainTextFt(BaseModel):
+class TrainTextFt(ConfigBase):
     pretrained_model: Annotated[
         Optional[str],
         Field(
@@ -1045,6 +1080,143 @@ class TrainTextFt(BaseModel):
     privacy_params: Optional[PrivacyParams] = None
 
 
+class ClassifyConfig(ConfigBase):
+    enable: Annotated[
+        Optional[bool],
+        Field(description="Enable column classification.", title="Enable"),
+    ] = None
+    entities: Annotated[
+        Optional[List[str]],
+        Field(description="List of entity types to classify.", title="Entities"),
+    ] = None
+    num_samples: Annotated[
+        Optional[int],
+        Field(
+            description="Number of column values to sample for classification.",
+            title="Num Samples",
+        ),
+    ] = 3
+
+
+class Position(RootModel[int]):
+    root: Annotated[int, Field(description="Column position.", ge=0, title="Position")]
+
+
+class PositionItem(RootModel[int]):
+    root: Annotated[int, Field(ge=0)]
+
+
+class Column(ConfigBase):
+    name: Annotated[Optional[str], Field(description="Column name.", title="Name")] = (
+        None
+    )
+    position: Annotated[
+        Optional[Union[Position, List[PositionItem]]],
+        Field(description="Column position.", title="Position"),
+    ] = None
+    condition: Annotated[
+        Optional[str], Field(description="Column condition.", title="Condition")
+    ] = None
+    value: Annotated[
+        Optional[str], Field(description="Rename to value.", title="Value")
+    ] = None
+    entity: Annotated[
+        Optional[Union[str, List[str]]],
+        Field(description="Column entity match.", title="Entity"),
+    ] = None
+    type: Annotated[
+        Optional[Union[str, List[str]]],
+        Field(description="Column type match.", title="Type"),
+    ] = None
+
+
+class ColumnActions(ConfigBase):
+    add: Annotated[
+        Optional[List[Column]], Field(description="Columns to add.", title="Add")
+    ] = None
+    drop: Annotated[
+        Optional[List[Column]], Field(description="Columns to drop.", title="Drop")
+    ] = None
+    rename: Annotated[
+        Optional[List[Column]], Field(description="Columns to rename", title="Rename")
+    ] = None
+
+
+class NERConfig(ConfigBase):
+    ner_threshold: Annotated[
+        Optional[float],
+        Field(description="NER model threshold.", title="Ner Threshold"),
+    ] = 0.7
+    ner_optimized: Annotated[
+        Optional[bool],
+        Field(
+            description="Whether or not NER runs in an optimized mode (i.e. with a GPU)",
+            title="Ner Optimized",
+        ),
+    ] = True
+    enable_regexps: Annotated[
+        Optional[bool],
+        Field(
+            description="Enable NER regular expressions (experimental)",
+            title="Enable Regexps",
+        ),
+    ] = False
+    enable_gliner: Annotated[
+        Optional[bool],
+        Field(description="Enable gliner NER module", title="Enable Gliner"),
+    ] = True
+
+
+class Row(ConfigBase):
+    name: Annotated[
+        Optional[Union[str, List[str]]], Field(description="Row name.", title="Name")
+    ] = None
+    condition: Annotated[
+        Optional[str], Field(description="Row condition match.", title="Condition")
+    ] = None
+    foreach: Annotated[
+        Optional[str], Field(description="Foreach expression.", title="Foreach")
+    ] = None
+    value: Annotated[
+        Optional[str], Field(description="Row value definition.", title="Value")
+    ] = None
+    entity: Annotated[
+        Optional[Union[str, List[str]]],
+        Field(description="Row entity match.", title="Entity"),
+    ] = None
+    type: Annotated[
+        Optional[Union[str, List[str]]],
+        Field(description="Row type match.", title="Type"),
+    ] = None
+    fallback_value: Annotated[
+        Optional[str], Field(description="Row fallback value.", title="Fallback Value")
+    ] = None
+
+
+class RowActions(ConfigBase):
+    drop: Annotated[
+        Optional[List[Row]], Field(description="Rows to drop.", title="Drop")
+    ] = None
+    update: Annotated[
+        Optional[List[Row]], Field(description="Rows to update.", title="Update")
+    ] = None
+
+
+class StepDefinition(ConfigBase):
+    vars: Annotated[
+        Optional[Dict[str, Union[str, Dict[str, Any], List]]],
+        Field(description="Variable names and templates.", title="Vars"),
+    ] = None
+    columns: Annotated[
+        Optional[ColumnActions],
+        Field(description="Columns transform configuration.", title="Columns"),
+    ] = None
+    rows: Annotated[
+        Optional[RowActions],
+        Field(description="Rows transform configurations.", title="Rows"),
+    ] = None
+
+
 class CodeLang(str, Enum):
     python = "python"
     sqlite = "sqlite"
@@ -1055,28 +1227,33 @@ class CodeLang(str, Enum):
     ansi = "ansi"
 
 
-class ValidateCode(BaseModel):
+class ValidateCode(ConfigBase):
     code_lang: CodeLang
     code_columns: Annotated[Optional[List[str]], Field(title="Code Columns")] = ["code"]
 
 
-class DataConfig(BaseModel):
+class DataConfig(ConfigBase):
     type: Optional[OutputType] = "text"
     params: Annotated[Optional[Dict[str, Any]], Field(title="Params")] = None
 
 
-class GenerateColumnFromTemplate(BaseModel):
+class GenerateColumnFromTemplate(ConfigBase):
     model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
+    model_configs: Annotated[
+        Optional[List[ModelConfig]], Field(title="Model Configs")
+    ] = None
+    model_alias: Annotated[
+        Optional[Union[str, ModelAlias]], Field(title="Model Alias")
+    ] = "natural_language"
     prompt_template: Annotated[str, Field(title="Prompt Template")]
     response_column_name: Annotated[
         Optional[str], Field(title="Response Column Name")
     ] = "response"
     system_prompt: Annotated[Optional[str], Field(title="System Prompt")] = None
-    llm_type: Optional[LLMAlias] = "natural_language"
     data_config: DataConfig
 
 
-class ConditionalDataColumn(BaseModel):
+class ConditionalDataColumn(ConfigBase):
     name: Annotated[str, Field(title="Name")]
     conditional_params: Annotated[
         Optional[Dict[str, Union[Dict[str, Any], DataSourceParams]]],
@@ -1087,7 +1264,7 @@ class ConditionalDataColumn(BaseModel):
     params: Annotated[Union[Dict[str, Any], DataSourceParams], Field(title="Params")]
 
 
-class ConditionalDataColumnFromDefinition(BaseModel):
+class ConditionalDataColumnFromDefinition(ConfigBase):
     name: Annotated[str, Field(title="Name")]
     conditional_params: Annotated[
         Optional[Dict[str, Union[Dict[str, Any], DataSourceParams]]],
@@ -1097,7 +1274,7 @@ class ConditionalDataColumnFromDefinition(BaseModel):
     definition: Annotated[str, Field(title="Definition")]
 
 
-class DataSchema(BaseModel):
+class DataSchema(ConfigBase):
     columns: Annotated[
         List[Union[ConditionalDataColumn, ConditionalDataColumnFromDefinition]],
         Field(min_length=1, title="Columns"),
@@ -1107,7 +1284,7 @@ class DataSchema(BaseModel):
     ] = []
 
 
-class GenerateColumnsUsingSamplers(BaseModel):
+class GenerateColumnsUsingSamplers(ConfigBase):
     data_schema: DataSchema
     num_records: Annotated[int, Field(title="Num Records")]
     max_rejections_factor: Annotated[
@@ -1115,7 +1292,7 @@ class GenerateColumnsUsingSamplers(BaseModel):
     ] = 5
 
 
-class SeedCategory(BaseModel):
+class SeedCategory(ConfigBase):
     name: Annotated[str, Field(title="Name")]
     description: Annotated[Optional[str], Field(title="Description")] = None
     values: Annotated[Optional[List[Union[str, int, bool]]], Field(title="Values")] = []
@@ -1132,20 +1309,26 @@ class SeedCategory(BaseModel):
     ] = []
 
 
-class GenerateSeedCategoryValues(BaseModel):
+class GenerateSeedCategoryValues(ConfigBase):
     model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
+    model_configs: Annotated[
+        Optional[List[ModelConfig]], Field(title="Model Configs")
+    ] = None
+    model_alias: Annotated[
+        Optional[Union[str, ModelAlias]], Field(title="Model Alias")
+    ] = "natural_language"
     seed_categories: Annotated[List[SeedCategory], Field(title="Seed Categories")]
     dataset_context: Annotated[Optional[str], Field(title="Dataset Context")] = ""
 
 
-class LoadDataSeeds(BaseModel):
+class LoadDataSeeds(ConfigBase):
     seed_categories: Annotated[List[SeedCategory], Field(title="Seed Categories")]
     dataset_schema_map: Annotated[
         Optional[Dict[str, Any]], Field(title="Dataset Schema Map")
     ] = None
 
 
-class GenerateFromTabularFTConfig(BaseModel):
+class GenerateFromTabularFTConfig(ConfigBase):
     num_records: Annotated[
         Optional[int],
         Field(
@@ -1195,12 +1378,12 @@ class GenerateFromTabularFTConfig(BaseModel):
     ] = False
 
 
-class TabularFt(BaseModel):
+class TabularFt(ConfigBase):
     train: Optional[TrainTabularFTConfig] = None
     generate: Optional[GenerateFromTabularFTConfig] = None
 
 
-class ActganModelHyperparams(BaseModel):
+class ActganModelHyperparams(ConfigBase):
     embedding_dim: Annotated[Optional[int], Field(title="Embedding Dim")] = 128
     generator_dim: Annotated[Optional[List[int]], Field(title="Generator Dim")] = None
     discriminator_dim: Annotated[
@@ -1249,11 +1432,73 @@ class ActganModelHyperparams(BaseModel):
     ] = "auto"
 
 
-class TrainTabularGANConfig(BaseModel):
+class TrainTabularGANConfig(ConfigBase):
     privacy_filters: Optional[PrivacyFilters] = None
     params: Optional[ActganModelHyperparams] = None
 
 
-class TabularGan(BaseModel):
+class TabularGan(ConfigBase):
     train: Optional[TrainTabularGANConfig] = None
     generate: Optional[GenerateFromTabularGANConfig] = None
+
+
+class Globals(ConfigBase):
+    locales: Annotated[
+        Optional[List[str]],
+        Field(description="list of locales.", examples=["en_US"], title="Locales"),
+    ] = None
+    seed: Annotated[
+        Optional[int],
+        Field(
+            description="Optional random seed.",
+            gt=-2147483647,
+            lt=2147483647,
+            title="Seed",
+        ),
+    ] = None
+    classify: Annotated[
+        Optional[ClassifyConfig],
+        Field(description="Column classification configuration", title="Classify"),
+    ] = {"enable": None, "entities": None, "num_samples": 3}
+    ner: Annotated[
+        Optional[NERConfig],
+        Field(description="Named Entity Recognition configuration", title="Ner"),
+    ] = {
+        "ner_threshold": 0.7,
+        "ner_optimized": True,
+        "enable_regexps": False,
+        "enable_gliner": True,
+    }
+    lock_columns: Annotated[
+        Optional[List[str]],
+        Field(
+            description="List of columns to preserve as immutable across all transformations.",
+            title="Lock Columns",
+        ),
+    ] = None
+
+
+class Transform(ConfigBase):
+    globals: Annotated[
+        Optional[Globals], Field(description="Global config options.", title="Globals")
+    ] = {
+        "locales": None,
+        "seed": None,
+        "classify": {"enable": None, "entities": None, "num_samples": 3},
+        "ner": {
+            "ner_threshold": 0.7,
+            "ner_optimized": True,
+            "enable_regexps": False,
+            "enable_gliner": True,
+        },
+        "lock_columns": None,
+    }
+    steps: Annotated[
+        List[StepDefinition],
+        Field(
+            description="list of transform steps to perform on input.",
+            max_length=10,
+            min_length=1,
+            title="Steps",
+        ),
+    ]

@@ -207,7 +207,7 @@ class DataDesignerBatchJob:
 
     @property
     def workflow_run_status(self) -> str:
-        return self._get_statuses()[0]
+        return self._get_run().status
 
     def _check_if_step_exists(self, step_name: str) -> None:
         if step_name not in self.workflow_step_names:
@@ -249,11 +249,9 @@ class DataDesignerBatchJob:
         output_format: str,
         wait_for_completion: bool = False,
         **kwargs,
-    ) -> Optional[TaskOutput]:
-        statuses = self._get_statuses(step_name)
-        run_status, step_status = statuses
-
-        if step_status == "RUN_STATUS_COMPLETED":
+    ) -> TaskOutput:
+        status = self.get_step_status(step_name)
+        if status == "RUN_STATUS_COMPLETED":
             if output_format == "parquet":
                 logger.info(f"💿 Fetching dataset from workflow step `{step_name}`")
                 return self._get_step_output(step_name, output_format=output_format)
@@ -272,49 +270,43 @@ class DataDesignerBatchJob:
                 return self._get_step_output(step_name, output_format=output_format)
             else:
                 raise ValueError(f"Unknown output type: {output_format}")
-
-        if any(
-            status in {"RUN_STATUS_ERROR", "RUN_STATUS_LOST"} for status in statuses
-        ):
+        elif status in {"RUN_STATUS_ERROR", "RUN_STATUS_LOST"}:
             logger.error("🛑 Workflow run failed. Cannot fetch step output.")
-            return None
-        elif any(
-            status in {"RUN_STATUS_CANCELLING", "RUN_STATUS_CANCELLED"}
-            for status in statuses
-        ):
+        elif status in {"RUN_STATUS_CANCELLING", "RUN_STATUS_CANCELLED"}:
             logger.warning("⚠️ Workflow run was cancelled.")
-            return None
-
-        if wait_for_completion:
-            logger.info(f"⏳ Waiting for workflow step `{step_name}` to complete...")
-            self.wait_for_completion(step_name)
-            return self._fetch_artifact(step_name, output_format, **kwargs)
+        elif status in {
+            "RUN_STATUS_PENDING",
+            "RUN_STATUS_CREATED",
+            "RUN_STATUS_ACTIVE",
+            "RUN_STATUS_UNKNOWN",
+        }:
+            if wait_for_completion:
+                logger.info(
+                    f"⏳ Waiting for workflow step `{step_name}` to complete..."
+                )
+                self.wait_for_completion(step_name)
+                return self._fetch_artifact(step_name, output_format, **kwargs)
+            else:
+                logger.warning(
+                    f"🏗️ We are still building the requested artifact from step '{step_name}'. "
+                    "Set `wait_for_completion=True` to wait for the step to complete. "
+                    f"Workflow status: {self.workflow_run_status}."
+                )
         else:
-            logger.warning(
-                f"🏗️ We are still building the requested artifact from step '{step_name}'. "
-                "Set `wait_for_completion=True` to wait for the step to complete. "
-                f"Workflow status: {run_status}"
-            )
-            return None
+            logger.error(f"Unknown step status: {status}")
 
-    def _get_statuses(self, step_name: Optional[str] = None) -> tuple[str, str]:
-        """
-        Fetches run info from the API and returns a tuple of the
-        run and step statuses
-        """
-        run = self._get_run()
-        run_status = run.status
-
-        step_status = "RUN_STATUS_UNKNOWN"
-        if step_name:
-            self._check_if_step_exists(step_name)
-            step_summary = [a for a in run.actions if a.name == step_name][0]
-            step_status = step_summary.status
-
-        return (run_status, step_status)
+    def _reached_terminal_status(self, step_name: Optional[str] = None) -> bool:
+        status = (
+            self.workflow_run_status
+            if step_name is None
+            else self.get_step_status(step_name)
+        )
+        return status in TERMINAL_STATUSES
 
     def get_step_status(self, step_name: str) -> str:
-        return self._get_statuses(step_name)[1]
+        self._check_if_step_exists(step_name)
+        run = self._get_run()
+        return [a for a in run.actions if a.name == step_name][0].status
 
     def poll_logs(self) -> None:
         print_logs_for_workflow_run(self.workflow_run_id, self._session)
@@ -323,8 +315,7 @@ class DataDesignerBatchJob:
         self._check_if_step_exists(step_name)
         logger.info(f"👀 Follow along -> {self.console_url}")
         while True:
-            run_status, step_status = self._get_statuses(step_name)
-            if run_status in TERMINAL_STATUSES or step_status in TERMINAL_STATUSES:
+            if self._reached_terminal_status(step_name):
                 break
             time.sleep(10)
 
@@ -335,7 +326,7 @@ class DataDesignerBatchJob:
         output_format: Optional[str] = None,
         wait_for_completion: bool = False,
         **kwargs,
-    ) -> Optional[TaskOutput]:
+    ) -> TaskOutput:
         self._check_if_step_exists(step_name)
         if output_format is None:
             output_format = (
@@ -348,7 +339,7 @@ class DataDesignerBatchJob:
             **kwargs,
         )
 
-    def fetch_dataset(self, *, wait_for_completion: bool = False) -> Optional[Dataset]:
+    def fetch_dataset(self, *, wait_for_completion: bool = False) -> Dataset:
         if self.last_dataset_step_name is None:
             raise ValueError("The Workflow did not contain a dataset.")
         return self._fetch_artifact(
@@ -365,7 +356,7 @@ class DataDesignerBatchJob:
     ) -> None:
         if self.last_evaluation_step_name is None:
             raise ValueError("The Workflow did not contain an evaluation step.")
-        self._fetch_artifact(
+        return self._fetch_artifact(
             step_name=self.last_evaluation_step_name,
             output_format="pdf",
             wait_for_completion=wait_for_completion,
