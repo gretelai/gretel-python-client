@@ -8,7 +8,7 @@ import webbrowser
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import List, Union
 
 import yaml
 
@@ -34,6 +34,7 @@ logger.setLevel(logging.INFO)
 class ReportType(str, Enum):
     """The kind of report to fetch."""
 
+    MULTI = "multi"
     SQS = "sqs"
     TEXT = "text"
     TRANSFORM = "transform"
@@ -41,6 +42,7 @@ class ReportType(str, Enum):
     @property
     def artifact_name(self) -> str:  # type: ignore
         names = {
+            ReportType.MULTI: "report",
             ReportType.SQS: "report",
             ReportType.TRANSFORM: "report",
             ReportType.TEXT: "text_metrics_report",
@@ -133,7 +135,7 @@ def fetch_model_report(
     with model.get_artifact_handle(report_type.artifact_name) as file:
         report_html = str(file.read(), encoding="utf-8")  # type: ignore
 
-    if report_type in [ReportType.SQS, ReportType.TEXT]:
+    if report_type in [ReportType.MULTI, ReportType.SQS, ReportType.TEXT]:
         return GretelDataQualityReport(as_dict=report_dict, as_html=report_html)
 
     return GretelReport(as_dict=report_dict, as_html=report_html)

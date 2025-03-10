@@ -131,7 +131,7 @@ CONFIG_SETUP_DICT = {
         model_name="gpt",
         config_sections=["params", "peft_params", "privacy_params", "generate"],
         data_source_optional=True,
-        report_type=ReportType.TEXT,
+        report_type=ReportType.SQS,
         extra_kwargs=[
             "pretrained_model",
             "prompt_template",

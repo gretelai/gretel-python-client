@@ -383,7 +383,13 @@ class Gretel:
                 and model.status == Status.COMPLETED
                 and not model_config_section.get("evaluate", {}).get("skip", False)
             ):
-                report = fetch_model_report(model, model_setup.report_type)
+                try:
+                    report = fetch_model_report(model, model_setup.report_type)
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to fetch {model_setup.report_type} report for model {model.model_id}: {e}"
+                    )
+                    report = None
 
             if model.status != Status.COMPLETED:
                 logger.warning(
