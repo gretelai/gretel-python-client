@@ -34,6 +34,7 @@ from gretel_client.rest_v1.models.workflow_run_billing_summary import (
 from gretel_client.rest_v1.models.workflow_run_cancellation_request import (
     WorkflowRunCancellationRequest,
 )
+from gretel_client.rest_v1.models.workflow_run_report import WorkflowRunReport
 
 
 class WorkflowRun(BaseModel):
@@ -120,6 +121,9 @@ class WorkflowRun(BaseModel):
         description="An ordered summary of the actions in this workflow run. Provided when the `expand=actions` query param is present.",
     )
     billing_summary: Optional[WorkflowRunBillingSummary] = None
+    report: Optional[WorkflowRunReport] = Field(
+        default=None, description="Report data produced by the run"
+    )
     __properties: ClassVar[List[str]] = [
         "id",
         "workflow_id",
@@ -145,6 +149,7 @@ class WorkflowRun(BaseModel):
         "total_compute_time_sconds",
         "actions",
         "billing_summary",
+        "report",
     ]
 
     @field_validator("runner_mode")
@@ -244,6 +249,9 @@ class WorkflowRun(BaseModel):
         # override the default output from pydantic by calling `to_dict()` of billing_summary
         if self.billing_summary:
             _dict["billing_summary"] = self.billing_summary.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of report
+        if self.report:
+            _dict["report"] = self.report.to_dict()
         return _dict
 
     @classmethod
@@ -305,6 +313,11 @@ class WorkflowRun(BaseModel):
                 "billing_summary": (
                     WorkflowRunBillingSummary.from_dict(obj["billing_summary"])
                     if obj.get("billing_summary") is not None
+                    else None
+                ),
+                "report": (
+                    WorkflowRunReport.from_dict(obj["report"])
+                    if obj.get("report") is not None
                     else None
                 ),
             }

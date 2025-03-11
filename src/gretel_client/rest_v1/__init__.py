@@ -145,4 +145,5 @@ from gretel_client.rest_v1.models.workflow_run_billing_summary import (
 from gretel_client.rest_v1.models.workflow_run_cancellation_request import (
     WorkflowRunCancellationRequest,
 )
+from gretel_client.rest_v1.models.workflow_run_report import WorkflowRunReport
 from gretel_client.rest_v1.models.workflow_task import WorkflowTask
