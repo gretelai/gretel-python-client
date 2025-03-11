@@ -374,7 +374,7 @@ class WorkflowBuilder:
             name=(
                 self._name if self._name != "" else _generate_workflow_name(self._steps)
             ),
-            steps=_autowire_steps(self._steps),
+            steps=self._steps,
         )
 
     def to_dict(self) -> dict:
@@ -543,19 +543,6 @@ def _generate_workflow_name(steps: Optional[list[Step]] = None) -> str:
             step_str = f"{steps[-2].name}--{steps[-1].name}--"
 
     return f"{step_str}{date_str}"
-
-
-# todo: remove me once backend impl lands
-def _autowire_steps(steps: list[Step]) -> list[Step]:
-    prev_step = None
-    for step in steps:
-        if prev_step:
-            inputs = step.inputs or []
-            if len(inputs) == 0:
-                step.inputs = inputs + [prev_step.name]
-        prev_step = step
-
-    return steps
 
 
 def _disambiguate_name(

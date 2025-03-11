@@ -252,11 +252,10 @@ def test_handle_step_name_duplicates(builder: WorkflowBuilder, tasks: Registry):
         Step(name="id-generator-1", task="id_generator", config={}),
         Step(
             name="id-generator-2",
-            inputs=["id-generator-1"],
             task="id_generator",
             config={},
         ),
-        Step(name="combiner", inputs=["id-generator-2"], task="combiner", config={}),
+        Step(name="combiner", task="combiner", config={}),
     ]
 
     assert actual == expected
