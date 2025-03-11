@@ -6,7 +6,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Iterator, Optional, Self, Union
+from typing import Callable, Iterator, Optional, Union
 
 import pandas as pd
 import requests
@@ -14,6 +14,7 @@ import yaml
 
 from pydantic import BaseModel
 from requests.exceptions import ChunkedEncodingError
+from typing_extensions import Self
 
 from gretel_client._api.api.default_api import DefaultApi, TaskEnvelope
 from gretel_client._api.api_client import ApiException

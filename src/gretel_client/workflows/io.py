@@ -2,11 +2,12 @@ import json
 import logging
 
 from pathlib import Path
-from typing import Callable, IO, Literal, Optional, Self, Union
+from typing import Callable, IO, Literal, Optional, Union
 
 import pandas as pd
 
 from rich.table import Table
+from typing_extensions import Self
 
 logger = logging.getLogger(__name__)
 

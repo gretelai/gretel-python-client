@@ -24,6 +24,7 @@ from gretel_client.projects.projects import (
     Project,
 )
 from gretel_client.rest.api.projects_api import ProjectsApi
+from gretel_client.safe_synthetics.dataset import SafeSyntheticDatasetFactory
 from gretel_client.workflows.configs.registry import Registry
 from gretel_client.workflows.manager import WorkflowManager
 from gretel_client.workflows.tasks import TaskRegistry
@@ -219,6 +220,7 @@ class Gretel:
         )
         self._workflows = WorkflowManager(self._api_factory, self)
         self._tasks = TaskRegistry.create()
+        self._safe_synthetic_dataset_factory = SafeSyntheticDatasetFactory(self)
 
     def configure_logger(self, log_configuration: LogConfiguration) -> None:
         if log_configuration == LogConfiguration.STANDARD:
@@ -274,6 +276,10 @@ class Gretel:
         if not self._project:
             self._project = get_project(name=self._project_id)
         return self._project
+
+    @property
+    def safe_synthetic_dataset(self) -> SafeSyntheticDatasetFactory:
+        return self._safe_synthetic_dataset_factory
 
     @property
     def console_url(self) -> str:
