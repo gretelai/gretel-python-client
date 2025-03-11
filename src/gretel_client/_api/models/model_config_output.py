@@ -18,20 +18,25 @@ import json
 import pprint
 import re  # noqa: F401
 
-from typing import Any, ClassVar, Dict, List, Optional, Set, Union
+from typing import Any, ClassVar, Dict, List, Optional, Set
 
-from pydantic import BaseModel, ConfigDict, StrictFloat, StrictInt
+from pydantic import BaseModel, ConfigDict, StrictStr
 from typing_extensions import Self
 
+from gretel_client._api.models.generation_parameters_output import (
+    GenerationParametersOutput,
+)
 
-class GenerationParameters(BaseModel):
+
+class ModelConfigOutput(BaseModel):
     """
-    GenerationParameters
+    ModelConfigOutput
     """  # noqa: E501
 
-    temperature: Union[StrictFloat, StrictInt]
-    top_p: Union[StrictFloat, StrictInt]
-    __properties: ClassVar[List[str]] = ["temperature", "top_p"]
+    alias: StrictStr
+    generation_parameters: GenerationParametersOutput
+    model_name: StrictStr
+    __properties: ClassVar[List[str]] = ["alias", "generation_parameters", "model_name"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -50,7 +55,7 @@ class GenerationParameters(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of GenerationParameters from a JSON string"""
+        """Create an instance of ModelConfigOutput from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -70,11 +75,14 @@ class GenerationParameters(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
+        # override the default output from pydantic by calling `to_dict()` of generation_parameters
+        if self.generation_parameters:
+            _dict["generation_parameters"] = self.generation_parameters.to_dict()
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of GenerationParameters from a dict"""
+        """Create an instance of ModelConfigOutput from a dict"""
         if obj is None:
             return None
 
@@ -82,6 +90,14 @@ class GenerationParameters(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate(
-            {"temperature": obj.get("temperature"), "top_p": obj.get("top_p")}
+            {
+                "alias": obj.get("alias"),
+                "generation_parameters": (
+                    GenerationParametersOutput.from_dict(obj["generation_parameters"])
+                    if obj.get("generation_parameters") is not None
+                    else None
+                ),
+                "model_name": obj.get("model_name"),
+            }
         )
         return _obj

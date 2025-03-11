@@ -23,7 +23,7 @@ from typing import Any, ClassVar, Dict, List, Optional, Set
 from pydantic import BaseModel, ConfigDict, StrictInt, StrictStr
 from typing_extensions import Self
 
-from gretel_client._api.models.model_config import ModelConfig
+from gretel_client._api.models.model_config_input import ModelConfigInput
 
 
 class GlobalsInput(BaseModel):
@@ -31,7 +31,7 @@ class GlobalsInput(BaseModel):
     GlobalsInput
     """  # noqa: E501
 
-    model_configs: Optional[List[ModelConfig]] = None
+    model_configs: Optional[List[ModelConfigInput]] = None
     model_suite: Optional[StrictStr] = "apache-2.0"
     num_records: Optional[StrictInt] = 100
     __properties: ClassVar[List[str]] = ["model_configs", "model_suite", "num_records"]
@@ -80,6 +80,11 @@ class GlobalsInput(BaseModel):
                 if _item:
                     _items.append(_item.to_dict())
             _dict["model_configs"] = _items
+        # set to None if model_configs (nullable) is None
+        # and model_fields_set contains the field
+        if self.model_configs is None and "model_configs" in self.model_fields_set:
+            _dict["model_configs"] = None
+
         return _dict
 
     @classmethod
@@ -94,7 +99,10 @@ class GlobalsInput(BaseModel):
         _obj = cls.model_validate(
             {
                 "model_configs": (
-                    [ModelConfig.from_dict(_item) for _item in obj["model_configs"]]
+                    [
+                        ModelConfigInput.from_dict(_item)
+                        for _item in obj["model_configs"]
+                    ]
                     if obj.get("model_configs") is not None
                     else None
                 ),

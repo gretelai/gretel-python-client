@@ -20,21 +20,21 @@ import re  # noqa: F401
 
 from typing import Any, ClassVar, Dict, List, Optional, Set
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr
-from typing_extensions import Annotated, Self
+from pydantic import BaseModel, ConfigDict
+from typing_extensions import Self
 
-from gretel_client._api.models.model_config_input import ModelConfigInput
+from gretel_client._api.models.temperature import Temperature
+from gretel_client._api.models.top_p import TopP
 
 
-class StreamingGlobals(BaseModel):
+class GenerationParametersOutput(BaseModel):
     """
-    StreamingGlobals
+    GenerationParametersOutput
     """  # noqa: E501
 
-    model_configs: Optional[List[ModelConfigInput]] = None
-    model_suite: Optional[StrictStr] = "apache-2.0"
-    num_records: Optional[Annotated[int, Field(le=100, strict=True, ge=1)]] = 50
-    __properties: ClassVar[List[str]] = ["model_configs", "model_suite", "num_records"]
+    temperature: Temperature
+    top_p: TopP
+    __properties: ClassVar[List[str]] = ["temperature", "top_p"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -53,7 +53,7 @@ class StreamingGlobals(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of StreamingGlobals from a JSON string"""
+        """Create an instance of GenerationParametersOutput from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -73,23 +73,17 @@ class StreamingGlobals(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of each item in model_configs (list)
-        _items = []
-        if self.model_configs:
-            for _item in self.model_configs:
-                if _item:
-                    _items.append(_item.to_dict())
-            _dict["model_configs"] = _items
-        # set to None if model_configs (nullable) is None
-        # and model_fields_set contains the field
-        if self.model_configs is None and "model_configs" in self.model_fields_set:
-            _dict["model_configs"] = None
-
+        # override the default output from pydantic by calling `to_dict()` of temperature
+        if self.temperature:
+            _dict["temperature"] = self.temperature.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of top_p
+        if self.top_p:
+            _dict["top_p"] = self.top_p.to_dict()
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of StreamingGlobals from a dict"""
+        """Create an instance of GenerationParametersOutput from a dict"""
         if obj is None:
             return None
 
@@ -98,21 +92,15 @@ class StreamingGlobals(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "model_configs": (
-                    [
-                        ModelConfigInput.from_dict(_item)
-                        for _item in obj["model_configs"]
-                    ]
-                    if obj.get("model_configs") is not None
+                "temperature": (
+                    Temperature.from_dict(obj["temperature"])
+                    if obj.get("temperature") is not None
                     else None
                 ),
-                "model_suite": (
-                    obj.get("model_suite")
-                    if obj.get("model_suite") is not None
-                    else "apache-2.0"
-                ),
-                "num_records": (
-                    obj.get("num_records") if obj.get("num_records") is not None else 50
+                "top_p": (
+                    TopP.from_dict(obj["top_p"])
+                    if obj.get("top_p") is not None
+                    else None
                 ),
             }
         )

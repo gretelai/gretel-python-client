@@ -5,7 +5,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**model_configs** | [**List[ModelConfig]**](ModelConfig.md) |  | [optional] 
+**model_configs** | [**List[ModelConfigOutput]**](ModelConfigOutput.md) |  | [optional] 
 **model_suite** | **str** |  | [optional] [default to 'apache-2.0']
 **num_records** | **int** |  | [optional] [default to 100]
 

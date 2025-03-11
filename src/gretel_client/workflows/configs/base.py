@@ -25,4 +25,5 @@ class ConfigBase(BaseModel):
     model_config = ConfigDict(
         protected_namespaces=(),
         extra="allow",
+        validate_default=False,
     )

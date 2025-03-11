@@ -18,23 +18,20 @@ import json
 import pprint
 import re  # noqa: F401
 
-from typing import Any, ClassVar, Dict, List, Optional, Set
+from typing import Any, ClassVar, Dict, List, Optional, Set, Union
 
-from pydantic import BaseModel, ConfigDict, StrictStr
-from typing_extensions import Self
-
-from gretel_client._api.models.generation_parameters import GenerationParameters
+from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt
+from typing_extensions import Annotated, Self
 
 
-class ModelConfig(BaseModel):
+class ManualDistributionParams(BaseModel):
     """
-    ModelConfig
+    ManualDistributionParams
     """  # noqa: E501
 
-    alias: StrictStr
-    generation_parameters: GenerationParameters
-    model_name: StrictStr
-    __properties: ClassVar[List[str]] = ["alias", "generation_parameters", "model_name"]
+    values: Annotated[List[Union[StrictFloat, StrictInt]], Field(min_length=1)]
+    weights: Optional[List[Union[StrictFloat, StrictInt]]] = None
+    __properties: ClassVar[List[str]] = ["values", "weights"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -53,7 +50,7 @@ class ModelConfig(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of ModelConfig from a JSON string"""
+        """Create an instance of ManualDistributionParams from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -73,14 +70,16 @@ class ModelConfig(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of generation_parameters
-        if self.generation_parameters:
-            _dict["generation_parameters"] = self.generation_parameters.to_dict()
+        # set to None if weights (nullable) is None
+        # and model_fields_set contains the field
+        if self.weights is None and "weights" in self.model_fields_set:
+            _dict["weights"] = None
+
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of ModelConfig from a dict"""
+        """Create an instance of ManualDistributionParams from a dict"""
         if obj is None:
             return None
 
@@ -88,14 +87,6 @@ class ModelConfig(BaseModel):
             return cls.model_validate(obj)
 
         _obj = cls.model_validate(
-            {
-                "alias": obj.get("alias"),
-                "generation_parameters": (
-                    GenerationParameters.from_dict(obj["generation_parameters"])
-                    if obj.get("generation_parameters") is not None
-                    else None
-                ),
-                "model_name": obj.get("model_name"),
-            }
+            {"values": obj.get("values"), "weights": obj.get("weights")}
         )
         return _obj

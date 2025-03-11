@@ -20,21 +20,23 @@ import re  # noqa: F401
 
 from typing import Any, ClassVar, Dict, List, Optional, Set
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr
-from typing_extensions import Annotated, Self
+from pydantic import BaseModel, ConfigDict, StrictStr
+from typing_extensions import Self
 
-from gretel_client._api.models.model_config_input import ModelConfigInput
+from gretel_client._api.models.generation_parameters_input import (
+    GenerationParametersInput,
+)
 
 
-class StreamingGlobals(BaseModel):
+class ModelConfigInput(BaseModel):
     """
-    StreamingGlobals
+    ModelConfigInput
     """  # noqa: E501
 
-    model_configs: Optional[List[ModelConfigInput]] = None
-    model_suite: Optional[StrictStr] = "apache-2.0"
-    num_records: Optional[Annotated[int, Field(le=100, strict=True, ge=1)]] = 50
-    __properties: ClassVar[List[str]] = ["model_configs", "model_suite", "num_records"]
+    alias: StrictStr
+    generation_parameters: GenerationParametersInput
+    model_name: StrictStr
+    __properties: ClassVar[List[str]] = ["alias", "generation_parameters", "model_name"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -53,7 +55,7 @@ class StreamingGlobals(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of StreamingGlobals from a JSON string"""
+        """Create an instance of ModelConfigInput from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -73,23 +75,14 @@ class StreamingGlobals(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of each item in model_configs (list)
-        _items = []
-        if self.model_configs:
-            for _item in self.model_configs:
-                if _item:
-                    _items.append(_item.to_dict())
-            _dict["model_configs"] = _items
-        # set to None if model_configs (nullable) is None
-        # and model_fields_set contains the field
-        if self.model_configs is None and "model_configs" in self.model_fields_set:
-            _dict["model_configs"] = None
-
+        # override the default output from pydantic by calling `to_dict()` of generation_parameters
+        if self.generation_parameters:
+            _dict["generation_parameters"] = self.generation_parameters.to_dict()
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of StreamingGlobals from a dict"""
+        """Create an instance of ModelConfigInput from a dict"""
         if obj is None:
             return None
 
@@ -98,22 +91,13 @@ class StreamingGlobals(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "model_configs": (
-                    [
-                        ModelConfigInput.from_dict(_item)
-                        for _item in obj["model_configs"]
-                    ]
-                    if obj.get("model_configs") is not None
+                "alias": obj.get("alias"),
+                "generation_parameters": (
+                    GenerationParametersInput.from_dict(obj["generation_parameters"])
+                    if obj.get("generation_parameters") is not None
                     else None
                 ),
-                "model_suite": (
-                    obj.get("model_suite")
-                    if obj.get("model_suite") is not None
-                    else "apache-2.0"
-                ),
-                "num_records": (
-                    obj.get("num_records") if obj.get("num_records") is not None else 50
-                ),
+                "model_name": obj.get("model_name"),
             }
         )
         return _obj
