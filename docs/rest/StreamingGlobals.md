@@ -5,6 +5,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**error_rate** | **float** |  | [optional] [default to 1.0]
 **model_configs** | [**List[ModelConfigInput]**](ModelConfigInput.md) |  | [optional] 
 **model_suite** | **str** |  | [optional] [default to 'apache-2.0']
 **num_records** | **int** |  | [optional] [default to 50]

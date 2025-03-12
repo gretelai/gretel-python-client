@@ -18,10 +18,10 @@ import json
 import pprint
 import re  # noqa: F401
 
-from typing import Any, ClassVar, Dict, List, Optional, Set
+from typing import Any, ClassVar, Dict, List, Optional, Set, Union
 
-from pydantic import BaseModel, ConfigDict, StrictInt, StrictStr
-from typing_extensions import Self
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr
+from typing_extensions import Annotated, Self
 
 from gretel_client._api.models.model_config_output import ModelConfigOutput
 
@@ -31,10 +31,21 @@ class GlobalsOutput(BaseModel):
     GlobalsOutput
     """  # noqa: E501
 
+    error_rate: Optional[
+        Union[
+            Annotated[float, Field(le=1.0, strict=True, ge=0.0)],
+            Annotated[int, Field(le=1, strict=True, ge=0)],
+        ]
+    ] = 0.2
     model_configs: Optional[List[ModelConfigOutput]] = None
     model_suite: Optional[StrictStr] = "apache-2.0"
     num_records: Optional[StrictInt] = 100
-    __properties: ClassVar[List[str]] = ["model_configs", "model_suite", "num_records"]
+    __properties: ClassVar[List[str]] = [
+        "error_rate",
+        "model_configs",
+        "model_suite",
+        "num_records",
+    ]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -98,6 +109,9 @@ class GlobalsOutput(BaseModel):
 
         _obj = cls.model_validate(
             {
+                "error_rate": (
+                    obj.get("error_rate") if obj.get("error_rate") is not None else 0.2
+                ),
                 "model_configs": (
                     [
                         ModelConfigOutput.from_dict(_item)

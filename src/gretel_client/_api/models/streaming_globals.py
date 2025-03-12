@@ -18,7 +18,7 @@ import json
 import pprint
 import re  # noqa: F401
 
-from typing import Any, ClassVar, Dict, List, Optional, Set
+from typing import Any, ClassVar, Dict, List, Optional, Set, Union
 
 from pydantic import BaseModel, ConfigDict, Field, StrictStr
 from typing_extensions import Annotated, Self
@@ -31,10 +31,21 @@ class StreamingGlobals(BaseModel):
     StreamingGlobals
     """  # noqa: E501
 
+    error_rate: Optional[
+        Union[
+            Annotated[float, Field(le=1.0, strict=True, ge=0.0)],
+            Annotated[int, Field(le=1, strict=True, ge=0)],
+        ]
+    ] = 1.0
     model_configs: Optional[List[ModelConfigInput]] = None
     model_suite: Optional[StrictStr] = "apache-2.0"
     num_records: Optional[Annotated[int, Field(le=100, strict=True, ge=1)]] = 50
-    __properties: ClassVar[List[str]] = ["model_configs", "model_suite", "num_records"]
+    __properties: ClassVar[List[str]] = [
+        "error_rate",
+        "model_configs",
+        "model_suite",
+        "num_records",
+    ]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -98,6 +109,9 @@ class StreamingGlobals(BaseModel):
 
         _obj = cls.model_validate(
             {
+                "error_rate": (
+                    obj.get("error_rate") if obj.get("error_rate") is not None else 1.0
+                ),
                 "model_configs": (
                     [
                         ModelConfigInput.from_dict(_item)
