@@ -37,12 +37,19 @@ class EvaluateDataset(ConfigBase):
 
 
 class EvaluateSsDataset(ConfigBase):
-    skip_aia: Annotated[Optional[bool], Field(title="Skip Aia")] = False
-    aia_quasi_identifier_count: Annotated[
-        Optional[int], Field(gt=0, title="Aia Quasi Identifier Count")
+    skip_attribute_inference_protection: Annotated[
+        Optional[bool], Field(title="Skip Attribute Inference Protection")
+    ] = False
+    attribute_inference_protection_quasi_identifier_count: Annotated[
+        Optional[int],
+        Field(gt=0, title="Attribute Inference Protection Quasi Identifier Count"),
     ] = 3
-    skip_mia: Annotated[Optional[bool], Field(title="Skip Mia")] = False
-    mia_column_name: Annotated[Optional[str], Field(title="Mia Column Name")] = None
+    skip_membership_inference_protection: Annotated[
+        Optional[bool], Field(title="Skip Membership Inference Protection")
+    ] = False
+    membership_inference_protection_column_name: Annotated[
+        Optional[str], Field(title="Membership Inference Protection Column Name")
+    ] = None
     skip_pii_replay: Annotated[Optional[bool], Field(title="Skip Pii Replay")] = False
     pii_replay_entities: Annotated[
         Optional[List[str]], Field(title="Pii Replay Entities")
@@ -59,6 +66,9 @@ class SystemPromptType(str, Enum):
 
 class ExtractDataSeedsFromSampleRecords(ConfigBase):
     model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
+    error_rate: Annotated[
+        Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
+    ] = 0.2
     sample_records: Annotated[List[Dict[str, Any]], Field(title="Sample Records")]
     max_num_seeds: Annotated[
         Optional[int], Field(ge=1, le=10, title="Max Num Seeds")
@@ -71,9 +81,14 @@ class ExtractDataSeedsFromSampleRecords(ConfigBase):
     num_samples: Annotated[Optional[int], Field(title="Num Samples")] = 25
 
 
-class GenerationParameters(ConfigBase):
-    temperature: Annotated[float, Field(title="Temperature")]
-    top_p: Annotated[float, Field(title="Top P")]
+class DistributionType(str, Enum):
+    UNIFORM = "uniform"
+    MANUAL = "manual"
+
+
+class ManualDistributionParams(ConfigBase):
+    values: Annotated[List[float], Field(min_length=1, title="Values")]
+    weights: Annotated[Optional[List[float]], Field(title="Weights")] = None
 
 
 class ModelAlias(str, Enum):
@@ -82,16 +97,15 @@ class ModelAlias(str, Enum):
     JUDGE = "judge"
 
 
-class ModelConfig(ConfigBase):
-    alias: Annotated[str, Field(title="Alias")]
-    model_name: Annotated[str, Field(title="Model Name")]
-    generation_parameters: GenerationParameters
-
-
 class OutputType(str, Enum):
     CODE = "code"
     TEXT = "text"
     STRUCTURED = "structured"
+
+
+class UniformDistributionParams(ConfigBase):
+    low: Annotated[float, Field(ge=0.0, le=1.0, title="Low")]
+    high: Annotated[float, Field(ge=0.0, le=1.0, title="High")]
 
 
 class ConstraintType(str, Enum):
@@ -116,6 +130,7 @@ class SourceType(str, Enum):
     DATETIME = "datetime"
     EXPRESSION = "expression"
     GAUSSIAN = "gaussian"
+    PERSON = "person"
     POISSON = "poisson"
     SCIPY = "scipy"
     SUBCATEGORY = "subcategory"
@@ -126,6 +141,9 @@ class SourceType(str, Enum):
 
 class GenerateDatasetFromSampleRecords(ConfigBase):
     model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
+    error_rate: Annotated[
+        Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
+    ] = 0.2
     sample_records: Annotated[List[Dict[str, Any]], Field(title="Sample Records")]
     target_num_records: Annotated[
         Optional[int], Field(ge=50, le=10000, title="Target Num Records")
@@ -277,25 +295,6 @@ class LLMJudgePromptTemplateType(str, Enum):
     TEXT_TO_SQL = "text_to_sql"
 
 
-class JudgeWithLlm(ConfigBase):
-    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
-    model_configs: Annotated[
-        Optional[List[ModelConfig]], Field(title="Model Configs")
-    ] = None
-    model_alias: Annotated[
-        Optional[Union[str, ModelAlias]], Field(title="Model Alias")
-    ] = "judge"
-    judge_template_type: LLMJudgePromptTemplateType
-    instruction_column_name: Annotated[str, Field(title="Instruction Column Name")]
-    response_column_name: Annotated[str, Field(title="Response Column Name")]
-    context_column_name: Annotated[
-        Optional[str], Field(title="Context Column Name")
-    ] = None
-    num_samples_to_judge: Annotated[
-        Optional[int], Field(title="Num Samples To Judge")
-    ] = 100
-
-
 class NameGenerator(ConfigBase):
     column_name: Annotated[Optional[str], Field(title="Column Name")] = "name"
     num_records: Annotated[Optional[int], Field(title="Num Records")] = 5
@@ -405,6 +404,17 @@ class PromptPretrainedModel(ConfigBase):
 
 class SampleDataSeeds(ConfigBase):
     num_records: Annotated[Optional[int], Field(title="Num Records")] = 10
+
+
+class SamplingStrategy(str, Enum):
+    ORDERED = "ordered"
+    SHUFFLE = "shuffle"
+
+
+class SampleFromDataset(ConfigBase):
+    num_samples: Annotated[Optional[int], Field(title="Num Samples")] = None
+    strategy: Optional[SamplingStrategy] = "ordered"
+    with_replacement: Annotated[Optional[bool], Field(title="With Replacement")] = False
 
 
 class SeedFromRecords(ConfigBase):
@@ -1237,20 +1247,26 @@ class DataConfig(ConfigBase):
     params: Annotated[Optional[Dict[str, Any]], Field(title="Params")] = None
 
 
-class GenerateColumnFromTemplate(ConfigBase):
-    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
-    model_configs: Annotated[
-        Optional[List[ModelConfig]], Field(title="Model Configs")
-    ] = None
-    model_alias: Annotated[
-        Optional[Union[str, ModelAlias]], Field(title="Model Alias")
-    ] = "natural_language"
-    prompt_template: Annotated[str, Field(title="Prompt Template")]
-    response_column_name: Annotated[
-        Optional[str], Field(title="Response Column Name")
-    ] = "response"
-    system_prompt: Annotated[Optional[str], Field(title="System Prompt")] = None
+class ExistingColumn(ConfigBase):
+    name: Annotated[str, Field(title="Name")]
+    description: Annotated[str, Field(title="Description")]
     data_config: DataConfig
+
+
+class ExistingColumns(ConfigBase):
+    variables: Annotated[Optional[List[ExistingColumn]], Field(title="Variables")] = (
+        None
+    )
+
+
+class ManualDistribution(ConfigBase):
+    distribution_type: Optional[DistributionType] = "manual"
+    params: ManualDistributionParams
+
+
+class UniformDistribution(ConfigBase):
+    distribution_type: Optional[DistributionType] = "uniform"
+    params: UniformDistributionParams
 
 
 class ConditionalDataColumn(ConfigBase):
@@ -1285,8 +1301,8 @@ class DataSchema(ConfigBase):
 
 
 class GenerateColumnsUsingSamplers(ConfigBase):
-    data_schema: DataSchema
     num_records: Annotated[int, Field(title="Num Records")]
+    data_schema: DataSchema
     max_rejections_factor: Annotated[
         Optional[int], Field(title="Max Rejections Factor")
     ] = 5
@@ -1307,18 +1323,6 @@ class SeedCategory(ConfigBase):
     generated_values: Annotated[
         Optional[List[Union[str, int, bool]]], Field(title="Generated Values")
     ] = []
-
-
-class GenerateSeedCategoryValues(ConfigBase):
-    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
-    model_configs: Annotated[
-        Optional[List[ModelConfig]], Field(title="Model Configs")
-    ] = None
-    model_alias: Annotated[
-        Optional[Union[str, ModelAlias]], Field(title="Model Alias")
-    ] = "natural_language"
-    seed_categories: Annotated[List[SeedCategory], Field(title="Seed Categories")]
-    dataset_context: Annotated[Optional[str], Field(title="Dataset Context")] = ""
 
 
 class LoadDataSeeds(ConfigBase):
@@ -1502,3 +1506,115 @@ class Transform(ConfigBase):
             title="Steps",
         ),
     ]
+
+
+class GenerationParameters(ConfigBase):
+    temperature: Annotated[
+        Union[float, UniformDistribution, ManualDistribution],
+        Field(title="Temperature"),
+    ]
+    top_p: Annotated[
+        Union[float, UniformDistribution, ManualDistribution], Field(title="Top P")
+    ]
+
+
+class ModelConfig(ConfigBase):
+    alias: Annotated[str, Field(title="Alias")]
+    model_name: Annotated[str, Field(title="Model Name")]
+    generation_parameters: GenerationParameters
+
+
+class GenerateColumnFromTemplate(ConfigBase):
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
+    error_rate: Annotated[
+        Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
+    ] = 0.2
+    model_configs: Annotated[
+        Optional[List[ModelConfig]], Field(title="Model Configs")
+    ] = None
+    model_alias: Annotated[
+        Optional[Union[str, ModelAlias]], Field(title="Model Alias")
+    ] = "natural_language"
+    prompt_template: Annotated[str, Field(title="Prompt Template")]
+    response_column_name: Annotated[
+        Optional[str], Field(title="Response Column Name")
+    ] = "response"
+    system_prompt: Annotated[Optional[str], Field(title="System Prompt")] = None
+    data_config: DataConfig
+    description: Annotated[Optional[str], Field(title="Description")] = ""
+
+
+class GenerateSeedCategoryValues(ConfigBase):
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
+    error_rate: Annotated[
+        Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
+    ] = 0.2
+    model_configs: Annotated[
+        Optional[List[ModelConfig]], Field(title="Model Configs")
+    ] = None
+    model_alias: Annotated[
+        Optional[Union[str, ModelAlias]], Field(title="Model Alias")
+    ] = "natural_language"
+    seed_categories: Annotated[List[SeedCategory], Field(title="Seed Categories")]
+    dataset_context: Annotated[Optional[str], Field(title="Dataset Context")] = ""
+
+
+class JudgeWithLlm(ConfigBase):
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
+    error_rate: Annotated[
+        Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
+    ] = 0.2
+    model_configs: Annotated[
+        Optional[List[ModelConfig]], Field(title="Model Configs")
+    ] = None
+    model_alias: Annotated[
+        Optional[Union[str, ModelAlias]], Field(title="Model Alias")
+    ] = "judge"
+    judge_template_type: LLMJudgePromptTemplateType
+    instruction_column_name: Annotated[str, Field(title="Instruction Column Name")]
+    response_column_name: Annotated[str, Field(title="Response Column Name")]
+    context_column_name: Annotated[
+        Optional[str], Field(title="Context Column Name")
+    ] = None
+    num_samples_to_judge: Annotated[
+        Optional[int], Field(title="Num Samples To Judge")
+    ] = 100
+
+
+class GenerateColumnFromTemplateConfig(ConfigBase):
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
+    error_rate: Annotated[
+        Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
+    ] = 0.2
+    model_configs: Annotated[
+        Optional[List[ModelConfig]], Field(title="Model Configs")
+    ] = None
+    model_alias: Annotated[
+        Optional[Union[str, ModelAlias]], Field(title="Model Alias")
+    ] = "natural_language"
+    prompt_template: Annotated[str, Field(title="Prompt Template")]
+    response_column_name: Annotated[
+        Optional[str], Field(title="Response Column Name")
+    ] = "response"
+    system_prompt: Annotated[Optional[str], Field(title="System Prompt")] = None
+    data_config: DataConfig
+    description: Annotated[Optional[str], Field(title="Description")] = ""
+
+
+class GenerateColumnConfigFromInstruction(ConfigBase):
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
+    error_rate: Annotated[
+        Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
+    ] = 0.2
+    model_configs: Annotated[
+        Optional[List[ModelConfig]], Field(title="Model Configs")
+    ] = None
+    model_alias: Annotated[
+        Optional[Union[str, ModelAlias]], Field(title="Model Alias")
+    ] = "judge"
+    name: Annotated[str, Field(title="Name")]
+    instruction: Annotated[str, Field(title="Instruction")]
+    edit_task: Optional[GenerateColumnFromTemplateConfig] = None
+    existing_columns: Annotated[Optional[ExistingColumns], Field()] = {"variables": []}
+    use_reasoning: Annotated[Optional[bool], Field(title="Use Reasoning")] = True
+    must_depend_on: Annotated[Optional[List[str]], Field(title="Must Depend On")] = None
