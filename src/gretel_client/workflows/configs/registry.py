@@ -15,6 +15,7 @@ class Registry(metaclass=RegistryMeta):
     ExtractDataSeedsFromSampleRecords = tasks.ExtractDataSeedsFromSampleRecords
     IdGenerator = tasks.IdGenerator
     LoadDataSeeds = tasks.LoadDataSeeds
+    DropColumns = tasks.DropColumns
     NameGenerator = tasks.NameGenerator
     GenerateDatasetFromSampleRecords = tasks.GenerateDatasetFromSampleRecords
     SampleDataSeeds = tasks.SampleDataSeeds

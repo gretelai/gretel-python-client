@@ -14,6 +14,10 @@ class Combiner(ConfigBase):
     pass
 
 
+class DropColumns(ConfigBase):
+    columns: Annotated[List[str], Field(title="Columns")]
+
+
 class DummyTaskWithInputs(ConfigBase):
     num_records: Annotated[Optional[int], Field(title="Num Records")] = 5
 
@@ -117,13 +121,7 @@ class DataSourceParams(ConfigBase):
     pass
 
 
-class SerializableConstraint(ConfigBase):
-    column_name: Annotated[str, Field(title="Column Name")]
-    constraint_type: ConstraintType
-    params: Annotated[Dict[str, Union[float, str]], Field(title="Params")]
-
-
-class SourceType(str, Enum):
+class SamplingSourceType(str, Enum):
     BERNOULLI = "bernoulli"
     BINOMIAL = "binomial"
     CATEGORY = "category"
@@ -1239,7 +1237,8 @@ class CodeLang(str, Enum):
 
 class ValidateCode(ConfigBase):
     code_lang: CodeLang
-    code_columns: Annotated[Optional[List[str]], Field(title="Code Columns")] = ["code"]
+    target_columns: Annotated[List[str], Field(title="Target Columns")]
+    result_columns: Annotated[List[str], Field(title="Result Columns")]
 
 
 class DataConfig(ConfigBase):
@@ -1269,6 +1268,12 @@ class UniformDistribution(ConfigBase):
     params: UniformDistributionParams
 
 
+class ColumnConstraint(ConfigBase):
+    target_column: Annotated[str, Field(title="Target Column")]
+    type: ConstraintType
+    params: Annotated[Dict[str, Union[float, str]], Field(title="Params")]
+
+
 class ConditionalDataColumn(ConfigBase):
     name: Annotated[str, Field(title="Name")]
     conditional_params: Annotated[
@@ -1276,7 +1281,7 @@ class ConditionalDataColumn(ConfigBase):
         Field(title="Conditional Params"),
     ] = {}
     convert_to: Annotated[Optional[str], Field(title="Convert To")] = None
-    source_type: SourceType
+    type: SamplingSourceType
     params: Annotated[Union[Dict[str, Any], DataSourceParams], Field(title="Params")]
 
 
@@ -1296,7 +1301,7 @@ class DataSchema(ConfigBase):
         Field(min_length=1, title="Columns"),
     ]
     constraints: Annotated[
-        Optional[List[SerializableConstraint]], Field(title="Constraints")
+        Optional[List[ColumnConstraint]], Field(title="Constraints")
     ] = []
 
 
@@ -1535,10 +1540,8 @@ class GenerateColumnFromTemplate(ConfigBase):
     model_alias: Annotated[
         Optional[Union[str, ModelAlias]], Field(title="Model Alias")
     ] = "natural_language"
-    prompt_template: Annotated[str, Field(title="Prompt Template")]
-    response_column_name: Annotated[
-        Optional[str], Field(title="Response Column Name")
-    ] = "response"
+    prompt: Annotated[str, Field(title="Prompt")]
+    name: Annotated[Optional[str], Field(title="Name")] = "response"
     system_prompt: Annotated[Optional[str], Field(title="System Prompt")] = None
     data_config: DataConfig
     description: Annotated[Optional[str], Field(title="Description")] = ""
@@ -1592,10 +1595,8 @@ class GenerateColumnFromTemplateConfig(ConfigBase):
     model_alias: Annotated[
         Optional[Union[str, ModelAlias]], Field(title="Model Alias")
     ] = "natural_language"
-    prompt_template: Annotated[str, Field(title="Prompt Template")]
-    response_column_name: Annotated[
-        Optional[str], Field(title="Response Column Name")
-    ] = "response"
+    prompt: Annotated[str, Field(title="Prompt")]
+    name: Annotated[Optional[str], Field(title="Name")] = "response"
     system_prompt: Annotated[Optional[str], Field(title="System Prompt")] = None
     data_config: DataConfig
     description: Annotated[Optional[str], Field(title="Description")] = ""
