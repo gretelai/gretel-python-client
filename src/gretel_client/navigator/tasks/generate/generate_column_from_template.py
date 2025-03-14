@@ -15,8 +15,8 @@ DEFAULT_RESPONSE_COLUMN_NAME = "response"
 
 
 class GenerateColumnFromTemplateConfig(TaskConfigWithModelAlias):
-    prompt_template: str
-    response_column_name: str = DEFAULT_RESPONSE_COLUMN_NAME
+    prompt: str
+    name: str = DEFAULT_RESPONSE_COLUMN_NAME
     system_prompt: Optional[str] = None
     data_config: DataConfig
 
@@ -30,10 +30,10 @@ class GenerateColumnFromTemplate(Task):
     in the dataset. The generated column will be appended to the dataset.
 
     Args:
-        prompt_template: Prompt template to be used for generating the column. The
+        prompt: Prompt template to be used for generating the column. The
             template should be a simple format string with keywords that are
             existing column names in the dataset.
-        response_column_name: Name of the column to be generated.
+        name: Name of the column to be generated.
         output_parser: The type of parser apply to the LLMs output. Must be a
             member of the TextParserType enum.
         model_alias: LLM type to use for generation. Must be a member of the LLMType enum
@@ -51,9 +51,9 @@ class GenerateColumnFromTemplate(Task):
 
     def __init__(
         self,
-        prompt_template: str,
+        prompt: str,
         data_config: DataConfig,
-        response_column_name: str = DEFAULT_RESPONSE_COLUMN_NAME,
+        name: str = DEFAULT_RESPONSE_COLUMN_NAME,
         model_alias: Union[str, LLMType] = LLMType.NATURAL_LANGUAGE,
         system_prompt: Optional[str] = None,
         workflow_label: Optional[str] = None,
@@ -62,8 +62,8 @@ class GenerateColumnFromTemplate(Task):
     ):
         super().__init__(
             config=GenerateColumnFromTemplateConfig(
-                prompt_template=prompt_template,
-                response_column_name=response_column_name,
+                prompt=prompt,
+                name=name,
                 model_alias=model_alias,
                 system_prompt=system_prompt,
                 data_config=data_config,

@@ -22,7 +22,8 @@ VALIDATE_SQL_COLUMN_SUFFIXES = [
 
 class ValidateCodeConfig(BaseModel):
     code_lang: CodeLang
-    code_columns: list[str] = ["code"]
+    target_columns: list[str]
+    result_columns: list[str]
 
 
 class ValidateCode(Task):
@@ -30,12 +31,17 @@ class ValidateCode(Task):
     def __init__(
         self,
         code_lang: CodeLang,
-        code_columns: list[str] = ["code"],
+        target_columns: list[str] = ["code"],
+        result_columns: list[str] = ["code_is_valid"],
         workflow_label: Optional[str] = None,
         client: Optional[Client] = None,
     ):
         super().__init__(
-            config=ValidateCodeConfig(code_lang=code_lang, code_columns=code_columns),
+            config=ValidateCodeConfig(
+                code_lang=code_lang,
+                target_columns=target_columns,
+                result_columns=result_columns,
+            ),
             workflow_label=workflow_label,
             client=client,
         )

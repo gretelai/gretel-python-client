@@ -515,6 +515,10 @@ class DataDesigner:
                     "`code_columns` contains columns that have not been defined."
                     f"\n* Available columns: {self.all_column_names}"
                 )
+            settings["target_columns"] = settings.pop("code_columns")
+            settings["result_columns"] = [
+                f"{col}_is_valid" for col in settings["target_columns"]
+            ]
             self._validators[ValidatorType(validator).value] = ValidateCode(
                 client=self._client, **settings
             )
@@ -593,7 +597,7 @@ class DataDesigner:
                     else VALIDATE_PYTHON_COLUMN_SUFFIXES
                 )
                 code_lang = validator.config.code_lang
-                code_columns.extend(validator.config.code_columns)
+                code_columns.extend(validator.config.target_columns)
                 for col in code_columns:
                     for prefix in column_suffix:
                         validation_columns.append(f"{col}{prefix}")
