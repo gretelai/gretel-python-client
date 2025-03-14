@@ -116,8 +116,8 @@ class GeneratedDataColumn(BaseModel):
             GenerateColumnFromTemplate task instance.
         """
         return GenerateColumnFromTemplate(
-            prompt_template=self.prompt_template,
-            response_column_name=self.name,
+            prompt=self.prompt_template,
+            name=self.name,
             workflow_label=f"generating {self.name}",
             model_alias=self.llm_type,
             system_prompt=self.get_system_prompt(special_system_instructions),
