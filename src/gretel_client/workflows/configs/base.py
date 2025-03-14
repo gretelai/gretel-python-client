@@ -27,3 +27,11 @@ class ConfigBase(BaseModel):
         extra="allow",
         validate_default=False,
     )
+
+    def model_dump(self, **kwargs) -> dict:
+        kwargs.setdefault("exclude_unset", True)
+        return super().model_dump(**kwargs)
+
+    def model_dump_json(self, **kwargs) -> str:
+        kwargs.setdefault("exclude_unset", True)
+        return super().model_dump_json(**kwargs)

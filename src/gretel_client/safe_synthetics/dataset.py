@@ -57,11 +57,8 @@ class SafeSyntheticDataset:
         registry: Registry,
     ):
         self._builder = builder
-
         self._registry = registry
         self._synthetic_model_registry = SafeSyntheticModelRegistry(registry)
-
-        self._workflow_id = None
 
         # steps with fixed positions
         self._holdout = None
@@ -241,7 +238,6 @@ class SafeSyntheticDatasetFactory:
 
     def __init__(self, resource_provider: GretelResourceProviderProtocol) -> None:
         self._resource_provider = resource_provider
-        self._workflow_id = None
 
     def from_data_source(
         self,
