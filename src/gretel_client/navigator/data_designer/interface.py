@@ -24,6 +24,7 @@ from gretel_client.navigator.data_designer.prompt_templates import (
 from gretel_client.navigator.data_designer.viz_tools import (
     display_preview_evaluation_summary,
 )
+from gretel_client.navigator.experimental.magic import MagicDataDesignerEditor
 from gretel_client.navigator.log import get_logger
 from gretel_client.navigator.tasks.base import Task
 from gretel_client.navigator.tasks.constants import PREVIEW_NUM_RECORDS
@@ -42,7 +43,6 @@ from gretel_client.navigator.tasks.types import (
     DataConfig,
     DEFAULT_MODEL_SUITE,
     EvaluationType,
-    GenerationParameters,
     LLMJudgePromptTemplateType,
     LLMType,
     ModelConfig,
@@ -314,6 +314,8 @@ class DataDesigner:
             "workflow_name": f"{self.__class__.__name__}-{datetime_label}",
         }
 
+        self.magic = MagicDataDesignerEditor(self)
+
     @property
     def categorical_seed_column_names(self) -> list[str]:
         """Return a list of the names of the seed columns, including subcategories."""
@@ -425,6 +427,9 @@ class DataDesigner:
             data_config=DataConfig.model_validate(data_config),
         )
 
+        ## Update the magic state
+        self.magic.reset()
+
     def add_categorical_seed_column(
         self,
         name: str,
@@ -490,6 +495,9 @@ class DataDesigner:
             subcategories=subcategories or [],
             **kwargs,
         )
+
+        ## Update the magic state
+        self.magic.reset()
 
     def add_validator(self, validator: ValidatorType, **settings) -> None:
         """Add a data validator to the data design.

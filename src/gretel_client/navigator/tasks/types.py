@@ -376,3 +376,36 @@ class CategoricalDataSeeds(BaseModel):
                     )
                     seed_categories += f"{2 * tab}  |-- {sub_cat.name}{needs_gen}\n"
         return f"CategoricalDataSeeds(\n{seed_categories})"
+
+
+class ExistingColumn(BaseModel):
+    """Interface for existing data column descriptions between client/server."""
+
+    name: str
+    description: str
+    data_config: DataConfig
+
+
+class ExistingColumns(BaseModel):
+    """Wrapper class to help with operations against available variables."""
+
+    variables: list[ExistingColumn] = Field(default_factory=list)
+
+    @property
+    def names(self) -> list[str]:
+        return [v.name for v in self.variables]
+
+    def __add__(self, other) -> Self:
+        if isinstance(other, ExistingColumns):
+            # Create a new instance instead of modifying self
+            return ExistingColumns(
+                variables=[*self.variables.copy(), *other.variables.copy()]
+            )
+
+        # Raise the error instead of returning it
+        raise ValueError(f"Cannot append {type(other)} to ExistingColumns")
+
+    def __radd__(self, other) -> Self:
+        if other == 0:  # Special case for sum() with initial value 0
+            return self.model_copy()  # Return a copy of self
+        return self.__add__(other)
