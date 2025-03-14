@@ -14,6 +14,10 @@ class Combiner(ConfigBase):
     pass
 
 
+class ConcatDatasets(ConfigBase):
+    pass
+
+
 class DropColumns(ConfigBase):
     columns: Annotated[List[str], Field(title="Columns")]
 
