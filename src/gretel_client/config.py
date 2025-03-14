@@ -278,6 +278,13 @@ class ClientConfig(ABC):
     def endpoint(self) -> str: ...
 
     @property
+    def console_endpoint(self) -> str:
+        if self.stage == "dev":
+            return "https://console-eng.gretel.ai"
+        else:
+            return "https://console.gretel.ai"
+
+    @property
     @abstractmethod
     def artifact_endpoint(self) -> str: ...
 
@@ -310,6 +317,7 @@ class ClientConfig(ABC):
         if (
             "https://api-dev.gretel" in self.endpoint
             or ".dev.gretel.cloud" in self.endpoint
+            or ".dev.gretel.ai" in self.endpoint
         ):
             return "dev"
         return "prod"
@@ -452,6 +460,7 @@ class DefaultClientConfig(ClientConfig):
     def __init__(
         self,
         endpoint: Optional[str] = None,
+        console_endpoint: Optional[str] = None,
         artifact_endpoint: Optional[str] = None,
         api_key: Optional[str] = None,
         default_project_name: Optional[str] = None,
@@ -611,6 +620,10 @@ class DelegatingClientConfig(ClientConfig):
     @property
     def endpoint(self) -> str:
         return self._delegate.endpoint
+
+    @property
+    def console_endpoint(self) -> str:
+        return self._delegate.console_endpoint
 
     @property
     def artifact_endpoint(self) -> str:

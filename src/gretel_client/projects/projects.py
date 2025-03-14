@@ -174,10 +174,7 @@ class Project:
     @check_not_deleted
     def get_console_url(self) -> str:
         """Returns web link to access the project from Gretel's console."""
-        console_base = self.client_config.endpoint.replace("api", "console").replace(
-            "cloud", "ai"
-        )
-        return f"{console_base}/{self.project_guid}"
+        return f"{self.client_config.console_endpoint}/{self.project_guid}"
 
     @property
     def as_dict(self) -> dict:
