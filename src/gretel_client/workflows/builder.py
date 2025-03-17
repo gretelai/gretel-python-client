@@ -86,6 +86,24 @@ class WorkflowInterruption:
 
 
 @dataclass
+class LogMessage:
+    level: str
+    msg: str
+
+    @property
+    def is_error(self) -> bool:
+        return self.level == "error"
+
+    @property
+    def is_info(self) -> bool:
+        return self.level == "info"
+
+    @property
+    def is_warning(self) -> bool:
+        return self.level == "warning"
+
+
+@dataclass
 class Message:
 
     step: str
@@ -117,15 +135,40 @@ class Message:
 
         return deserialized_message
 
+    @property
+    def has_log_message(self) -> bool:
+        return self.stream == "logs" and "msg" in self.payload
+
+    @property
+    def log_message(self) -> LogMessage | None:
+        if self.has_log_message:
+            return LogMessage(**self.payload)
+        return None
+
+    @property
+    def has_output(self) -> bool:
+        return self.stream == "step_outputs"
+
+    @property
+    def has_dataset(self) -> bool:
+        return self.has_output and "dataset" in self.payload
+
+    @property
+    def dataset(self) -> pd.DataFrame:
+        records = []
+        if self.has_dataset:
+            records = self.payload["dataset"]
+        return pd.DataFrame.from_records(records)
+
 
 def _default_preview_printer(log: Union[Message, WorkflowInterruption]):
     if isinstance(log, Message) and log.payload:
-        if log.stream == "logs" and log.payload.get("msg"):
-            logger.info(f"[{log.step}] {log.payload.get('msg')}")
-        if log.stream == "step_outputs":
+        if log.has_log_message:
+            logger.info(f"[{log.step}] {log.log_message.msg}")
+        if log.has_output:
             logger.info(f"[{log.step}] {log.payload}")
-        if isinstance(log, WorkflowInterruption):
-            logger.error(log)
+    if isinstance(log, WorkflowInterruption):
+        logger.error(f"{log.message}")
 
 
 class WorkflowSessionManager:
@@ -154,6 +197,7 @@ class WorkflowBuilder:
     def __init__(
         self,
         project_id: str,
+        globals: Globals,
         api_provider: GretelApiProviderProtocol,
         resource_provider: GretelResourceProviderProtocol,
         workflow_session_manager: Optional[WorkflowSessionManager] = None,
@@ -173,8 +217,12 @@ class WorkflowBuilder:
         self._name = ""
         self._input_file_id = None
         self._steps: list[Step] = []
-        self._globals = Globals()
+        self._globals = globals
         self._inputs = None
+
+    @property
+    def step_names(self) -> list[str]:
+        return [step.name for step in self._steps]
 
     def set_name(self, name: str) -> Self:
         """Set the name of the workflow.
@@ -273,7 +321,7 @@ class WorkflowBuilder:
             Self: The builder instance for method chaining.
         """
         if isinstance(step, TaskConfig) and not isinstance(step, Step):
-            step = task_to_step(step)
+            step = task_to_step(step, step_inputs)
 
         for existing_step in self._steps:
             if existing_step.name == step.name:
@@ -359,6 +407,10 @@ class WorkflowBuilder:
         for step in steps:
             self.add_step(step, validate=validate)
         return self
+
+    def get_steps(self) -> list[Step]:
+        """Return the list of steps in the workflow."""
+        return self._steps
 
     def to_workflow(self) -> Workflow:
         """Convert the builder to a Workflow object.

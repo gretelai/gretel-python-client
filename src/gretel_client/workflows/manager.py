@@ -7,6 +7,7 @@ from gretel_client.navigator_client_protocols import (
 )
 from gretel_client.rest_v1.api.workflows_api import WorkflowsApi
 from gretel_client.workflows.builder import WorkflowBuilder, WorkflowSessionManager
+from gretel_client.workflows.configs.workflows import Globals
 from gretel_client.workflows.tasks import task_to_step, TaskConfig
 from gretel_client.workflows.workflow import WorkflowRun
 
@@ -26,7 +27,10 @@ class WorkflowManager:
 
         self._workflow_session_manager = WorkflowSessionManager()
 
-    def builder(self) -> WorkflowBuilder:
+    def builder(
+        self,
+        globals: Globals | None = None,
+    ) -> WorkflowBuilder:
         """Creates a new workflow builder instance.
 
         Returns:
@@ -34,6 +38,7 @@ class WorkflowManager:
         """
         return WorkflowBuilder(
             self._resource_provider.project_id,
+            globals or Globals(),
             self._api_provider,
             self._resource_provider,
             self._workflow_session_manager,

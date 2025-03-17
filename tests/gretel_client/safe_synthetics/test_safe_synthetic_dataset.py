@@ -10,6 +10,7 @@ from gretel_client.safe_synthetics.dataset import (
 from gretel_client.test_utils import TestGretelApiFactory, TestGretelResourceProvider
 from gretel_client.workflows.builder import WorkflowBuilder
 from gretel_client.workflows.configs.registry import Registry
+from gretel_client.workflows.configs.workflows import Globals
 
 
 @pytest.fixture
@@ -18,11 +19,19 @@ def tasks() -> Registry:
 
 
 @pytest.fixture
+def stub_globals() -> Globals:
+    return Globals()
+
+
+@pytest.fixture
 def ssd(
     api_provider_mock: TestGretelApiFactory,
     resource_provider_mock: TestGretelResourceProvider,
+    stub_globals: Globals,
 ) -> SafeSyntheticDataset:
-    builder = WorkflowBuilder("proj_1", api_provider_mock, resource_provider_mock)
+    builder = WorkflowBuilder(
+        "proj_1", stub_globals, api_provider_mock, resource_provider_mock
+    )
     return SafeSyntheticDataset(builder, Registry())
 
 
@@ -30,8 +39,11 @@ def ssd(
 def ssd_factory(
     api_provider_mock: TestGretelApiFactory,
     resource_provider_mock: TestGretelResourceProvider,
+    stub_globals: Globals,
 ) -> SafeSyntheticDatasetFactory:
-    builder = WorkflowBuilder("proj_1", api_provider_mock, resource_provider_mock)
+    builder = WorkflowBuilder(
+        "proj_1", stub_globals, api_provider_mock, resource_provider_mock
+    )
     builder_mock = Mock(return_value=builder)
     resource_provider_mock._workflows.builder = builder_mock
 

@@ -20,7 +20,7 @@ from gretel_client.workflows.builder import (
     WorkflowValidationError,
 )
 from gretel_client.workflows.configs.registry import Registry
-from gretel_client.workflows.configs.workflows import Step, Workflow
+from gretel_client.workflows.configs.workflows import Globals, Step, Workflow
 
 
 @pytest.fixture
@@ -29,11 +29,19 @@ def tasks() -> Registry:
 
 
 @pytest.fixture
+def stub_globals() -> Globals:
+    return Globals()
+
+
+@pytest.fixture
 def builder(
     api_provider_mock: TestGretelApiFactory,
     resource_provider_mock: TestGretelResourceProvider,
+    stub_globals: Globals,
 ) -> WorkflowBuilder:
-    return WorkflowBuilder("proj_1", api_provider_mock, resource_provider_mock)
+    return WorkflowBuilder(
+        "proj_1", stub_globals, api_provider_mock, resource_provider_mock
+    )
 
 
 def test_workflow_default_name(builder: WorkflowBuilder):
@@ -218,14 +226,23 @@ def test_workflow_session_management(
     api_provider_mock: TestGretelApiFactory,
     resource_provider_mock: TestGretelResourceProvider,
     tasks: Registry,
+    stub_globals: Globals,
 ):
     workflow_session = WorkflowSessionManager()
 
     builder_one = WorkflowBuilder(
-        "proj_1", api_provider_mock, resource_provider_mock, workflow_session
+        "proj_1",
+        stub_globals,
+        api_provider_mock,
+        resource_provider_mock,
+        workflow_session,
     )
     builder_two = WorkflowBuilder(
-        "proj_1", api_provider_mock, resource_provider_mock, workflow_session
+        "proj_1",
+        stub_globals,
+        api_provider_mock,
+        resource_provider_mock,
+        workflow_session,
     )
 
     builder_one.for_workflow("w_1")

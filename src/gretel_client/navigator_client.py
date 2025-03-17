@@ -17,6 +17,7 @@ from gretel_client.config import (
     GretelClientConfigurationError,
     T,
 )
+from gretel_client.data_designer import DataDesignerFactory
 from gretel_client.files.interface import FileClient
 from gretel_client.projects.projects import (
     create_or_get_unique_project,
@@ -221,6 +222,7 @@ class Gretel:
         self._workflows = WorkflowManager(self._api_factory, self)
         self._tasks = TaskRegistry.create()
         self._safe_synthetic_dataset_factory = SafeSyntheticDatasetFactory(self)
+        self._data_designer_factory = DataDesignerFactory(self)
 
     def configure_logger(self, log_configuration: LogConfiguration) -> None:
         if log_configuration == LogConfiguration.STANDARD:
@@ -280,6 +282,10 @@ class Gretel:
     @property
     def safe_synthetic_dataset(self) -> SafeSyntheticDatasetFactory:
         return self._safe_synthetic_dataset_factory
+
+    @property
+    def data_designer(self) -> DataDesignerFactory:
+        return self._data_designer_factory
 
     @property
     def console_url(self) -> str:

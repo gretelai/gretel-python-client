@@ -1,3 +1,5 @@
+from typing import Optional
+
 from inflection import underscore
 from pydantic import BaseModel
 
@@ -16,10 +18,11 @@ class TaskRegistry:
         return registry()
 
 
-def task_to_step(task: TaskConfig) -> Step:
+def task_to_step(task: TaskConfig, inputs: Optional[list[str]] = None) -> Step:
     task_name = underscore(task.__class__.__name__)
     return Step(
         name=task_name.replace("_", "-"),
         task=task_name,
         config=task.model_dump(exclude_unset=True),
+        inputs=inputs,
     )

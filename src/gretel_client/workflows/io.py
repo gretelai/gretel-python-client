@@ -23,6 +23,10 @@ class Dataset:
     def from_bytes(cls, parquet_bytes: IO) -> Self:
         return cls(pd.read_parquet(parquet_bytes))
 
+    @classmethod
+    def from_records(cls, records: list[dict]) -> Self:
+        return cls(pd.DataFrame.from_records(records))
+
     @property
     def df(self) -> pd.DataFrame:
         return self._df
