@@ -33,3 +33,17 @@ TASK_TYPE_EMOJI_MAP = {
     "load": "📥",
     "extract": "💭",
 }
+
+
+DEFAULT_REPR_HTML_STYLE = "nord"
+
+REPR_HTML_TEMPLATE = (
+    "<style>{css}</style>"
+    "<div class='code' "
+    "style='padding: 5px;"
+    "border: 1px solid grey;"
+    "border-radius: 5px;"
+    "display:inline-block;'>"
+    "{highlighted_html}"
+    "</div>"
+)

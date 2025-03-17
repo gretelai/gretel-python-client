@@ -7,10 +7,15 @@ from typing import Any, cast
 import pandas as pd
 import yaml
 
+from pygments import highlight
+from pygments.formatters import HtmlFormatter
+from pygments.lexers import PythonLexer
 from typing_extensions import Self
 
 from gretel_client.data_designer.aidd_config import AIDDConfig
 from gretel_client.data_designer.constants import (
+    DEFAULT_REPR_HTML_STYLE,
+    REPR_HTML_TEMPLATE,
     SQL_DIALECTS,
     VALIDATE_PYTHON_COLUMN_SUFFIXES,
     VALIDATE_SQL_COLUMN_SUFFIXES,
@@ -128,6 +133,7 @@ class DataDesigner:
         self._registry = Registry()
         self._files = self._gretel_resource_provider.files
         self._workflow_manager = self._gretel_resource_provider.workflows
+        self._repr_html_style = DEFAULT_REPR_HTML_STYLE
 
     @property
     def columns_from_sampling(self) -> list[DataColumnFromSamplingT]:
@@ -588,3 +594,67 @@ class DataDesigner:
             s for s in workflow_step_names if s.startswith("evaluate-dataset")
         ]
         return None if len(eval_steps) == 0 else eval_steps[-1]
+
+    def __repr__(self) -> str:
+        max_list_elements = 3
+
+        model_suite = (
+            self.model_suite.value
+            if isinstance(self.model_suite, ModelSuite)
+            else self.model_suite
+        )
+
+        if len(self._columns) == 0:
+            return f"{self.__class__.__name__}(model_suite: {model_suite})"
+
+        md = self._get_data_pipeline_metadata()
+
+        props_to_repr = {
+            "model_suite": model_suite,
+            "seed_dataset_file_id": (
+                None if self._seed_dataset is None else self._seed_dataset.file_id
+            ),
+            "sampling_based_columns": (
+                None
+                if len(md.sampling_based_column_names) == 0
+                else (
+                    json.dumps(md.sampling_based_column_names, indent=8)
+                    if len(md.sampling_based_column_names) > max_list_elements
+                    else md.sampling_based_column_names
+                )
+            ),
+            "llm_based_columns": (
+                None
+                if len(md.prompt_based_column_names) == 0
+                else (
+                    json.dumps(md.prompt_based_column_names, indent=8)
+                    if len(md.prompt_based_column_names) > max_list_elements
+                    else md.prompt_based_column_names
+                )
+            ),
+            "validation_columns": (
+                None
+                if len(md.validation_column_names) == 0
+                else (
+                    json.dumps(md.validation_column_names, indent=8)
+                    if len(md.validation_column_names) > max_list_elements
+                    else md.validation_column_names
+                )
+            ),
+            "llm_judge_column": md.llm_judge_column_name,
+        }
+
+        repr_string = f"{self.__class__.__name__}(\n"
+        for k, v in props_to_repr.items():
+            if v is not None:
+                v_indented = v if "[" not in v else f"{v[:-1]}" + "    " + v[-1]
+                repr_string += f"    {k}: {v_indented}\n"
+        repr_string += ")"
+        return repr_string
+
+    def _repr_html_(self) -> str:
+        repr_string = self.__repr__()
+        formatter = HtmlFormatter(style=self._repr_html_style, cssclass="code")
+        highlighted_html = highlight(repr_string, PythonLexer(), formatter)
+        css = formatter.get_style_defs(".code")
+        return REPR_HTML_TEMPLATE.format(css=css, highlighted_html=highlighted_html)
