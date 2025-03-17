@@ -34,7 +34,7 @@ setup(
     long_description_content_type="text/markdown",
     package_dir={"": "src"},
     packages=find_packages("src"),
-    python_requires=">=3.9",
+    python_requires=">=3.11",
     entry_points={"console_scripts": ["gretel=gretel_client.cli.cli:cli"]},
     install_requires=reqs("requirements/base.txt"),
     tests_require=reqs("requirements/test.txt"),
