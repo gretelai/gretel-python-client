@@ -314,7 +314,7 @@ class DataDesigner:
             "workflow_name": f"{self.__class__.__name__}-{datetime_label}",
         }
 
-        self.magic = MagicDataDesignerEditor(self)
+        self.magic = MagicDataDesignerEditor(self, model_suite=model_suite)
 
     @property
     def categorical_seed_column_names(self) -> list[str]:

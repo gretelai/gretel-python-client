@@ -32,6 +32,7 @@ from gretel_client.navigator.tasks.types import (
     DataConfig,
     ExistingColumn,
     ExistingColumns,
+    ModelSuite,
     OutputColumnType,
     SeedCategory,
     SeedSubcategory,
@@ -82,8 +83,8 @@ def generation_config_to_gdc(
     cfg: GenerateColumnFromTemplateConfig,
 ) -> GeneratedDataColumn:
     return GeneratedDataColumn(
-        name=cfg.response_column_name,
-        generation_prompt=cfg.prompt_template,
+        name=cfg.name,
+        generation_prompt=cfg.prompt,
         llm_type=cfg.model_alias,
         data_config=cfg.data_config,
     )
@@ -99,7 +100,7 @@ def pprint_generation_config(config: GenerateColumnFromTemplateConfig):
     display_group = Group(
         Panel(
             Syntax(
-                f'f"{config.prompt_template}"',
+                f'f"{config.prompt}"',
                 "python",
                 word_wrap=True,
                 theme="dracula",
@@ -114,7 +115,7 @@ def pprint_generation_config(config: GenerateColumnFromTemplateConfig):
     console.print(
         Panel(
             display_group,
-            title=f"🪄 Proposed Config for {pprint_column_name(config.response_column_name)}",
+            title=f"🪄 Proposed Config for {pprint_column_name(config.name)}",
         )
     )
 
@@ -190,6 +191,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
     source_dd_state: DataDesignerT
     _seeds: Optional[CategoricalDataSeeds]
     _modified_columns: list[str]
+    model_suite: ModelSuite
 
     def __init__(
         self,
@@ -197,11 +199,13 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
         *,
         dataset_objective: str = "",
         row_entity: str = "",
+        model_suite: ModelSuite = ModelSuite.LLAMA_3_x,
     ):
         self.dataset_objective = dataset_objective
         self.row_entity = row_entity
         self.dd_state = deepcopy(dd_state)  # Local working copy
         self.source_dd_state = dd_state  # Source state
+        self.model_suite = model_suite
         self._seeds = None
         self._modified_columns = []
 
@@ -349,6 +353,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
             must_depend_on=must_depend_on,
             existing_columns=self.existing_columns,
             client=self.dd_state._client,
+            model_suite=self.model_suite,
         )
 
         generation_config = self._instruction_loop(
@@ -387,9 +392,9 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
         gdc_config = self.dd_state.get_generated_data_column(name)
 
         existing_config = GenerateColumnFromTemplateConfig(
-            response_column_name=gdc_config.name,
-            prompt_template=gdc_config.generation_prompt,
-            llm_type=gdc_config.llm_type,
+            name=gdc_config.name,
+            prompt=gdc_config.generation_prompt,
+            model_alias=gdc_config.llm_type,
             data_config=gdc_config.data_config,
         )
 
