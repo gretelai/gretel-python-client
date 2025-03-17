@@ -15,9 +15,9 @@ from gretel_client.navigator.data_designer.prompt_templates import (
         ("Hello {name}", False),  # Single valid named placeholder.
         ("{greeting}, {name}!", False),  # Multiple valid placeholders.
         ("Hello {name} and {friend}", False),  # Multiple valid placeholders.
-        ("{{}}", True),  # Escaped braces (literal "{}").
+        ("{{}}", False),  # Escaped braces (literal "{}").
         ("a {b} c {{escaped}} d", False),  # Mix of placeholder and escaped braces.
-        ("Just a brace: {{}}", True),  # Only escaped braces.
+        ("Just a brace: {{}}", False),  # Only escaped braces.
         ("Hello {name!s}", False),  # With conversion flag.
         ("Hello {name:>10}", False),  # With format spec.
         (

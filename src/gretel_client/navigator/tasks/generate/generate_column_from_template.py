@@ -1,5 +1,7 @@
 from typing import Optional, Union
 
+from pydantic import BaseModel, field_serializer
+
 from gretel_client.navigator.client.interface import Client, TaskOutput
 from gretel_client.navigator.tasks.base import Task
 from gretel_client.navigator.tasks.io import Dataset
@@ -8,17 +10,21 @@ from gretel_client.navigator.tasks.types import (
     DEFAULT_MODEL_SUITE,
     LLMType,
     ModelSuite,
-    TaskConfigWithModelAlias,
 )
 
 DEFAULT_RESPONSE_COLUMN_NAME = "response"
 
 
-class GenerateColumnFromTemplateConfig(TaskConfigWithModelAlias):
-    prompt: str
-    name: str = DEFAULT_RESPONSE_COLUMN_NAME
+class GenerateColumnFromTemplateConfig(BaseModel):
+    prompt_template: str
+    response_column_name: str = DEFAULT_RESPONSE_COLUMN_NAME
+    llm_type: LLMType = LLMType.NATURAL_LANGUAGE
     system_prompt: Optional[str] = None
     data_config: DataConfig
+
+    @field_serializer("llm_type")
+    def serialize_llm_type(self, llm_type: LLMType, _) -> str:
+        return llm_type.value
 
 
 class GenerateColumnFromTemplate(Task):
@@ -30,14 +36,13 @@ class GenerateColumnFromTemplate(Task):
     in the dataset. The generated column will be appended to the dataset.
 
     Args:
-        prompt: Prompt template to be used for generating the column. The
+        prompt_template: Prompt template to be used for generating the column. The
             template should be a simple format string with keywords that are
             existing column names in the dataset.
-        name: Name of the column to be generated.
+        response_column_name: Name of the column to be generated.
         output_parser: The type of parser apply to the LLMs output. Must be a
             member of the TextParserType enum.
-        model_alias: LLM type to use for generation. Must be a member of the LLMType enum
-            or an alias defined in model_configs global parameter.
+        llm_type: LLM type to use for generation. Must be a member of the LLMType enum.
         system_prompt: System prompt to use for generation. If not provided,
             a generic system prompt will be used.
         workflow_label: Label to append to the task name within a workflow. This can
@@ -51,10 +56,10 @@ class GenerateColumnFromTemplate(Task):
 
     def __init__(
         self,
-        prompt: str,
+        prompt_template: str,
         data_config: DataConfig,
-        name: str = DEFAULT_RESPONSE_COLUMN_NAME,
-        model_alias: Union[str, LLMType] = LLMType.NATURAL_LANGUAGE,
+        response_column_name: str = DEFAULT_RESPONSE_COLUMN_NAME,
+        llm_type: LLMType = LLMType.NATURAL_LANGUAGE,
         system_prompt: Optional[str] = None,
         workflow_label: Optional[str] = None,
         client: Optional[Client] = None,
@@ -62,9 +67,9 @@ class GenerateColumnFromTemplate(Task):
     ):
         super().__init__(
             config=GenerateColumnFromTemplateConfig(
-                prompt=prompt,
-                name=name,
-                model_alias=model_alias,
+                prompt_template=prompt_template,
+                response_column_name=response_column_name,
+                llm_type=llm_type,
                 system_prompt=system_prompt,
                 data_config=data_config,
             ),

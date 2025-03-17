@@ -8,7 +8,6 @@ from gretel_client.config import (
     DEFAULT_GRETEL_ARTIFACT_ENDPOINT,
     DEFAULT_RUNNER,
 )
-from gretel_client.test_utils import TestGretelApiFactory, TestGretelResourceProvider
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -36,13 +35,3 @@ def configure_session_client():
 @pytest.fixture
 def dev_ep() -> str:
     return "https://api-dev.gretel.cloud"
-
-
-@pytest.fixture(scope="function")
-def api_provider_mock() -> TestGretelApiFactory:
-    return TestGretelApiFactory()
-
-
-@pytest.fixture(scope="function")
-def resource_provider_mock() -> TestGretelResourceProvider:
-    return TestGretelResourceProvider()

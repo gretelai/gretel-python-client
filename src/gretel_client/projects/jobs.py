@@ -4,7 +4,7 @@ import base64
 import json
 import time
 
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, abstractproperty
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum
@@ -204,8 +204,7 @@ class Job(ABC):
     @abstractmethod
     def _submit(self, runner_mode: RunnerMode, **kwargs) -> Job: ...
 
-    @property
-    @abstractmethod
+    @abstractproperty
     def model_type(self) -> str: ...
 
     @abstractmethod
@@ -217,12 +216,10 @@ class Job(ABC):
     @abstractmethod
     def delete(self): ...
 
-    @property
-    @abstractmethod
+    @abstractproperty
     def instance_type(self): ...
 
-    @property
-    @abstractmethod
+    @abstractproperty
     def artifact_types(self) -> List[str]: ...
 
     @abstractmethod
@@ -462,20 +459,29 @@ class Job(ABC):
         if report_path:
             report_contents = self._get_report_contents(report_path=report_path)
         else:
-            for artifact_type in [
-                "report_json",
-                "text_metrics_report_json",
-                "classification_report_json",
-                "regression_report_json",
-            ]:
-                try:
+            try:
+                if self.model_type == "gpt_x":
                     report_contents = self._get_report_contents(
-                        artifact_type=artifact_type
+                        artifact_type="text_metrics_report_json"
                     )
-                    if report_contents:
-                        break
-                except Exception:
-                    pass
+                elif self.model_type == "evaluate":
+                    for artifact_type in [
+                        "report_json",
+                        "classification_report_json",
+                        "regression_report_json",
+                        "text_metrics_report_json",
+                    ]:
+                        report_contents = self._get_report_contents(
+                            artifact_type=artifact_type
+                        )
+                        if report_contents:
+                            break
+                else:
+                    report_contents = self._get_report_contents(
+                        artifact_type="report_json"
+                    )
+            except Exception:
+                pass
         return report_contents
 
     def _peek_report(self, report_contents: dict) -> Optional[dict]:
@@ -597,8 +603,7 @@ class Job(ABC):
         """Get billing details for the current job."""
         return self._data.get("billing_data", {})
 
-    @property
-    @abstractmethod
+    @abstractproperty
     def container_image(self) -> str:
         """Return the container image for the job."""
         ...

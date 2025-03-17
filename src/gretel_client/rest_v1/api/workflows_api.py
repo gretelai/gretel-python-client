@@ -3117,12 +3117,6 @@ class WorkflowsApi:
                 description="The fields to expand in the search results. Supported values are: `project`, `created_by`, `updated_by`, `latest_run`"
             ),
         ] = None,
-        omit: Annotated[
-            Optional[List[StrictStr]],
-            Field(
-                description="The fields to omit in the search results, for example to avoid overly large payloads."
-            ),
-        ] = None,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -3149,8 +3143,6 @@ class WorkflowsApi:
         :type skip: int
         :param expand: The fields to expand in the search results. Supported values are: `project`, `created_by`, `updated_by`, `latest_run`
         :type expand: List[str]
-        :param omit: The fields to omit in the search results, for example to avoid overly large payloads.
-        :type omit: List[str]
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -3179,7 +3171,6 @@ class WorkflowsApi:
             limit=limit,
             skip=skip,
             expand=expand,
-            omit=omit,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -3229,12 +3220,6 @@ class WorkflowsApi:
                 description="The fields to expand in the search results. Supported values are: `project`, `created_by`, `updated_by`, `latest_run`"
             ),
         ] = None,
-        omit: Annotated[
-            Optional[List[StrictStr]],
-            Field(
-                description="The fields to omit in the search results, for example to avoid overly large payloads."
-            ),
-        ] = None,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -3261,8 +3246,6 @@ class WorkflowsApi:
         :type skip: int
         :param expand: The fields to expand in the search results. Supported values are: `project`, `created_by`, `updated_by`, `latest_run`
         :type expand: List[str]
-        :param omit: The fields to omit in the search results, for example to avoid overly large payloads.
-        :type omit: List[str]
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -3291,7 +3274,6 @@ class WorkflowsApi:
             limit=limit,
             skip=skip,
             expand=expand,
-            omit=omit,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -3341,12 +3323,6 @@ class WorkflowsApi:
                 description="The fields to expand in the search results. Supported values are: `project`, `created_by`, `updated_by`, `latest_run`"
             ),
         ] = None,
-        omit: Annotated[
-            Optional[List[StrictStr]],
-            Field(
-                description="The fields to omit in the search results, for example to avoid overly large payloads."
-            ),
-        ] = None,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -3373,8 +3349,6 @@ class WorkflowsApi:
         :type skip: int
         :param expand: The fields to expand in the search results. Supported values are: `project`, `created_by`, `updated_by`, `latest_run`
         :type expand: List[str]
-        :param omit: The fields to omit in the search results, for example to avoid overly large payloads.
-        :type omit: List[str]
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -3403,7 +3377,6 @@ class WorkflowsApi:
             limit=limit,
             skip=skip,
             expand=expand,
-            omit=omit,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -3425,7 +3398,6 @@ class WorkflowsApi:
         limit,
         skip,
         expand,
-        omit,
         _request_auth,
         _content_type,
         _headers,
@@ -3436,7 +3408,6 @@ class WorkflowsApi:
 
         _collection_formats: Dict[str, str] = {
             "expand": "multi",
-            "omit": "multi",
         }
 
         _path_params: Dict[str, str] = {}
@@ -3467,10 +3438,6 @@ class WorkflowsApi:
         if expand is not None:
 
             _query_params.append(("expand", expand))
-
-        if omit is not None:
-
-            _query_params.append(("omit", omit))
 
         # process the header parameters
         # process the form parameters

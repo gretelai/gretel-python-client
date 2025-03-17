@@ -1,6 +1,7 @@
 # AUTO-GENERATED FILE, DO NOT EDIT DIRECTLY
+import inspect
 
-from typing import Any
+from typing import Any, cast, Type, TypeVar
 
 from gretel_client.workflows.configs import tasks
 
@@ -12,11 +13,9 @@ class RegistryMeta(type):
 
 class Registry(metaclass=RegistryMeta):
 
-    ConcatDatasets = tasks.ConcatDatasets
     ExtractDataSeedsFromSampleRecords = tasks.ExtractDataSeedsFromSampleRecords
     IdGenerator = tasks.IdGenerator
     LoadDataSeeds = tasks.LoadDataSeeds
-    DropColumns = tasks.DropColumns
     NameGenerator = tasks.NameGenerator
     GenerateDatasetFromSampleRecords = tasks.GenerateDatasetFromSampleRecords
     SampleDataSeeds = tasks.SampleDataSeeds
@@ -28,10 +27,7 @@ class Registry(metaclass=RegistryMeta):
     TestOptionalArgTask = tasks.TestOptionalArgTask
     TestRequiredAndOptionalArgsTask = tasks.TestRequiredAndOptionalArgsTask
     TestTaskCallingTask = tasks.TestTaskCallingTask
-    EvaluateSsDataset = tasks.EvaluateSsDataset
     Holdout = tasks.Holdout
-    GenerateColumnConfigFromInstruction = tasks.GenerateColumnConfigFromInstruction
-    SampleFromDataset = tasks.SampleFromDataset
     JudgeWithLlm = tasks.JudgeWithLlm
     GenerateColumnsUsingSamplers = tasks.GenerateColumnsUsingSamplers
     ValidateCode = tasks.ValidateCode
@@ -42,8 +38,5 @@ class Registry(metaclass=RegistryMeta):
     TabularGan = tasks.TabularGan
     TabularFt = tasks.TabularFt
     Transform = tasks.Transform
-    GenerateFromTextFt = tasks.GenerateFromTextFt
-    TextFt = tasks.TextFt
-    TrainTextFt = tasks.TrainTextFt
-    PromptPretrainedModel = tasks.PromptPretrainedModel
+
 

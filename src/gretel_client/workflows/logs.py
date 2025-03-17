@@ -372,24 +372,11 @@ class LogWorker:
             yield from self._fetch_log_lines(resp.next_page_token)
 
     def _poll(self):
-        consecutive_sync_failures = 0
         while self._control.is_set():
             for line in self._fetch_log_lines():
                 self._log_printer.log(line)
 
-            try:
-                self._sync_task()
-                consecutive_sync_failures = 0
-            except Exception as ex:
-                consecutive_sync_failures += 1
-                if consecutive_sync_failures > 5:
-                    self._log_printer.error(
-                        f"Failed to fetch updated status for task {self.task.name}. "
-                        "This may be a network related issue, and the task may still be running, "
-                        "but we are no longer tailing its logs."
-                    )
-                    logger.debug(f"got error syncing task state: {ex}")
-                    self._control.clear()
+            self._sync_task()
 
             if self.task.did_transition:
                 self._log_printer.transition(self.task)

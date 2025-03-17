@@ -11,6 +11,8 @@ from rich.pretty import Pretty
 from rich.text import Text
 from typing_extensions import Annotated, Self
 
+from gretel_client.config import get_session_config
+
 MAX_NUM_DATA_SEED_VALUES = 25
 MAX_NUM_NESTED_DATA_SEED_SUBCATEGORIES = 5
 
@@ -27,43 +29,17 @@ DEFAULT_MODEL_SUITE = ModelSuite.APACHE_2_0
 
 
 def check_model_suite(model_suite: Union[ModelSuite, str]) -> str:
-    # Temporarily disable this check for now.
-    # is_gretel_dev = get_session_config().stage == "dev"
+    is_gretel_dev = get_session_config().stage == "dev"
 
-    # if not is_gretel_dev:
-    # Make sure that the model_suite is a valid ModelSuite enum.
-    # Why? Faster feedback for users who are using the wrong model suite.
-    # return ModelSuite(model_suite).value
+    if not is_gretel_dev:
+        # Make sure that the model_suite is a valid ModelSuite enum.
+        # Why? Faster feedback for users who are using the wrong model suite.
+        return ModelSuite(model_suite).value
 
     # Allow for more flexibility in dev mode.
     if isinstance(model_suite, ModelSuite):
         return model_suite.value
     return model_suite
-
-
-class GenerationParameters(BaseModel):
-    temperature: float
-    top_p: float
-
-
-class ModelConfig(BaseModel):
-    alias: str
-    model_name: str
-    generation_parameters: GenerationParameters
-
-
-class LLMType(str, Enum):
-    NATURAL_LANGUAGE = "natural_language"
-    CODE = "code"
-    JUDGE = "judge"
-
-
-class TaskConfigWithModelAlias(BaseModel):
-    model_alias: Union[str, LLMType] = LLMType.NATURAL_LANGUAGE
-
-    @field_serializer("model_alias")
-    def serialize_model_alias(self, model_alias: Union[str, LLMType]) -> str:
-        return model_alias.value if isinstance(model_alias, LLMType) else model_alias
 
 
 class OutputColumnType(str, Enum):
@@ -130,6 +106,12 @@ class DataConfig(BaseModel):
 class SystemPromptType(str, Enum):
     REFLECTION = "reflection"
     COGNITION = "cognition"
+
+
+class LLMType(str, Enum):
+    NATURAL_LANGUAGE = "natural_language"
+    CODE = "code"
+    JUDGE = "judge"
 
 
 class TextParserType(str, Enum):
@@ -376,36 +358,3 @@ class CategoricalDataSeeds(BaseModel):
                     )
                     seed_categories += f"{2 * tab}  |-- {sub_cat.name}{needs_gen}\n"
         return f"CategoricalDataSeeds(\n{seed_categories})"
-
-
-class ExistingColumn(BaseModel):
-    """Interface for existing data column descriptions between client/server."""
-
-    name: str
-    description: str
-    data_config: DataConfig
-
-
-class ExistingColumns(BaseModel):
-    """Wrapper class to help with operations against available variables."""
-
-    variables: list[ExistingColumn] = Field(default_factory=list)
-
-    @property
-    def names(self) -> list[str]:
-        return [v.name for v in self.variables]
-
-    def __add__(self, other) -> Self:
-        if isinstance(other, ExistingColumns):
-            # Create a new instance instead of modifying self
-            return ExistingColumns(
-                variables=[*self.variables.copy(), *other.variables.copy()]
-            )
-
-        # Raise the error instead of returning it
-        raise ValueError(f"Cannot append {type(other)} to ExistingColumns")
-
-    def __radd__(self, other) -> Self:
-        if other == 0:  # Special case for sum() with initial value 0
-            return self.model_copy()  # Return a copy of self
-        return self.__add__(other)

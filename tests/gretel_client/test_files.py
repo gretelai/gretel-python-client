@@ -43,4 +43,4 @@ def test_file_not_exists():
         client = FileClient()
         client.upload("non_existent_file.txt", "test")
 
-    assert "No such file or directory" in str(ex)
+    assert "Could not find file at path" in str(ex)

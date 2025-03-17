@@ -383,13 +383,7 @@ class Gretel:
                 and model.status == Status.COMPLETED
                 and not model_config_section.get("evaluate", {}).get("skip", False)
             ):
-                try:
-                    report = fetch_model_report(model, model_setup.report_type)
-                except Exception as e:
-                    logger.warning(
-                        f"Failed to fetch {model_setup.report_type} report for model {model.model_id}: {e}"
-                    )
-                    report = None
+                report = fetch_model_report(model, model_setup.report_type)
 
             if model.status != Status.COMPLETED:
                 logger.warning(
@@ -745,7 +739,7 @@ class Gretel:
 
         Args:
             config: The evaluate config as a yaml file path, yaml string, or dict.
-            data_source: Data source as a file path or pandas DataFrame to train on and produce synthetic data.
+            data_source: Training data source as a file path or pandas DataFrame.
             ref_data: Reference data source as a file path or pandas DataFrame.
             test_data: Optional test data source as a file path or pandas DataFrame. This file will be used to calculate MIA, for more information about Data Privacy Metrics, please refer to our doc site, https://docs.gretel.ai/optimize-synthetic-data/evaluate/synthetic-data-quality-report.
             job_label: Descriptive label to append to job the name.
@@ -773,14 +767,13 @@ class Gretel:
                   data_source: "_"
             '''
 
-            synth_data_source = "https://gretel-public-website.s3-us-west-2.amazonaws.com/datasets/USAdultIncome5kGenerated.csv"
-            train_ref_data = "https://gretel-public-website.s3-us-west-2.amazonaws.com/datasets/USAdultIncome4k.csv"
-            test_data = "https://gretel-public-website.s3.us-west-2.amazonaws.com/datasets/USAdultIncome1k.csv"
+            data_source="https://gretel-public-website.s3-us-west-2.amazonaws.com/datasets/USAdultIncome4k.csv"
+            ref_data="https://gretel-public-website.s3-us-west-2.amazonaws.com/datasets/USAdultIncome5kGenerated.csv"
+            test_data="https://gretel-public-website.s3.us-west-2.amazonaws.com/datasets/USAdultIncome1k.csv"
             evaluate_result = gretel.submit_evaluate(
                 config=config,
-                data_source=synth_data_source,
-                ref_data=train_ref_data,
-                test_data=test_data,
+                data_source=tabular_data_source,
+                ref_data=tabular_data_source,
                 job_label="testing123",
             )
 

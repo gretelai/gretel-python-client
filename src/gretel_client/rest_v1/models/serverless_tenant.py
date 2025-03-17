@@ -35,7 +35,7 @@ from gretel_client.rest_v1.models.serverless_tenant_provisioning_state import (
 
 class ServerlessTenant(BaseModel):
     """
-    Next Tag: 9
+    ServerlessTenant
     """  # noqa: E501
 
     guid: StrictStr
@@ -46,7 +46,7 @@ class ServerlessTenant(BaseModel):
     config: ServerlessTenantConfig
     cluster_guid: Optional[StrictStr] = Field(
         default=None,
-        description="The GUID of the cluster that the tenant is associated with. Deprecated: No longer used.",
+        description="The GUID of the cluster that the tenant is associated with.",
     )
     provisioning_state: Optional[ServerlessTenantProvisioningState] = None
     __properties: ClassVar[List[str]] = [

@@ -2,74 +2,24 @@
 
 from __future__ import annotations
 
-from enum import Enum
-from typing import Annotated, Any, Dict, List, Optional, Union
+from typing import Annotated, Any, Dict, List, Optional
 
-from pydantic import Field
-
-from gretel_client.workflows.configs.base import ConfigBase
+from pydantic import BaseModel, Field
 
 
-class DistributionType(str, Enum):
-    UNIFORM = "uniform"
-    MANUAL = "manual"
+class Globals(BaseModel):
+    num_records: Annotated[Optional[int], Field(title="Num Records")] = 100
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
 
 
-class ManualDistributionParams(ConfigBase):
-    values: Annotated[List[float], Field(min_length=1, title="Values")]
-    weights: Annotated[Optional[List[float]], Field(title="Weights")] = None
-
-
-class Step(ConfigBase):
+class Step(BaseModel):
     name: Annotated[str, Field(title="Name")]
     task: Annotated[str, Field(title="Task")]
     inputs: Annotated[Optional[List[str]], Field(title="Inputs")] = None
     config: Annotated[Dict[str, Any], Field(title="Config")]
 
 
-class UniformDistributionParams(ConfigBase):
-    low: Annotated[float, Field(ge=0.0, le=1.0, title="Low")]
-    high: Annotated[float, Field(ge=0.0, le=1.0, title="High")]
-
-
-class ManualDistribution(ConfigBase):
-    distribution_type: Optional[DistributionType] = "manual"
-    params: ManualDistributionParams
-
-
-class UniformDistribution(ConfigBase):
-    distribution_type: Optional[DistributionType] = "uniform"
-    params: UniformDistributionParams
-
-
-class GenerationParameters(ConfigBase):
-    temperature: Annotated[
-        Union[float, UniformDistribution, ManualDistribution],
-        Field(title="Temperature"),
-    ]
-    top_p: Annotated[
-        Union[float, UniformDistribution, ManualDistribution], Field(title="Top P")
-    ]
-
-
-class ModelConfig(ConfigBase):
-    alias: Annotated[str, Field(title="Alias")]
-    model_name: Annotated[str, Field(title="Model Name")]
-    generation_parameters: GenerationParameters
-
-
-class Globals(ConfigBase):
-    num_records: Annotated[Optional[int], Field(title="Num Records")] = 100
-    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
-    model_configs: Annotated[
-        Optional[List[ModelConfig]], Field(title="Model Configs")
-    ] = None
-    error_rate: Annotated[
-        Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
-    ] = 0.2
-
-
-class Workflow(ConfigBase):
+class Workflow(BaseModel):
     name: Annotated[str, Field(title="Name")]
     version: Annotated[Optional[str], Field(title="Version")] = "2"
     inputs: Annotated[Optional[Dict[str, Any]], Field(title="Inputs")] = None

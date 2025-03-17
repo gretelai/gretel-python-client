@@ -297,15 +297,7 @@ class EvaluateResults(GretelJobResults):
         """Refresh the Evaluate job result attributes."""
         if self.job_status == Status.COMPLETED:
             if self.evaluate_report is None:
-                try:
-                    report_type = self.model.model_config["models"][0]["evaluate"][
-                        "task"
-                    ]["type"]
-                except Exception:
-                    report_type = ReportType.SQS
-                self.evaluate_report = fetch_model_report(
-                    self.model, report_type=report_type
-                )
+                self.evaluate_report = fetch_model_report(self.model)
 
         # We can fetch model logs no matter what
         self.evaluate_logs = fetch_model_logs(self.model)

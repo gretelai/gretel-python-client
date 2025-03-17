@@ -24,7 +24,6 @@ from gretel_client.navigator.data_designer.prompt_templates import (
 from gretel_client.navigator.data_designer.viz_tools import (
     display_preview_evaluation_summary,
 )
-from gretel_client.navigator.experimental.magic import MagicDataDesignerEditor
 from gretel_client.navigator.log import get_logger
 from gretel_client.navigator.tasks.base import Task
 from gretel_client.navigator.tasks.constants import PREVIEW_NUM_RECORDS
@@ -45,7 +44,6 @@ from gretel_client.navigator.tasks.types import (
     EvaluationType,
     LLMJudgePromptTemplateType,
     LLMType,
-    ModelConfig,
     ModelSuite,
     SeedCategory,
     SeedSubcategory,
@@ -169,7 +167,7 @@ class DataDesigner:
         wait_for_completion: bool = True,
         session: Optional[ClientConfig] = None,
         **session_kwargs,
-    ) -> Optional[TaskOutput]:
+    ) -> TaskOutput:
         """Utility method to fetch the output from a specific step in a previously run batch job.
 
         Args:
@@ -217,7 +215,6 @@ class DataDesigner:
         dd = cls(
             special_system_instructions=config.get("special_system_instructions"),
             model_suite=config.get("model_suite", DEFAULT_MODEL_SUITE),
-            model_configs=config.get("model_configs"),
             session=session,
             **session_kwargs,
         )
@@ -253,7 +250,6 @@ class DataDesigner:
                     )
                     code_lang = processor["settings"].get("code_lang")
                 elif "evaluator" in processor:
-                    model_alias = processor.get("model_alias", LLMType.JUDGE)
                     settings = processor["settings"].copy()
                     if processor["evaluator"] in list(LLMJudgePromptTemplateType):
                         settings["instruction_column_name"] = settings.pop(
@@ -266,11 +262,7 @@ class DataDesigner:
                         eval_type = LLMJudgePromptTemplateType(
                             processor["evaluator"]
                         ).value
-                    dd.add_evaluator(
-                        eval_type=processor["evaluator"],
-                        model_alias=model_alias,
-                        **settings,
-                    )
+                    dd.add_evaluator(eval_type=processor["evaluator"], **settings)
                 if code_lang and eval_type:
                     if (code_lang in SQL_DIALECTS and eval_type != "text_to_sql") or (
                         code_lang == "python" and eval_type != "text_to_python"
@@ -289,7 +281,6 @@ class DataDesigner:
         self,
         *,
         model_suite: ModelSuite = DEFAULT_MODEL_SUITE,
-        model_configs: Optional[list[ModelConfig]] = None,
         special_system_instructions: Optional[str] = None,
         session: Optional[ClientConfig] = None,
         **session_kwargs,
@@ -309,12 +300,9 @@ class DataDesigner:
         datetime_label = datetime.now().isoformat(timespec="seconds")
         self._workflow_kwargs = {
             "model_suite": check_model_suite(model_suite),
-            "model_configs": model_configs,
             "client": self._client,
             "workflow_name": f"{self.__class__.__name__}-{datetime_label}",
         }
-
-        self.magic = MagicDataDesignerEditor(self)
 
     @property
     def categorical_seed_column_names(self) -> list[str]:
@@ -427,9 +415,6 @@ class DataDesigner:
             data_config=DataConfig.model_validate(data_config),
         )
 
-        ## Update the magic state
-        self.magic.reset()
-
     def add_categorical_seed_column(
         self,
         name: str,
@@ -470,6 +455,8 @@ class DataDesigner:
             raise ValueError(
                 "You must provide *at least* one of `values` or `num_new_values_to_generate`."
             )
+        if name in self._seed_category_names:
+            raise ValueError(f"Seed category `{name}` already exists.")
 
         if len(subcategories or []) > 0:
             for seed in subcategories:
@@ -477,8 +464,7 @@ class DataDesigner:
                     seed = SeedSubcategory(**seed)
                 if seed.name in self._seed_category_names:
                     raise ValueError(f"Seed category `{seed.name}` already exists.")
-                if seed.name not in self._seed_subcategory_names[name]:
-                    self._seed_subcategory_names[name].append(seed.name)
+                self._seed_subcategory_names[name].append(seed.name)
 
         weights = weights or []
         if len(weights) > 0 and len(weights) != len(values):
@@ -495,9 +481,6 @@ class DataDesigner:
             subcategories=subcategories or [],
             **kwargs,
         )
-
-        ## Update the magic state
-        self.magic.reset()
 
     def add_validator(self, validator: ValidatorType, **settings) -> None:
         """Add a data validator to the data design.
@@ -523,10 +506,6 @@ class DataDesigner:
                     "`code_columns` contains columns that have not been defined."
                     f"\n* Available columns: {self.all_column_names}"
                 )
-            settings["target_columns"] = settings.pop("code_columns")
-            settings["result_columns"] = [
-                f"{col}_is_valid" for col in settings["target_columns"]
-            ]
             self._validators[ValidatorType(validator).value] = ValidateCode(
                 client=self._client, **settings
             )
@@ -534,10 +513,7 @@ class DataDesigner:
             raise ValueError(f"Unknown validator type: {validator}")
 
     def add_evaluator(
-        self,
-        eval_type: Union[EvaluationType, LLMJudgePromptTemplateType],
-        model_alias: Union[str, LLMType],
-        **settings,
+        self, eval_type: Union[EvaluationType, LLMJudgePromptTemplateType], **settings
     ) -> None:
         """Add a dataset evaluation task to the data design.
 
@@ -558,7 +534,6 @@ class DataDesigner:
             instruction_column_name = settings.get("instruction_column_name")
             response_column_name = settings.get("response_column_name")
             self._evaluators["judge_with_llm"] = JudgeWithLLM(
-                model_alias=model_alias,
                 judge_template_type=eval_type,
                 instruction_column_name=instruction_column_name,
                 response_column_name=response_column_name,
@@ -605,7 +580,7 @@ class DataDesigner:
                     else VALIDATE_PYTHON_COLUMN_SUFFIXES
                 )
                 code_lang = validator.config.code_lang
-                code_columns.extend(validator.config.target_columns)
+                code_columns.extend(validator.config.code_columns)
                 for col in code_columns:
                     for prefix in column_suffix:
                         validation_columns.append(f"{col}{prefix}")
@@ -996,6 +971,8 @@ class DataDesigner:
             A tuple containing the validated inputs for the data column.
         """
 
+        if name in self._generated_data_columns:
+            raise ValueError(f"Column name `{name}` already exists.")
         if name in self._seed_categories:
             raise ValueError(f"Column name `{name}` already exists as a seed category.")
 

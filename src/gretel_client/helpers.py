@@ -1,10 +1,17 @@
 import json
+import os
 import sys
 
-from typing import Optional, Tuple
+from pathlib import Path
+from typing import Dict, Optional, Tuple, Union
 
+from gretel_client.cli.utils.parser_utils import ref_data_factory
 from gretel_client.config import ClientConfig, get_logger, get_session_config
-from gretel_client.models.config import get_model_type_config, get_status_description
+from gretel_client.models.config import (
+    get_model_type_config,
+    get_status_description,
+    GPU,
+)
 from gretel_client.projects.common import WAIT_UNTIL_DONE
 from gretel_client.projects.jobs import Job, WaitTimeExceeded
 from gretel_client.projects.models import Model
