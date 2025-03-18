@@ -13,7 +13,6 @@ from gretel_client._api.models.task_envelope import TaskEnvelope
 from gretel_client._api.models.workflow_input import WorkflowInput
 from gretel_client.test_utils import TestGretelApiFactory, TestGretelResourceProvider
 from gretel_client.workflows.builder import (
-    _disambiguate_name,
     _generate_workflow_name,
     WorkflowBuilder,
     WorkflowSessionManager,
@@ -76,10 +75,8 @@ def test_workflow_builder_add_step(builder: WorkflowBuilder):
             config={},
         )
     )
-
     actual = builder.to_workflow().steps
     expected = [Step(name="generate_ids", task="id_generator", config={})]
-
     assert actual == expected
 
 
@@ -216,7 +213,12 @@ def test_does_submit_batch_job(
         "inputs": None,
         "name": "test-workflow",
         "steps": [
-            {"config": {}, "inputs": None, "name": "test_step", "task": "id_generator"}
+            {
+                "config": {},
+                "inputs": None,
+                "name": "test_step",
+                "task": "id_generator",
+            }
         ],
         "version": "2",
     }
@@ -266,9 +268,9 @@ def test_handle_step_name_duplicates(builder: WorkflowBuilder, tasks: Registry):
 
     actual = builder.to_workflow().steps
     expected = [
-        Step(name="id-generator-1", task="id_generator", config={}),
+        Step(name="id-generator", task="id_generator", config={}),
         Step(
-            name="id-generator-2",
+            name="id-generator-1",
             task="id_generator",
             config={},
         ),
@@ -278,75 +280,52 @@ def test_handle_step_name_duplicates(builder: WorkflowBuilder, tasks: Registry):
     assert actual == expected
 
 
-@pytest.mark.parametrize(
-    "step_one_name, step_two_name, all_names, expected_one, expected_two, test_description",
-    [
-        # Already different names
-        (
-            "foo",
-            "bar",
-            ["step1", "step2"],
-            "foo",
-            "bar",
-            "already different names",
-        ),
-        # Basic disambiguation
-        (
-            "id",
-            "id",
-            ["step1", "step2"],
-            "id-1",
-            "id-2",
-            "basic disambiguation",
-        ),
-        # Disambiguation when suffixed names already exist
-        (
-            "id",
-            "id",
-            ["id-1", "step2"],
-            "id-2",
-            "id-3",
-            "existing suffixed names",
-        ),
-        # Disambiguation with multiple conflicts
-        (
-            "id",
-            "id",
-            ["id-1", "id-2", "id-3"],
-            "id-4",
-            "id-5",
-            "multiple conflicts",
-        ),
-        # Disambiguation with gaps in suffixes
-        (
-            "id",
-            "id",
-            ["id-1", "id-3"],
-            "id-2",
-            "id-4",
-            "gaps in suffixes",
-        ),
-        # Disambiguation when name already has numeric suffix
-        (
-            "step-1",
-            "step-1",
-            ["step-1", "step-2"],
-            "step-1-1",
-            "step-1-2",
-            "name already has suffix",
-        ),
-    ],
-)
-def test_disambiguate_name(
-    step_one_name,
-    step_two_name,
-    all_names,
-    expected_one,
-    expected_two,
-    test_description,
+def test_handle_step_name_duplicates_with_inputs(
+    builder: WorkflowBuilder, tasks: Registry
 ):
-    """Test name disambiguation with various scenarios."""
-    name1, name2 = _disambiguate_name(step_one_name, step_two_name, all_names)
+    id_generator = tasks.IdGenerator()
+    first_name_generator = tasks.NameGenerator(column_name="first_name")
+    last_name_generator = tasks.NameGenerator(column_name="last_name")
+    full_name_combiner = tasks.Combiner()
+    profile_combiner = tasks.Combiner()
 
-    assert name1 == expected_one, f"Failed on: {test_description}"
-    assert name2 == expected_two, f"Failed on: {test_description}"
+    builder.add_step(id_generator)
+    builder.add_step(first_name_generator)
+    builder.add_step(last_name_generator)
+    builder.add_step(
+        full_name_combiner, step_inputs=[first_name_generator, last_name_generator]
+    )
+    builder.add_step(profile_combiner, step_inputs=[id_generator, full_name_combiner])
+
+    actual = builder.to_workflow().steps
+    expected = [
+        Step(name="id-generator", task="id_generator", config={}),
+        Step(
+            name="name-generator",
+            task="name_generator",
+            config={
+                "column_name": "first_name",
+            },
+        ),
+        Step(
+            name="name-generator-1",
+            task="name_generator",
+            config={
+                "column_name": "last_name",
+            },
+        ),
+        Step(
+            name="combiner",
+            task="combiner",
+            config={},
+            inputs=["name-generator", "name-generator-1"],
+        ),
+        Step(
+            name="combiner-1",
+            task="combiner",
+            config={},
+            inputs=["id-generator", "combiner"],
+        ),
+    ]
+
+    assert actual == expected

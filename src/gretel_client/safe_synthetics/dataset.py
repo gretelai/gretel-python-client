@@ -63,6 +63,7 @@ class SafeSyntheticDataset:
         # steps with fixed positions
         self._holdout = None
         self._evaluate_config = EvaluateSsDataset()
+        self._synthesis_task = None
 
         # these steps are ordered
         self._tasks = []
@@ -154,7 +155,7 @@ class SafeSyntheticDataset:
                     "We tried configuring num_records, but "
                     "the configuration doesn't support it."
                 )
-
+        self._synthesis_task = task_config_for_klass
         self._tasks.append(task_config_for_klass)
         return self
 
@@ -201,13 +202,13 @@ class SafeSyntheticDataset:
             # if one exists, or the input file to the workflow.
             train = None
             if holdout_step:
-                train = holdout_step.name
+                train = holdout_step
             elif self._builder.data_source:
                 train = self._builder.data_source
 
             # The training dataset is always going to be the last
             # step in a SSD based workflow
-            synth = self._builder._steps[-1].name
+            synth = self._synthesis_task
 
             # For now, using evaluate in a SSD workflow requires both
             # a synthetic and training dataset. In the future, this might
@@ -216,10 +217,7 @@ class SafeSyntheticDataset:
                 raise Exception(
                     "Can not configure evaluate task. Could not find training and synthetic datasets"
                 )
-
-            evaluate_step.inputs = [synth, train]
-
-            self._builder.add_step(evaluate_step)
+            self._builder.add_step(evaluate_step, step_inputs=[synth, train])
 
         return self._builder.run(wait=wait)
 

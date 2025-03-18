@@ -6,7 +6,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Iterator, Optional, Union
+from typing import Any, Callable, Iterator, Optional, Union
 
 import pandas as pd
 import requests
@@ -217,6 +217,7 @@ class WorkflowBuilder:
         self._name = ""
         self._input_file_id = None
         self._steps: list[Step] = []
+        self._step_hash_to_name_map: dict[int, str] = {}
         self._globals = globals
         self._inputs = None
 
@@ -307,7 +308,7 @@ class WorkflowBuilder:
     def add_step(
         self,
         step: Union[TaskConfig, Step],
-        step_inputs: Optional[list[str]] = None,
+        step_inputs: Optional[list[Union[TaskConfig, Step, str]]] = None,
         validate: bool = True,
     ) -> Self:
         """Add a single step to the workflow.
@@ -320,25 +321,22 @@ class WorkflowBuilder:
         Returns:
             Self: The builder instance for method chaining.
         """
+        # uniquely identify step or task config objects
+        hash_before_transform = _get_object_hash(step)
+        disambiguated_step_input_names = self._disambiguate_step_inputs(
+            step_inputs=step_inputs
+        )
         if isinstance(step, TaskConfig) and not isinstance(step, Step):
-            step = task_to_step(step, step_inputs)
-
-        for existing_step in self._steps:
-            if existing_step.name == step.name:
-                new_existing_name, new_step_name = _disambiguate_name(
-                    existing_step.name, step.name, [s.name for s in self._steps]
-                )
-
-                existing_step.name = new_existing_name
-                step.name = new_step_name
+            step = task_to_step(step, inputs=disambiguated_step_input_names)
+        else:
+            step.inputs = disambiguated_step_input_names
+        step = self._ensure_unique_step_name(step)
 
         if validate:
             self.validate_step(step)
 
-        if step_inputs:
-            step.inputs = step_inputs
-
         self._steps.append(step)
+        self._step_hash_to_name_map[hash_before_transform] = step.name
         return self
 
     def validate_step(self, step: Step) -> str:
@@ -553,6 +551,35 @@ class WorkflowBuilder:
 
         return workflow_run
 
+    def _ensure_unique_step_name(self, step: Step) -> Step:
+        """Ensure the name of the step is unique by appending a counter suffix"""
+        ctr = 0
+        for step_name in self.step_names:
+            if step_name.startswith(step.name):
+                ctr += 1
+        if ctr > 0:
+            step.name = f"{step.name}-{ctr}"
+        return step
+
+    def _disambiguate_step_inputs(
+        self, step_inputs: Optional[list[Union[TaskConfig, Step, str]]] = None
+    ) -> Optional[list[str]]:
+        disambiguated_step_input_names = []
+        for step_input in step_inputs or []:
+            if isinstance(step_input, str) and step_input.startswith("file_"):
+                disambiguated_step_input_names.append(step_input)
+                continue
+            step_input_hash = _get_object_hash(step_input)
+            if step_input_hash in self._step_hash_to_name_map:
+                disambiguated_step_input_names.append(
+                    self._step_hash_to_name_map[step_input_hash]
+                )
+        return (
+            disambiguated_step_input_names
+            if len(disambiguated_step_input_names) > 0
+            else None
+        )
+
 
 def _check_for_error_response(response: requests.Response) -> None:
     try:
@@ -597,28 +624,8 @@ def _generate_workflow_name(steps: Optional[list[Step]] = None) -> str:
     return f"{step_str}{date_str}"
 
 
-def _disambiguate_name(
-    step_one: str, step_two: str, all_names: list[str]
-) -> tuple[str, str]:
-    """Disambiguate conflicting step names by adding numeric suffixes."""
-
-    def get_unique_name(base_name: str) -> str:
-        counter = 1
-        new_name = f"{base_name}-{counter}"
-
-        # Keep incrementing suffix until we find a name not in use
-        while new_name in all_names:
-            counter += 1
-            new_name = f"{base_name}-{counter}"
-
-        return new_name
-
-    # If the names are already different, no need to disambiguate
-    if step_one != step_two:
-        return step_one, step_two
-
-    new_step_one = get_unique_name(step_one)
-    all_names.append(new_step_one)
-    new_step_two = get_unique_name(step_one)
-
-    return new_step_one, new_step_two
+def _get_object_hash(obj: Any) -> int:
+    """
+    Generate a hash of the object provided
+    """
+    return hash(id(obj))

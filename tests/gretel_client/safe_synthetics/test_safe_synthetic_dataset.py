@@ -108,9 +108,6 @@ def test_ssd_model_num_records(
 
     steps = ssd.builder().to_workflow().steps
     assert steps
-
-    print(steps)
-
     assert steps[0].config["generate"]["num_records"] == 10
     assert steps[1].config["generate"]["num_records"] == 10
 
@@ -144,10 +141,29 @@ def test_multiple_tasks(ssd_factory: SafeSyntheticDatasetFactory):
     assert steps
     assert [(s.name, s.inputs) for s in steps] == [
         ("holdout", ["file_1"]),
+        ("transform", None),
         ("transform-1", None),
-        ("transform-2", None),
         ("tabular-ft", None),
         ("evaluate-ss-dataset", ["tabular-ft", "holdout"]),
+    ]
+
+
+def test_multiple_tasks_no_hold_out(ssd_factory: SafeSyntheticDatasetFactory):
+    ssd = (
+        ssd_factory.from_data_source("file_1", holdout=None)
+        .transform()
+        .transform()
+        .synthesize()
+    )
+    ssd.create(wait=False)
+
+    steps = ssd.builder().to_workflow().steps
+    assert steps
+    assert [(s.name, s.inputs) for s in steps] == [
+        ("transform", ["file_1"]),
+        ("transform-1", None),
+        ("tabular-ft", None),
+        ("evaluate-ss-dataset", ["tabular-ft", "file_1"]),
     ]
 
 
