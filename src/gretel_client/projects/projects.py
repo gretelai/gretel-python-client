@@ -35,7 +35,11 @@ from gretel_client.projects.exceptions import GretelProjectError
 from gretel_client.projects.models import Model
 from gretel_client.rest import models
 from gretel_client.rest.api.projects_api import ProjectsApi
-from gretel_client.rest.exceptions import ForbiddenException, UnauthorizedException
+from gretel_client.rest.exceptions import (
+    ForbiddenException,
+    NotFoundException,
+    UnauthorizedException,
+)
 from gretel_client.users.users import get_me
 
 DATA = "data"
@@ -499,7 +503,7 @@ def get_project(
     if name:
         try:
             project = api.get_project(project_id=name)
-        except (UnauthorizedException, ForbiddenException):
+        except (UnauthorizedException, ForbiddenException, NotFoundException):
             if create:
                 project_args["name"] = name
                 _validate_project_name(name)

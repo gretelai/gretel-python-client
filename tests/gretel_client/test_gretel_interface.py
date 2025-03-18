@@ -9,7 +9,11 @@ from gretel_client.gretel.interface import Gretel
 from gretel_client.projects.exceptions import GretelProjectError
 from gretel_client.projects.projects import Project
 from gretel_client.rest.apis import ProjectsApi
-from gretel_client.rest.exceptions import ForbiddenException, NotFoundException
+from gretel_client.rest.exceptions import (
+    ApiException,
+    ForbiddenException,
+    NotFoundException,
+)
 
 
 @dataclass
@@ -90,9 +94,11 @@ def test_project_creation_invalid(
 ):
     projects_api = Mock()
     projects_api.get_project.side_effect = [
-        NotFoundException(
+        ApiException(
             http_resp=MockResponse(
-                reason="NotFound", status=404, resp={"message": "not found"}
+                reason="BadRequest",
+                status=400,
+                resp={"message": "Project name not available!"},
             )
         ),
         ForbiddenException(
