@@ -15,6 +15,7 @@ from gretel_client.data_designer.types import (
     Evaluator,
 )
 from gretel_client.workflows.configs.tasks import (
+    ConcatDatasets,
     GenerateColumnFromTemplate,
     GenerateColumnsUsingSamplers,
     SampleFromDataset,
@@ -243,6 +244,7 @@ def test_workflow_builder_preview_integration(
     assert steps[0].num_samples == 10
     assert steps[0].with_replacement is True
     assert steps[0].strategy == "shuffle"
+
     assert isinstance(steps[1], GenerateColumnsUsingSamplers)
     assert len(steps[1].data_schema.columns) == 4
     expected_sampling_column_names = set([c.name for c in dd.columns_from_sampling])
@@ -253,11 +255,13 @@ def test_workflow_builder_preview_integration(
     assert len(steps[1].data_schema.constraints) == 1
     assert steps[1].data_schema.constraints[0].target_column == "age"
 
-    assert isinstance(steps[2], GenerateColumnFromTemplate)
-    assert steps[2].name == "text"
+    assert isinstance(steps[2], ConcatDatasets)
 
     assert isinstance(steps[3], GenerateColumnFromTemplate)
-    assert steps[3].name == "code"
+    assert steps[3].name == "text"
+
+    assert isinstance(steps[4], GenerateColumnFromTemplate)
+    assert steps[4].name == "code"
 
     # TODO: Add more assertions for validators and evaluators
 

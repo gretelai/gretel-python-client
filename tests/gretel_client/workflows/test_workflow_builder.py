@@ -59,7 +59,12 @@ def test_workflow_builder_add_step_from_task(builder: WorkflowBuilder, tasks: Re
     expected = Workflow(
         name=_generate_workflow_name(builder._steps),
         steps=[
-            Step(name="id-generator", task="id_generator", config={"num_records": 5})
+            Step(
+                name="id-generator",
+                task="id_generator",
+                inputs=[],
+                config={"num_records": 5},
+            )
         ],
     )
 
@@ -72,11 +77,12 @@ def test_workflow_builder_add_step(builder: WorkflowBuilder):
         Step(
             name="generate_ids",
             task="id_generator",
+            inputs=[],
             config={},
         )
     )
     actual = builder.to_workflow().steps
-    expected = [Step(name="generate_ids", task="id_generator", config={})]
+    expected = [Step(name="generate_ids", task="id_generator", inputs=[], config={})]
     assert actual == expected
 
 
@@ -215,7 +221,7 @@ def test_does_submit_batch_job(
         "steps": [
             {
                 "config": {},
-                "inputs": None,
+                "inputs": [],
                 "name": "test_step",
                 "task": "id_generator",
             }
@@ -268,13 +274,14 @@ def test_handle_step_name_duplicates(builder: WorkflowBuilder, tasks: Registry):
 
     actual = builder.to_workflow().steps
     expected = [
-        Step(name="id-generator", task="id_generator", config={}),
+        Step(name="id-generator", task="id_generator", inputs=[], config={}),
         Step(
             name="id-generator-1",
             task="id_generator",
+            inputs=[],
             config={},
         ),
-        Step(name="combiner", task="combiner", config={}),
+        Step(name="combiner", task="combiner", inputs=[], config={}),
     ]
 
     assert actual == expected
@@ -299,10 +306,11 @@ def test_handle_step_name_duplicates_with_inputs(
 
     actual = builder.to_workflow().steps
     expected = [
-        Step(name="id-generator", task="id_generator", config={}),
+        Step(name="id-generator", task="id_generator", inputs=[], config={}),
         Step(
             name="name-generator",
             task="name_generator",
+            inputs=[],
             config={
                 "column_name": "first_name",
             },
@@ -310,6 +318,7 @@ def test_handle_step_name_duplicates_with_inputs(
         Step(
             name="name-generator-1",
             task="name_generator",
+            inputs=[],
             config={
                 "column_name": "last_name",
             },

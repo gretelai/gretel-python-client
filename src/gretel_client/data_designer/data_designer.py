@@ -357,87 +357,107 @@ class DataDesigner:
             )
         )
 
+        sample_from_dataset_step = None
+        columns_using_samples_step = None
+        last_step_added = None
         if self._seed_dataset is not None:
+            sample_from_dataset_step = self._registry.SampleFromDataset(
+                num_samples=num_records,
+                strategy=self._seed_dataset.sampling_strategy,
+                with_replacement=self._seed_dataset.with_replacement,
+            )
             builder.add_step(
-                step=self._registry.SampleFromDataset(
-                    num_samples=num_records,
-                    strategy=self._seed_dataset.sampling_strategy,
-                    with_replacement=self._seed_dataset.with_replacement,
-                ),
+                step=sample_from_dataset_step,
                 step_inputs=[self._seed_dataset.file_id],
             )
+            last_step_added = sample_from_dataset_step
 
         if len(self.columns_from_sampling) > 0:
-            builder.add_step(
-                step=self._registry.GenerateColumnsUsingSamplers(
-                    data_schema=DataSchema(
-                        columns=[c for c in self.columns_from_sampling],
-                        constraints=[c for c in list(self._constraints.values())],
-                    ),
-                    num_records=num_records,
+            columns_using_samples_step = self._registry.GenerateColumnsUsingSamplers(
+                data_schema=DataSchema(
+                    columns=[c for c in self.columns_from_sampling],
+                    constraints=[c for c in list(self._constraints.values())],
                 ),
+                num_records=num_records,
+            )
+            builder.add_step(
+                step=columns_using_samples_step,
                 step_inputs=[],
             )
+            last_step_added = columns_using_samples_step
 
-        if len(builder.step_names) == 2:
+        if (
+            sample_from_dataset_step is not None
+            and columns_using_samples_step is not None
+        ):
+            concat_step = self._registry.ConcatDatasets()
             builder.add_step(
-                step=self._registry.Combiner(),
-                step_inputs=[*builder.step_names],
+                step=concat_step,
+                step_inputs=[sample_from_dataset_step, columns_using_samples_step],
             )
+            last_step_added = concat_step
 
         for prompt_based_column in self.columns_from_prompt:
-            builder.add_step(
-                step=self._registry.GenerateColumnFromTemplate(
-                    prompt=prompt_based_column.prompt,
-                    name=prompt_based_column.name,
-                    system_prompt=prompt_based_column.system_prompt,
-                    model_alias=prompt_based_column.model_alias,
-                    data_config=prompt_based_column.data_config,
-                ),
-                step_inputs=[builder.step_names[-1]],
+            columns_from_prompt_step = self._registry.GenerateColumnFromTemplate(
+                prompt=prompt_based_column.prompt,
+                name=prompt_based_column.name,
+                system_prompt=prompt_based_column.system_prompt,
+                model_alias=prompt_based_column.model_alias,
+                data_config=prompt_based_column.data_config,
             )
+            builder.add_step(
+                step=columns_from_prompt_step,
+                step_inputs=[last_step_added],
+            )
+            last_step_added = columns_from_prompt_step
 
         for validator in self._validators.values():
-            builder.add_step(
-                step=self._registry.ValidateCode(
-                    code_lang=validator.settings.code_lang,
-                    target_columns=validator.settings.target_columns,
-                    result_columns=[
-                        f"{c}_is_valid" for c in validator.settings.target_columns
-                    ],
-                ),
-                step_inputs=[builder.step_names[-1]],
+            validation_step = self._registry.ValidateCode(
+                code_lang=validator.settings.code_lang,
+                target_columns=validator.settings.target_columns,
+                result_columns=[
+                    f"{c}_is_valid" for c in validator.settings.target_columns
+                ],
             )
+            builder.add_step(
+                step=validation_step,
+                step_inputs=[last_step_added],
+            )
+            last_step_added = validation_step
 
         for evaluator in self._evaluators.values():
             if evaluator.type == EvaluationType.JUDGE_WITH_LLM:
                 settings = evaluator.settings
                 if isinstance(evaluator, JudgeCodeWithLLMEvaluator):
                     settings = evaluator.settings.to_judge_with_llm_settings()
-                builder.add_step(
-                    step=self._registry.JudgeWithLlm(
-                        judge_template_type=settings.judge_template_type,
-                        instruction_column_name=settings.instruction_column_name,
-                        response_column_name=settings.response_column_name,
-                        context_column_name=settings.context_column_name,
-                        num_samples_to_judge=settings.num_samples_to_judge,
-                    ),
-                    step_inputs=[builder.step_names[-1]],
+                judge_with_llm_step = self._registry.JudgeWithLlm(
+                    judge_template_type=settings.judge_template_type,
+                    instruction_column_name=settings.instruction_column_name,
+                    response_column_name=settings.response_column_name,
+                    context_column_name=settings.context_column_name,
+                    num_samples_to_judge=settings.num_samples_to_judge,
                 )
+                builder.add_step(
+                    step=judge_with_llm_step,
+                    step_inputs=[last_step_added],
+                )
+                last_step_added = judge_with_llm_step
             elif evaluator.type == EvaluationType.GENERAL:
                 settings: EvaluateDatasetSettings = cast(
                     EvaluateDatasetSettings, evaluator.settings
                 )
-                builder.add_step(
-                    step=self._registry.EvaluateDataset(
-                        seed_columns=[col.name for col in self.categorical_columns],
-                        ordered_list_like_columns=settings.ordered_list_like_columns,
-                        list_like_columns=settings.list_like_columns,
-                        llm_judge_column=settings.llm_judge_column_with_suffix,
-                        columns_to_ignore=settings.columns_to_ignore,
-                    ),
-                    step_inputs=[builder.step_names[-1]],
+                general_eval_step = self._registry.EvaluateDataset(
+                    seed_columns=[col.name for col in self.categorical_columns],
+                    ordered_list_like_columns=settings.ordered_list_like_columns,
+                    list_like_columns=settings.list_like_columns,
+                    llm_judge_column=settings.llm_judge_column_with_suffix,
+                    columns_to_ignore=settings.columns_to_ignore,
                 )
+                builder.add_step(
+                    step=general_eval_step,
+                    step_inputs=[last_step_added],
+                )
+                last_step_added = general_eval_step
 
         if verbose_logging:
             self._write_workflow_steps_to_logger(builder.get_steps())

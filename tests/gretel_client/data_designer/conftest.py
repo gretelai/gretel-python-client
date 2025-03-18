@@ -52,7 +52,7 @@ seed_dataset:
   file_id: file_123
   sampling_strategy: shuffle
   with_replacement: true
-              
+
 columns:
     - name: code_id
       type: uuid

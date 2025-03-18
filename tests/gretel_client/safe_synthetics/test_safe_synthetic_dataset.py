@@ -64,11 +64,11 @@ def test_ssd_factory(ssd_factory: SafeSyntheticDatasetFactory, tasks: Registry):
     assert steps[0].task == "holdout"
 
     assert steps[1].name == "transform"
-    assert steps[1].inputs == None
+    assert steps[1].inputs == []
     assert steps[1].task == "transform"
 
     assert steps[2].name == "tabular-ft"
-    assert steps[2].inputs == None
+    assert steps[2].inputs == []
     assert steps[2].task == "tabular_ft"
 
     assert steps[3].name == "evaluate-ss-dataset"
@@ -141,9 +141,9 @@ def test_multiple_tasks(ssd_factory: SafeSyntheticDatasetFactory):
     assert steps
     assert [(s.name, s.inputs) for s in steps] == [
         ("holdout", ["file_1"]),
-        ("transform", None),
-        ("transform-1", None),
-        ("tabular-ft", None),
+        ("transform", []),
+        ("transform-1", []),
+        ("tabular-ft", []),
         ("evaluate-ss-dataset", ["tabular-ft", "holdout"]),
     ]
 
@@ -161,8 +161,8 @@ def test_multiple_tasks_no_hold_out(ssd_factory: SafeSyntheticDatasetFactory):
     assert steps
     assert [(s.name, s.inputs) for s in steps] == [
         ("transform", ["file_1"]),
-        ("transform-1", None),
-        ("tabular-ft", None),
+        ("transform-1", []),
+        ("tabular-ft", []),
         ("evaluate-ss-dataset", ["tabular-ft", "file_1"]),
     ]
 

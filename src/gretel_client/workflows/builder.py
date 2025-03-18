@@ -574,11 +574,7 @@ class WorkflowBuilder:
                 disambiguated_step_input_names.append(
                     self._step_hash_to_name_map[step_input_hash]
                 )
-        return (
-            disambiguated_step_input_names
-            if len(disambiguated_step_input_names) > 0
-            else None
-        )
+        return disambiguated_step_input_names
 
 
 def _check_for_error_response(response: requests.Response) -> None:
