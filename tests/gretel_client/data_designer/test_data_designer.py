@@ -16,9 +16,13 @@ from gretel_client.data_designer.types import (
 )
 from gretel_client.workflows.configs.tasks import (
     ConcatDatasets,
+    DropColumns,
+    EvaluateDataset,
     GenerateColumnFromTemplate,
     GenerateColumnsUsingSamplers,
+    JudgeWithLlm,
     SampleFromDataset,
+    ValidateCode,
 )
 
 
@@ -246,7 +250,7 @@ def test_workflow_builder_preview_integration(
     assert steps[0].strategy == "shuffle"
 
     assert isinstance(steps[1], GenerateColumnsUsingSamplers)
-    assert len(steps[1].data_schema.columns) == 4
+    assert len(steps[1].data_schema.columns) == 6
     expected_sampling_column_names = set([c.name for c in dd.columns_from_sampling])
     actual_sampling_column_names = set(
         set([col.name for col in steps[1].data_schema.columns])
@@ -263,7 +267,15 @@ def test_workflow_builder_preview_integration(
     assert isinstance(steps[4], GenerateColumnFromTemplate)
     assert steps[4].name == "code"
 
-    # TODO: Add more assertions for validators and evaluators
+    assert isinstance(steps[5], ValidateCode)
+    assert steps[5].code_lang == "python"
+
+    assert isinstance(steps[6], JudgeWithLlm)
+
+    assert isinstance(steps[7], EvaluateDataset)
+
+    assert isinstance(steps[8], DropColumns)
+    assert steps[8].columns == ["some_dude", "some_lady"]
 
 
 def test_workflow_builder_run_integration(

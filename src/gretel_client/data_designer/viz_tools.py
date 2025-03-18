@@ -92,7 +92,7 @@ def display_sample_record(
 
     columns_combined = sampling_based_column_names + prompt_based_column_names
     if len(columns_combined) > 0:
-        table = Table(title="Generated columns", **table_kws)
+        table = Table(title="Generated Columns", **table_kws)
         table.add_column("Name")
         table.add_column("Value")
         for col in [c for c in columns_combined if c not in code_columns]:
@@ -104,6 +104,8 @@ def display_sample_record(
                 pass
             if isinstance(_element, (np.integer, np.floating, np.ndarray)):
                 _element = str(_element)
+            elif isinstance(_element, (list, dict)):
+                _element = Pretty(_element)
             table.add_row(col, _element)
         render_list.append(_pad_console_element(table))
 

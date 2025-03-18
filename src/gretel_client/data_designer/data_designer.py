@@ -37,6 +37,7 @@ from gretel_client.data_designer.types import (
     JudgeWithLLMSettings,
     ModelSuite,
     NonSamplingSupportedTypes,
+    PersonParams,
     SeedDataset,
     SupportedColumnTypesT,
     ValidationType,
@@ -104,6 +105,7 @@ class DataDesigner:
             model_suite=valid_config.model_suite,
             model_configs=valid_config.model_configs,
             seed_dataset=valid_config.seed_dataset,
+            person_samplers=valid_config.person_samplers,
             columns=columns,
             constraints=constraints,
             validators=validators,
@@ -117,6 +119,7 @@ class DataDesigner:
         model_suite: ModelSuite = ModelSuite.APACHE_2_0,
         model_configs: list[ModelConfig] | None = None,
         seed_dataset: SeedDataset | None = None,
+        person_samplers: dict[str, PersonParams] | None = None,
         columns: dict[str, DataColumnT] | None = None,
         constraints: dict[str, ColumnConstraint] | None = None,
         validators: dict[str, ValidatorT] | None = None,
@@ -134,6 +137,9 @@ class DataDesigner:
         self._files = self._gretel_resource_provider.files
         self._workflow_manager = self._gretel_resource_provider.workflows
         self._repr_html_style = DEFAULT_REPR_HTML_STYLE
+        self._latent_columns: dict[str, PersonParams] = {}
+        if person_samplers:
+            self.with_person_samplers(person_samplers)
 
     @property
     def columns_from_sampling(self) -> list[DataColumnFromSamplingT]:
@@ -310,6 +316,19 @@ class DataDesigner:
                     f"You provided: {path.suffix}"
                 )
 
+    def with_person_samplers(self, person_samplers: dict[str, PersonParams]) -> Self:
+        for name, params in person_samplers.items():
+            person_params = PersonParams.model_validate(params)
+            self._add_column(
+                DataColumnFromSamplingT(
+                    name=name,
+                    type=SamplingSourceType.PERSON,
+                    params=person_params.model_dump(),
+                )
+            )
+            self._latent_columns[name] = person_params
+        return self
+
     def with_seed_dataset(
         self,
         dataset: pd.DataFrame | Path | str,
@@ -367,8 +386,7 @@ class DataDesigner:
                 with_replacement=self._seed_dataset.with_replacement,
             )
             builder.add_step(
-                step=sample_from_dataset_step,
-                step_inputs=[self._seed_dataset.file_id],
+                step=sample_from_dataset_step, step_inputs=[self._seed_dataset.file_id]
             )
             last_step_added = sample_from_dataset_step
 
@@ -380,10 +398,7 @@ class DataDesigner:
                 ),
                 num_records=num_records,
             )
-            builder.add_step(
-                step=columns_using_samples_step,
-                step_inputs=[],
-            )
+            builder.add_step(step=columns_using_samples_step, step_inputs=[])
             last_step_added = columns_using_samples_step
 
         if (
@@ -406,8 +421,7 @@ class DataDesigner:
                 data_config=prompt_based_column.data_config,
             )
             builder.add_step(
-                step=columns_from_prompt_step,
-                step_inputs=[last_step_added],
+                step=columns_from_prompt_step, step_inputs=[last_step_added]
             )
             last_step_added = columns_from_prompt_step
 
@@ -419,11 +433,10 @@ class DataDesigner:
                     f"{c}_is_valid" for c in validator.settings.target_columns
                 ],
             )
-            builder.add_step(
-                step=validation_step,
-                step_inputs=[last_step_added],
-            )
+            builder.add_step(step=validation_step, step_inputs=[last_step_added])
             last_step_added = validation_step
+
+        last_dataset_step = last_step_added
 
         for evaluator in self._evaluators.values():
             if evaluator.type == EvaluationType.JUDGE_WITH_LLM:
@@ -438,9 +451,9 @@ class DataDesigner:
                     num_samples_to_judge=settings.num_samples_to_judge,
                 )
                 builder.add_step(
-                    step=judge_with_llm_step,
-                    step_inputs=[last_step_added],
+                    step=judge_with_llm_step, step_inputs=[last_step_added]
                 )
+                last_dataset_step = judge_with_llm_step
                 last_step_added = judge_with_llm_step
             elif evaluator.type == EvaluationType.GENERAL:
                 settings: EvaluateDatasetSettings = cast(
@@ -458,6 +471,15 @@ class DataDesigner:
                     step_inputs=[last_step_added],
                 )
                 last_step_added = general_eval_step
+
+        if len(self._latent_columns) > 0:
+            drop_latent_columns_step = self._registry.DropColumns(
+                columns=list(self._latent_columns.keys()),
+            )
+            builder.add_step(
+                step=drop_latent_columns_step, step_inputs=[last_dataset_step]
+            )
+            last_step_added = drop_latent_columns_step
 
         if verbose_logging:
             self._write_workflow_steps_to_logger(builder.get_steps())
@@ -568,7 +590,11 @@ class DataDesigner:
                     JudgeWithLLMSettings, evaluator.settings
                 ).judge_template_type
 
-        sampling_based_column_names = [col.name for col in self.columns_from_sampling]
+        sampling_based_column_names = [
+            col.name
+            for col in self.columns_from_sampling
+            if col.name not in list(self._latent_columns.keys())
+        ]
         prompt_based_column_names = [col.name for col in self.columns_from_prompt]
 
         return DataPipelineMetadata(
@@ -631,8 +657,13 @@ class DataDesigner:
 
         props_to_repr = {
             "model_suite": model_suite,
-            "seed_dataset_file_id": (
+            "seed_dataset": (
                 None if self._seed_dataset is None else self._seed_dataset.file_id
+            ),
+            "person_samplers": (
+                None
+                if len(self._latent_columns) == 0
+                else list(self._latent_columns.keys())
             ),
             "sampling_based_columns": (
                 None

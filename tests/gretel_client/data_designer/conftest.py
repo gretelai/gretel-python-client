@@ -52,7 +52,17 @@ seed_dataset:
   file_id: file_123
   sampling_strategy: shuffle
   with_replacement: true
+  
 
+person_samplers:
+  some_dude:
+    sex: Male
+    locale: en_GB
+  some_lady:
+    sex: Female
+    locale: fr_FR
+             
+             
 columns:
     - name: code_id
       type: uuid

@@ -2,7 +2,7 @@ import json
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Annotated, Any, Optional, Type, TypeAlias, TypeVar
+from typing import Annotated, Any, Literal, Optional, Self, Type, TypeAlias, TypeVar
 
 import pandas as pd
 
@@ -238,6 +238,19 @@ class JudgeRubric:
             return cls.text_to_sql
         else:
             raise ValueError(f"Unsupported judge template type: {eval_type}")
+
+
+class PersonParams(BaseModel):
+    sex: Literal["Male", "Female", "M", "F"] | None = None
+    city: Optional[str] = None
+    # TODO: Change to "en_US" when PGM works in streaming mode.
+    locale: Optional[str] = "en_GB"
+
+    @model_validator(mode="after")
+    def convert_sex_format_if_needed(self) -> Self:
+        if self.sex is not None and len(self.sex) == 1:
+            self.sex = {"M": "Male", "F": "Female"}[self.sex]
+        return self
 
 
 class SeedDataset(BaseModel):
