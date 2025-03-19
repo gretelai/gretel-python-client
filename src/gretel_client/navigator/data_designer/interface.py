@@ -139,7 +139,7 @@ class DataDesigner:
         output_dir: Union[str, Path] = Path("."),
         session: Optional[ClientConfig] = None,
         **session_kwargs,
-    ) -> None:
+    ) -> TaskOutput | None:
         """Utility method to download the evaluation report generated in a previously run batch job.
 
         Args:

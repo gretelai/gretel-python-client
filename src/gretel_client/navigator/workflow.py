@@ -362,10 +362,10 @@ class DataDesignerBatchJob:
         *,
         wait_for_completion: bool = False,
         output_dir: Union[str, Path] = Path("."),
-    ) -> None:
+    ) -> TaskOutput | None:
         if self.last_evaluation_step_name is None:
             raise ValueError("The Workflow did not contain an evaluation step.")
-        self._fetch_artifact(
+        return self._fetch_artifact(
             step_name=self.last_evaluation_step_name,
             output_format="pdf",
             wait_for_completion=wait_for_completion,

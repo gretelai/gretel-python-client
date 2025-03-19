@@ -1,1 +1,4 @@
-{"_project": "gretel-client-project-pretrained", "transforms_default": "62b9f162461958b83554b26f", "synthetics_default": "63fef1915e53c7443b7cb304", "classify_default": "62b9f184461958b83554b270"}
+{
+    "_project": "gretel-client-project-pretrained",
+    "actgan_default": "67da67ddaf4a27936be52c6f"
+}
