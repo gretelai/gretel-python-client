@@ -293,7 +293,6 @@ Registry
 
 ### Example
 
-* Api Key Authentication (GretelAPIKey):
 
 ```python
 import gretel_client._api
@@ -306,16 +305,6 @@ configuration = gretel_client._api.Configuration(
     host = "http://localhost"
 )
 
-# The client must configure the authentication and authorization parameters
-# in accordance with the API server security policy.
-# Examples for each auth method are provided below, use the example that
-# satisfies your auth use case.
-
-# Configure API key authorization: GretelAPIKey
-configuration.api_key['GretelAPIKey'] = os.environ["API_KEY"]
-
-# Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
-# configuration.api_key_prefix['GretelAPIKey'] = 'Bearer'
 
 # Enter a context with an instance of the API client
 with gretel_client._api.ApiClient(configuration) as api_client:
@@ -343,7 +332,7 @@ This endpoint does not need any parameter.
 
 ### Authorization
 
-[GretelAPIKey](../README.md#GretelAPIKey)
+No authorization required
 
 ### HTTP request headers
 
@@ -660,7 +649,6 @@ Workflows Validate
 
 ### Example
 
-* Api Key Authentication (GretelAPIKey):
 
 ```python
 import gretel_client._api
@@ -675,16 +663,6 @@ configuration = gretel_client._api.Configuration(
     host = "http://localhost"
 )
 
-# The client must configure the authentication and authorization parameters
-# in accordance with the API server security policy.
-# Examples for each auth method are provided below, use the example that
-# satisfies your auth use case.
-
-# Configure API key authorization: GretelAPIKey
-configuration.api_key['GretelAPIKey'] = os.environ["API_KEY"]
-
-# Uncomment below to setup prefix (e.g. Bearer) for API key, if needed
-# configuration.api_key_prefix['GretelAPIKey'] = 'Bearer'
 
 # Enter a context with an instance of the API client
 with gretel_client._api.ApiClient(configuration) as api_client:
@@ -716,7 +694,7 @@ Name | Type | Description  | Notes
 
 ### Authorization
 
-[GretelAPIKey](../README.md#GretelAPIKey)
+No authorization required
 
 ### HTTP request headers
 

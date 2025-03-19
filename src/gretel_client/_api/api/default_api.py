@@ -1253,7 +1253,7 @@ class DefaultApi:
             )
 
         # authentication setting
-        _auth_settings: List[str] = ["GretelAPIKey"]
+        _auth_settings: List[str] = []
 
         return self.api_client.param_serialize(
             method="GET",
@@ -2518,7 +2518,7 @@ class DefaultApi:
                 _header_params["Content-Type"] = _default_content_type
 
         # authentication setting
-        _auth_settings: List[str] = ["GretelAPIKey"]
+        _auth_settings: List[str] = []
 
         return self.api_client.param_serialize(
             method="POST",
