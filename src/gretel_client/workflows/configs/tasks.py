@@ -70,6 +70,7 @@ class EvaluateSsDataset(ConfigBase):
 class SystemPromptType(str, Enum):
     REFLECTION = "reflection"
     COGNITION = "cognition"
+    COLUMN_CLASSIFICATION = "column_classification"
 
 
 class ExtractDataSeedsFromSampleRecords(ConfigBase):
@@ -116,13 +117,72 @@ class UniformDistributionParams(ConfigBase):
     high: Annotated[float, Field(ge=0.0, le=1.0, title="High")]
 
 
+class BernoulliSamplerParams(ConfigBase):
+    p: Annotated[float, Field(title="P")]
+
+
+class BinomialSamplerParams(ConfigBase):
+    n: Annotated[int, Field(title="N")]
+    p: Annotated[float, Field(title="P")]
+
+
+class CategorySamplerParams(ConfigBase):
+    values: Annotated[List[Union[str, int, float]], Field(min_length=1, title="Values")]
+    weights: Annotated[Optional[List[float]], Field(title="Weights")] = None
+
+
 class ConstraintType(str, Enum):
     SCALAR_INEQUALITY = "scalar_inequality"
     COLUMN_INEQUALITY = "column_inequality"
 
 
-class DataSourceParams(ConfigBase):
-    pass
+class Unit(str, Enum):
+    Y = "Y"
+    M = "M"
+    D = "D"
+    H = "h"
+    m_1 = "m"
+    S = "s"
+
+
+class DatetimeSamplerParams(ConfigBase):
+    start: Annotated[str, Field(title="Start")]
+    end: Annotated[str, Field(title="End")]
+    unit: Annotated[Optional[Unit], Field(title="Unit")] = "D"
+
+
+class DistributionSamplerParams(ConfigBase):
+    dist_name: Annotated[str, Field(title="Dist Name")]
+    dist_params: Annotated[Dict[str, Any], Field(title="Dist Params")]
+
+
+class ExpressionParams(ConfigBase):
+    expr: Annotated[str, Field(title="Expr")]
+
+
+class GaussianSamplerParams(ConfigBase):
+    mean: Annotated[float, Field(title="Mean")]
+    stddev: Annotated[float, Field(title="Stddev")]
+
+
+class Sex(str, Enum):
+    MALE = "Male"
+    FEMALE = "Female"
+
+
+class SexEnum(str, Enum):
+    MALE = "Male"
+    FEMALE = "Female"
+
+
+class PersonSamplerParams(ConfigBase):
+    locale: Annotated[Optional[str], Field(title="Locale")] = "en_US"
+    sex: Annotated[Optional[Union[Sex, List[SexEnum]]], Field(title="Sex")] = None
+    city: Annotated[Optional[Union[str, List[str]]], Field(title="City")] = None
+
+
+class PoissonSamplerParams(ConfigBase):
+    mean: Annotated[float, Field(title="Mean")]
 
 
 class SamplingSourceType(str, Enum):
@@ -139,6 +199,36 @@ class SamplingSourceType(str, Enum):
     TIMEDELTA = "timedelta"
     UNIFORM = "uniform"
     UUID = "uuid"
+
+
+class SubcategoryParams(ConfigBase):
+    category: Annotated[str, Field(title="Category")]
+    values: Annotated[Dict[str, List[Union[str, int, float]]], Field(title="Values")]
+
+
+class Unit1(str, Enum):
+    D = "D"
+    H = "h"
+    M = "m"
+    S = "s"
+
+
+class TimeDeltaParams(ConfigBase):
+    dt_min: Annotated[int, Field(ge=0, title="Dt Min")]
+    dt_max: Annotated[int, Field(gt=0, title="Dt Max")]
+    reference_column_name: Annotated[str, Field(title="Reference Column Name")]
+    unit: Annotated[Optional[Unit1], Field(title="Unit")] = "D"
+
+
+class UUIDParams(ConfigBase):
+    prefix: Annotated[Optional[str], Field(title="Prefix")] = None
+    short_form: Annotated[Optional[bool], Field(title="Short Form")] = False
+    uppercase: Annotated[Optional[bool], Field(title="Uppercase")] = False
+
+
+class UniformSamplerParams(ConfigBase):
+    low: Annotated[float, Field(title="Low")]
+    high: Annotated[float, Field(title="High")]
 
 
 class GenerateDatasetFromSampleRecords(ConfigBase):
@@ -717,6 +807,10 @@ class TestTaskCallingTask(ConfigBase):
     pass
 
 
+class TestUnhandledErrorTask(ConfigBase):
+    foo: Annotated[str, Field(title="Foo")]
+
+
 class GenerateFromTextFTConfig(ConfigBase):
     seed_records_multiplier: Annotated[
         Optional[int],
@@ -1280,29 +1374,54 @@ class ColumnConstraint(ConfigBase):
 
 class ConditionalDataColumn(ConfigBase):
     name: Annotated[str, Field(title="Name")]
-    conditional_params: Annotated[
-        Optional[Dict[str, Union[Dict[str, Any], DataSourceParams]]],
-        Field(title="Conditional Params"),
-    ] = {}
-    convert_to: Annotated[Optional[str], Field(title="Convert To")] = None
     type: SamplingSourceType
-    params: Annotated[Union[Dict[str, Any], DataSourceParams], Field(title="Params")]
-
-
-class ConditionalDataColumnFromDefinition(ConfigBase):
-    name: Annotated[str, Field(title="Name")]
+    params: Annotated[
+        Union[
+            ExpressionParams,
+            SubcategoryParams,
+            CategorySamplerParams,
+            DatetimeSamplerParams,
+            TimeDeltaParams,
+            UUIDParams,
+            DistributionSamplerParams,
+            BinomialSamplerParams,
+            BernoulliSamplerParams,
+            GaussianSamplerParams,
+            PoissonSamplerParams,
+            UniformSamplerParams,
+            PersonSamplerParams,
+        ],
+        Field(title="Params"),
+    ]
     conditional_params: Annotated[
-        Optional[Dict[str, Union[Dict[str, Any], DataSourceParams]]],
+        Optional[
+            Dict[
+                str,
+                Union[
+                    ExpressionParams,
+                    SubcategoryParams,
+                    CategorySamplerParams,
+                    DatetimeSamplerParams,
+                    TimeDeltaParams,
+                    UUIDParams,
+                    DistributionSamplerParams,
+                    BinomialSamplerParams,
+                    BernoulliSamplerParams,
+                    GaussianSamplerParams,
+                    PoissonSamplerParams,
+                    UniformSamplerParams,
+                    PersonSamplerParams,
+                ],
+            ]
+        ],
         Field(title="Conditional Params"),
     ] = {}
     convert_to: Annotated[Optional[str], Field(title="Convert To")] = None
-    definition: Annotated[str, Field(title="Definition")]
 
 
 class DataSchema(ConfigBase):
     columns: Annotated[
-        List[Union[ConditionalDataColumn, ConditionalDataColumnFromDefinition]],
-        Field(min_length=1, title="Columns"),
+        List[ConditionalDataColumn], Field(min_length=1, title="Columns")
     ]
     constraints: Annotated[
         Optional[List[ColumnConstraint]], Field(title="Constraints")
@@ -1515,6 +1634,10 @@ class Transform(ConfigBase):
             title="Steps",
         ),
     ]
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
+    error_rate: Annotated[
+        Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
+    ] = 0.2
 
 
 class GenerationParameters(ConfigBase):

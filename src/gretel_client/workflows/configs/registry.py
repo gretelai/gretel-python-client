@@ -28,6 +28,7 @@ class Registry(metaclass=RegistryMeta):
     TestOptionalArgTask = tasks.TestOptionalArgTask
     TestRequiredAndOptionalArgsTask = tasks.TestRequiredAndOptionalArgsTask
     TestTaskCallingTask = tasks.TestTaskCallingTask
+    TestUnhandledErrorTask = tasks.TestUnhandledErrorTask
     EvaluateSsDataset = tasks.EvaluateSsDataset
     Holdout = tasks.Holdout
     GenerateColumnConfigFromInstruction = tasks.GenerateColumnConfigFromInstruction

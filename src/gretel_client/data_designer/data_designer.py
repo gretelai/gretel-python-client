@@ -37,7 +37,6 @@ from gretel_client.data_designer.types import (
     JudgeWithLLMSettings,
     ModelSuite,
     NonSamplingSupportedTypes,
-    PersonParams,
     SeedDataset,
     SupportedColumnTypesT,
     ValidationType,
@@ -63,6 +62,7 @@ from gretel_client.workflows.configs.tasks import (
     ColumnConstraint,
     ConstraintType,
     DataSchema,
+    PersonSamplerParams,
     SamplingSourceType,
     SamplingStrategy,
 )
@@ -119,7 +119,7 @@ class DataDesigner:
         model_suite: ModelSuite = ModelSuite.APACHE_2_0,
         model_configs: list[ModelConfig] | None = None,
         seed_dataset: SeedDataset | None = None,
-        person_samplers: dict[str, PersonParams] | None = None,
+        person_samplers: dict[str, PersonSamplerParams] | None = None,
         columns: dict[str, DataColumnT] | None = None,
         constraints: dict[str, ColumnConstraint] | None = None,
         validators: dict[str, ValidatorT] | None = None,
@@ -137,7 +137,7 @@ class DataDesigner:
         self._files = self._gretel_resource_provider.files
         self._workflow_manager = self._gretel_resource_provider.workflows
         self._repr_html_style = DEFAULT_REPR_HTML_STYLE
-        self._latent_columns: dict[str, PersonParams] = {}
+        self._latent_columns: dict[str, PersonSamplerParams] = {}
         if person_samplers:
             self.with_person_samplers(person_samplers)
 
@@ -316,9 +316,11 @@ class DataDesigner:
                     f"You provided: {path.suffix}"
                 )
 
-    def with_person_samplers(self, person_samplers: dict[str, PersonParams]) -> Self:
+    def with_person_samplers(
+        self, person_samplers: dict[str, PersonSamplerParams]
+    ) -> Self:
         for name, params in person_samplers.items():
-            person_params = PersonParams.model_validate(params)
+            person_params = PersonSamplerParams.model_validate(params)
             self._add_column(
                 DataColumnFromSamplingT(
                     name=name,
