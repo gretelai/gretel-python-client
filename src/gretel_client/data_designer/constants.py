@@ -10,14 +10,12 @@ SQL_DIALECTS = {
 }
 
 VALIDATE_PYTHON_COLUMN_SUFFIXES = [
-    "_is_valid",
     "_pylint_score",
     "_pylint_severity",
     "_pylint_messages",
 ]
 
 VALIDATE_SQL_COLUMN_SUFFIXES = [
-    "_is_valid",
     "_validator_messages",
 ]
 

@@ -2,7 +2,7 @@ import json
 import logging
 
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, cast, Type
 
 import pandas as pd
 import yaml
@@ -23,7 +23,7 @@ from gretel_client.data_designer.constants import (
 from gretel_client.data_designer.log import get_logger
 from gretel_client.data_designer.preview import PreviewResults
 from gretel_client.data_designer.types import (
-    CodeValidator,
+    DataColumnFromCodeValidation,
     DataColumnFromJudge,
     DataColumnFromPrompt,
     DataColumnFromSamplingT,
@@ -37,8 +37,6 @@ from gretel_client.data_designer.types import (
     NonSamplingSupportedTypes,
     SeedDataset,
     SupportedColumnTypesT,
-    ValidationType,
-    ValidatorT,
 )
 from gretel_client.data_designer.utils import (
     camel_to_kebab,
@@ -88,11 +86,6 @@ class DataDesigner:
             if len(valid_config.constraints or []) > 0
             else {}
         )
-        validators = (
-            {val.type: val for val in valid_config.validators}
-            if len(valid_config.validators or []) > 0
-            else {}
-        )
         evaluators = (
             {eval.type: eval for eval in valid_config.evaluators}
             if len(valid_config.evaluators or []) > 0
@@ -106,7 +99,6 @@ class DataDesigner:
             person_samplers=valid_config.person_samplers,
             columns=columns,
             constraints=constraints,
-            validators=validators,
             evaluators=evaluators,
         )
 
@@ -120,7 +112,6 @@ class DataDesigner:
         person_samplers: dict[str, PersonSamplerParams] | None = None,
         columns: dict[str, DataColumnT] | None = None,
         constraints: dict[str, ColumnConstraint] | None = None,
-        validators: dict[str, ValidatorT] | None = None,
         evaluators: dict[str, EvaluatorT] | None = None,
     ):
         self._gretel_resource_provider = gretel_resource_provider
@@ -129,51 +120,14 @@ class DataDesigner:
         self._seed_dataset = seed_dataset
         self._columns = columns or {}
         self._constraints = constraints or {}
-        self._validators = validators or {}
         self._evaluators = evaluators or {}
-        self._registry = Registry()
+        self._task_registry = Registry()
         self._files = self._gretel_resource_provider.files
         self._workflow_manager = self._gretel_resource_provider.workflows
         self._repr_html_style = DEFAULT_REPR_HTML_STYLE
         self._latent_columns: dict[str, PersonSamplerParams] = {}
         if person_samplers:
             self.with_person_samplers(person_samplers)
-
-    @property
-    def columns_from_sampling(self) -> list[DataColumnFromSamplingT]:
-        return [
-            col
-            for col in self._columns.values()
-            if isinstance(col, DataColumnFromSamplingT)
-        ]
-
-    @property
-    def columns_from_prompt(self) -> list[DataColumnFromPrompt]:
-        return [
-            col
-            for col in self._columns.values()
-            if isinstance(col, DataColumnFromPrompt)
-        ]
-
-    @property
-    def columns_from_judge(self) -> list[DataColumnFromJudge]:
-        return [
-            col
-            for col in self._columns.values()
-            if isinstance(col, DataColumnFromJudge)
-        ]
-
-    @property
-    def categorical_columns(self) -> list[DataColumnFromSamplingT]:
-        return [
-            col
-            for col in self._columns.values()
-            if isinstance(col, DataColumnFromSamplingT)
-            and (
-                col.type == SamplingSourceType.CATEGORY
-                or col.type == SamplingSourceType.SUBCATEGORY
-            )
-        ]
 
     @property
     def model_suite(self) -> ModelSuite:
@@ -185,6 +139,9 @@ class DataDesigner:
 
     def get_column(self, column_name: str) -> DataColumnT | None:
         return self._columns.get(column_name, None)
+
+    def get_columns_of_type(self, column_type: Type) -> list[DataColumnT]:
+        return [col for col in self._columns.values() if isinstance(col, column_type)]
 
     def delete_column(self, column_name: str) -> Self:
         self._columns.pop(column_name, None)
@@ -198,14 +155,17 @@ class DataDesigner:
     ) -> Self:
         kwargs_set = set(list(kwargs.keys()) + ["name", "type"])
         self._validate_add_column_kwargs(type, kwargs_set)
-        if type == NonSamplingSupportedTypes.LLM_GENERATED:
-            return self._add_column(column=DataColumnFromPrompt(name=name, **kwargs))
-        if type == NonSamplingSupportedTypes.LLM_JUDGE:
-            return self._add_column(column=DataColumnFromJudge(name=name, **kwargs))
-        else:
-            return self._add_column(
-                column=DataColumnFromSamplingT(name=name, type=type, **kwargs)
-            )
+        column_klass = None
+        match type:
+            case NonSamplingSupportedTypes.LLM_GENERATED:
+                column_klass = DataColumnFromPrompt
+            case NonSamplingSupportedTypes.LLM_JUDGE:
+                column_klass = DataColumnFromJudge
+            case NonSamplingSupportedTypes.CODE_VALIDATION:
+                column_klass = DataColumnFromCodeValidation
+            case _:
+                column_klass = DataColumnFromSamplingT
+        return self._add_column(column=column_klass(name=name, type=type, **kwargs))
 
     def get_constraint(self, target_column: str) -> ColumnConstraint | None:
         return self._constraints.get(target_column, None)
@@ -222,22 +182,6 @@ class DataDesigner:
             type=type,
             params=params,
         )
-        return self
-
-    def get_validator(self, validation_type: ValidationType) -> ValidatorT | None:
-        return self._validators.get(validation_type, None)
-
-    def delete_validator(self, validation_type: ValidationType) -> Self:
-        self._validators.pop(validation_type, None)
-        return self
-
-    def add_validator(
-        self, validation_type: ValidationType, settings: dict[str, Any]
-    ) -> Self:
-        if validation_type == ValidationType.CODE:
-            self._validators[validation_type] = CodeValidator(settings=settings)
-        else:
-            raise ValueError(f"Unknown validator type: {validation_type}")
         return self
 
     def get_evaluator(self, evaluation_type: EvaluationType) -> EvaluatorT | None:
@@ -295,7 +239,6 @@ class DataDesigner:
             seed_dataset=self._seed_dataset,
             columns=list(self._columns.values()),
             constraints=list(self._constraints.values()),
-            validators=list(self._validators.values()),
             evaluators=list(self._evaluators.values()),
         )
 
@@ -357,6 +300,43 @@ class DataDesigner:
         )
         return self
 
+    @property
+    def _columns_from_sampling(self) -> list[DataColumnFromSamplingT]:
+        return cast(
+            list[DataColumnFromSamplingT],
+            self.get_columns_of_type(DataColumnFromSamplingT),
+        )
+
+    @property
+    def _columns_from_prompt(self) -> list[DataColumnFromPrompt]:
+        return cast(
+            list[DataColumnFromPrompt], self.get_columns_of_type(DataColumnFromPrompt)
+        )
+
+    @property
+    def _columns_from_judge(self) -> list[DataColumnFromJudge]:
+        return cast(
+            list[DataColumnFromJudge], self.get_columns_of_type(DataColumnFromJudge)
+        )
+
+    @property
+    def _columns_from_code_validation(self) -> list[DataColumnFromCodeValidation]:
+        return cast(
+            list[DataColumnFromCodeValidation],
+            self.get_columns_of_type(DataColumnFromCodeValidation),
+        )
+
+    @property
+    def _columns_from_categorical_sampling(self) -> list[DataColumnFromSamplingT]:
+        return [
+            col
+            for col in self._columns_from_sampling
+            if (
+                col.type == SamplingSourceType.CATEGORY
+                or col.type == SamplingSourceType.SUBCATEGORY
+            )
+        ]
+
     def _add_column(self, column: DataColumnT) -> Self:
         self._columns[column.name] = column
         return self
@@ -365,7 +345,7 @@ class DataDesigner:
         self, num_records: int, verbose_logging: bool = False
     ) -> WorkflowBuilder:
 
-        if self._seed_dataset is None and len(self.columns_from_sampling) == 0:
+        if self._seed_dataset is None and len(self._columns_from_sampling) == 0:
             raise ValueError(
                 "🛑 Data Designer needs a seed dataset and/or at least one column that is "
                 "generated using a non-LLM sampler. Seeding data is an essential ingredient "
@@ -384,7 +364,7 @@ class DataDesigner:
         columns_using_samples_step = None
         last_step_added = None
         if self._seed_dataset is not None:
-            sample_from_dataset_step = self._registry.SampleFromDataset(
+            sample_from_dataset_step = self._task_registry.SampleFromDataset(
                 num_samples=num_records,
                 strategy=self._seed_dataset.sampling_strategy,
                 with_replacement=self._seed_dataset.with_replacement,
@@ -394,13 +374,15 @@ class DataDesigner:
             )
             last_step_added = sample_from_dataset_step
 
-        if len(self.columns_from_sampling) > 0:
-            columns_using_samples_step = self._registry.GenerateColumnsUsingSamplers(
-                data_schema=DataSchema(
-                    columns=[c for c in self.columns_from_sampling],
-                    constraints=[c for c in list(self._constraints.values())],
-                ),
-                num_records=num_records,
+        if len(self._columns_from_sampling) > 0:
+            columns_using_samples_step = (
+                self._task_registry.GenerateColumnsUsingSamplers(
+                    data_schema=DataSchema(
+                        columns=[c for c in self._columns_from_sampling],
+                        constraints=[c for c in list(self._constraints.values())],
+                    ),
+                    num_records=num_records,
+                )
             )
             builder.add_step(step=columns_using_samples_step, step_inputs=[])
             last_step_added = columns_using_samples_step
@@ -409,44 +391,40 @@ class DataDesigner:
             sample_from_dataset_step is not None
             and columns_using_samples_step is not None
         ):
-            concat_step = self._registry.ConcatDatasets()
+            concat_step = self._task_registry.ConcatDatasets()
             builder.add_step(
                 step=concat_step,
                 step_inputs=[sample_from_dataset_step, columns_using_samples_step],
             )
             last_step_added = concat_step
 
-        for prompt_based_column in self.columns_from_prompt:
-            columns_from_prompt_step = self._registry.GenerateColumnFromTemplate(
-                prompt=prompt_based_column.prompt,
-                name=prompt_based_column.name,
-                system_prompt=prompt_based_column.system_prompt,
-                model_alias=prompt_based_column.model_alias,
-                data_config=prompt_based_column.data_config,
+        for prompt_based_column in self._columns_from_prompt:
+            generate_column_from_template_args = prompt_based_column.model_dump(
+                exclude={"type"}
+            )
+            columns_from_prompt_step = self._task_registry.GenerateColumnFromTemplate(
+                **generate_column_from_template_args
             )
             builder.add_step(
                 step=columns_from_prompt_step, step_inputs=[last_step_added]
             )
             last_step_added = columns_from_prompt_step
 
-        for validator in self._validators.values():
-            validation_step = self._registry.ValidateCode(
-                code_lang=validator.settings.code_lang,
-                target_columns=validator.settings.target_columns,
-                result_columns=[
-                    f"{c}_is_valid" for c in validator.settings.target_columns
-                ],
+        for validation_column in self._columns_from_code_validation:
+            validation_step = self._task_registry.ValidateCode(
+                code_lang=validation_column.code_lang,
+                target_columns=[validation_column.target_column],
+                result_columns=[validation_column.name],
             )
             builder.add_step(step=validation_step, step_inputs=[last_step_added])
             last_step_added = validation_step
 
         last_dataset_step = last_step_added
 
-        for judge_based_column in self.columns_from_judge:
-            judge_with_llm_args = judge_based_column.model_dump(
-                exclude=["name", "type"]
-            )
-            judge_step = self._registry.JudgeWithLlm(**judge_with_llm_args)
+        for judge_based_column in self._columns_from_judge:
+            judge_with_llm_args = judge_based_column.model_dump(exclude={"type"})
+            judge_with_llm_args["result_column"] = judge_with_llm_args.pop("name")
+            judge_step = self._task_registry.JudgeWithLlm(**judge_with_llm_args)
             builder.add_step(step=judge_step, step_inputs=[last_step_added])
             last_step_added = judge_step
 
@@ -455,8 +433,10 @@ class DataDesigner:
                 settings: EvaluateDatasetSettings = cast(
                     EvaluateDatasetSettings, evaluator.settings
                 )
-                general_eval_step = self._registry.EvaluateDataset(
-                    seed_columns=[col.name for col in self.categorical_columns],
+                general_eval_step = self._task_registry.EvaluateDataset(
+                    seed_columns=[
+                        col.name for col in self._columns_from_categorical_sampling
+                    ],
                     ordered_list_like_columns=settings.ordered_list_like_columns,
                     list_like_columns=settings.list_like_columns,
                     llm_judge_column=settings.llm_judge_column,
@@ -469,7 +449,7 @@ class DataDesigner:
                 last_step_added = general_eval_step
 
         if len(self._latent_columns) > 0:
-            drop_latent_columns_step = self._registry.DropColumns(
+            drop_latent_columns_step = self._task_registry.DropColumns(
                 columns=list(self._latent_columns.keys()),
             )
             builder.add_step(
@@ -560,35 +540,34 @@ class DataDesigner:
         """Return a DataPipelineMetadata instance that defines the schema and other relevant info."""
         code_lang = None
         code_columns = []
-        validation_columns = []
-        llm_judge_column_names = []
+        code_validation_columns = []
+        llm_judge_columns = []
         eval_type = None
-        for validation_type, validator in self._validators.items():
-            if validation_type == ValidationType.CODE:
-                code_lang = validator.settings.code_lang
-                column_suffix = (
-                    VALIDATE_SQL_COLUMN_SUFFIXES
-                    if validator.settings.code_lang in SQL_DIALECTS
-                    else VALIDATE_PYTHON_COLUMN_SUFFIXES
-                )
-                code_columns.extend(validator.settings.target_columns)
-                for col in code_columns:
-                    for prefix in column_suffix:
-                        validation_columns.append(f"{col}{prefix}")
-                break
 
-        sampling_based_column_names = [
+        for code_val_col in self._columns_from_code_validation:
+            code_validation_columns.append(code_val_col.name)
+
+            column_suffix = (
+                VALIDATE_SQL_COLUMN_SUFFIXES
+                if code_val_col.code_lang in SQL_DIALECTS
+                else VALIDATE_PYTHON_COLUMN_SUFFIXES
+            )
+
+            for suffix in column_suffix:
+                code_validation_columns.append(f"{code_val_col.target_column}{suffix}")
+
+        sampling_based_columns = [
             col.name
-            for col in self.columns_from_sampling
+            for col in self._columns_from_sampling
             if col.name not in list(self._latent_columns.keys())
         ]
-        prompt_based_column_names = [col.name for col in self.columns_from_prompt]
-        llm_judge_column_names = [col.name for col in self.columns_from_judge]
+        prompt_based_columns = [col.name for col in self._columns_from_prompt]
+        llm_judge_columns = [col.name for col in self._columns_from_judge]
         return DataPipelineMetadata(
-            sampling_based_columns=sampling_based_column_names,
-            prompt_based_columns=prompt_based_column_names,
-            llm_judge_columns=llm_judge_column_names,
-            validation_columns=validation_columns,
+            sampling_based_columns=sampling_based_columns,
+            prompt_based_columns=prompt_based_columns,
+            llm_judge_columns=llm_judge_columns,
+            validation_columns=code_validation_columns,
             code_column_names=code_columns,
             code_lang=code_lang,
             eval_type=eval_type,
@@ -599,9 +578,9 @@ class DataDesigner:
         for i, step in enumerate(steps):
             step_name = camel_to_kebab(step.task)
             suffix = ""
-            if isinstance(step, self._registry.GenerateColumnsUsingSamplers):
-                suffix = f"-generating {', '.join([col.name for col in self.columns_from_sampling])}"
-            elif isinstance(step, self._registry.GenerateColumnFromTemplate):
+            if isinstance(step, self._task_registry.GenerateColumnsUsingSamplers):
+                suffix = f"-generating {', '.join([col.name for col in self._columns_from_sampling])}"
+            elif isinstance(step, self._task_registry.GenerateColumnFromTemplate):
                 suffix = f"-generating {step.name}"
             name = f"{step_name}-{i + 1}{suffix}".replace(",", "").replace(" ", "-")
             logger.info(f"  |-- Step {i + 1}: {name}")
@@ -615,6 +594,9 @@ class DataDesigner:
             invalid_kwargs = kwargs_set - valid_kwargs
         elif type == NonSamplingSupportedTypes.LLM_JUDGE:
             valid_kwargs = set(DataColumnFromJudge.model_fields.keys())
+            invalid_kwargs = kwargs_set - valid_kwargs
+        elif type == NonSamplingSupportedTypes.CODE_VALIDATION:
+            valid_kwargs = set(DataColumnFromCodeValidation.model_fields.keys())
             invalid_kwargs = kwargs_set - valid_kwargs
         else:
             valid_kwargs = set(DataColumnFromSamplingT.model_fields.keys())

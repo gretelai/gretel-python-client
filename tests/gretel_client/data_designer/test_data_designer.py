@@ -9,7 +9,8 @@ import yaml
 from gretel_client.data_designer import DataDesigner
 from gretel_client.data_designer.aidd_config import AIDDConfig
 from gretel_client.data_designer.types import (
-    CodeValidator,
+    DataColumnFromCodeValidation,
+    DataColumnFromJudge,
     DataColumnFromPrompt,
     DataColumnFromSamplingT,
     Evaluator,
@@ -21,6 +22,7 @@ from gretel_client.workflows.configs.tasks import (
     GenerateColumnFromTemplate,
     GenerateColumnsUsingSamplers,
     JudgeWithLlm,
+    Rubric,
     SampleFromDataset,
     ValidateCode,
 )
@@ -32,7 +34,14 @@ def test_data_designer_from_config(stub_aidd_config_str):
     )
     assert isinstance(dd.get_column(column_name="code_id"), DataColumnFromSamplingT)
     assert isinstance(dd.get_column(column_name="text"), DataColumnFromPrompt)
-    assert isinstance(dd.get_validator(validation_type="code"), CodeValidator)
+    assert isinstance(dd.get_column(column_name="code"), DataColumnFromPrompt)
+    assert isinstance(
+        dd.get_column(column_name="code_validation_result"),
+        DataColumnFromCodeValidation,
+    )
+    assert isinstance(
+        dd.get_column(column_name="code_judge_result"), DataColumnFromJudge
+    )
     assert isinstance(dd.get_evaluator(evaluation_type="general"), Evaluator)
 
     assert dd.model_suite == "apache-2.0"
@@ -47,11 +56,8 @@ def test_column_operations():
         type="uuid",
         params={"prefix": "code_", "short_form": True, "uppercase": True},
     ).add_column(name="text", prompt="Write a description of fizzbuzz python code")
-    assert len(dd.columns_from_sampling) == 1
-    assert isinstance(dd.columns_from_sampling[0], DataColumnFromSamplingT)
-    assert len(dd.columns_from_prompt) == 1
-    assert isinstance(dd.columns_from_prompt[0], DataColumnFromPrompt)
-    assert len(dd.categorical_columns) == 0
+    assert isinstance(dd.get_column("code_id"), DataColumnFromSamplingT)
+    assert isinstance(dd.get_column("text"), DataColumnFromPrompt)
 
     # replace existing column
     dd = dd.add_column(name="text", prompt="Updated")
@@ -59,22 +65,28 @@ def test_column_operations():
 
     # delete column by name
     dd = dd.delete_column("code_id")
-    assert len(dd.columns_from_sampling) == 0
+    assert len(dd.get_columns_of_type(DataColumnFromSamplingT)) == 0
 
-    # add categorical columns
+    # add validation columns
+    dd = dd.add_column(name="code", prompt="generate some python code")
     dd = dd.add_column(
-        name="domain", type="category", params={"values": ["Healthcare", "Finance"]}
-    ).add_column(
-        name="topic",
-        type="subcategory",
-        params={
-            "values": {
-                "Healthcare": ["Web Development"],
-                "Finance": ["Machine Learning"],
-            }
-        },
+        name="code_validation_result",
+        type="code-validation",
+        code_lang="python",
+        target_column="text",
     )
-    assert len(dd.categorical_columns) == 2
+    assert isinstance(
+        dd.get_column("code_validation_result"), DataColumnFromCodeValidation
+    )
+
+    # add judge columns
+    dd = dd.add_column(
+        name="code_judge_result",
+        type="llm-judge",
+        prompt="some judge prompt",
+        rubrics=[MagicMock(spec=Rubric)],
+    )
+    assert isinstance(dd.get_column("code_judge_result"), DataColumnFromJudge)
 
     # unsupported kwargs should raise an exception
     with pytest.raises(
@@ -111,39 +123,6 @@ def test_constraint_operations():
     # delete constraint by name
     dd.delete_constraint(target_column="height")
     assert dd.get_constraint(target_column="height") is None
-
-
-def test_validator_operations():
-    dd = (
-        DataDesigner(gretel_resource_provider=MagicMock())
-        .add_column(name="code", prompt="Write Python code")
-        .add_validator(
-            validation_type="code",
-            settings={
-                "code_lang": "python",
-                "target_columns": ["code"],
-                "result_columns": ["code_is_valid"],
-            },
-        )
-        # add another validator to replace the old one
-        .add_validator(
-            validation_type="code",
-            settings={
-                "code_lang": "postgres",
-                "target_columns": ["code"],
-                "result_columns": ["code_is_valid"],
-            },
-        )
-    )
-    assert dd.get_validator(validation_type="code").settings.code_lang == "postgres"
-
-    # delete validator by type
-    dd.delete_validator(validation_type="code")
-    assert dd.get_validator(validation_type="code") is None
-
-    # invalid validator type raises exception
-    with pytest.raises(ValueError, match="Unknown validator type"):
-        dd.add_validator(validation_type="nonexistent", settings={})
 
 
 def test_evaluator_operations():
@@ -242,7 +221,9 @@ def test_workflow_builder_preview_integration(
     assert steps[0].strategy == "shuffle"
     assert isinstance(steps[1], GenerateColumnsUsingSamplers)
     assert len(steps[1].data_schema.columns) == 6
-    expected_sampling_column_names = set([c.name for c in dd.columns_from_sampling])
+    expected_sampling_column_names = set(
+        [c.name for c in dd.get_columns_of_type(DataColumnFromSamplingT)]
+    )
     actual_sampling_column_names = set(
         set([col.name for col in steps[1].data_schema.columns])
     )

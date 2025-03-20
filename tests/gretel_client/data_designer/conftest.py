@@ -82,15 +82,22 @@ columns:
       params:
         values: [Web Development, Data Science, Machine Learning, Cloud Computing]
     - name: text
+      type: llm-generated
       prompt: Write a description of python code in topic {topic} and domain {domain}
     - name: code
+      type: llm-generated
       prompt: Write Python code that will be paired with the following prompt {text}
       model_alias: my_own
       data_config:
         type: code
         params:
           syntax: python
+    - name: code_validation_result
+      type: code-validation
+      code_lang: python
+      target_column: code
     - name: code_judge_result
+      type: llm-judge
       prompt: You are an expert in Python programming and make appropriate judgement on the quality of the code.
       rubrics:
         - name: Pythonic
@@ -116,13 +123,6 @@ constraints:
       params:
         operator: "<"
         rhs: 65
-
-validators:
-    - type: code
-      settings:
-        code_lang: python
-        target_columns: [code]
-        result_columns: [code_is_valid]
 
 evaluators:
     - type: general

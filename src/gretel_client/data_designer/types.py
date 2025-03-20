@@ -2,7 +2,7 @@ import json
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Annotated, Any, Optional, Type, TypeAlias, TypeVar
+from typing import Annotated, Any, Type, TypeAlias
 
 import pandas as pd
 
@@ -14,7 +14,9 @@ from gretel_client.workflows.configs.tasks import (
     DataConfig,
     GenerateColumnFromTemplate,
     JudgeWithLlm,
+    ModelAlias,
     OutputType,
+    Rubric,
     SamplingSourceType,
     SamplingStrategy,
 )
@@ -23,31 +25,6 @@ from gretel_client.workflows.configs.tasks import (
 class ModelSuite(str, Enum):
     APACHE_2_0 = "apache-2.0"
     LLAMA_3_x = "llama-3.x"
-
-
-class ValidationType(str, Enum):
-    CODE = "code"
-
-
-class CodeValidatorSettings(BaseModel):
-    code_lang: CodeLang
-    target_columns: list[str]
-    result_columns: list[str]
-
-    def validate_columns(self, all_column_names: set[str]) -> None:
-        if not set(self.target_columns).issubset(all_column_names):
-            raise ValueError(
-                "`code_columns` contains columns that have not been defined."
-                f"\n* Available columns: {all_column_names}"
-            )
-
-
-class CodeValidator(BaseModel):
-    settings: CodeValidatorSettings
-    type: ValidationType = ValidationType.CODE
-
-
-ValidatorT = TypeVar("ValidatorT", bound=CodeValidator)
 
 
 class LLMJudgePromptTemplateType(str, Enum):
@@ -135,7 +112,7 @@ class ColumnDataConfig(DataConfig):
 
 class NonSamplingSupportedTypes(str, Enum):
     LLM_GENERATED = "llm-generated"
-    VALIDATION = "validation"
+    CODE_VALIDATION = "code-validation"
     LLM_JUDGE = "llm-judge"
 
 
@@ -148,26 +125,41 @@ SupportedColumnTypesT: TypeAlias = SamplingSourceType | NonSamplingSupportedType
 DataColumnFromSamplingT: TypeAlias = ConditionalDataColumn
 
 
-class DataColumnFromPrompt(GenerateColumnFromTemplate):
+class DataColumnFromPrompt(BaseModel):
     type: NonSamplingSupportedTypes = NonSamplingSupportedTypes.LLM_GENERATED
+    name: str
+    model_alias: str | ModelAlias = ModelAlias.NATURAL_LANGUAGE
+    prompt: str
+    system_prompt: str | None = None
+    description: str | None = ""
     data_config: ColumnDataConfig = Field(
         default_factory=lambda: ColumnDataConfig(type=OutputType.TEXT)
     )
+    error_rate: float | None = 0.2
 
 
-class DataColumnFromJudge(JudgeWithLlm):
+class DataColumnFromJudge(BaseModel):
     type: NonSamplingSupportedTypes = NonSamplingSupportedTypes.LLM_JUDGE
     name: str
+    model_alias: str | ModelAlias = ModelAlias.JUDGE
+    prompt: str
+    num_samples_to_judge: int | None = 100
+    rubrics: list[Rubric]
+    error_rate: float | None = 0.2
 
-    @model_validator(mode="before")
-    @classmethod
-    def populate_result_column(cls, data: dict) -> dict:
-        data["result_column"] = data["name"]
-        return data
+
+class DataColumnFromCodeValidation(BaseModel):
+    type: NonSamplingSupportedTypes = NonSamplingSupportedTypes.LLM_JUDGE
+    name: str
+    code_lang: CodeLang
+    target_column: str
 
 
 DataColumnT: TypeAlias = (
-    DataColumnFromSamplingT | DataColumnFromPrompt | DataColumnFromJudge
+    DataColumnFromSamplingT
+    | DataColumnFromPrompt
+    | DataColumnFromJudge
+    | DataColumnFromCodeValidation
 )
 
 
