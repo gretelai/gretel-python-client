@@ -1399,15 +1399,15 @@ class ConditionalDataColumn(ConfigBase):
             SubcategoryParams,
             CategorySamplerParams,
             DatetimeSamplerParams,
+            PersonSamplerParams,
             TimeDeltaParams,
             UUIDParams,
-            DistributionSamplerParams,
-            BinomialSamplerParams,
             BernoulliSamplerParams,
+            BinomialSamplerParams,
             GaussianSamplerParams,
             PoissonSamplerParams,
             UniformSamplerParams,
-            PersonSamplerParams,
+            DistributionSamplerParams,
         ],
         Field(title="Params"),
     ]
@@ -1420,15 +1420,15 @@ class ConditionalDataColumn(ConfigBase):
                     SubcategoryParams,
                     CategorySamplerParams,
                     DatetimeSamplerParams,
+                    PersonSamplerParams,
                     TimeDeltaParams,
                     UUIDParams,
-                    DistributionSamplerParams,
-                    BinomialSamplerParams,
                     BernoulliSamplerParams,
+                    BinomialSamplerParams,
                     GaussianSamplerParams,
                     PoissonSamplerParams,
                     UniformSamplerParams,
-                    PersonSamplerParams,
+                    DistributionSamplerParams,
                 ],
             ]
         ],
@@ -1774,7 +1774,7 @@ class GenerateColumnConfigFromInstruction(ConfigBase):
     ] = None
     model_alias: Annotated[
         Optional[Union[str, ModelAlias]], Field(title="Model Alias")
-    ] = "judge"
+    ] = "code"
     name: Annotated[str, Field(title="Name")]
     instruction: Annotated[str, Field(title="Instruction")]
     edit_task: Optional[GenerateColumnFromTemplateConfig] = None
