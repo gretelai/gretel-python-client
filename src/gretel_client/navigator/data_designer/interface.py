@@ -33,7 +33,7 @@ from gretel_client.navigator.tasks.generate.generate_seed_category_values import
     GenerateSeedCategoryValues,
 )
 from gretel_client.navigator.tasks.io import Dataset
-from gretel_client.navigator.tasks.judge_with_llm import JudgeWithLLM
+from gretel_client.navigator.tasks.judge.judge_with_llm import JudgeWithLLM
 from gretel_client.navigator.tasks.load_data_seeds import LoadDataSeeds
 from gretel_client.navigator.tasks.seed.sample_data_seeds import SampleDataSeeds
 from gretel_client.navigator.tasks.types import (
@@ -43,7 +43,6 @@ from gretel_client.navigator.tasks.types import (
     DataConfig,
     DEFAULT_MODEL_SUITE,
     EvaluationType,
-    LLMJudgePromptTemplateType,
     LLMType,
     ModelConfig,
     ModelSuite,
@@ -253,27 +252,13 @@ class DataDesigner:
                     )
                     code_lang = processor["settings"].get("code_lang")
                 elif "evaluator" in processor:
-                    model_alias = processor.get("model_alias", LLMType.JUDGE)
                     settings = processor["settings"].copy()
-                    if processor["evaluator"] in list(LLMJudgePromptTemplateType):
-                        settings["instruction_column_name"] = settings.pop(
-                            "text_column"
-                        )
-                        settings["response_column_name"] = settings.pop("code_column")
-                        settings["context_column_name"] = settings.pop(
-                            "context_column", None
-                        )
-                        eval_type = LLMJudgePromptTemplateType(
-                            processor["evaluator"]
-                        ).value
-                    dd.add_evaluator(
-                        eval_type=processor["evaluator"],
-                        model_alias=model_alias,
-                        **settings,
-                    )
+                    model_alias = processor.get("model_alias", LLMType.JUDGE)
+                    settings["model_alias"] = model_alias
+                    dd.add_evaluator(eval_type=processor["evaluator"], **settings)
                 if code_lang and eval_type:
-                    if (code_lang in SQL_DIALECTS and eval_type != "text_to_sql") or (
-                        code_lang == "python" and eval_type != "text_to_python"
+                    if (code_lang in SQL_DIALECTS and eval_type != "judge") or (
+                        code_lang == "python" and eval_type != "judge"
                     ):
                         raise ValueError(
                             f"The `{code_lang}` code validator is not compatible with "
@@ -535,7 +520,7 @@ class DataDesigner:
 
     def add_evaluator(
         self,
-        eval_type: Union[EvaluationType, LLMJudgePromptTemplateType],
+        eval_type: EvaluationType,
         model_alias: Union[str, LLMType],
         **settings,
     ) -> None:
@@ -546,30 +531,28 @@ class DataDesigner:
             **settings: Evaluation-specific settings.
         """
         llm_judge_column = ""
-        if eval_type in list(LLMJudgePromptTemplateType):
-            if "instruction_column_name" not in settings:
+        if eval_type == EvaluationType.JUDGE:
+            if "prompt" not in settings:
                 raise ValueError(
-                    f"You must provide `instruction_column_name` for {eval_type} evaluation."
+                    f"You must provide `prompt` for {eval_type} evaluation"
                 )
-            if "response_column_name" not in settings:
+            if "rubrics" not in settings:
                 raise ValueError(
-                    f"You must provide `response_column_name` for {eval_type} evaluation."
+                    f"You must provide `rubrics` for {eval_type} evaluation"
                 )
-            instruction_column_name = settings.get("instruction_column_name")
-            response_column_name = settings.get("response_column_name")
+            prompt = settings.get("prompt")
+            rubrics = settings.get("rubrics")
+
             self._evaluators["judge_with_llm"] = JudgeWithLLM(
+                prompt=prompt,
+                rubrics=rubrics,
                 model_alias=model_alias,
-                judge_template_type=eval_type,
-                instruction_column_name=instruction_column_name,
-                response_column_name=response_column_name,
-                context_column_name=settings.get("context_column_name"),
                 num_samples_to_judge=settings.get("num_samples_to_judge", 100),
                 client=self._client,
             )
-            eval_type = LLMJudgePromptTemplateType(eval_type).value
-            llm_judge_column = f"{eval_type}_llm_judge_results"
+            llm_judge_column = "llm_judge_results"
 
-        elif eval_type in list(EvaluationType):
+        elif eval_type == EvaluationType.GENERAL:
             eval_type = EvaluationType(eval_type).value
 
         else:
@@ -610,8 +593,8 @@ class DataDesigner:
                     for prefix in column_suffix:
                         validation_columns.append(f"{col}{prefix}")
                 break
-        if self._eval_type in list(LLMJudgePromptTemplateType):
-            llm_judge_column_name = f"{self._eval_type}_llm_judge_results"
+        if self._eval_type == EvaluationType.JUDGE:
+            llm_judge_column_name = "llm_judge_results"
 
         seed_category_names = (
             self._seed_category_names
@@ -810,7 +793,7 @@ class DataDesigner:
         preview.data_spec = self.get_data_spec(data_seeds)
 
         if preview.evaluation_results is not None and self._eval_type in list(
-            LLMJudgePromptTemplateType
+            EvaluationType.JUDGE
         ):
             display_preview_evaluation_summary(
                 self._eval_type, preview.evaluation_results

@@ -64,11 +64,20 @@ post_processors:
         code_lang: ansi
         code_columns: [sql_context, sql]
 
-    - evaluator: text_to_sql
+    - evaluator: judge
       settings:
-        text_column: sql_prompt
-        code_column: sql
-        context_column: sql_context
+        prompt: >-
+          Write an SQL query to accomplish the task described by the following prompt:
+          {{ sql_prompt }} \n
+          {{ sql }} \n
+          Assume you have access to a database as defined below:
+          ```sql
+          {{ sql_context }}
+          ```
+        rubrics:
+          - name: Quality
+            description: Rate the quality of the SQL code
+            scoring: {0: "bad", 1: "good"}
 """
 
 

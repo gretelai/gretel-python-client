@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 from gretel_client.navigator.data_designer.data_column import GeneratedDataColumn
 from gretel_client.navigator.tasks.types import (
-    LLMJudgePromptTemplateType,
+    EvaluationType,
     ModelSuite,
     SeedCategory,
     ValidatorType,
@@ -20,7 +20,7 @@ class PostProcessValidator(PostProcessor):
 
 
 class PostProcessEvaluator(PostProcessor):
-    evaluator: LLMJudgePromptTemplateType
+    evaluator: EvaluationType
 
 
 class AIDDConfig(BaseModel):

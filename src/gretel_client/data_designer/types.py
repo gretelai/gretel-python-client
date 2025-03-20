@@ -8,13 +8,12 @@ import pandas as pd
 
 from pydantic import BaseModel, Field, field_serializer, model_validator
 
-from gretel_client.data_designer.constants import LLM_JUDGE_COLUMN_SUFFIX
 from gretel_client.workflows.configs.tasks import (
     CodeLang,
     ConditionalDataColumn,
     DataConfig,
     GenerateColumnFromTemplate,
-    LLMJudgePromptTemplateType,
+    JudgeWithLlm,
     OutputType,
     SamplingSourceType,
     SamplingStrategy,
@@ -51,27 +50,10 @@ class CodeValidator(BaseModel):
 ValidatorT = TypeVar("ValidatorT", bound=CodeValidator)
 
 
-class JudgeWithLLMSettings(BaseModel):
-    judge_template_type: LLMJudgePromptTemplateType
-    instruction_column_name: str
-    response_column_name: str
-    context_column_name: str | None = None
-    num_samples_to_judge: int = Field(default=100)
-
-
-class JudgeCodeWithLLMSettings(BaseModel):
-    judge_template_type: LLMJudgePromptTemplateType
-    text_column: str
-    code_column: str
-    context_column: str | None = None
-
-    def to_judge_with_llm_settings(self) -> JudgeWithLLMSettings:
-        return JudgeWithLLMSettings(
-            judge_template_type=self.judge_template_type,
-            instruction_column_name=self.text_column,
-            response_column_name=self.code_column,
-            context_column_name=self.context_column,
-        )
+class LLMJudgePromptTemplateType(str, Enum):
+    # TODO: eliminate to use new judge task format
+    TEXT_TO_PYTHON = "text_to_python"
+    TEXT_TO_SQL = "text_to_sql"
 
 
 class EvaluateDatasetSettings(BaseModel):
@@ -80,14 +62,9 @@ class EvaluateDatasetSettings(BaseModel):
     llm_judge_column: str = Field(default="")
     columns_to_ignore: list[str] = Field(default_factory=list)
 
-    @property
-    def llm_judge_column_with_suffix(self) -> str:
-        return f"{self.llm_judge_column}{LLM_JUDGE_COLUMN_SUFFIX}"
-
 
 class EvaluationType(str, Enum):
     GENERAL = "general"
-    JUDGE_WITH_LLM = "judge_with_llm"
 
 
 class Evaluator(BaseModel):
@@ -95,24 +72,12 @@ class Evaluator(BaseModel):
     type: EvaluationType
 
 
-class JudgeWithLLMEvaluator(Evaluator):
-    settings: JudgeWithLLMSettings
-    type: EvaluationType = EvaluationType.JUDGE_WITH_LLM
-
-
-class JudgeCodeWithLLMEvaluator(Evaluator):
-    settings: JudgeCodeWithLLMSettings
-    type: EvaluationType = EvaluationType.JUDGE_WITH_LLM
-
-
 class GeneralDatasetEvaluator(Evaluator):
     settings: EvaluateDatasetSettings
     type: EvaluationType = EvaluationType.GENERAL
 
 
-EvaluatorT: TypeAlias = (
-    JudgeWithLLMEvaluator | JudgeCodeWithLLMEvaluator | GeneralDatasetEvaluator
-)
+EvaluatorT: TypeAlias = GeneralDatasetEvaluator
 
 
 class ContentType(BaseModel): ...
@@ -171,6 +136,7 @@ class ColumnDataConfig(DataConfig):
 class NonSamplingSupportedTypes(str, Enum):
     LLM_GENERATED = "llm-generated"
     VALIDATION = "validation"
+    LLM_JUDGE = "llm-judge"
 
 
 SamplingSupportedTypesT: TypeAlias = SamplingSourceType
@@ -189,7 +155,20 @@ class DataColumnFromPrompt(GenerateColumnFromTemplate):
     )
 
 
-DataColumnT: TypeAlias = DataColumnFromSamplingT | DataColumnFromPrompt
+class DataColumnFromJudge(JudgeWithLlm):
+    type: NonSamplingSupportedTypes = NonSamplingSupportedTypes.LLM_JUDGE
+    name: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_result_column(cls, data: dict) -> dict:
+        data["result_column"] = data["name"]
+        return data
+
+
+DataColumnT: TypeAlias = (
+    DataColumnFromSamplingT | DataColumnFromPrompt | DataColumnFromJudge
+)
 
 
 @dataclass
@@ -200,14 +179,14 @@ class DataPipelineMetadata:
     `display_sample_record`, `fetch_dataset`, and `download_evaluation_report`.
     """
 
-    sampling_based_column_names: list[str]
-    prompt_based_column_names: list[str]
-    validation_column_names: Optional[list[str]] = None
-    evaluation_column_names: Optional[list[str]] = None
-    code_column_names: Optional[list[str]] = None
-    code_lang: Optional[CodeLang] = None
-    eval_type: Optional[LLMJudgePromptTemplateType] = None
-    llm_judge_column_name: Optional[str] = None
+    sampling_based_columns: list[str]
+    prompt_based_columns: list[str]
+    llm_judge_columns: list[str] | None = None
+    validation_columns: list[str] | None = None
+    evaluation_columns: list[str] | None = None
+    code_column_names: list[str] | None = None
+    code_lang: CodeLang | None = None
+    eval_type: LLMJudgePromptTemplateType | None = None
 
 
 TaskOutputT = pd.DataFrame | dict

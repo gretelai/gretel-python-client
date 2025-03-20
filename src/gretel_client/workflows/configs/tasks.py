@@ -382,9 +382,27 @@ class IdGenerator(ConfigBase):
     num_records: Annotated[Optional[int], Field(title="Num Records")] = 5
 
 
-class LLMJudgePromptTemplateType(str, Enum):
-    TEXT_TO_PYTHON = "text_to_python"
-    TEXT_TO_SQL = "text_to_sql"
+class Rubric(ConfigBase):
+    scoring: Annotated[
+        Dict[str, str],
+        Field(
+            description="Dictionary specifying score: description pairs for rubric scoring.",
+            title="Scoring",
+        ),
+    ]
+    name: Annotated[
+        str,
+        Field(
+            description="A clear, pythonic class name for this rubric.", title="Name"
+        ),
+    ]
+    description: Annotated[
+        Optional[str],
+        Field(
+            description="An informative and detailed assessment guide for using this rubric.",
+            title="Description",
+        ),
+    ] = ""
 
 
 class NameGenerator(ConfigBase):
@@ -1700,15 +1718,32 @@ class JudgeWithLlm(ConfigBase):
     model_alias: Annotated[
         Optional[Union[str, ModelAlias]], Field(title="Model Alias")
     ] = "judge"
-    judge_template_type: LLMJudgePromptTemplateType
-    instruction_column_name: Annotated[str, Field(title="Instruction Column Name")]
-    response_column_name: Annotated[str, Field(title="Response Column Name")]
-    context_column_name: Annotated[
-        Optional[str], Field(title="Context Column Name")
-    ] = None
+    prompt: Annotated[
+        str,
+        Field(
+            description="Template for generating prompts. Use Jinja2 templates to reference dataset columns.",
+            title="Prompt",
+        ),
+    ]
     num_samples_to_judge: Annotated[
-        Optional[int], Field(title="Num Samples To Judge")
+        Optional[int],
+        Field(
+            description="Number of samples to judge. Default is 100.",
+            title="Num Samples To Judge",
+        ),
     ] = 100
+    rubrics: Annotated[
+        List[Rubric],
+        Field(
+            description="List of rubric configurations to use for evaluation. At least one must be provided.",
+            min_length=1,
+            title="Rubrics",
+        ),
+    ]
+    result_column: Annotated[
+        Optional[str],
+        Field(description="Column name to store judge results.", title="Result Column"),
+    ] = "llm_judge_results"
 
 
 class GenerateColumnFromTemplateConfig(ConfigBase):

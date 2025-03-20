@@ -52,7 +52,6 @@ seed_dataset:
   file_id: file_123
   sampling_strategy: shuffle
   with_replacement: true
-  
 
 person_samplers:
   some_dude:
@@ -61,8 +60,7 @@ person_samplers:
   some_lady:
     sex: Female
     locale: fr_FR
-             
-             
+
 columns:
     - name: code_id
       type: uuid
@@ -92,24 +90,41 @@ columns:
         type: code
         params:
           syntax: python
+    - name: code_judge_result
+      prompt: You are an expert in Python programming and make appropriate judgement on the quality of the code.
+      rubrics:
+        - name: Pythonic
+          description: Pythonic Code and Best Practices (Does the code follow Python conventions and best practices?)
+          scoring:
+            "4": The code exemplifies Pythonic principles, making excellent use of Python-specific constructs, standard library modules and programming idioms; follows all relevant PEPs.
+            "3": The code closely follows Python conventions and adheres to many best practices; good use of Python-specific constructs, standard library modules and programming idioms.
+            "2": The code generally follows Python conventions but has room for better alignment with Pythonic practices.
+            "1": The code loosely follows Python conventions, with several deviations from best practices.
+            "0": The code does not follow Python conventions or best practices, using non-Pythonic approaches.
+        - name: Readability
+          description: Readability and Maintainability (Is the Python code easy to understand and maintain?)
+          scoring:
+            "4": The code is excellently formatted, follows PEP 8 guidelines, is elegantly concise and clear, uses meaningful variable names, ensuring high readability and ease of maintenance; organizes complex logic well. Docstrings are given in a Google Docstring format.
+            "3": The code is well-formatted in the sense of code-as-documentation, making it relatively easy to understand and maintain; uses descriptive names and organizes logic clearly.
+            "2": The code is somewhat readable with basic formatting and some comments, but improvements are needed; needs better use of descriptive names and organization.
+            "1": The code has minimal formatting, making it hard to understand; lacks meaningful names and organization.
+            "0": The code is unreadable, with no attempt at formatting or description.
+
 constraints:
     - target_column: age
       type: scalar_inequality
       params:
         operator: "<"
         rhs: 65
+
 validators:
     - type: code
       settings:
         code_lang: python
         target_columns: [code]
         result_columns: [code_is_valid]
+
 evaluators:
-    - type: judge_with_llm
-      settings:
-        judge_template_type: text_to_python
-        text_column: text
-        code_column: code
     - type: general
       settings:
         llm_judge_column: text_to_python

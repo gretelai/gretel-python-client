@@ -139,13 +139,11 @@ class TextParserType(str, Enum):
     PASS_THROUGH = "pass_through"
 
 
+# TODO: refine to different types of eval contained in the eval task - eda, diversity
+# + potential renaming to AnalysisType
 class EvaluationType(str, Enum):
+    JUDGE = "judge"
     GENERAL = "general"
-
-
-class LLMJudgePromptTemplateType(str, Enum):
-    TEXT_TO_PYTHON = "text_to_python"
-    TEXT_TO_SQL = "text_to_sql"
 
 
 class CodeLang(str, Enum):

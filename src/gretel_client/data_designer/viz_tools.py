@@ -56,12 +56,12 @@ def create_rich_histogram_table(
 
 def display_sample_record(
     record: Union[dict, pd.Series, pd.DataFrame],
-    sampling_based_column_names: Optional[list[str]],
-    prompt_based_column_names: Optional[list[str]],
+    sampling_based_columns: Optional[list[str]],
+    prompt_based_columns: Optional[list[str]],
+    llm_judge_columns: Optional[list[str]] = None,
     code_lang: Optional[CodeLang] = None,
     code_columns: Optional[list[str]] = None,
     validation_columns: Optional[list[str]] = None,
-    llm_judge_column: Optional[str] = None,
     background_color: Optional[str] = None,
     syntax_highlighting_theme: str = "dracula",
     record_index: Optional[int] = None,
@@ -82,15 +82,15 @@ def display_sample_record(
         )
 
     code_columns = code_columns or []
-    sampling_based_column_names = sampling_based_column_names or []
-    prompt_based_column_names = prompt_based_column_names or []
+    sampling_based_columns = sampling_based_columns or []
+    prompt_based_columns = prompt_based_columns or []
     validation_columns = validation_columns or []
 
     table_kws = dict(show_lines=True, expand=True)
 
     render_list = []
 
-    columns_combined = sampling_based_column_names + prompt_based_column_names
+    columns_combined = sampling_based_columns + prompt_based_columns
     if len(columns_combined) > 0:
         table = Table(title="Generated Columns", **table_kws)
         table.add_column("Name")
@@ -147,17 +147,20 @@ def display_sample_record(
         table.add_row(*row)
         render_list.append(_pad_console_element(table, (1, 0, 1, 0)))
 
-    if llm_judge_column is not None:
-        judge = record[llm_judge_column]
-        table = Table(title="LLM-as-a-Judge", **table_kws)
-        row = []
-        for measure, results in judge.items():
-            table.add_column(measure)
-            row.append(
-                f"score: {results['score']}\n" f"reasoning: {results['reasoning']}"
-            )
-        table.add_row(*row)
-        render_list.append(_pad_console_element(table, (1, 0, 1, 0)))
+    if len(llm_judge_columns) > 0:
+
+        for col in llm_judge_columns:
+            table = Table(title=f"LLM-as-a-Judge: {col}", **table_kws)
+            row = []
+            judge = record[col]
+
+            for measure, results in judge.items():
+                table.add_column(measure)
+                row.append(
+                    f"score: {results['score']}\n" f"reasoning: {results['reasoning']}"
+                )
+            table.add_row(*row)
+            render_list.append(_pad_console_element(table, (1, 0, 1, 0)))
 
     if record_index is not None:
         index_label = Text(f"[index: {record_index}]", justify="center")

@@ -29,7 +29,7 @@ from gretel_client.navigator.tasks.types import (
     check_model_suite,
     CodeLang,
     DEFAULT_MODEL_SUITE,
-    LLMJudgePromptTemplateType,
+    EvaluationType,
     ModelConfig,
     ModelSuite,
 )
@@ -95,7 +95,7 @@ class DataSpec:
     evaluation_column_names: Optional[list[str]] = None
     code_column_names: Optional[list[str]] = None
     code_lang: Optional[CodeLang] = None
-    eval_type: Optional[LLMJudgePromptTemplateType] = None
+    eval_type: Optional[EvaluationType] = None
     llm_judge_column_name: Optional[str] = None
 
 

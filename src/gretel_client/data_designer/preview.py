@@ -33,12 +33,12 @@ class PreviewResults:
         dp_metadata = self.data_pipeline_metadata
         display_sample_record(
             record=self.dataset.df.iloc[i],
-            sampling_based_column_names=dp_metadata.sampling_based_column_names,
-            prompt_based_column_names=dp_metadata.prompt_based_column_names,
+            sampling_based_columns=dp_metadata.sampling_based_columns,
+            prompt_based_columns=dp_metadata.prompt_based_columns,
+            llm_judge_columns=dp_metadata.llm_judge_columns,
             code_lang=dp_metadata.code_lang,
             code_columns=dp_metadata.code_column_names,
-            validation_columns=dp_metadata.validation_column_names,
-            llm_judge_column=dp_metadata.llm_judge_column_name,
+            validation_columns=dp_metadata.validation_columns,
             background_color=background_color,
             syntax_highlighting_theme=syntax_highlighting_theme,
             record_index=i,

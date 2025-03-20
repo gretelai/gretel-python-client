@@ -152,14 +152,6 @@ def test_evaluator_operations():
         .add_column(name="text", prompt="Write a description of python code")
         .add_column(name="code", prompt="Write Python code")
         .add_evaluator(
-            evaluation_type="judge_with_llm",
-            settings={
-                "judge_template_type": "text_to_python",
-                "instruction_column_name": "text",
-                "response_column_name": "code",
-            },
-        )
-        .add_evaluator(
             evaluation_type="general",
             settings={"llm_judge_column": "text_to_python"},
         )
@@ -248,7 +240,6 @@ def test_workflow_builder_preview_integration(
     assert steps[0].num_samples == 10
     assert steps[0].with_replacement is True
     assert steps[0].strategy == "shuffle"
-
     assert isinstance(steps[1], GenerateColumnsUsingSamplers)
     assert len(steps[1].data_schema.columns) == 6
     expected_sampling_column_names = set([c.name for c in dd.columns_from_sampling])
@@ -260,7 +251,6 @@ def test_workflow_builder_preview_integration(
     assert steps[1].data_schema.constraints[0].target_column == "age"
 
     assert isinstance(steps[2], ConcatDatasets)
-
     assert isinstance(steps[3], GenerateColumnFromTemplate)
     assert steps[3].name == "text"
 
@@ -271,11 +261,14 @@ def test_workflow_builder_preview_integration(
     assert steps[5].code_lang == "python"
 
     assert isinstance(steps[6], JudgeWithLlm)
+    assert steps[6].result_column == "code_judge_result"
 
     assert isinstance(steps[7], EvaluateDataset)
 
     assert isinstance(steps[8], DropColumns)
     assert steps[8].columns == ["some_dude", "some_lady"]
+
+    # TODO: Add more assertions for validators and evaluators
 
 
 def test_workflow_builder_run_integration(

@@ -16,12 +16,7 @@ from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
 
-from gretel_client.navigator.tasks.judge_with_llm import JudgeRubric
-from gretel_client.navigator.tasks.types import (
-    CodeLang,
-    EvaluationType,
-    LLMJudgePromptTemplateType,
-)
+from gretel_client.navigator.tasks.types import CodeLang, EvaluationType
 
 console = Console()
 
@@ -175,7 +170,7 @@ def display_sample_record(
 
 
 def display_preview_evaluation_summary(
-    eval_type: Union[EvaluationType, LLMJudgePromptTemplateType],
+    eval_type: Union[EvaluationType],
     eval_results: dict,
     hist_name_color: str = DEFAULT_HIST_NAME_COLOR,
     hist_value_color: str = DEFAULT_HIST_VALUE_COLOR,
@@ -218,13 +213,10 @@ def display_preview_evaluation_summary(
     metrics_hist = Align(metrics_hist, vertical="bottom", align="left")
     console_columns.append(metrics_hist)
 
-    if eval_type in list(LLMJudgePromptTemplateType):
-        rubric = JudgeRubric.get_rubric(eval_type)
+    if eval_type in list(EvaluationType.JUDGE):
         judge_summary = {}
-        for k in rubric.keys():
-            judge_summary[k.capitalize()] = results.get(
-                "llm_as_a_judge_mean_scores", {}
-            ).setdefault(f"{k}_score", 0)
+        for k, v in results.get("llm_as_a_judge_mean_scores", {}).items():
+            judge_summary[k.capitalize()] = v
         judge_hist = create_rich_histogram_table(
             judge_summary,
             column_names=("Rubric", "Mean Score (0 - 5)"),

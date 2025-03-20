@@ -21,8 +21,6 @@ VALIDATE_SQL_COLUMN_SUFFIXES = [
     "_validator_messages",
 ]
 
-LLM_JUDGE_COLUMN_SUFFIX = "_llm_judge_results"
-
 TASK_TYPE_EMOJI_MAP = {
     "generate": "🦜",
     "evaluate": "🧐",

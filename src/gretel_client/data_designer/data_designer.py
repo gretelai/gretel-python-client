@@ -24,6 +24,7 @@ from gretel_client.data_designer.log import get_logger
 from gretel_client.data_designer.preview import PreviewResults
 from gretel_client.data_designer.types import (
     CodeValidator,
+    DataColumnFromJudge,
     DataColumnFromPrompt,
     DataColumnFromSamplingT,
     DataColumnT,
@@ -32,9 +33,6 @@ from gretel_client.data_designer.types import (
     EvaluationType,
     EvaluatorT,
     GeneralDatasetEvaluator,
-    JudgeCodeWithLLMEvaluator,
-    JudgeWithLLMEvaluator,
-    JudgeWithLLMSettings,
     ModelSuite,
     NonSamplingSupportedTypes,
     SeedDataset,
@@ -158,6 +156,14 @@ class DataDesigner:
         ]
 
     @property
+    def columns_from_judge(self) -> list[DataColumnFromJudge]:
+        return [
+            col
+            for col in self._columns.values()
+            if isinstance(col, DataColumnFromJudge)
+        ]
+
+    @property
     def categorical_columns(self) -> list[DataColumnFromSamplingT]:
         return [
             col
@@ -194,6 +200,8 @@ class DataDesigner:
         self._validate_add_column_kwargs(type, kwargs_set)
         if type == NonSamplingSupportedTypes.LLM_GENERATED:
             return self._add_column(column=DataColumnFromPrompt(name=name, **kwargs))
+        if type == NonSamplingSupportedTypes.LLM_JUDGE:
+            return self._add_column(column=DataColumnFromJudge(name=name, **kwargs))
         else:
             return self._add_column(
                 column=DataColumnFromSamplingT(name=name, type=type, **kwargs)
@@ -244,9 +252,7 @@ class DataDesigner:
         evaluation_type: EvaluationType,
         settings: dict[str, Any],
     ) -> Self:
-        if evaluation_type == EvaluationType.JUDGE_WITH_LLM:
-            self._evaluators[evaluation_type] = JudgeWithLLMEvaluator(settings=settings)
-        elif evaluation_type == EvaluationType.GENERAL:
+        if evaluation_type == EvaluationType.GENERAL:
             self._evaluators[evaluation_type] = GeneralDatasetEvaluator(
                 settings=settings
             )
@@ -264,15 +270,11 @@ class DataDesigner:
         if preview.dataset is not None:
             logger.info("👀 Your dataset preview is ready for a peek!")
 
-        judge_with_llm_evaluator = [
-            e for e in self._evaluators.values() if isinstance(e, JudgeWithLLMEvaluator)
-        ]
-
-        if preview.evaluation_results is not None and len(judge_with_llm_evaluator) > 0:
-            settings = judge_with_llm_evaluator[0].settings
-            display_preview_evaluation_summary(
-                settings.judge_template_type, preview.evaluation_results
-            )
+        # TODO: Re-visit how we display evaluation results in light of generalized judge-with-llm
+        # if preview.evaluation_results is not None:
+        #     display_preview_evaluation_summary(
+        #         settings.judge_template_type, preview.evaluation_results
+        #     )
         return preview
 
     def create(
@@ -440,24 +442,16 @@ class DataDesigner:
 
         last_dataset_step = last_step_added
 
+        for judge_based_column in self.columns_from_judge:
+            judge_with_llm_args = judge_based_column.model_dump(
+                exclude=["name", "type"]
+            )
+            judge_step = self._registry.JudgeWithLlm(**judge_with_llm_args)
+            builder.add_step(step=judge_step, step_inputs=[last_step_added])
+            last_step_added = judge_step
+
         for evaluator in self._evaluators.values():
-            if evaluator.type == EvaluationType.JUDGE_WITH_LLM:
-                settings = evaluator.settings
-                if isinstance(evaluator, JudgeCodeWithLLMEvaluator):
-                    settings = evaluator.settings.to_judge_with_llm_settings()
-                judge_with_llm_step = self._registry.JudgeWithLlm(
-                    judge_template_type=settings.judge_template_type,
-                    instruction_column_name=settings.instruction_column_name,
-                    response_column_name=settings.response_column_name,
-                    context_column_name=settings.context_column_name,
-                    num_samples_to_judge=settings.num_samples_to_judge,
-                )
-                builder.add_step(
-                    step=judge_with_llm_step, step_inputs=[last_step_added]
-                )
-                last_dataset_step = judge_with_llm_step
-                last_step_added = judge_with_llm_step
-            elif evaluator.type == EvaluationType.GENERAL:
+            if evaluator.type == EvaluationType.GENERAL:
                 settings: EvaluateDatasetSettings = cast(
                     EvaluateDatasetSettings, evaluator.settings
                 )
@@ -465,7 +459,7 @@ class DataDesigner:
                     seed_columns=[col.name for col in self.categorical_columns],
                     ordered_list_like_columns=settings.ordered_list_like_columns,
                     list_like_columns=settings.list_like_columns,
-                    llm_judge_column=settings.llm_judge_column_with_suffix,
+                    llm_judge_column=settings.llm_judge_column,
                     columns_to_ignore=settings.columns_to_ignore,
                 )
                 builder.add_step(
@@ -567,7 +561,7 @@ class DataDesigner:
         code_lang = None
         code_columns = []
         validation_columns = []
-        llm_judge_column_name = None
+        llm_judge_column_names = []
         eval_type = None
         for validation_type, validator in self._validators.items():
             if validation_type == ValidationType.CODE:
@@ -582,15 +576,6 @@ class DataDesigner:
                     for prefix in column_suffix:
                         validation_columns.append(f"{col}{prefix}")
                 break
-        for evaluator_type, evaluator in self._evaluators.items():
-            if evaluator_type == EvaluationType.GENERAL:
-                llm_judge_column_name = cast(
-                    EvaluateDatasetSettings, evaluator.settings
-                ).llm_judge_column_with_suffix
-            if evaluator_type == EvaluationType.JUDGE_WITH_LLM:
-                eval_type = cast(
-                    JudgeWithLLMSettings, evaluator.settings
-                ).judge_template_type
 
         sampling_based_column_names = [
             col.name
@@ -598,15 +583,15 @@ class DataDesigner:
             if col.name not in list(self._latent_columns.keys())
         ]
         prompt_based_column_names = [col.name for col in self.columns_from_prompt]
-
+        llm_judge_column_names = [col.name for col in self.columns_from_judge]
         return DataPipelineMetadata(
-            sampling_based_column_names=sampling_based_column_names,
-            prompt_based_column_names=prompt_based_column_names,
-            validation_column_names=validation_columns,
+            sampling_based_columns=sampling_based_column_names,
+            prompt_based_columns=prompt_based_column_names,
+            llm_judge_columns=llm_judge_column_names,
+            validation_columns=validation_columns,
             code_column_names=code_columns,
             code_lang=code_lang,
             eval_type=eval_type,
-            llm_judge_column_name=llm_judge_column_name,
         )
 
     def _write_workflow_steps_to_logger(self, steps: list[Any]) -> None:
@@ -627,6 +612,9 @@ class DataDesigner:
         valid_kwargs = {}
         if type == NonSamplingSupportedTypes.LLM_GENERATED:
             valid_kwargs = set(DataColumnFromPrompt.model_fields.keys())
+            invalid_kwargs = kwargs_set - valid_kwargs
+        elif type == NonSamplingSupportedTypes.LLM_JUDGE:
+            valid_kwargs = set(DataColumnFromJudge.model_fields.keys())
             invalid_kwargs = kwargs_set - valid_kwargs
         else:
             valid_kwargs = set(DataColumnFromSamplingT.model_fields.keys())
@@ -669,32 +657,40 @@ class DataDesigner:
             ),
             "sampling_based_columns": (
                 None
-                if len(md.sampling_based_column_names) == 0
+                if len(md.sampling_based_columns) == 0
                 else (
-                    json.dumps(md.sampling_based_column_names, indent=8)
-                    if len(md.sampling_based_column_names) > max_list_elements
-                    else md.sampling_based_column_names
+                    json.dumps(md.sampling_based_columns, indent=8)
+                    if len(md.sampling_based_columns) > max_list_elements
+                    else md.sampling_based_columns
                 )
             ),
             "llm_based_columns": (
                 None
-                if len(md.prompt_based_column_names) == 0
+                if len(md.prompt_based_columns) == 0
                 else (
-                    json.dumps(md.prompt_based_column_names, indent=8)
-                    if len(md.prompt_based_column_names) > max_list_elements
-                    else md.prompt_based_column_names
+                    json.dumps(md.prompt_based_columns, indent=8)
+                    if len(md.prompt_based_columns) > max_list_elements
+                    else md.prompt_based_columns
+                )
+            ),
+            "llm_judge_columns": (
+                None
+                if len(md.llm_judge_columns) == 0
+                else (
+                    json.dumps(md.llm_judge_columns, indent=8)
+                    if len(md.llm_judge_columns) > max_list_elements
+                    else md.llm_judge_columns
                 )
             ),
             "validation_columns": (
                 None
-                if len(md.validation_column_names) == 0
+                if len(md.validation_columns) == 0
                 else (
-                    json.dumps(md.validation_column_names, indent=8)
-                    if len(md.validation_column_names) > max_list_elements
-                    else md.validation_column_names
+                    json.dumps(md.validation_columns, indent=8)
+                    if len(md.validation_columns) > max_list_elements
+                    else md.validation_columns
                 )
             ),
-            "llm_judge_column": md.llm_judge_column_name,
         }
 
         repr_string = f"{self.__class__.__name__}(\n"

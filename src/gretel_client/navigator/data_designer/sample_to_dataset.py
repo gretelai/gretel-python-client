@@ -19,7 +19,7 @@ from gretel_client.navigator.tasks.seed.sample_data_seeds import SampleDataSeeds
 from gretel_client.navigator.tasks.types import (
     CategoricalDataSeeds,
     DEFAULT_MODEL_SUITE,
-    LLMJudgePromptTemplateType,
+    EvaluationType,
     ModelSuite,
     RecordsT,
     SQL_DIALECTS,
@@ -256,8 +256,8 @@ class DataDesignerFromSampleRecords(DataDesigner):
                     for prefix in column_suffix:
                         validation_columns.append(f"{col}{prefix}")
                 break
-        if self._eval_type in list(LLMJudgePromptTemplateType):
-            llm_judge_column_name = f"{self._eval_type}_llm_judge_results"
+        if self._eval_type == EvaluationType.JUDGE:
+            llm_judge_column_name = "llm_judge_results"
 
         seed_category_names = (
             self._seed_category_names
