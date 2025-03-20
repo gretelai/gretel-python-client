@@ -503,7 +503,7 @@ class Job(ABC):
             report_contents
         )
 
-    def get_report_summary(self, report_path: str = None) -> Optional[dict]:
+    def get_report_summary(self, report_path: Optional[str] = None) -> Optional[dict]:
         """Return a summary of the job results
         Args:
             report_path: If a report_path is passed, that report
