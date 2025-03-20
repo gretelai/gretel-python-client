@@ -100,10 +100,10 @@ def pprint_generation_config(config: GenerateColumnFromTemplateConfig):
     display_group = Group(
         Panel(
             Syntax(
-                f'f"{config.prompt}"',
-                "python",
+                config.prompt,
+                "jinja",
                 word_wrap=True,
-                theme="dracula",
+                theme="native",
             ),
             title="Generation Prompt Template",
             title_align="left",
@@ -152,7 +152,7 @@ def make_panel_grid(items: list[Any], columns: int, syntax: Optional[str]) -> Ta
             else:
                 return Pretty(x)
         else:
-            return Syntax(x, syntax)
+            return Syntax(x, syntax, theme="native", word_wrap=True)
 
     panels = [Panel(render_output(item), expand=True) for item in items]
 
