@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from gretel_client.data_designer import DataDesigner
-from gretel_client.data_designer.types import DataColumnT, EvaluatorT, ModelSuite
+from gretel_client.data_designer.types import DataColumnT, EvaluationReportT, ModelSuite
 from gretel_client.navigator_client_protocols import GretelResourceProviderProtocol
 from gretel_client.workflows.configs.tasks import ColumnConstraint
 from gretel_client.workflows.configs.workflows import ModelConfig
@@ -27,7 +27,7 @@ class DataDesignerFactory:
         model_configs: list[ModelConfig] | None = None,
         columns: dict[str, DataColumnT] | None = None,
         constraints: list[ColumnConstraint] | None = None,
-        evaluators: dict[str, EvaluatorT] | None = None,
+        evaluation_report: EvaluationReportT | None = None,
     ) -> DataDesigner:
         return DataDesigner(
             gretel_resource_provider=self._gretel_resource_provider,
@@ -35,5 +35,5 @@ class DataDesignerFactory:
             model_configs=model_configs,
             columns=columns,
             constraints=constraints,
-            evaluators=evaluators,
+            evaluation_report=evaluation_report,
         )

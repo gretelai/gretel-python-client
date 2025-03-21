@@ -6,14 +6,12 @@ from typing import Annotated, Any, Type, TypeAlias
 
 import pandas as pd
 
-from pydantic import BaseModel, Field, field_serializer, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 
 from gretel_client.workflows.configs.tasks import (
     CodeLang,
     ConditionalDataColumn,
     DataConfig,
-    GenerateColumnFromTemplate,
-    JudgeWithLlm,
     ModelAlias,
     OutputType,
     Rubric,
@@ -33,10 +31,17 @@ class LLMJudgePromptTemplateType(str, Enum):
     TEXT_TO_SQL = "text_to_sql"
 
 
-class EvaluateDatasetSettings(BaseModel):
+class AIDDConfigBase(BaseModel):
+    model_config = ConfigDict(
+        protected_namespaces=(),
+        extra="allow",
+        validate_default=False,
+    )
+
+
+class EvaluateDatasetSettings(AIDDConfigBase):
     ordered_list_like_columns: list[str] = Field(default_factory=list)
     list_like_columns: list[str] = Field(default_factory=list)
-    llm_judge_column: str = Field(default="")
     columns_to_ignore: list[str] = Field(default_factory=list)
 
 
@@ -44,17 +49,12 @@ class EvaluationType(str, Enum):
     GENERAL = "general"
 
 
-class Evaluator(BaseModel):
-    settings: BaseModel
-    type: EvaluationType
-
-
-class GeneralDatasetEvaluator(Evaluator):
-    settings: EvaluateDatasetSettings
+class GeneralDatasetEvaluation(AIDDConfigBase):
+    settings: EvaluateDatasetSettings = Field(default_factory=EvaluateDatasetSettings)
     type: EvaluationType = EvaluationType.GENERAL
 
 
-EvaluatorT: TypeAlias = GeneralDatasetEvaluator
+EvaluationReportT: TypeAlias = GeneralDatasetEvaluation
 
 
 class ContentType(BaseModel): ...
@@ -125,7 +125,7 @@ SupportedColumnTypesT: TypeAlias = SamplingSourceType | NonSamplingSupportedType
 DataColumnFromSamplingT: TypeAlias = ConditionalDataColumn
 
 
-class DataColumnFromPrompt(BaseModel):
+class DataColumnFromPrompt(AIDDConfigBase):
     type: NonSamplingSupportedTypes = NonSamplingSupportedTypes.LLM_GENERATED
     name: str
     model_alias: str | ModelAlias = ModelAlias.NATURAL_LANGUAGE
@@ -138,7 +138,7 @@ class DataColumnFromPrompt(BaseModel):
     error_rate: float | None = 0.2
 
 
-class DataColumnFromJudge(BaseModel):
+class DataColumnFromJudge(AIDDConfigBase):
     type: NonSamplingSupportedTypes = NonSamplingSupportedTypes.LLM_JUDGE
     name: str
     model_alias: str | ModelAlias = ModelAlias.JUDGE
@@ -148,7 +148,7 @@ class DataColumnFromJudge(BaseModel):
     error_rate: float | None = 0.2
 
 
-class DataColumnFromCodeValidation(BaseModel):
+class DataColumnFromCodeValidation(AIDDConfigBase):
     type: NonSamplingSupportedTypes = NonSamplingSupportedTypes.LLM_JUDGE
     name: str
     code_lang: CodeLang
@@ -211,7 +211,7 @@ class JudgeRubric:
             raise ValueError(f"Unsupported judge template type: {eval_type}")
 
 
-class SeedDataset(BaseModel):
+class SeedDataset(AIDDConfigBase):
     file_id: str
     sampling_strategy: SamplingStrategy = SamplingStrategy.ORDERED
     with_replacement: bool = False

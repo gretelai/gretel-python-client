@@ -30,9 +30,8 @@ from gretel_client.data_designer.types import (
     DataColumnT,
     DataPipelineMetadata,
     EvaluateDatasetSettings,
-    EvaluationType,
-    EvaluatorT,
-    GeneralDatasetEvaluator,
+    EvaluationReportT,
+    GeneralDatasetEvaluation,
     ModelSuite,
     NonSamplingSupportedTypes,
     SeedDataset,
@@ -44,7 +43,6 @@ from gretel_client.data_designer.utils import (
     get_task_log_emoji,
     make_date_obj_serializable,
 )
-from gretel_client.data_designer.viz_tools import display_preview_evaluation_summary
 from gretel_client.files.interface import File
 from gretel_client.gretel.config_setup import smart_load_yaml
 from gretel_client.navigator_client_protocols import GretelResourceProviderProtocol
@@ -86,11 +84,6 @@ class DataDesigner:
             if len(valid_config.constraints or []) > 0
             else {}
         )
-        evaluators = (
-            {eval.type: eval for eval in valid_config.evaluators}
-            if len(valid_config.evaluators or []) > 0
-            else {}
-        )
         return cls(
             gretel_resource_provider=gretel_resource_provider,
             model_suite=valid_config.model_suite,
@@ -99,7 +92,7 @@ class DataDesigner:
             person_samplers=valid_config.person_samplers,
             columns=columns,
             constraints=constraints,
-            evaluators=evaluators,
+            evaluation_report=valid_config.evaluation_report,
         )
 
     def __init__(
@@ -112,7 +105,7 @@ class DataDesigner:
         person_samplers: dict[str, PersonSamplerParams] | None = None,
         columns: dict[str, DataColumnT] | None = None,
         constraints: dict[str, ColumnConstraint] | None = None,
-        evaluators: dict[str, EvaluatorT] | None = None,
+        evaluation_report: EvaluationReportT | None = None,
     ):
         self._gretel_resource_provider = gretel_resource_provider
         self._model_suite = model_suite
@@ -120,7 +113,7 @@ class DataDesigner:
         self._seed_dataset = seed_dataset
         self._columns = columns or {}
         self._constraints = constraints or {}
-        self._evaluators = evaluators or {}
+        self._evaluation_report = evaluation_report or {}
         self._task_registry = Registry()
         self._files = self._gretel_resource_provider.files
         self._workflow_manager = self._gretel_resource_provider.workflows
@@ -184,24 +177,17 @@ class DataDesigner:
         )
         return self
 
-    def get_evaluator(self, evaluation_type: EvaluationType) -> EvaluatorT | None:
-        return self._evaluators.get(evaluation_type, None)
+    def get_evaluation_report(self) -> EvaluationReportT | None:
+        return self._evaluation_report
 
-    def delete_evaluator(self, evaluation_type: EvaluationType) -> Self:
-        self._evaluators.pop(evaluation_type, None)
+    def delete_evaluation_report(self) -> Self:
+        self._evaluation_report = None
         return self
 
-    def add_evaluator(
-        self,
-        evaluation_type: EvaluationType,
-        settings: dict[str, Any],
+    def with_evaluation_report(
+        self, settings: EvaluateDatasetSettings | None = None
     ) -> Self:
-        if evaluation_type == EvaluationType.GENERAL:
-            self._evaluators[evaluation_type] = GeneralDatasetEvaluator(
-                settings=settings
-            )
-        else:
-            raise ValueError(f"Unknown evaluator type: {evaluation_type}")
+        self._evaluation_report = GeneralDatasetEvaluation(settings=settings or {})
         return self
 
     def preview(self, verbose_logging: bool = True) -> PreviewResults:
@@ -239,7 +225,7 @@ class DataDesigner:
             seed_dataset=self._seed_dataset,
             columns=list(self._columns.values()),
             constraints=list(self._constraints.values()),
-            evaluators=list(self._evaluators.values()),
+            evaluation_report=self._evaluation_report,
         )
 
     def to_config_dict(self) -> dict[str, Any]:
@@ -428,25 +414,27 @@ class DataDesigner:
             builder.add_step(step=judge_step, step_inputs=[last_step_added])
             last_step_added = judge_step
 
-        for evaluator in self._evaluators.values():
-            if evaluator.type == EvaluationType.GENERAL:
-                settings: EvaluateDatasetSettings = cast(
-                    EvaluateDatasetSettings, evaluator.settings
-                )
-                general_eval_step = self._task_registry.EvaluateDataset(
-                    seed_columns=[
-                        col.name for col in self._columns_from_categorical_sampling
-                    ],
-                    ordered_list_like_columns=settings.ordered_list_like_columns,
-                    list_like_columns=settings.list_like_columns,
-                    llm_judge_column=settings.llm_judge_column,
-                    columns_to_ignore=settings.columns_to_ignore,
-                )
-                builder.add_step(
-                    step=general_eval_step,
-                    step_inputs=[last_step_added],
-                )
-                last_step_added = general_eval_step
+        if self._evaluation_report is not None:
+            settings = self._evaluation_report.settings
+            general_eval_step = self._task_registry.EvaluateDataset(
+                seed_columns=[
+                    col.name for col in self._columns_from_categorical_sampling
+                ],
+                other_list_like_columns=settings.list_like_columns,
+                ordered_list_like_columns=settings.ordered_list_like_columns,
+                # TODO: Update to use all judge columns once the evaluate-dataset task is updated.
+                llm_judge_column=(
+                    ""
+                    if len(self._columns_from_judge) == 0
+                    else self._columns_from_judge[0].name
+                ),
+                columns_to_ignore=settings.columns_to_ignore,
+            )
+            builder.add_step(
+                step=general_eval_step,
+                step_inputs=[last_step_added],
+            )
+            last_step_added = general_eval_step
 
         if len(self._latent_columns) > 0:
             drop_latent_columns_step = self._task_registry.DropColumns(

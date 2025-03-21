@@ -13,7 +13,7 @@ from gretel_client.data_designer.types import (
     DataColumnFromJudge,
     DataColumnFromPrompt,
     DataColumnFromSamplingT,
-    Evaluator,
+    EvaluationReportT,
 )
 from gretel_client.workflows.configs.tasks import (
     ConcatDatasets,
@@ -42,7 +42,7 @@ def test_data_designer_from_config(stub_aidd_config_str):
     assert isinstance(
         dd.get_column(column_name="code_judge_result"), DataColumnFromJudge
     )
-    assert isinstance(dd.get_evaluator(evaluation_type="general"), Evaluator)
+    assert isinstance(dd.get_evaluation_report(), EvaluationReportT)
 
     assert dd.model_suite == "apache-2.0"
     assert dd.model_configs[0].alias == "my_own_code_model"
@@ -125,33 +125,26 @@ def test_constraint_operations():
     assert dd.get_constraint(target_column="height") is None
 
 
-def test_evaluator_operations():
+def test_evaluation_operations():
     dd = (
         DataDesigner(gretel_resource_provider=MagicMock())
         .add_column(name="text", prompt="Write a description of python code")
         .add_column(name="code", prompt="Write Python code")
-        .add_evaluator(
-            evaluation_type="general",
-            settings={"llm_judge_column": "text_to_python"},
-        )
-        # add another evaluator to replace the old one
-        .add_evaluator(
-            evaluation_type="general",
-            settings={"llm_judge_column": "text_to_python_updated"},
-        )
-    )
-    assert (
-        dd.get_evaluator(evaluation_type="general").settings.llm_judge_column
-        == "text_to_python_updated"
+        .with_evaluation_report()
     )
 
-    # delete evaluator by type
-    dd.delete_evaluator(evaluation_type="general")
-    assert dd.get_evaluator(evaluation_type="general") is None
+    # delete evaluation by type
+    dd.delete_evaluation_report()
+    assert dd.get_evaluation_report() is None
 
-    # invalid evaluator type raises exception
-    with pytest.raises(ValueError, match="Unknown evaluator type"):
-        dd.add_evaluator(evaluation_type="nonexistent", settings={})
+    # invalid settings
+    with pytest.raises(ValueError):
+        (
+            DataDesigner(gretel_resource_provider=MagicMock())
+            .add_column(name="text", prompt="Write a description of python code")
+            .add_column(name="code", prompt="Write Python code")
+            .with_evaluation_report(settings={"list_like_columns": 123})
+        )
 
 
 def test_export_operations(stub_aidd_config_str):

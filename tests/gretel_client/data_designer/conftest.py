@@ -61,6 +61,9 @@ person_samplers:
     sex: Female
     locale: fr_FR
 
+evaluation_report:
+  type: general
+
 columns:
     - name: code_id
       type: uuid
@@ -123,9 +126,4 @@ constraints:
       params:
         operator: "<"
         rhs: 65
-
-evaluators:
-    - type: general
-      settings:
-        llm_judge_column: text_to_python
 """
