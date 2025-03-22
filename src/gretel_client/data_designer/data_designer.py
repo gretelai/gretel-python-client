@@ -113,7 +113,7 @@ class DataDesigner:
         self._seed_dataset = seed_dataset
         self._columns = columns or {}
         self._constraints = constraints or {}
-        self._evaluation_report = evaluation_report or {}
+        self._evaluation_report = evaluation_report
         self._task_registry = Registry()
         self._files = self._gretel_resource_provider.files
         self._workflow_manager = self._gretel_resource_provider.workflows
