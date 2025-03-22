@@ -118,17 +118,32 @@ class UniformDistributionParams(ConfigBase):
 
 
 class BernoulliSamplerParams(ConfigBase):
-    p: Annotated[float, Field(title="P")]
+    p: Annotated[float, Field(description="Probability of success.", title="P")]
 
 
 class BinomialSamplerParams(ConfigBase):
-    n: Annotated[int, Field(title="N")]
-    p: Annotated[float, Field(title="P")]
+    n: Annotated[int, Field(description="Number of trials.", title="N")]
+    p: Annotated[
+        float, Field(description="Probability of success on each trial.", title="P")
+    ]
 
 
 class CategorySamplerParams(ConfigBase):
-    values: Annotated[List[Union[str, int, float]], Field(min_length=1, title="Values")]
-    weights: Annotated[Optional[List[float]], Field(title="Weights")] = None
+    values: Annotated[
+        List[Union[str, int, float]],
+        Field(
+            description="List of possible categorical values that can be sampled from.",
+            min_length=1,
+            title="Values",
+        ),
+    ]
+    weights: Annotated[
+        Optional[List[float]],
+        Field(
+            description="List of unnormalized probability weights to assigned to each value, in order. Larger values will be sampled with higher probability.",
+            title="Weights",
+        ),
+    ] = None
 
 
 class ConstraintType(str, Enum):
@@ -146,23 +161,63 @@ class Unit(str, Enum):
 
 
 class DatetimeSamplerParams(ConfigBase):
-    start: Annotated[str, Field(title="Start")]
-    end: Annotated[str, Field(title="End")]
-    unit: Annotated[Optional[Unit], Field(title="Unit")] = "D"
+    start: Annotated[
+        str,
+        Field(
+            description="Earliest possible datetime for sampling range, inclusive.",
+            title="Start",
+        ),
+    ]
+    end: Annotated[
+        str,
+        Field(
+            description="Latest possible datetime for sampling range, inclusive.",
+            title="End",
+        ),
+    ]
+    unit: Annotated[
+        Optional[Unit],
+        Field(
+            description="Sampling units, e.g. the smallest possible time interval between samples.",
+            title="Unit",
+        ),
+    ] = "D"
 
 
 class DistributionSamplerParams(ConfigBase):
-    dist_name: Annotated[str, Field(title="Dist Name")]
-    dist_params: Annotated[Dict[str, Any], Field(title="Dist Params")]
+    dist_name: Annotated[
+        str, Field(description="Name of a scipy.stats distribution.", title="Dist Name")
+    ]
+    dist_params: Annotated[
+        Dict[str, Any],
+        Field(
+            description="Parameters of the scipy.stats distribution given in `dist_name`.",
+            title="Dist Params",
+        ),
+    ]
 
 
 class ExpressionParams(ConfigBase):
-    expr: Annotated[str, Field(title="Expr")]
+    expr: Annotated[
+        str,
+        Field(
+            description="Expression to be evaluated. Must be a valid jinja2 template expression, which can reference columns in the current dataset. Do not include the double curly brackets in the expression, as they are automatically added.",
+            title="Expr",
+        ),
+    ]
 
 
 class GaussianSamplerParams(ConfigBase):
-    mean: Annotated[float, Field(title="Mean")]
-    stddev: Annotated[float, Field(title="Stddev")]
+    mean: Annotated[
+        float, Field(description="Mean of the Gaussian distribution", title="Mean")
+    ]
+    stddev: Annotated[
+        float,
+        Field(
+            description="Standard deviation of the Gaussian distribution",
+            title="Stddev",
+        ),
+    ]
 
 
 class Sex(str, Enum):
@@ -176,13 +231,34 @@ class SexEnum(str, Enum):
 
 
 class PersonSamplerParams(ConfigBase):
-    locale: Annotated[Optional[str], Field(title="Locale")] = "en_US"
-    sex: Annotated[Optional[Union[Sex, List[SexEnum]]], Field(title="Sex")] = None
-    city: Annotated[Optional[Union[str, List[str]]], Field(title="City")] = None
+    locale: Annotated[
+        Optional[str],
+        Field(
+            description="Locale string, determines the language and geographic locale that a synthetic person will be sampled from. E.g, en_US, en_GB, fr_FR, ...",
+            title="Locale",
+        ),
+    ] = "en_US"
+    sex: Annotated[
+        Optional[Union[Sex, List[SexEnum]]],
+        Field(
+            description="If specified, then only synthetic people of the specified sex will be sampled.",
+            title="Sex",
+        ),
+    ] = None
+    city: Annotated[
+        Optional[Union[str, List[str]]],
+        Field(
+            description="If specified, then only synthetic people from these cities will be sampled.",
+            title="City",
+        ),
+    ] = None
 
 
 class PoissonSamplerParams(ConfigBase):
-    mean: Annotated[float, Field(title="Mean")]
+    mean: Annotated[
+        float,
+        Field(description="Mean number of events in a fixed interval.", title="Mean"),
+    ]
 
 
 class SamplingSourceType(str, Enum):
@@ -202,8 +278,19 @@ class SamplingSourceType(str, Enum):
 
 
 class SubcategoryParams(ConfigBase):
-    category: Annotated[str, Field(title="Category")]
-    values: Annotated[Dict[str, List[Union[str, int, float]]], Field(title="Values")]
+    category: Annotated[
+        str,
+        Field(
+            description="Name of parent category to this subcategory.", title="Category"
+        ),
+    ]
+    values: Annotated[
+        Dict[str, List[Union[str, int, float]]],
+        Field(
+            description="Mapping from each value of parent category to a list of subcategory values.",
+            title="Values",
+        ),
+    ]
 
 
 class Unit1(str, Enum):
@@ -214,21 +301,74 @@ class Unit1(str, Enum):
 
 
 class TimeDeltaParams(ConfigBase):
-    dt_min: Annotated[int, Field(ge=0, title="Dt Min")]
-    dt_max: Annotated[int, Field(gt=0, title="Dt Max")]
-    reference_column_name: Annotated[str, Field(title="Reference Column Name")]
-    unit: Annotated[Optional[Unit1], Field(title="Unit")] = "D"
+    dt_min: Annotated[
+        int,
+        Field(
+            description="Minimum possible time-delta for sampling range, inclusive. Must be less than `dt_max`.",
+            ge=0,
+            title="Dt Min",
+        ),
+    ]
+    dt_max: Annotated[
+        int,
+        Field(
+            description="Maximum possible time-delta for sampling range, exclusive. Must be greater than `dt_min`.",
+            gt=0,
+            title="Dt Max",
+        ),
+    ]
+    reference_column_name: Annotated[
+        str,
+        Field(
+            description="Name of an existing datetime column to condition time-delta sampling on.",
+            title="Reference Column Name",
+        ),
+    ]
+    unit: Annotated[
+        Optional[Unit1],
+        Field(
+            description="Sampling units, e.g. the smallest possible time interval between samples.",
+            title="Unit",
+        ),
+    ] = "D"
 
 
 class UUIDParams(ConfigBase):
-    prefix: Annotated[Optional[str], Field(title="Prefix")] = None
-    short_form: Annotated[Optional[bool], Field(title="Short Form")] = False
-    uppercase: Annotated[Optional[bool], Field(title="Uppercase")] = False
+    prefix: Annotated[
+        Optional[str],
+        Field(description="String prepended to the front of the UUID.", title="Prefix"),
+    ] = None
+    short_form: Annotated[
+        Optional[bool],
+        Field(
+            description="If true, all UUIDs sampled will be truncated at 8 characters.",
+            title="Short Form",
+        ),
+    ] = False
+    uppercase: Annotated[
+        Optional[bool],
+        Field(
+            description="If true, all letters in the UUID will be capitalized.",
+            title="Uppercase",
+        ),
+    ] = False
 
 
 class UniformSamplerParams(ConfigBase):
-    low: Annotated[float, Field(title="Low")]
-    high: Annotated[float, Field(title="High")]
+    low: Annotated[
+        float,
+        Field(
+            description="Lower bound of the uniform distribution, inclusive.",
+            title="Low",
+        ),
+    ]
+    high: Annotated[
+        float,
+        Field(
+            description="Upper bound of the uniform distribution, inclusive.",
+            title="High",
+        ),
+    ]
 
 
 class GenerateDatasetFromSampleRecords(ConfigBase):
