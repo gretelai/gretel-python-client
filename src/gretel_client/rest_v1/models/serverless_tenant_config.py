@@ -24,6 +24,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, StrictInt, S
 from typing_extensions import Self
 
 from gretel_client.rest_v1.models.config_tenant_key import ConfigTenantKey
+from gretel_client.rest_v1.models.config_tenant_limits import ConfigTenantLimits
 from gretel_client.rest_v1.models.llm_config import LlmConfig
 
 
@@ -46,6 +47,9 @@ class ServerlessTenantConfig(BaseModel):
     keys: Optional[List[ConfigTenantKey]] = Field(
         default=None, description="keys required for CMK, provided by the customer"
     )
+    limits: Optional[ConfigTenantLimits] = Field(
+        default=None, description="limits for the tenant"
+    )
     __properties: ClassVar[List[str]] = [
         "cell_id",
         "api_endpoint",
@@ -57,6 +61,7 @@ class ServerlessTenantConfig(BaseModel):
         "state",
         "disk_size_gb",
         "keys",
+        "limits",
     ]
 
     @field_validator("tenant_type")
@@ -134,6 +139,9 @@ class ServerlessTenantConfig(BaseModel):
                 if _item:
                     _items.append(_item.to_dict())
             _dict["keys"] = _items
+        # override the default output from pydantic by calling `to_dict()` of limits
+        if self.limits:
+            _dict["limits"] = self.limits.to_dict()
         return _dict
 
     @classmethod
@@ -163,6 +171,11 @@ class ServerlessTenantConfig(BaseModel):
                 "keys": (
                     [ConfigTenantKey.from_dict(_item) for _item in obj["keys"]]
                     if obj.get("keys") is not None
+                    else None
+                ),
+                "limits": (
+                    ConfigTenantLimits.from_dict(obj["limits"])
+                    if obj.get("limits") is not None
                     else None
                 ),
             }

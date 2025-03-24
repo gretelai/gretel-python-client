@@ -26,6 +26,7 @@ from gretel_client.rest_v1.models.config_asymmetric_key_metadata import (
     ConfigAsymmetricKeyMetadata,
 )
 from gretel_client.rest_v1.models.config_tenant_key import ConfigTenantKey
+from gretel_client.rest_v1.models.config_tenant_limits import ConfigTenantLimits
 from gretel_client.rest_v1.models.connection import Connection
 from gretel_client.rest_v1.models.create_connection_request import (
     CreateConnectionRequest,
@@ -43,6 +44,7 @@ from gretel_client.rest_v1.models.create_workflow_run_request import (
 from gretel_client.rest_v1.models.delete_serverless_tenant_response import (
     DeleteServerlessTenantResponse,
 )
+from gretel_client.rest_v1.models.duration import Duration
 from gretel_client.rest_v1.models.event_component import EventComponent
 from gretel_client.rest_v1.models.get_cluster_response import GetClusterResponse
 from gretel_client.rest_v1.models.get_log_response import GetLogResponse

@@ -24,6 +24,7 @@ from pydantic import BaseModel, ConfigDict, field_validator, StrictInt, StrictSt
 from typing_extensions import Self
 
 from gretel_client.rest_v1.models.config_tenant_key import ConfigTenantKey
+from gretel_client.rest_v1.models.config_tenant_limits import ConfigTenantLimits
 from gretel_client.rest_v1.models.llm_config import LlmConfig
 from gretel_client.rest_v1.models.serverless_tenant_provisioning_state import (
     ServerlessTenantProvisioningState,
@@ -44,6 +45,7 @@ class UpdateServerlessTenantRequest(BaseModel):
     disk_size_gb: Optional[StrictInt] = None
     keys: Optional[List[ConfigTenantKey]] = None
     provisioning_state: Optional[ServerlessTenantProvisioningState] = None
+    limits: Optional[ConfigTenantLimits] = None
     __properties: ClassVar[List[str]] = [
         "enabled_llms",
         "tier",
@@ -54,6 +56,7 @@ class UpdateServerlessTenantRequest(BaseModel):
         "disk_size_gb",
         "keys",
         "provisioning_state",
+        "limits",
     ]
 
     @field_validator("tenant_type")
@@ -134,6 +137,9 @@ class UpdateServerlessTenantRequest(BaseModel):
         # override the default output from pydantic by calling `to_dict()` of provisioning_state
         if self.provisioning_state:
             _dict["provisioning_state"] = self.provisioning_state.to_dict()
+        # override the default output from pydantic by calling `to_dict()` of limits
+        if self.limits:
+            _dict["limits"] = self.limits.to_dict()
         return _dict
 
     @classmethod
@@ -168,6 +174,11 @@ class UpdateServerlessTenantRequest(BaseModel):
                         obj["provisioning_state"]
                     )
                     if obj.get("provisioning_state") is not None
+                    else None
+                ),
+                "limits": (
+                    ConfigTenantLimits.from_dict(obj["limits"])
+                    if obj.get("limits") is not None
                     else None
                 ),
             }
