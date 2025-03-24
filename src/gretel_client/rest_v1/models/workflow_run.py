@@ -46,6 +46,9 @@ class WorkflowRun(BaseModel):
     workflow_id: StrictStr = Field(
         description="The ID of the workflow that this run belongs to."
     )
+    name: Optional[StrictStr] = Field(
+        default=None, description="The name of the workflow run."
+    )
     project_id: StrictStr = Field(
         description="The project ID that this workflow run belongs to. This will be the same as the project ID of the workflow."
     )
@@ -127,6 +130,7 @@ class WorkflowRun(BaseModel):
     __properties: ClassVar[List[str]] = [
         "id",
         "workflow_id",
+        "name",
         "project_id",
         "project",
         "cluster_guid",
@@ -267,6 +271,7 @@ class WorkflowRun(BaseModel):
             {
                 "id": obj.get("id"),
                 "workflow_id": obj.get("workflow_id"),
+                "name": obj.get("name"),
                 "project_id": obj.get("project_id"),
                 "project": (
                     Project.from_dict(obj["project"])

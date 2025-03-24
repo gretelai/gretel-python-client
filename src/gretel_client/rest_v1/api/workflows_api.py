@@ -2362,7 +2362,7 @@ class WorkflowsApi:
         query: Annotated[
             Optional[StrictStr],
             Field(
-                description="The query string for searching workflow runs. Supported fields are: `id`, `workflow_id`, `project_id`, `status`, `runner_mode`, `cancelation_request`"
+                description="The query string for searching workflow runs. Supported fields are: `id`, `workflow_id`, `project_id`, `status`, `runner_mode`, `cancellation_request`"
             ),
         ] = None,
         expand: Annotated[
@@ -2403,7 +2403,7 @@ class WorkflowsApi:
 
         Search for workflow runs.  This endpoint supports pagination, querying, and expansion.
 
-        :param query: The query string for searching workflow runs. Supported fields are: `id`, `workflow_id`, `project_id`, `status`, `runner_mode`, `cancelation_request`
+        :param query: The query string for searching workflow runs. Supported fields are: `id`, `workflow_id`, `project_id`, `status`, `runner_mode`, `cancellation_request`
         :type query: str
         :param expand: The fields to expand in the search results. Supported values are: `project`, `config.system`, `created_by`
         :type expand: List[str]
@@ -2465,7 +2465,7 @@ class WorkflowsApi:
         query: Annotated[
             Optional[StrictStr],
             Field(
-                description="The query string for searching workflow runs. Supported fields are: `id`, `workflow_id`, `project_id`, `status`, `runner_mode`, `cancelation_request`"
+                description="The query string for searching workflow runs. Supported fields are: `id`, `workflow_id`, `project_id`, `status`, `runner_mode`, `cancellation_request`"
             ),
         ] = None,
         expand: Annotated[
@@ -2506,7 +2506,7 @@ class WorkflowsApi:
 
         Search for workflow runs.  This endpoint supports pagination, querying, and expansion.
 
-        :param query: The query string for searching workflow runs. Supported fields are: `id`, `workflow_id`, `project_id`, `status`, `runner_mode`, `cancelation_request`
+        :param query: The query string for searching workflow runs. Supported fields are: `id`, `workflow_id`, `project_id`, `status`, `runner_mode`, `cancellation_request`
         :type query: str
         :param expand: The fields to expand in the search results. Supported values are: `project`, `config.system`, `created_by`
         :type expand: List[str]
@@ -2568,7 +2568,7 @@ class WorkflowsApi:
         query: Annotated[
             Optional[StrictStr],
             Field(
-                description="The query string for searching workflow runs. Supported fields are: `id`, `workflow_id`, `project_id`, `status`, `runner_mode`, `cancelation_request`"
+                description="The query string for searching workflow runs. Supported fields are: `id`, `workflow_id`, `project_id`, `status`, `runner_mode`, `cancellation_request`"
             ),
         ] = None,
         expand: Annotated[
@@ -2609,7 +2609,7 @@ class WorkflowsApi:
 
         Search for workflow runs.  This endpoint supports pagination, querying, and expansion.
 
-        :param query: The query string for searching workflow runs. Supported fields are: `id`, `workflow_id`, `project_id`, `status`, `runner_mode`, `cancelation_request`
+        :param query: The query string for searching workflow runs. Supported fields are: `id`, `workflow_id`, `project_id`, `status`, `runner_mode`, `cancellation_request`
         :type query: str
         :param expand: The fields to expand in the search results. Supported values are: `project`, `config.system`, `created_by`
         :type expand: List[str]

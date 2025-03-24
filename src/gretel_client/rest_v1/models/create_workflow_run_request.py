@@ -32,6 +32,9 @@ class CreateWorkflowRunRequest(BaseModel):
     workflow_id: Annotated[str, Field(strict=True)] = Field(
         description="The ID of the workflow to create a run for."
     )
+    name: Optional[Annotated[str, Field(min_length=3, strict=True, max_length=30)]] = (
+        Field(default=None, description="An optional name for the workflow run.")
+    )
     config: Optional[Dict[str, Any]] = Field(
         default=None,
         description="An optional config for the workflow run If provided, this will be used in place of the workflow's config.",
@@ -40,13 +43,25 @@ class CreateWorkflowRunRequest(BaseModel):
         default=None,
         description="An optional config for the workflow run as a YAML string. If provided, this will be used in place of the workflow's config.",
     )
-    __properties: ClassVar[List[str]] = ["workflow_id", "config", "config_text"]
+    __properties: ClassVar[List[str]] = ["workflow_id", "name", "config", "config_text"]
 
     @field_validator("workflow_id")
     def workflow_id_validate_regular_expression(cls, value):
         """Validates the regular expression"""
         if not re.match(r"^w_.*$", value):
             raise ValueError(r"must validate the regular expression /^w_.*$/")
+        return value
+
+    @field_validator("name")
+    def name_validate_regular_expression(cls, value):
+        """Validates the regular expression"""
+        if value is None:
+            return value
+
+        if not re.match(r"^(?i)[a-z][a-z0-9_-]*$", value):
+            raise ValueError(
+                r"must validate the regular expression /^(?i)[a-z][a-z0-9_-]*$/"
+            )
         return value
 
     model_config = ConfigDict(
@@ -100,6 +115,7 @@ class CreateWorkflowRunRequest(BaseModel):
         _obj = cls.model_validate(
             {
                 "workflow_id": obj.get("workflow_id"),
+                "name": obj.get("name"),
                 "config": obj.get("config"),
                 "config_text": obj.get("config_text"),
             }

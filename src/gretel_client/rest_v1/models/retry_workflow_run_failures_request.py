@@ -20,8 +20,8 @@ import re  # noqa: F401
 
 from typing import Any, ClassVar, Dict, List, Optional, Set
 
-from pydantic import BaseModel, ConfigDict, Field
-from typing_extensions import Self
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from typing_extensions import Annotated, Self
 
 
 class RetryWorkflowRunFailuresRequest(BaseModel):
@@ -33,7 +33,22 @@ class RetryWorkflowRunFailuresRequest(BaseModel):
         default=None,
         description="An optional config for the retry workflow run If absent, the config of the workflow run being retried will be used.",
     )
-    __properties: ClassVar[List[str]] = ["config"]
+    name: Optional[Annotated[str, Field(min_length=3, strict=True, max_length=30)]] = (
+        None
+    )
+    __properties: ClassVar[List[str]] = ["config", "name"]
+
+    @field_validator("name")
+    def name_validate_regular_expression(cls, value):
+        """Validates the regular expression"""
+        if value is None:
+            return value
+
+        if not re.match(r"^(?i)[a-z][a-z0-9_-]*$", value):
+            raise ValueError(
+                r"must validate the regular expression /^(?i)[a-z][a-z0-9_-]*$/"
+            )
+        return value
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -83,5 +98,7 @@ class RetryWorkflowRunFailuresRequest(BaseModel):
         if not isinstance(obj, dict):
             return cls.model_validate(obj)
 
-        _obj = cls.model_validate({"config": obj.get("config")})
+        _obj = cls.model_validate(
+            {"config": obj.get("config"), "name": obj.get("name")}
+        )
         return _obj
