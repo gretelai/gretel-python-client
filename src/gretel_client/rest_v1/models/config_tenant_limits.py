@@ -20,10 +20,8 @@ import re  # noqa: F401
 
 from typing import Any, ClassVar, Dict, List, Optional, Set
 
-from pydantic import BaseModel, ConfigDict, Field, StrictInt
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr
 from typing_extensions import Self
-
-from gretel_client.rest_v1.models.duration import Duration
 
 
 class ConfigTenantLimits(BaseModel):
@@ -39,7 +37,7 @@ class ConfigTenantLimits(BaseModel):
         default=None,
         description="Max number of total workflows that can be scheduled in a tenant at once.",
     )
-    max_workflow_duration: Optional[Duration] = Field(
+    max_workflow_duration: Optional[StrictStr] = Field(
         default=None,
         description="Max time duration for a workflow (e.g. 180s, 60m, 8h)",
     )
@@ -86,9 +84,6 @@ class ConfigTenantLimits(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of max_workflow_duration
-        if self.max_workflow_duration:
-            _dict["max_workflow_duration"] = self.max_workflow_duration.to_dict()
         return _dict
 
     @classmethod
@@ -104,11 +99,7 @@ class ConfigTenantLimits(BaseModel):
             {
                 "max_parallel_workflows": obj.get("max_parallel_workflows"),
                 "max_total_workflows": obj.get("max_total_workflows"),
-                "max_workflow_duration": (
-                    Duration.from_dict(obj["max_workflow_duration"])
-                    if obj.get("max_workflow_duration") is not None
-                    else None
-                ),
+                "max_workflow_duration": obj.get("max_workflow_duration"),
             }
         )
         return _obj
