@@ -117,6 +117,19 @@ class UniformDistributionParams(ConfigBase):
     high: Annotated[float, Field(ge=0.0, le=1.0, title="High")]
 
 
+class Dtype(str, Enum):
+    INT = "int"
+    FLOAT = "float"
+    STR = "str"
+    BOOL = "bool"
+
+
+class GenerateColumnFromExpression(ConfigBase):
+    name: Annotated[str, Field(title="Name")]
+    expr: Annotated[str, Field(title="Expr")]
+    dtype: Annotated[Optional[Dtype], Field(title="Dtype")] = "str"
+
+
 class BernoulliSamplerParams(ConfigBase):
     p: Annotated[float, Field(description="Probability of success.", title="P")]
 
