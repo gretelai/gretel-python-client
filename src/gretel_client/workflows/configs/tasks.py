@@ -680,7 +680,7 @@ class LRScheduler(str, Enum):
     CONSTANT_WITH_WARMUP = "constant_with_warmup"
 
 
-class NavigatorFTGenerateStopParams(ConfigBase):
+class TabularFTGenerateStopParams(ConfigBase):
     patience: Annotated[
         Optional[int],
         Field(
@@ -716,7 +716,7 @@ class Delta1(str, Enum):
     AUTO = "auto"
 
 
-class NavigatorFTPrivacyParams(ConfigBase):
+class TabularFTPrivacyParams(ConfigBase):
     dp: Annotated[
         Optional[bool],
         Field(
@@ -765,7 +765,7 @@ class NumInputRecordsToSample1(str, Enum):
     AUTO = "auto"
 
 
-class NavigatorFTTrainingParams(ConfigBase):
+class TabularFTTrainingParams(ConfigBase):
     num_input_records_to_sample: Annotated[
         Optional[Union[NumInputRecordsToSample, NumInputRecordsToSample1]],
         Field(
@@ -887,20 +887,8 @@ class TrainTabularFTConfig(ConfigBase):
             title="max_sequences_per_example",
         ),
     ] = "auto"
-    params: Optional[NavigatorFTTrainingParams] = None
-    privacy_params: Optional[NavigatorFTPrivacyParams] = None
-
-
-class BatchSize(str, Enum):
-    AUTO = "auto"
-
-
-class Epochs(str, Enum):
-    AUTO = "auto"
-
-
-class ForceConditioning(str, Enum):
-    AUTO = "auto"
+    params: Optional[TabularFTTrainingParams] = None
+    privacy_params: Optional[TabularFTPrivacyParams] = None
 
 
 class BinaryEncoderHandler(str, Enum):
@@ -947,6 +935,77 @@ class PrivacyFilters(ConfigBase):
     outliers: Optional[FilterLevel] = "medium"
     similarity: Optional[FilterLevel] = "medium"
     max_iterations: Annotated[Optional[int], Field(title="Max Iterations")] = 10
+
+
+class BatchSize(str, Enum):
+    AUTO = "auto"
+
+
+class Epochs(str, Enum):
+    AUTO = "auto"
+
+
+class ForceConditioning(str, Enum):
+    AUTO = "auto"
+
+
+class TabularGANTrainingParams(ConfigBase):
+    embedding_dim: Annotated[Optional[int], Field(title="Embedding Dim")] = 128
+    generator_dim: Annotated[Optional[List[int]], Field(title="Generator Dim")] = None
+    discriminator_dim: Annotated[
+        Optional[List[int]], Field(title="Discriminator Dim")
+    ] = None
+    generator_lr: Annotated[Optional[float], Field(title="Generator Lr")] = 0.0002
+    generator_decay: Annotated[Optional[float], Field(title="Generator Decay")] = 1e-06
+    discriminator_lr: Annotated[Optional[float], Field(title="Discriminator Lr")] = (
+        0.0002
+    )
+    discriminator_decay: Annotated[
+        Optional[float], Field(title="Discriminator Decay")
+    ] = 1e-06
+    batch_size: Annotated[
+        Optional[Union[int, BatchSize]], Field(title="Batch Size")
+    ] = 500
+    discriminator_steps: Annotated[
+        Optional[int], Field(title="Discriminator Steps")
+    ] = 1
+    binary_encoder_cutoff: Annotated[
+        Optional[int], Field(title="Binary Encoder Cutoff")
+    ] = 150
+    binary_encoder_nan_handler: Optional[BinaryEncoderHandler] = "mode"
+    auto_transform_datetimes: Annotated[
+        Optional[bool], Field(title="Auto Transform Datetimes")
+    ] = False
+    log_frequency: Annotated[Optional[bool], Field(title="Log Frequency")] = True
+    cbn_sample_size: Annotated[Optional[int], Field(title="Cbn Sample Size")] = 250000
+    epochs: Annotated[Optional[Union[int, Epochs]], Field(title="Epochs")] = 600
+    pac: Annotated[Optional[int], Field(title="Pac")] = 10
+    data_upsample_limit: Annotated[
+        Optional[int], Field(title="Data Upsample Limit")
+    ] = 100
+    conditional_vector_type: Optional[ConditionalVectorType] = "single_discrete"
+    conditional_select_column_prob: Annotated[
+        Optional[float], Field(title="Conditional Select Column Prob")
+    ] = None
+    conditional_select_mean_columns: Annotated[
+        Optional[float], Field(title="Conditional Select Mean Columns")
+    ] = None
+    reconstruction_loss_coef: Annotated[
+        Optional[float], Field(title="Reconstruction Loss Coef")
+    ] = 1.0
+    force_conditioning: Annotated[
+        Optional[Union[bool, ForceConditioning]], Field(title="Force Conditioning")
+    ] = "auto"
+
+
+class TrainTabularGANConfig(ConfigBase):
+    privacy_filters: Optional[PrivacyFilters] = None
+    params: Optional[TabularGANTrainingParams] = None
+
+
+class TabularGan(ConfigBase):
+    train: Optional[TrainTabularGANConfig] = None
+    generate: Optional[GenerateFromTabularGANConfig] = None
 
 
 class TestFailingTask(ConfigBase):
@@ -1065,91 +1124,6 @@ class GenerateFromTextFTConfig(ConfigBase):
     ] = None
 
 
-class GptXModelHyperparams(ConfigBase):
-    batch_size: Annotated[
-        Optional[int],
-        Field(
-            description="The batch size per GPU/TPU core/CPU for training. Defaults to `4`.",
-            gt=0,
-            title="batch_size",
-        ),
-    ] = 4
-    epochs: Annotated[
-        Optional[float],
-        Field(
-            description="Total number of training epochs to perform on fine-tuning the model. Either this or the steps parameter must be set, but not both.",
-            gt=0.0,
-            title="epochs",
-        ),
-    ] = None
-    steps: Annotated[
-        Optional[int],
-        Field(
-            description="Total number of training steps to perform on fine-tuning the model. Either this or the epochs parameter must be set, but not both.",
-            gt=0,
-            title="steps",
-        ),
-    ] = None
-    weight_decay: Annotated[
-        Optional[float],
-        Field(
-            description="The weight decay to apply (if not zero) to all layers except all bias and LayerNorm weights in AdamW optimizer. Defaults to `0.01`.",
-            ge=0.0,
-            le=1.0,
-            title="weight_decay",
-        ),
-    ] = 0.01
-    warmup_steps: Annotated[
-        Optional[int],
-        Field(
-            description="Number of steps used for a linear warmup from `0` to `learning_rate`. Defaults to `100`.",
-            gt=0,
-            title="warmup_steps",
-        ),
-    ] = 100
-    lr_scheduler: Annotated[
-        Optional[LRScheduler],
-        Field(
-            description="The scheduler type to use. See the HuggingFace documentation of `SchedulerType` for all possible values. Defaults to `linear`.",
-            title="lr_scheduler",
-        ),
-    ] = "linear"
-    learning_rate: Annotated[
-        Optional[float],
-        Field(
-            description="The initial learning rate for `AdamW` optimizer. Defaults to `0.0002`.",
-            gt=0.0,
-            lt=1.0,
-            title="learning_rate",
-        ),
-    ] = 0.0002
-    max_tokens: Annotated[
-        Optional[int],
-        Field(
-            description="The maximum length (in number of tokens) for any input record.The tokenizer used corresponds to the pretrained model selected.Defaults to `512`.",
-            gt=0,
-            title="max_tokens",
-        ),
-    ] = 512
-    gradient_accumulation_steps: Annotated[
-        Optional[int],
-        Field(
-            description="Number of update steps to accumulate the gradients for, before performing a backward/update pass. This technique increases the effective batch size that will fit into GPU memory.",
-            gt=0,
-            title="gradient_accumulation_steps",
-        ),
-    ] = 8
-    seed: Annotated[
-        Optional[int],
-        Field(
-            description="Random number generator seed passed to HF's Trainer. A null value will result on a random seed being generated.",
-            ge=0,
-            lt=4294967296,
-            title="seed",
-        ),
-    ] = None
-
-
 class PeftParams(ConfigBase):
     lora_r: Annotated[
         Optional[int],
@@ -1241,6 +1215,91 @@ class PrivacyParams(ConfigBase):
     ] = False
 
 
+class TextFTTrainingParams(ConfigBase):
+    batch_size: Annotated[
+        Optional[int],
+        Field(
+            description="The batch size per GPU/TPU core/CPU for training. Defaults to `4`.",
+            gt=0,
+            title="batch_size",
+        ),
+    ] = 4
+    epochs: Annotated[
+        Optional[float],
+        Field(
+            description="Total number of training epochs to perform on fine-tuning the model. Either this or the steps parameter must be set, but not both.",
+            gt=0.0,
+            title="epochs",
+        ),
+    ] = None
+    steps: Annotated[
+        Optional[int],
+        Field(
+            description="Total number of training steps to perform on fine-tuning the model. Either this or the epochs parameter must be set, but not both.",
+            gt=0,
+            title="steps",
+        ),
+    ] = None
+    weight_decay: Annotated[
+        Optional[float],
+        Field(
+            description="The weight decay to apply (if not zero) to all layers except all bias and LayerNorm weights in AdamW optimizer. Defaults to `0.01`.",
+            ge=0.0,
+            le=1.0,
+            title="weight_decay",
+        ),
+    ] = 0.01
+    warmup_steps: Annotated[
+        Optional[int],
+        Field(
+            description="Number of steps used for a linear warmup from `0` to `learning_rate`. Defaults to `100`.",
+            gt=0,
+            title="warmup_steps",
+        ),
+    ] = 100
+    lr_scheduler: Annotated[
+        Optional[LRScheduler],
+        Field(
+            description="The scheduler type to use. See the HuggingFace documentation of `SchedulerType` for all possible values. Defaults to `linear`.",
+            title="lr_scheduler",
+        ),
+    ] = "linear"
+    learning_rate: Annotated[
+        Optional[float],
+        Field(
+            description="The initial learning rate for `AdamW` optimizer. Defaults to `0.0002`.",
+            gt=0.0,
+            lt=1.0,
+            title="learning_rate",
+        ),
+    ] = 0.0002
+    max_tokens: Annotated[
+        Optional[int],
+        Field(
+            description="The maximum length (in number of tokens) for any input record.The tokenizer used corresponds to the pretrained model selected.Defaults to `512`.",
+            gt=0,
+            title="max_tokens",
+        ),
+    ] = 512
+    gradient_accumulation_steps: Annotated[
+        Optional[int],
+        Field(
+            description="Number of update steps to accumulate the gradients for, before performing a backward/update pass. This technique increases the effective batch size that will fit into GPU memory.",
+            gt=0,
+            title="gradient_accumulation_steps",
+        ),
+    ] = 8
+    seed: Annotated[
+        Optional[int],
+        Field(
+            description="Random number generator seed passed to HF's Trainer. A null value will result on a random seed being generated.",
+            ge=0,
+            lt=4294967296,
+            title="seed",
+        ),
+    ] = None
+
+
 class Validation(RootModel[int]):
     root: Annotated[
         int,
@@ -1285,14 +1344,14 @@ class TrainTextFTConfig(ConfigBase):
             title="validation",
         ),
     ] = None
-    params: Optional[GptXModelHyperparams] = None
+    params: Optional[TextFTTrainingParams] = None
     peft_params: Optional[PeftParams] = None
     privacy_params: Optional[PrivacyParams] = None
 
 
 class TextFt(ConfigBase):
-    train: TrainTextFTConfig
-    generate: GenerateFromTextFTConfig
+    train: Optional[TrainTextFTConfig] = None
+    generate: Optional[GenerateFromTextFTConfig] = None
 
 
 class Validation2(RootModel[int]):
@@ -1339,7 +1398,7 @@ class TrainTextFt(ConfigBase):
             title="validation",
         ),
     ] = None
-    params: Optional[GptXModelHyperparams] = None
+    params: Optional[TextFTTrainingParams] = None
     peft_params: Optional[PeftParams] = None
     privacy_params: Optional[PrivacyParams] = None
 
@@ -1653,7 +1712,7 @@ class GenerateFromTabularFTConfig(ConfigBase):
         ),
     ] = 1.0
     stop_params: Annotated[
-        Optional[NavigatorFTGenerateStopParams],
+        Optional[TabularFTGenerateStopParams],
         Field(
             description="Optional mechanism to stop generation if too many invalid records are being created. This helps guard against extremely long generation jobs that likely do not have the potential to generate high-quality data.",
             title="Stop Params",
@@ -1671,65 +1730,6 @@ class GenerateFromTabularFTConfig(ConfigBase):
 class TabularFt(ConfigBase):
     train: Optional[TrainTabularFTConfig] = None
     generate: Optional[GenerateFromTabularFTConfig] = None
-
-
-class ActganModelHyperparams(ConfigBase):
-    embedding_dim: Annotated[Optional[int], Field(title="Embedding Dim")] = 128
-    generator_dim: Annotated[Optional[List[int]], Field(title="Generator Dim")] = None
-    discriminator_dim: Annotated[
-        Optional[List[int]], Field(title="Discriminator Dim")
-    ] = None
-    generator_lr: Annotated[Optional[float], Field(title="Generator Lr")] = 0.0002
-    generator_decay: Annotated[Optional[float], Field(title="Generator Decay")] = 1e-06
-    discriminator_lr: Annotated[Optional[float], Field(title="Discriminator Lr")] = (
-        0.0002
-    )
-    discriminator_decay: Annotated[
-        Optional[float], Field(title="Discriminator Decay")
-    ] = 1e-06
-    batch_size: Annotated[
-        Optional[Union[int, BatchSize]], Field(title="Batch Size")
-    ] = 500
-    discriminator_steps: Annotated[
-        Optional[int], Field(title="Discriminator Steps")
-    ] = 1
-    binary_encoder_cutoff: Annotated[
-        Optional[int], Field(title="Binary Encoder Cutoff")
-    ] = 150
-    binary_encoder_nan_handler: Optional[BinaryEncoderHandler] = "mode"
-    auto_transform_datetimes: Annotated[
-        Optional[bool], Field(title="Auto Transform Datetimes")
-    ] = False
-    log_frequency: Annotated[Optional[bool], Field(title="Log Frequency")] = True
-    cbn_sample_size: Annotated[Optional[int], Field(title="Cbn Sample Size")] = 250000
-    epochs: Annotated[Optional[Union[int, Epochs]], Field(title="Epochs")] = 600
-    pac: Annotated[Optional[int], Field(title="Pac")] = 10
-    data_upsample_limit: Annotated[
-        Optional[int], Field(title="Data Upsample Limit")
-    ] = 100
-    conditional_vector_type: Optional[ConditionalVectorType] = "single_discrete"
-    conditional_select_column_prob: Annotated[
-        Optional[float], Field(title="Conditional Select Column Prob")
-    ] = None
-    conditional_select_mean_columns: Annotated[
-        Optional[float], Field(title="Conditional Select Mean Columns")
-    ] = None
-    reconstruction_loss_coef: Annotated[
-        Optional[float], Field(title="Reconstruction Loss Coef")
-    ] = 1.0
-    force_conditioning: Annotated[
-        Optional[Union[bool, ForceConditioning]], Field(title="Force Conditioning")
-    ] = "auto"
-
-
-class TrainTabularGANConfig(ConfigBase):
-    privacy_filters: Optional[PrivacyFilters] = None
-    params: Optional[ActganModelHyperparams] = None
-
-
-class TabularGan(ConfigBase):
-    train: Optional[TrainTabularGANConfig] = None
-    generate: Optional[GenerateFromTabularGANConfig] = None
 
 
 class Globals(ConfigBase):
