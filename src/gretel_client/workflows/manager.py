@@ -44,7 +44,7 @@ class WorkflowManager:
             self._workflow_session_manager,
         )
 
-    def create(self, tasks: list[TaskConfig]) -> WorkflowRun:
+    def create(self, tasks: list[TaskConfig], wait: bool = True) -> WorkflowRun:
         """
         Creates and executes a workflow from a list of task configurations.
 
@@ -57,7 +57,7 @@ class WorkflowManager:
         builder = self.builder()
         for task in tasks:
             builder.add_step(task_to_step(task))
-        return builder.run()
+        return builder.run(wait=wait)
 
     def registry(self) -> dict[str, Any]:
         """
