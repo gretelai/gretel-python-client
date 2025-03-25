@@ -213,11 +213,12 @@ class SafeSyntheticDataset:
             # For now, using evaluate in a SSD workflow requires both
             # a synthetic and training dataset. In the future, this might
             # change.
-            if not synth or not train:
-                raise Exception(
-                    "Can not configure evaluate task. Could not find training and synthetic datasets"
+            if train and synth:
+                self._builder.add_step(evaluate_step, step_inputs=[synth, train])
+            else:
+                logger.debug(
+                    "Evaluate requires both training and synthetic datasets. No Evaluate step added."
                 )
-            self._builder.add_step(evaluate_step, step_inputs=[synth, train])
 
         return self._builder.run(wait=wait)
 
