@@ -233,40 +233,6 @@ class GaussianSamplerParams(ConfigBase):
     ]
 
 
-class Sex(str, Enum):
-    MALE = "Male"
-    FEMALE = "Female"
-
-
-class SexEnum(str, Enum):
-    MALE = "Male"
-    FEMALE = "Female"
-
-
-class PersonSamplerParams(ConfigBase):
-    locale: Annotated[
-        Optional[str],
-        Field(
-            description="Locale string, determines the language and geographic locale that a synthetic person will be sampled from. E.g, en_US, en_GB, fr_FR, ...",
-            title="Locale",
-        ),
-    ] = "en_US"
-    sex: Annotated[
-        Optional[Union[Sex, List[SexEnum]]],
-        Field(
-            description="If specified, then only synthetic people of the specified sex will be sampled.",
-            title="Sex",
-        ),
-    ] = None
-    city: Annotated[
-        Optional[Union[str, List[str]]],
-        Field(
-            description="If specified, then only synthetic people from these cities will be sampled.",
-            title="City",
-        ),
-    ] = None
-
-
 class PoissonSamplerParams(ConfigBase):
     mean: Annotated[
         float,
@@ -288,6 +254,11 @@ class SamplingSourceType(str, Enum):
     TIMEDELTA = "timedelta"
     UNIFORM = "uniform"
     UUID = "uuid"
+
+
+class Sex(str, Enum):
+    MALE = "Male"
+    FEMALE = "Female"
 
 
 class SubcategoryParams(ConfigBase):
@@ -1602,68 +1573,28 @@ class ColumnConstraint(ConfigBase):
     params: Annotated[Dict[str, Union[float, str]], Field(title="Params")]
 
 
-class ConditionalDataColumn(ConfigBase):
-    name: Annotated[str, Field(title="Name")]
-    type: SamplingSourceType
-    params: Annotated[
-        Union[
-            ExpressionParams,
-            SubcategoryParams,
-            CategorySamplerParams,
-            DatetimeSamplerParams,
-            PersonSamplerParams,
-            TimeDeltaParams,
-            UUIDParams,
-            BernoulliSamplerParams,
-            BinomialSamplerParams,
-            GaussianSamplerParams,
-            PoissonSamplerParams,
-            UniformSamplerParams,
-            DistributionSamplerParams,
-        ],
-        Field(title="Params"),
-    ]
-    conditional_params: Annotated[
-        Optional[
-            Dict[
-                str,
-                Union[
-                    ExpressionParams,
-                    SubcategoryParams,
-                    CategorySamplerParams,
-                    DatetimeSamplerParams,
-                    PersonSamplerParams,
-                    TimeDeltaParams,
-                    UUIDParams,
-                    BernoulliSamplerParams,
-                    BinomialSamplerParams,
-                    GaussianSamplerParams,
-                    PoissonSamplerParams,
-                    UniformSamplerParams,
-                    DistributionSamplerParams,
-                ],
-            ]
-        ],
-        Field(title="Conditional Params"),
-    ] = {}
-    convert_to: Annotated[Optional[str], Field(title="Convert To")] = None
-
-
-class DataSchema(ConfigBase):
-    columns: Annotated[
-        List[ConditionalDataColumn], Field(min_length=1, title="Columns")
-    ]
-    constraints: Annotated[
-        Optional[List[ColumnConstraint]], Field(title="Constraints")
-    ] = []
-
-
-class GenerateColumnsUsingSamplers(ConfigBase):
-    num_records: Annotated[int, Field(title="Num Records")]
-    data_schema: DataSchema
-    max_rejections_factor: Annotated[
-        Optional[int], Field(title="Max Rejections Factor")
-    ] = 5
+class PersonSamplerParams(ConfigBase):
+    locale: Annotated[
+        Optional[str],
+        Field(
+            description="Locale string, determines the language and geographic locale that a synthetic person will be sampled from. E.g, en_US, en_GB, fr_FR, ...",
+            title="Locale",
+        ),
+    ] = "en_US"
+    sex: Annotated[
+        Optional[Union[Sex, List[Sex]]],
+        Field(
+            description="If specified, then only synthetic people of the specified sex will be sampled.",
+            title="Sex",
+        ),
+    ] = None
+    city: Annotated[
+        Optional[Union[str, List[str]]],
+        Field(
+            description="If specified, then only synthetic people from these cities will be sampled.",
+            title="City",
+        ),
+    ] = None
 
 
 class SeedCategory(ConfigBase):
@@ -1843,6 +1774,70 @@ class GenerateColumnFromTemplate(ConfigBase):
     system_prompt: Annotated[Optional[str], Field(title="System Prompt")] = None
     data_config: DataConfig
     description: Annotated[Optional[str], Field(title="Description")] = ""
+
+
+class ConditionalDataColumn(ConfigBase):
+    name: Annotated[str, Field(title="Name")]
+    type: SamplingSourceType
+    params: Annotated[
+        Union[
+            ExpressionParams,
+            SubcategoryParams,
+            CategorySamplerParams,
+            DatetimeSamplerParams,
+            PersonSamplerParams,
+            TimeDeltaParams,
+            UUIDParams,
+            BernoulliSamplerParams,
+            BinomialSamplerParams,
+            GaussianSamplerParams,
+            PoissonSamplerParams,
+            UniformSamplerParams,
+            DistributionSamplerParams,
+        ],
+        Field(title="Params"),
+    ]
+    conditional_params: Annotated[
+        Optional[
+            Dict[
+                str,
+                Union[
+                    ExpressionParams,
+                    SubcategoryParams,
+                    CategorySamplerParams,
+                    DatetimeSamplerParams,
+                    PersonSamplerParams,
+                    TimeDeltaParams,
+                    UUIDParams,
+                    BernoulliSamplerParams,
+                    BinomialSamplerParams,
+                    GaussianSamplerParams,
+                    PoissonSamplerParams,
+                    UniformSamplerParams,
+                    DistributionSamplerParams,
+                ],
+            ]
+        ],
+        Field(title="Conditional Params"),
+    ] = {}
+    convert_to: Annotated[Optional[str], Field(title="Convert To")] = None
+
+
+class DataSchema(ConfigBase):
+    columns: Annotated[
+        List[ConditionalDataColumn], Field(min_length=1, title="Columns")
+    ]
+    constraints: Annotated[
+        Optional[List[ColumnConstraint]], Field(title="Constraints")
+    ] = []
+
+
+class GenerateColumnsUsingSamplers(ConfigBase):
+    num_records: Annotated[int, Field(title="Num Records")]
+    data_schema: DataSchema
+    max_rejections_factor: Annotated[
+        Optional[int], Field(title="Max Rejections Factor")
+    ] = 5
 
 
 class GenerateSeedCategoryValues(ConfigBase):
