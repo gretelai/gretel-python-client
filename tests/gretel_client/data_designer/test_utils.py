@@ -3,7 +3,6 @@ import json
 from datetime import date
 from unittest.mock import patch
 
-from gretel_client.data_designer.types import CodeLang
 from gretel_client.data_designer.utils import (
     camel_to_kebab,
     fetch_config_if_remote,

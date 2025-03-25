@@ -43,3 +43,10 @@ REPR_HTML_TEMPLATE = (
     "{highlighted_html}"
     "</div>"
 )
+
+
+MODEL_DUMP_KWARGS = dict(
+    exclude_unset=False,
+    exclude={"model_configs", "model_suite", "error_rate"},
+    mode="json",
+)

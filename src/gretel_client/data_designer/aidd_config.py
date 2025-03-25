@@ -1,7 +1,7 @@
 from pydantic import BaseModel, ConfigDict, Field
 
 from gretel_client.data_designer.types import (
-    DataColumnT,
+    AIDDColumnT,
     EvaluationReportT,
     ModelSuite,
     SeedDataset,
@@ -17,6 +17,6 @@ class AIDDConfig(BaseModel):
     model_configs: list[ModelConfig] | None = None
     seed_dataset: SeedDataset | None = None
     person_samplers: dict[str, PersonSamplerParams] | None = None
-    columns: list[DataColumnT] = Field(min_length=1)
+    columns: list[AIDDColumnT] = Field(min_length=1)
     constraints: list[ColumnConstraint] | None = None
     evaluation_report: EvaluationReportT | None = None

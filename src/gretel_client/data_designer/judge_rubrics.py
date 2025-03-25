@@ -1,5 +1,8 @@
 # Contains presets for rubrics and judge prompt templates for Python and SQL
 
+from dataclasses import dataclass
+
+from gretel_client.data_designer.types import LLMJudgePromptTemplateType
 from gretel_client.workflows.configs.tasks import Rubric
 
 # General Rubrics ##
@@ -144,3 +147,30 @@ Generated Python Code
 {{ code_implementation }}
 ```
 """
+
+
+@dataclass(frozen=True)
+class JudgeRubric:
+    # When adding new rubrics, ensure all rubric names are capitalized to match jarvis
+    text_to_python = {
+        "Relevance": "Adherence to INSTRUCTIONS",
+        "Readability": "Readability and Maintainability (Is the Python code easy to understand and maintain?)",
+        "Efficiency": "Efficiency and Performance (Is the code optimized for performance?)",
+        "Pythonic": "Pythonic Code and Best Practices (Does the code follow Python conventions and best practices?)",
+    }
+
+    text_to_sql = {
+        "Relevance": "Adherence to INSTRUCTIONS and CONTEXT",
+        "Readability": "Readability and Maintainability (Is the SQL code easy to understand and maintain?)",
+        "Scalability": "Scalability (Does the solution scale well with larger datasets or more complex queries?)",
+        "Standards": "Compliance with Standards (Does the SQL query follow SQL standards and best practices?)",
+    }
+
+    @classmethod
+    def get_rubric(cls, eval_type: LLMJudgePromptTemplateType) -> dict[str, str]:
+        if eval_type == LLMJudgePromptTemplateType.TEXT_TO_PYTHON:
+            return cls.text_to_python
+        elif eval_type == LLMJudgePromptTemplateType.TEXT_TO_SQL:
+            return cls.text_to_sql
+        else:
+            raise ValueError(f"Unsupported judge template type: {eval_type}")

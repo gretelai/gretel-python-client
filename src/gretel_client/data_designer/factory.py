@@ -1,13 +1,19 @@
 from pathlib import Path
 
+import gretel_client.data_designer.columns as columns
+import gretel_client.data_designer.params as params
+
 from gretel_client.data_designer import DataDesigner
-from gretel_client.data_designer.types import DataColumnT, EvaluationReportT, ModelSuite
+from gretel_client.data_designer.types import AIDDColumnT, EvaluationReportT, ModelSuite
 from gretel_client.navigator_client_protocols import GretelResourceProviderProtocol
 from gretel_client.workflows.configs.tasks import ColumnConstraint
 from gretel_client.workflows.configs.workflows import ModelConfig
 
 
 class DataDesignerFactory:
+
+    columns = columns
+    params = params
 
     def __init__(
         self, gretel_resource_provider: GretelResourceProviderProtocol
@@ -25,7 +31,7 @@ class DataDesignerFactory:
         *,
         model_suite: ModelSuite = ModelSuite.APACHE_2_0,
         model_configs: list[ModelConfig] | None = None,
-        columns: dict[str, DataColumnT] | None = None,
+        columns: dict[str, AIDDColumnT] | None = None,
         constraints: list[ColumnConstraint] | None = None,
         evaluation_report: EvaluationReportT | None = None,
     ) -> DataDesigner:

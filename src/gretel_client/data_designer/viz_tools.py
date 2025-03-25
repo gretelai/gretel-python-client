@@ -16,13 +16,10 @@ from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
 
-from gretel_client.data_designer.types import (
-    CodeLang,
-    EvaluationType,
-    JudgeRubric,
-    LLMJudgePromptTemplateType,
-)
+from gretel_client.data_designer.judge_rubrics import JudgeRubric
+from gretel_client.data_designer.types import EvaluationType, LLMJudgePromptTemplateType
 from gretel_client.data_designer.utils import code_lang_to_syntax_lexer
+from gretel_client.workflows.configs.tasks import CodeLang
 
 console = Console()
 

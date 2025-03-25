@@ -6,14 +6,17 @@ from unittest.mock import MagicMock
 import pytest
 import yaml
 
+import gretel_client.data_designer.columns as C
+import gretel_client.data_designer.params as P
+
 from gretel_client.data_designer import DataDesigner
 from gretel_client.data_designer.aidd_config import AIDDConfig
 from gretel_client.data_designer.types import (
-    DataColumnFromCodeValidation,
-    DataColumnFromJudge,
-    DataColumnFromPrompt,
-    DataColumnFromSamplingT,
+    CodeValidationColumn,
     EvaluationReportT,
+    LLMGenColumn,
+    LLMJudgeColumn,
+    SamplerColumn,
 )
 from gretel_client.workflows.configs.tasks import (
     ConcatDatasets,
@@ -28,20 +31,60 @@ from gretel_client.workflows.configs.tasks import (
 )
 
 
+def test_build_data_designer_state_using_types():
+    dd = DataDesigner(gretel_resource_provider=MagicMock())
+    dd.add_column(
+        C.SamplerColumn(name="test_id", type=P.SamplingSourceType.UUID, params={})
+    )
+    dd.add_column(
+        C.LLMGenColumn(
+            name="test_code",
+            prompt="Write some zig but call it Python.",
+            model_alias="code",
+            data_config=P.DataConfig(
+                type=P.OutputType.CODE, params={"syntax": P.CodeLang.PYTHON}
+            ),
+        )
+    )
+    dd.add_column(
+        C.LLMJudgeColumn(
+            name="test_judge",
+            prompt="Judge this",
+            rubrics=[
+                P.Rubric(
+                    name="test_rubric",
+                    description="test",
+                    scoring={"0": "Not Good", "1": "Good"},
+                )
+            ],
+        )
+    )
+    dd.add_column(
+        C.CodeValidationColumn(
+            name="test_validation",
+            code_lang=P.CodeLang.PYTHON,
+            target_column="test_code",
+        )
+    )
+    assert dd.get_columns_of_type(C.SamplerColumn)[0].name == "test_id"
+    assert dd.get_columns_of_type(C.LLMGenColumn)[0].name == "test_code"
+    assert dd.get_columns_of_type(C.LLMJudgeColumn)[0].name == "test_judge"
+    assert dd.get_columns_of_type(C.CodeValidationColumn)[0].name == "test_validation"
+    assert len(dd._columns) == 4
+
+
 def test_data_designer_from_config(stub_aidd_config_str):
     dd = DataDesigner.from_config(
         gretel_resource_provider=MagicMock(), config=stub_aidd_config_str
     )
-    assert isinstance(dd.get_column(column_name="code_id"), DataColumnFromSamplingT)
-    assert isinstance(dd.get_column(column_name="text"), DataColumnFromPrompt)
-    assert isinstance(dd.get_column(column_name="code"), DataColumnFromPrompt)
+    assert isinstance(dd.get_column(column_name="code_id"), SamplerColumn)
+    assert isinstance(dd.get_column(column_name="text"), LLMGenColumn)
+    assert isinstance(dd.get_column(column_name="code"), LLMGenColumn)
     assert isinstance(
         dd.get_column(column_name="code_validation_result"),
-        DataColumnFromCodeValidation,
+        CodeValidationColumn,
     )
-    assert isinstance(
-        dd.get_column(column_name="code_judge_result"), DataColumnFromJudge
-    )
+    assert isinstance(dd.get_column(column_name="code_judge_result"), LLMJudgeColumn)
     assert isinstance(dd.get_evaluation_report(), EvaluationReportT)
 
     assert dd.model_suite == "apache-2.0"
@@ -56,8 +99,8 @@ def test_column_operations():
         type="uuid",
         params={"prefix": "code_", "short_form": True, "uppercase": True},
     ).add_column(name="text", prompt="Write a description of fizzbuzz python code")
-    assert isinstance(dd.get_column("code_id"), DataColumnFromSamplingT)
-    assert isinstance(dd.get_column("text"), DataColumnFromPrompt)
+    assert isinstance(dd.get_column("code_id"), SamplerColumn)
+    assert isinstance(dd.get_column("text"), LLMGenColumn)
 
     # replace existing column
     dd = dd.add_column(name="text", prompt="Updated")
@@ -65,7 +108,7 @@ def test_column_operations():
 
     # delete column by name
     dd = dd.delete_column("code_id")
-    assert len(dd.get_columns_of_type(DataColumnFromSamplingT)) == 0
+    assert len(dd.get_columns_of_type(SamplerColumn)) == 0
 
     # add validation columns
     dd = dd.add_column(name="code", prompt="generate some python code")
@@ -75,9 +118,7 @@ def test_column_operations():
         code_lang="python",
         target_column="text",
     )
-    assert isinstance(
-        dd.get_column("code_validation_result"), DataColumnFromCodeValidation
-    )
+    assert isinstance(dd.get_column("code_validation_result"), CodeValidationColumn)
 
     # add judge columns
     dd = dd.add_column(
@@ -86,19 +127,13 @@ def test_column_operations():
         prompt="some judge prompt",
         rubrics=[MagicMock(spec=Rubric)],
     )
-    assert isinstance(dd.get_column("code_judge_result"), DataColumnFromJudge)
-
-    # unsupported kwargs should raise an exception
-    with pytest.raises(
-        ValueError, match="Invalid keyword arguments {'unsupported_kwarg'}"
-    ):
-        dd.add_column(name="first_name", unsupported_kwarg="value")
+    assert isinstance(dd.get_column("code_judge_result"), LLMJudgeColumn)
 
 
 def test_constraint_operations():
     dd = (
         DataDesigner(gretel_resource_provider=MagicMock())
-        .add_column(name="age", type="gaussian", params={"mean": 35, "stdev": 5})
+        .add_column(name="age", type="gaussian", params={"mean": 35, "stddev": 5})
         .add_column(name="height", type="uniform", params={"low": 15, "high": 200})
         .add_constraint(
             target_column="age",
@@ -215,7 +250,7 @@ def test_workflow_builder_preview_integration(
     assert isinstance(steps[1], GenerateColumnsUsingSamplers)
     assert len(steps[1].data_schema.columns) == 6
     expected_sampling_column_names = set(
-        [c.name for c in dd.get_columns_of_type(DataColumnFromSamplingT)]
+        [c.name for c in dd.get_columns_of_type(SamplerColumn)]
     )
     actual_sampling_column_names = set(
         set([col.name for col in steps[1].data_schema.columns])

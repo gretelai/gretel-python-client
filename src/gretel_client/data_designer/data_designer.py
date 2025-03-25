@@ -2,11 +2,12 @@ import json
 import logging
 
 from pathlib import Path
-from typing import Any, cast, Type
+from typing import Any, Type
 
 import pandas as pd
 import yaml
 
+from pydantic import BaseModel
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
@@ -15,6 +16,7 @@ from typing_extensions import Self
 from gretel_client.data_designer.aidd_config import AIDDConfig
 from gretel_client.data_designer.constants import (
     DEFAULT_REPR_HTML_STYLE,
+    MODEL_DUMP_KWARGS,
     REPR_HTML_TEMPLATE,
     SQL_DIALECTS,
     VALIDATE_PYTHON_COLUMN_SUFFIXES,
@@ -23,23 +25,25 @@ from gretel_client.data_designer.constants import (
 from gretel_client.data_designer.log import get_logger
 from gretel_client.data_designer.preview import PreviewResults
 from gretel_client.data_designer.types import (
-    DataColumnFromCodeValidation,
-    DataColumnFromJudge,
-    DataColumnFromPrompt,
-    DataColumnFromSamplingT,
-    DataColumnT,
+    AIDDColumnT,
+    CodeValidationColumn,
+    ColumnProviderTypeT,
     DataPipelineMetadata,
+    DataSeedColumn,
     EvaluateDatasetSettings,
     EvaluationReportT,
     GeneralDatasetEvaluation,
+    LLMGenColumn,
+    LLMJudgeColumn,
     ModelSuite,
-    NonSamplingSupportedTypes,
+    ProviderType,
+    SamplerColumn,
     SeedDataset,
-    SupportedColumnTypesT,
 )
 from gretel_client.data_designer.utils import (
     camel_to_kebab,
     fetch_config_if_remote,
+    get_sampler_params,
     get_task_log_emoji,
     make_date_obj_serializable,
 )
@@ -64,6 +68,8 @@ from gretel_client.workflows.configs.workflows import Globals, ModelConfig
 from gretel_client.workflows.workflow import WorkflowRun
 
 logger = get_logger(__name__, level=logging.INFO)
+
+_SAMPLER_PARAMS: dict[SamplingSourceType, Type[BaseModel]] = get_sampler_params()
 
 
 class DataDesigner:
@@ -103,7 +109,7 @@ class DataDesigner:
         model_configs: list[ModelConfig] | None = None,
         seed_dataset: SeedDataset | None = None,
         person_samplers: dict[str, PersonSamplerParams] | None = None,
-        columns: dict[str, DataColumnT] | None = None,
+        columns: dict[str, AIDDColumnT] | None = None,
         constraints: dict[str, ColumnConstraint] | None = None,
         evaluation_report: EvaluationReportT | None = None,
     ):
@@ -130,35 +136,36 @@ class DataDesigner:
     def model_configs(self) -> list[ModelConfig] | None:
         return self._model_configs
 
-    def get_column(self, column_name: str) -> DataColumnT | None:
+    def get_column(self, column_name: str) -> AIDDColumnT | None:
         return self._columns.get(column_name, None)
 
-    def get_columns_of_type(self, column_type: Type) -> list[DataColumnT]:
+    def get_columns_of_type(self, column_type: Type) -> list[AIDDColumnT]:
         return [col for col in self._columns.values() if isinstance(col, column_type)]
 
     def delete_column(self, column_name: str) -> Self:
+        if isinstance(self._columns.get(column_name), DataSeedColumn):
+            raise ValueError(
+                "Seed columns cannot be deleted. Please update the seed dataset instead."
+            )
         self._columns.pop(column_name, None)
         return self
 
     def add_column(
         self,
-        name: str,
-        type: SupportedColumnTypesT = NonSamplingSupportedTypes.LLM_GENERATED,
+        column: AIDDColumnT | None = None,
+        *,
+        name: str | None = None,
+        type: ColumnProviderTypeT = ProviderType.LLM_GEN,
         **kwargs,
     ) -> Self:
-        kwargs_set = set(list(kwargs.keys()) + ["name", "type"])
-        self._validate_add_column_kwargs(type, kwargs_set)
-        column_klass = None
-        match type:
-            case NonSamplingSupportedTypes.LLM_GENERATED:
-                column_klass = DataColumnFromPrompt
-            case NonSamplingSupportedTypes.LLM_JUDGE:
-                column_klass = DataColumnFromJudge
-            case NonSamplingSupportedTypes.CODE_VALIDATION:
-                column_klass = DataColumnFromCodeValidation
-            case _:
-                column_klass = DataColumnFromSamplingT
-        return self._add_column(column=column_klass(name=name, type=type, **kwargs))
+        if column is None:
+            column = self._get_column_from_kwargs(name=name, type=type, **kwargs)
+        if not isinstance(column, AIDDColumnT):
+            raise ValueError(
+                f"Column must be of type AIDDColumnT, but got {type(column)}. "
+            )
+        self._columns[column.name] = column
+        return self
 
     def get_constraint(self, target_column: str) -> ColumnConstraint | None:
         return self._constraints.get(target_column, None)
@@ -248,18 +255,22 @@ class DataDesigner:
                 )
 
     def with_person_samplers(
-        self, person_samplers: dict[str, PersonSamplerParams]
+        self,
+        person_samplers: dict[str, PersonSamplerParams],
+        *,
+        keep_person_columns: bool = False,
     ) -> Self:
         for name, params in person_samplers.items():
             person_params = PersonSamplerParams.model_validate(params)
-            self._add_column(
-                DataColumnFromSamplingT(
+            self.add_column(
+                SamplerColumn(
                     name=name,
                     type=SamplingSourceType.PERSON,
                     params=person_params.model_dump(),
                 )
             )
-            self._latent_columns[name] = person_params
+            if not keep_person_columns:
+                self._latent_columns[name] = person_params
         return self
 
     def with_seed_dataset(
@@ -279,6 +290,8 @@ class DataDesigner:
 
         logger.info(f"🌱 Using seed dataset with file ID: {file_id}")
 
+        # TODO: Add seed columns to self._columns.
+
         self._seed_dataset = SeedDataset(
             file_id=file_id,
             sampling_strategy=sampling_strategy,
@@ -287,51 +300,41 @@ class DataDesigner:
         return self
 
     @property
-    def _columns_from_sampling(self) -> list[DataColumnFromSamplingT]:
-        return cast(
-            list[DataColumnFromSamplingT],
-            self.get_columns_of_type(DataColumnFromSamplingT),
-        )
+    def _seed_columns(self) -> list[DataSeedColumn]:
+        return self.get_columns_of_type(DataSeedColumn)
 
     @property
-    def _columns_from_prompt(self) -> list[DataColumnFromPrompt]:
-        return cast(
-            list[DataColumnFromPrompt], self.get_columns_of_type(DataColumnFromPrompt)
-        )
+    def _sampler_columns(self) -> list[SamplerColumn]:
+        return self.get_columns_of_type(SamplerColumn)
 
     @property
-    def _columns_from_judge(self) -> list[DataColumnFromJudge]:
-        return cast(
-            list[DataColumnFromJudge], self.get_columns_of_type(DataColumnFromJudge)
-        )
+    def _llm_gen_columns(self) -> list[LLMGenColumn]:
+        return self.get_columns_of_type(LLMGenColumn)
 
     @property
-    def _columns_from_code_validation(self) -> list[DataColumnFromCodeValidation]:
-        return cast(
-            list[DataColumnFromCodeValidation],
-            self.get_columns_of_type(DataColumnFromCodeValidation),
-        )
+    def _llm_judge_columns(self) -> list[LLMJudgeColumn]:
+        return self.get_columns_of_type(LLMJudgeColumn)
 
     @property
-    def _columns_from_categorical_sampling(self) -> list[DataColumnFromSamplingT]:
+    def _code_validation_columns(self) -> list[CodeValidationColumn]:
+        return self.get_columns_of_type(CodeValidationColumn)
+
+    @property
+    def _categorical_columns(self) -> list[SamplerColumn]:
         return [
             col
-            for col in self._columns_from_sampling
+            for col in self._sampler_columns
             if (
                 col.type == SamplingSourceType.CATEGORY
                 or col.type == SamplingSourceType.SUBCATEGORY
             )
         ]
 
-    def _add_column(self, column: DataColumnT) -> Self:
-        self._columns[column.name] = column
-        return self
-
     def _build_workflow(
         self, num_records: int, verbose_logging: bool = False
     ) -> WorkflowBuilder:
 
-        if self._seed_dataset is None and len(self._columns_from_sampling) == 0:
+        if self._seed_dataset is None and len(self._sampler_columns) == 0:
             raise ValueError(
                 "🛑 Data Designer needs a seed dataset and/or at least one column that is "
                 "generated using a non-LLM sampler. Seeding data is an essential ingredient "
@@ -360,11 +363,11 @@ class DataDesigner:
             )
             last_step_added = sample_from_dataset_step
 
-        if len(self._columns_from_sampling) > 0:
+        if len(self._sampler_columns) > 0:
             columns_using_samples_step = (
                 self._task_registry.GenerateColumnsUsingSamplers(
                     data_schema=DataSchema(
-                        columns=[c for c in self._columns_from_sampling],
+                        columns=[c for c in self._sampler_columns],
                         constraints=[c for c in list(self._constraints.values())],
                     ),
                     num_records=num_records,
@@ -384,19 +387,16 @@ class DataDesigner:
             )
             last_step_added = concat_step
 
-        for prompt_based_column in self._columns_from_prompt:
-            generate_column_from_template_args = prompt_based_column.model_dump(
-                exclude={"type"}
-            )
+        for llm_gen_config in self._llm_gen_columns:
             columns_from_prompt_step = self._task_registry.GenerateColumnFromTemplate(
-                **generate_column_from_template_args
+                **llm_gen_config.model_dump(**MODEL_DUMP_KWARGS)
             )
             builder.add_step(
                 step=columns_from_prompt_step, step_inputs=[last_step_added]
             )
             last_step_added = columns_from_prompt_step
 
-        for validation_column in self._columns_from_code_validation:
+        for validation_column in self._code_validation_columns:
             validation_step = self._task_registry.ValidateCode(
                 code_lang=validation_column.code_lang,
                 target_columns=[validation_column.target_column],
@@ -407,26 +407,24 @@ class DataDesigner:
 
         last_dataset_step = last_step_added
 
-        for judge_based_column in self._columns_from_judge:
-            judge_with_llm_args = judge_based_column.model_dump(exclude={"type"})
-            judge_with_llm_args["result_column"] = judge_with_llm_args.pop("name")
-            judge_step = self._task_registry.JudgeWithLlm(**judge_with_llm_args)
+        for judge_based_column in self._llm_judge_columns:
+            judge_step = self._task_registry.JudgeWithLlm(
+                **judge_based_column.model_dump(**MODEL_DUMP_KWARGS)
+            )
             builder.add_step(step=judge_step, step_inputs=[last_step_added])
             last_step_added = judge_step
 
         if self._evaluation_report is not None:
             settings = self._evaluation_report.settings
             general_eval_step = self._task_registry.EvaluateDataset(
-                seed_columns=[
-                    col.name for col in self._columns_from_categorical_sampling
-                ],
+                seed_columns=[col.name for col in self._categorical_columns],
                 other_list_like_columns=settings.list_like_columns,
                 ordered_list_like_columns=settings.ordered_list_like_columns,
                 # TODO: Update to use all judge columns once the evaluate-dataset task is updated.
                 llm_judge_column=(
                     ""
-                    if len(self._columns_from_judge) == 0
-                    else self._columns_from_judge[0].name
+                    if len(self._llm_judge_columns) == 0
+                    else self._llm_judge_columns[0].name
                 ),
                 columns_to_ignore=settings.columns_to_ignore,
             )
@@ -522,6 +520,25 @@ class DataDesigner:
             data_pipeline_metadata=self._get_data_pipeline_metadata(),
         )
 
+    def _get_column_from_kwargs(
+        self, name: str, type: ColumnProviderTypeT, **kwargs
+    ) -> AIDDColumnT:
+        if name is None or type is None:
+            raise ValueError(
+                "You must provide both `name` and `type` to add a column using kwargs."
+            )
+        match type:
+            case ProviderType.LLM_GEN:
+                column = LLMGenColumn(name=name, **kwargs)
+            case ProviderType.LLM_JUDGE:
+                column = LLMJudgeColumn(name=name, **kwargs)
+            case ProviderType.CODE_VALIDATION:
+                column = CodeValidationColumn(name=name, **kwargs)
+            case _:
+                kwargs["params"] = _SAMPLER_PARAMS[type](**kwargs.get("params", {}))
+                column = SamplerColumn(name=name, type=type, **kwargs)
+        return column
+
     def _get_data_pipeline_metadata(
         self,
     ) -> DataPipelineMetadata:
@@ -532,7 +549,7 @@ class DataDesigner:
         llm_judge_columns = []
         eval_type = None
 
-        for code_val_col in self._columns_from_code_validation:
+        for code_val_col in self._code_validation_columns:
             code_validation_columns.append(code_val_col.name)
 
             column_suffix = (
@@ -546,11 +563,11 @@ class DataDesigner:
 
         sampling_based_columns = [
             col.name
-            for col in self._columns_from_sampling
+            for col in self._sampler_columns
             if col.name not in list(self._latent_columns.keys())
         ]
-        prompt_based_columns = [col.name for col in self._columns_from_prompt]
-        llm_judge_columns = [col.name for col in self._columns_from_judge]
+        prompt_based_columns = [col.name for col in self._llm_gen_columns]
+        llm_judge_columns = [col.name for col in self._llm_judge_columns]
         return DataPipelineMetadata(
             sampling_based_columns=sampling_based_columns,
             prompt_based_columns=prompt_based_columns,
@@ -567,32 +584,11 @@ class DataDesigner:
             step_name = camel_to_kebab(step.task)
             suffix = ""
             if isinstance(step, self._task_registry.GenerateColumnsUsingSamplers):
-                suffix = f"-generating {', '.join([col.name for col in self._columns_from_sampling])}"
+                suffix = f"-generating {', '.join([col.name for col in self._sampler_columns])}"
             elif isinstance(step, self._task_registry.GenerateColumnFromTemplate):
                 suffix = f"-generating {step.name}"
             name = f"{step_name}-{i + 1}{suffix}".replace(",", "").replace(" ", "-")
             logger.info(f"  |-- Step {i + 1}: {name}")
-
-    def _validate_add_column_kwargs(
-        self, type: SupportedColumnTypesT, kwargs_set: set[str]
-    ) -> None:
-        valid_kwargs = {}
-        if type == NonSamplingSupportedTypes.LLM_GENERATED:
-            valid_kwargs = set(DataColumnFromPrompt.model_fields.keys())
-            invalid_kwargs = kwargs_set - valid_kwargs
-        elif type == NonSamplingSupportedTypes.LLM_JUDGE:
-            valid_kwargs = set(DataColumnFromJudge.model_fields.keys())
-            invalid_kwargs = kwargs_set - valid_kwargs
-        elif type == NonSamplingSupportedTypes.CODE_VALIDATION:
-            valid_kwargs = set(DataColumnFromCodeValidation.model_fields.keys())
-            invalid_kwargs = kwargs_set - valid_kwargs
-        else:
-            valid_kwargs = set(DataColumnFromSamplingT.model_fields.keys())
-            invalid_kwargs = kwargs_set - valid_kwargs
-        if len(invalid_kwargs) > 0:
-            raise ValueError(
-                f"Invalid keyword arguments {invalid_kwargs}. Arguments must map to one of {valid_kwargs}"
-            )
 
     @staticmethod
     def _get_last_evaluation_step_name(workflow_step_names: list[str]) -> str | None:
