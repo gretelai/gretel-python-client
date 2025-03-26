@@ -274,16 +274,16 @@ def test_workflow_builder_preview_integration(
     assert isinstance(steps[4], GenerateColumnFromTemplate)
     assert steps[4].name == "code"
 
-    assert isinstance(steps[5], ValidateCode)
-    assert steps[5].code_lang == "python"
+    assert isinstance(steps[5], JudgeWithLlm)
+    assert steps[5].result_column == "code_judge_result"
 
-    assert isinstance(steps[6], JudgeWithLlm)
-    assert steps[6].result_column == "code_judge_result"
+    assert isinstance(steps[6], ValidateCode)
+    assert steps[6].code_lang == "python"
 
-    assert isinstance(steps[7], EvaluateDataset)
+    assert isinstance(steps[7], DropColumns)
+    assert steps[7].columns == ["some_dude", "some_lady"]
 
-    assert isinstance(steps[8], DropColumns)
-    assert steps[8].columns == ["some_dude", "some_lady"]
+    assert isinstance(steps[8], EvaluateDataset)
 
     # TODO: Add more assertions for validators and evaluators
 

@@ -30,6 +30,7 @@ TASK_TYPE_EMOJI_MAP = {
     "seed": "🌱",
     "load": "📥",
     "extract": "💭",
+    "concat": "🔗",
 }
 
 
@@ -40,6 +41,7 @@ REPR_HTML_TEMPLATE = (
     "<style>{css}</style>"
     "<div class='code' "
     "style='padding: 5px;"
+    "background-color: #2F343F;"
     "border: 1px solid grey;"
     "border-radius: 5px;"
     "display:inline-block;'>"
@@ -49,9 +51,7 @@ REPR_HTML_TEMPLATE = (
 
 
 MODEL_DUMP_KWARGS = dict(
-    exclude_unset=False,
-    exclude={"model_configs", "model_suite", "error_rate"},
-    mode="json",
+    exclude_unset=False, exclude={"model_configs", "model_suite", "error_rate"}
 )
 
 

@@ -5,7 +5,6 @@ from gretel_client.workflows.configs.tasks import (
     CodeLang,
     DataConfig,
     DistributionSamplerParams,
-    ExpressionParams,
     GaussianSamplerParams,
     OutputType,
     PersonSamplerParams,

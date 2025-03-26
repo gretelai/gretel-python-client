@@ -3,14 +3,19 @@ import json
 import re
 
 from datetime import date
+from pathlib import Path
 from typing import Any, Type
 
+import pandas as pd
 import requests
 
+from jinja2 import meta
+from jinja2.sandbox import ImmutableSandboxedEnvironment
 from pydantic import BaseModel
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
+from rich.pretty import Pretty
 
 from gretel_client.data_designer.constants import (
     DEFAULT_REPR_HTML_STYLE,
@@ -78,6 +83,12 @@ def code_lang_to_syntax_lexer(code_lang: tasks.CodeLang) -> str:
             raise ValueError(f"Unsupported code language: {code_lang}")
 
 
+def get_prompt_template_keywords(template: str) -> set[str]:
+    """Extract all keywords from a string template."""
+    ast = ImmutableSandboxedEnvironment().parse(template)
+    return set(meta.find_undeclared_variables(ast))
+
+
 def get_sampler_params() -> dict[str, Type[BaseModel]]:
     """Returns a dictionary of sampler parameter classes."""
     params_cls_list = [
@@ -101,19 +112,52 @@ def get_sampler_params() -> dict[str, Type[BaseModel]]:
     return params_cls_dict
 
 
-class WithHTMLRepr:
-    """Mixin class offering stylized HTML Repr rendering of objects.
+def smart_load_dataframe(dataframe: str | Path | pd.DataFrame) -> pd.DataFrame:
+    """Load a dataframe from file if a path is given, otherwise return the dataframe.
+
+    Args:
+        dataframe: A path to a file or a pandas DataFrame object.
+
+    Returns:
+        A pandas DataFrame object.
+    """
+    if isinstance(dataframe, pd.DataFrame):
+        return dataframe
+
+    # Get the file extension.
+    if isinstance(dataframe, str) and dataframe.startswith("http"):
+        ext = dataframe.split(".")[-1].lower()
+    else:
+        dataframe = Path(dataframe)
+        ext = dataframe.suffix.lower()
+        if not dataframe.exists():
+            raise FileNotFoundError(f"File not found: {dataframe}")
+
+    # Load the dataframe based on the file extension.
+    match ext:
+        case "csv":
+            return pd.read_csv(dataframe)
+        case "json":
+            return pd.read_json(dataframe, lines=True)
+        case "parquet":
+            return pd.read_parquet(dataframe)
+        case _:
+            raise ValueError(f"Unsupported file format: {dataframe}")
+
+
+class WithPrettyRepr:
+    """Mixin offering stylized HTML and pretty rich console rendering of objects.
 
     For use in notebook displays of objects.
     """
 
     def __repr__(self) -> str:
-        """Base Repr reimplementation.
+        """Base Repr implementation.
 
         Puts dict fields on new lines for legibility.
         """
-        field_reprs = ",\n".join(f"  {k}={v!r}" for k, v in self.__dict__.items())
-        return f"{self.__class__.__name__}(\n{field_reprs}\n)"
+        field_repr = ",\n".join(f"  {k}={v!r}" for k, v in self.__dict__.items())
+        return f"{self.__class__.__name__}(\n{field_repr}\n)"
 
     def _repr_html_(self) -> str:
         """Represent the Repr string of an object as HTML.
@@ -127,3 +171,6 @@ class WithHTMLRepr:
         highlighted_html = highlight(repr_string, PythonLexer(), formatter)
         css = formatter.get_style_defs(".code")
         return REPR_HTML_TEMPLATE.format(css=css, highlighted_html=highlighted_html)
+
+    def __rich_console__(self, console, options):
+        yield Pretty(self)

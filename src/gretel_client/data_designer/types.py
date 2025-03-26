@@ -8,9 +8,16 @@ from uuid import UUID
 import pandas as pd
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from rich.pretty import Pretty
 
-from gretel_client.data_designer.utils import WithHTMLRepr
+from gretel_client.data_designer.constants import (
+    SQL_DIALECTS,
+    VALIDATE_PYTHON_COLUMN_SUFFIXES,
+    VALIDATE_SQL_COLUMN_SUFFIXES,
+)
+from gretel_client.data_designer.utils import (
+    get_prompt_template_keywords,
+    WithPrettyRepr,
+)
 from gretel_client.workflows.configs import tasks
 
 ##########################################################
@@ -37,6 +44,7 @@ class ProviderType(str, Enum):
     LLM_GEN = "llm-gen"
     LLM_JUDGE = "llm-judge"
     CODE_VALIDATION = "code-validation"
+    EXPRESSION = "expression"
 
 
 @dataclass
@@ -115,15 +123,29 @@ class SeedDataset(AIDDConfigBase):
 ##########################################################
 
 
-class SamplerColumn(tasks.ConditionalDataColumn, WithHTMLRepr):
-    def __rich_console__(self, console, options):
-        yield Pretty(self)
+class WithDAGColumnMixin:
+    @property
+    def required_columns(self) -> list[str]:
+        return []
+
+    @property
+    def side_effect_columns(self) -> list[str]:
+        return []
 
 
-class LLMGenColumn(tasks.GenerateColumnFromTemplate, WithHTMLRepr):
+class SamplerColumn(tasks.ConditionalDataColumn, WithPrettyRepr): ...
+
+
+class LLMGenColumn(
+    tasks.GenerateColumnFromTemplate, WithDAGColumnMixin, WithPrettyRepr
+):
     data_config: tasks.DataConfig = Field(
         default_factory=lambda: tasks.DataConfig(type=tasks.OutputType.TEXT, params={})
     )
+
+    @property
+    def required_columns(self) -> list[str]:
+        return list(get_prompt_template_keywords(self.prompt))
 
     @model_validator(mode="after")
     def validate_data_config_params(self) -> Self:
@@ -140,36 +162,53 @@ class LLMGenColumn(tasks.GenerateColumnFromTemplate, WithHTMLRepr):
                 raise ValueError("Missing `syntax` parameter for code column.")
         return self
 
-    def __rich_console__(self, console, options):
-        yield Pretty(self)
 
-
-class LLMJudgeColumn(tasks.JudgeWithLlm, WithHTMLRepr):
+class LLMJudgeColumn(tasks.JudgeWithLlm, WithDAGColumnMixin, WithPrettyRepr):
     result_column: str = Field(..., alias="name")
 
     @property
     def name(self) -> str:
         return self.result_column
 
-    def __rich_console__(self, console, options):
-        yield Pretty(self)
+    @property
+    def required_columns(self) -> list[str]:
+        return list(get_prompt_template_keywords(self.prompt))
 
 
-class CodeValidationColumn(AIDDConfigBase, WithHTMLRepr):
+class CodeValidationColumn(AIDDConfigBase, WithDAGColumnMixin, WithPrettyRepr):
     name: str
     code_lang: tasks.CodeLang
     target_column: str
 
-    def __rich_console__(self, console, options):
-        yield Pretty(self)
+    @property
+    def required_columns(self) -> list[str]:
+        return [self.target_column]
+
+    @property
+    def side_effect_columns(self) -> list[str]:
+        suffixes = (
+            VALIDATE_SQL_COLUMN_SUFFIXES
+            if self.code_lang in SQL_DIALECTS
+            else VALIDATE_PYTHON_COLUMN_SUFFIXES
+        )
+        columns = []
+        for suffix in suffixes:
+            columns.append(f"{self.target_column}{suffix}")
+        return columns
 
 
-class DataSeedColumn(AIDDConfigBase, WithHTMLRepr):
+class ExpressionColumn(
+    tasks.GenerateColumnFromExpression, WithDAGColumnMixin, WithPrettyRepr
+):
+
+    @property
+    def required_columns(self) -> list[str]:
+        return list(get_prompt_template_keywords(self.expr))
+
+
+class DataSeedColumn(AIDDConfigBase, WithPrettyRepr):
     name: str
     file_id: str
-
-    def __rich_console__(self, console, options):
-        yield Pretty(self)
 
 
 ##########################################################
@@ -177,9 +216,13 @@ class DataSeedColumn(AIDDConfigBase, WithHTMLRepr):
 ##########################################################
 
 AIDDColumnT: TypeAlias = (
-    SamplerColumn | LLMGenColumn | LLMJudgeColumn | CodeValidationColumn
+    SamplerColumn
+    | LLMGenColumn
+    | LLMJudgeColumn
+    | CodeValidationColumn
+    | ExpressionColumn
 )
 MagicColumnT: TypeAlias = AIDDColumnT | DataSeedColumn
 ColumnProviderTypeT: TypeAlias = tasks.SamplingSourceType | ProviderType
 EvaluationReportT: TypeAlias = GeneralDatasetEvaluation
-TaskOutputT = pd.DataFrame | dict
+TaskOutputT: TypeAlias = pd.DataFrame | dict

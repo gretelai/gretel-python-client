@@ -18,10 +18,8 @@ from gretel_client.data_designer.constants import (
     DEFAULT_REPR_HTML_STYLE,
     MODEL_DUMP_KWARGS,
     REPR_HTML_TEMPLATE,
-    SQL_DIALECTS,
-    VALIDATE_PYTHON_COLUMN_SUFFIXES,
-    VALIDATE_SQL_COLUMN_SUFFIXES,
 )
+from gretel_client.data_designer.dag import topologically_sort_columns
 from gretel_client.data_designer.log import get_logger
 from gretel_client.data_designer.magic_data_designer import MagicDataDesignerEditor
 from gretel_client.data_designer.preview import PreviewResults
@@ -33,6 +31,7 @@ from gretel_client.data_designer.types import (
     DataSeedColumn,
     EvaluateDatasetSettings,
     EvaluationReportT,
+    ExpressionColumn,
     GeneralDatasetEvaluation,
     LLMGenColumn,
     LLMJudgeColumn,
@@ -42,11 +41,11 @@ from gretel_client.data_designer.types import (
     SeedDataset,
 )
 from gretel_client.data_designer.utils import (
-    camel_to_kebab,
     fetch_config_if_remote,
     get_sampler_params,
     get_task_log_emoji,
     make_date_obj_serializable,
+    smart_load_dataframe,
 )
 from gretel_client.files.interface import File
 from gretel_client.gretel.config_setup import smart_load_yaml
@@ -58,18 +57,25 @@ from gretel_client.workflows.builder import (
 )
 from gretel_client.workflows.configs.registry import Registry
 from gretel_client.workflows.configs.tasks import (
+    CodeLang,
     ColumnConstraint,
     ConstraintType,
     DataSchema,
+)
+from gretel_client.workflows.configs.tasks import Dtype as ExprDtype
+from gretel_client.workflows.configs.tasks import (
     PersonSamplerParams,
     SamplingSourceType,
     SamplingStrategy,
 )
 from gretel_client.workflows.configs.workflows import Globals, ModelConfig
+from gretel_client.workflows.tasks import TaskConfig
 from gretel_client.workflows.workflow import WorkflowRun
 
 logger = get_logger(__name__, level=logging.INFO)
 
+
+_type_builtin = type
 _SAMPLER_PARAMS: dict[SamplingSourceType, Type[BaseModel]] = get_sampler_params()
 
 
@@ -165,7 +171,8 @@ class DataDesigner:
             column = self._get_column_from_kwargs(name=name, type=type, **kwargs)
         if not isinstance(column, AIDDColumnT):
             raise ValueError(
-                f"Column must be of type AIDDColumnT, but got {type(column)}. "
+                f"{_type_builtin(column)} is not a valid column type. "
+                f"Columns must be one of {AIDDColumnT}."
             )
         self._columns[column.name] = column
         self.magic.reset()
@@ -201,7 +208,7 @@ class DataDesigner:
         self._evaluation_report = GeneralDatasetEvaluation(settings=settings or {})
         return self
 
-    def preview(self, verbose_logging: bool = True) -> PreviewResults:
+    def preview(self, verbose_logging: bool = False) -> PreviewResults:
         logger.info("🚀 Generating preview")
         workflow = self._build_workflow(num_records=10, verbose_logging=verbose_logging)
 
@@ -209,7 +216,14 @@ class DataDesigner:
             workflow, verbose_logging=verbose_logging
         )
         if preview.dataset is not None:
-            logger.info("👀 Your dataset preview is ready for a peek!")
+            if preview.success:
+                logger.info("🎉 Your dataset preview is ready!")
+            else:
+                logger.warning(
+                    "⚠️ Something has gone wrong during preview generation. Please inspect "
+                    "the generated data and adjust your configuration as needed. If the issue "
+                    "persists please contact support."
+                )
 
         # TODO: Re-visit how we display evaluation results in light of generalized judge-with-llm
         # if preview.evaluation_results is not None:
@@ -303,13 +317,10 @@ class DataDesigner:
             file_id = dataset
             dataset_columns = self._retrieve_remote_dataset_columns(file_id)
 
-        elif isinstance(dataset, pd.DataFrame):
-            file_id = self._files.upload(dataset, "dataset").id
-            dataset_columns = dataset.columns.tolist()
-
         else:
-            file_id = self._files.upload(dataset, "dataset").id
-            dataset_columns = self._retrieve_remote_dataset_columns(file_id)
+            df = smart_load_dataframe(dataset)
+            file_id = self._files.upload(df, "dataset").id
+            dataset_columns = df.columns.tolist()
 
         logger.info(f"🌱 Using seed dataset with file ID: {file_id}")
 
@@ -344,6 +355,19 @@ class DataDesigner:
         return self.get_columns_of_type(CodeValidationColumn)
 
     @property
+    def _expression_columns(self) -> list[ExpressionColumn]:
+        return self.get_columns_of_type(ExpressionColumn)
+
+    @property
+    def _dag_columns(self) -> list[AIDDColumnT]:
+        return (
+            self._llm_gen_columns
+            + self._llm_judge_columns
+            + self._code_validation_columns
+            + self._expression_columns
+        )
+
+    @property
     def _categorical_columns(self) -> list[SamplerColumn]:
         return [
             col
@@ -353,6 +377,32 @@ class DataDesigner:
                 or col.type == SamplingSourceType.SUBCATEGORY
             )
         ]
+
+    def _get_next_dag_step(self, column_name: str) -> TaskConfig:
+        column = self.get_column(column_name)
+        if isinstance(column, LLMGenColumn):
+            next_step = self._task_registry.GenerateColumnFromTemplate(
+                **column.model_dump(**MODEL_DUMP_KWARGS)
+            )
+        elif isinstance(column, LLMJudgeColumn):
+            next_step = self._task_registry.JudgeWithLlm(
+                **column.model_dump(**MODEL_DUMP_KWARGS)
+            )
+        elif isinstance(column, CodeValidationColumn):
+            next_step = self._task_registry.ValidateCode(
+                code_lang=CodeLang(column.code_lang),
+                target_columns=[column.target_column],
+                result_columns=[column.name],
+            )
+        elif isinstance(column, ExpressionColumn):
+            next_step = self._task_registry.GenerateColumnFromExpression(
+                name=column.name,
+                expr=column.expr,
+                dtype=ExprDtype(column.dtype),
+            )
+        else:
+            raise ValueError(f"🛑 Columns of type {type(column)} do not go in the DAG.")
+        return next_step
 
     def _build_workflow(
         self, num_records: int, verbose_logging: bool = False
@@ -376,6 +426,11 @@ class DataDesigner:
         sample_from_dataset_step = None
         columns_using_samples_step = None
         last_step_added = None
+
+        ###################################################
+        # Add seed dataset to workflow if provided
+        ###################################################
+
         if self._seed_dataset is not None:
             sample_from_dataset_step = self._task_registry.SampleFromDataset(
                 num_samples=num_records,
@@ -386,6 +441,10 @@ class DataDesigner:
                 step=sample_from_dataset_step, step_inputs=[self._seed_dataset.file_id]
             )
             last_step_added = sample_from_dataset_step
+
+        ########################################################
+        # Add all sampler columns to workflow (single step)
+        ########################################################
 
         if len(self._sampler_columns) > 0:
             columns_using_samples_step = (
@@ -400,6 +459,10 @@ class DataDesigner:
             builder.add_step(step=columns_using_samples_step, step_inputs=[])
             last_step_added = columns_using_samples_step
 
+        ########################################################
+        # Concatenate seed and sampler datasets (if both exist)
+        ########################################################
+
         if (
             sample_from_dataset_step is not None
             and columns_using_samples_step is not None
@@ -411,32 +474,35 @@ class DataDesigner:
             )
             last_step_added = concat_step
 
-        for llm_gen_config in self._llm_gen_columns:
-            columns_from_prompt_step = self._task_registry.GenerateColumnFromTemplate(
-                **llm_gen_config.model_dump(**MODEL_DUMP_KWARGS)
+        ########################################################
+        # Add DAG columns to workflow (multiple steps)
+        ########################################################
+
+        sorted_columns_names = topologically_sort_columns(
+            self._dag_columns, logger=logger, verbose_logging=verbose_logging
+        )
+
+        for column_name in sorted_columns_names:
+            next_step = self._get_next_dag_step(column_name)
+            builder.add_step(step=next_step, step_inputs=[last_step_added])
+            last_step_added = next_step
+
+        ########################################################
+        # Drop all latent columns from the final dataset
+        ########################################################
+
+        if len(self._latent_columns) > 0:
+            drop_latent_columns_step = self._task_registry.DropColumns(
+                columns=list(self._latent_columns.keys()),
             )
             builder.add_step(
-                step=columns_from_prompt_step, step_inputs=[last_step_added]
+                step=drop_latent_columns_step, step_inputs=[last_step_added]
             )
-            last_step_added = columns_from_prompt_step
+            last_step_added = drop_latent_columns_step
 
-        for validation_column in self._code_validation_columns:
-            validation_step = self._task_registry.ValidateCode(
-                code_lang=validation_column.code_lang,
-                target_columns=[validation_column.target_column],
-                result_columns=[validation_column.name],
-            )
-            builder.add_step(step=validation_step, step_inputs=[last_step_added])
-            last_step_added = validation_step
-
-        last_dataset_step = last_step_added
-
-        for judge_based_column in self._llm_judge_columns:
-            judge_step = self._task_registry.JudgeWithLlm(
-                **judge_based_column.model_dump(**MODEL_DUMP_KWARGS)
-            )
-            builder.add_step(step=judge_step, step_inputs=[last_step_added])
-            last_step_added = judge_step
+        ########################################################
+        # Run dataset evaluation if requested
+        ########################################################
 
         if self._evaluation_report is not None:
             settings = self._evaluation_report.settings
@@ -458,18 +524,6 @@ class DataDesigner:
             )
             last_step_added = general_eval_step
 
-        if len(self._latent_columns) > 0:
-            drop_latent_columns_step = self._task_registry.DropColumns(
-                columns=list(self._latent_columns.keys()),
-            )
-            builder.add_step(
-                step=drop_latent_columns_step, step_inputs=[last_dataset_step]
-            )
-            last_step_added = drop_latent_columns_step
-
-        if verbose_logging:
-            self._write_workflow_steps_to_logger(builder.get_steps())
-
         return builder
 
     def _capture_preview_result(
@@ -480,8 +534,10 @@ class DataDesigner:
         current_step = None
         final_output = None
         outputs_by_step = {}
+        success = True
         for message in workflow.iter_preview():
             if isinstance(message, WorkflowInterruption):
+                success = False
                 logger.warning(message.message)
                 break
             if not message.step:
@@ -513,8 +569,10 @@ class DataDesigner:
                     if log_msg.is_info:
                         logger.info(formatted_msg)
                     elif log_msg.is_warning:
+                        success = False
                         logger.warning(formatted_msg)
                     else:
+                        success = False
                         logger.error(formatted_msg)
 
             if message.has_output:
@@ -542,6 +600,7 @@ class DataDesigner:
             output=final_output,
             evaluation_results=evaluation_results,
             data_pipeline_metadata=self._get_data_pipeline_metadata(),
+            success=success,
         )
 
     def _get_column_from_kwargs(
@@ -558,6 +617,8 @@ class DataDesigner:
                 column = LLMJudgeColumn(name=name, **kwargs)
             case ProviderType.CODE_VALIDATION:
                 column = CodeValidationColumn(name=name, **kwargs)
+            case ProviderType.EXPRESSION:
+                column = ExpressionColumn(name=name, **kwargs)
             case _:
                 kwargs["params"] = _SAMPLER_PARAMS[type](**kwargs.get("params", {}))
                 column = SamplerColumn(name=name, type=type, **kwargs)
@@ -574,16 +635,9 @@ class DataDesigner:
         eval_type = None
 
         for code_val_col in self._code_validation_columns:
-            code_validation_columns.append(code_val_col.name)
-
-            column_suffix = (
-                VALIDATE_SQL_COLUMN_SUFFIXES
-                if code_val_col.code_lang in SQL_DIALECTS
-                else VALIDATE_PYTHON_COLUMN_SUFFIXES
+            code_validation_columns.extend(
+                [code_val_col.name] + list(code_val_col.side_effect_columns)
             )
-
-            for suffix in column_suffix:
-                code_validation_columns.append(f"{code_val_col.target_column}{suffix}")
 
         sampling_based_columns = [
             col.name
@@ -601,18 +655,6 @@ class DataDesigner:
             code_lang=code_lang,
             eval_type=eval_type,
         )
-
-    def _write_workflow_steps_to_logger(self, steps: list[Any]) -> None:
-        logger.info("⚙️ Configuring Data Designer Workflow steps:")
-        for i, step in enumerate(steps):
-            step_name = camel_to_kebab(step.task)
-            suffix = ""
-            if isinstance(step, self._task_registry.GenerateColumnsUsingSamplers):
-                suffix = f"-generating {', '.join([col.name for col in self._sampler_columns])}"
-            elif isinstance(step, self._task_registry.GenerateColumnFromTemplate):
-                suffix = f"-generating {step.name}"
-            name = f"{step_name}-{i + 1}{suffix}".replace(",", "").replace(" ", "-")
-            logger.info(f"  |-- Step {i + 1}: {name}")
 
     @staticmethod
     def _get_last_evaluation_step_name(workflow_step_names: list[str]) -> str | None:
@@ -639,6 +681,15 @@ class DataDesigner:
             "model_suite": model_suite,
             "seed_dataset": (
                 None if self._seed_dataset is None else self._seed_dataset.file_id
+            ),
+            "seed_columns": (
+                None
+                if len(self._seed_columns) == 0
+                else (
+                    json.dumps([col.name for col in self._seed_columns], indent=8)
+                    if len(self._seed_columns) > max_list_elements
+                    else [col.name for col in self._seed_columns]
+                )
             ),
             "person_samplers": (
                 None

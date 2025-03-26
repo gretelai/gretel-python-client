@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import BinaryIO, IO, Optional, Union
 
 import pandas as pd
-import pyarrow
+import pyarrow.parquet
 import pydantic
 import requests
 import smart_open

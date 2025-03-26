@@ -210,16 +210,6 @@ class DistributionSamplerParams(ConfigBase):
     ]
 
 
-class ExpressionParams(ConfigBase):
-    expr: Annotated[
-        str,
-        Field(
-            description="Expression to be evaluated. Must be a valid jinja2 template expression, which can reference columns in the current dataset. Do not include the double curly brackets in the expression, as they are automatically added.",
-            title="Expr",
-        ),
-    ]
-
-
 class GaussianSamplerParams(ConfigBase):
     mean: Annotated[
         float, Field(description="Mean of the Gaussian distribution", title="Mean")
@@ -274,7 +264,6 @@ class SamplingSourceType(str, Enum):
     BINOMIAL = "binomial"
     CATEGORY = "category"
     DATETIME = "datetime"
-    EXPRESSION = "expression"
     GAUSSIAN = "gaussian"
     PERSON = "person"
     POISSON = "poisson"
@@ -1602,7 +1591,6 @@ class ConditionalDataColumn(ConfigBase):
     type: SamplingSourceType
     params: Annotated[
         Union[
-            ExpressionParams,
             SubcategoryParams,
             CategorySamplerParams,
             DatetimeSamplerParams,
@@ -1623,7 +1611,6 @@ class ConditionalDataColumn(ConfigBase):
             Dict[
                 str,
                 Union[
-                    ExpressionParams,
                     SubcategoryParams,
                     CategorySamplerParams,
                     DatetimeSamplerParams,

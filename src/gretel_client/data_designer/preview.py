@@ -12,6 +12,7 @@ class PreviewResults:
     data_pipeline_metadata: DataPipelineMetadata
     output: TaskOutputT | None = None
     evaluation_results: dict | None = None
+    success: bool = True
     _display_cycle_index: int = 0
 
     @property
