@@ -30,6 +30,9 @@ class Registry(metaclass=RegistryMeta):
     TestRequiredAndOptionalArgsTask = tasks.TestRequiredAndOptionalArgsTask
     TestTaskCallingTask = tasks.TestTaskCallingTask
     TestUnhandledErrorTask = tasks.TestUnhandledErrorTask
+    GenerateSamplingColumnConfigFromInstruction = (
+        tasks.GenerateSamplingColumnConfigFromInstruction
+    )
     EvaluateSsDataset = tasks.EvaluateSsDataset
     Holdout = tasks.Holdout
     GenerateColumnConfigFromInstruction = tasks.GenerateColumnConfigFromInstruction

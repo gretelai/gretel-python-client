@@ -7,7 +7,7 @@ import random
 
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Generic, Optional, Self, Type, TypeAlias, TypeVar
+from typing import Any, Generic, Optional, Self, TypeAlias, TypeVar
 
 import rich
 
@@ -36,6 +36,7 @@ from gretel_client.workflows.configs.tasks import (
     ExistingColumns,
     GenerateColumnConfigFromInstruction,
     GenerateColumnFromTemplateConfig,
+    GenerateSamplingColumnConfigFromInstruction,
     OutputType,
     SamplingSourceType,
 )
@@ -88,7 +89,9 @@ RICH_CONSOLE_THEME = Theme(
 )
 
 # Aliasing
-DataColumnConfigGenerationTask: TypeAlias = GenerateColumnConfigFromInstruction
+AIDDColumnConfigGenerationTask: TypeAlias = (
+    GenerateColumnConfigFromInstruction | GenerateSamplingColumnConfigFromInstruction
+)
 DataDesignerT = TypeVar(
     "DataDesignerT"
 )  # Prevent circular imports on DataDesigner object
@@ -189,7 +192,7 @@ def pprint_datacolumn(column: AIDDColumnT, use_html: bool = False) -> None:
         console.print(
             Panel(
                 column,
-                title=f"📊 Generated Column Config for {pprint_column_name(column.name)}",
+                title=f"🪄 Generated Column Config for {pprint_column_name(column.name)}",
                 title_align="left",
                 style="gold3",
             )
@@ -217,7 +220,7 @@ def make_panel_grid(items: list[Any], columns: int, syntax: Optional[str]) -> Ta
     def _load_if_json(x):
         try:
             return json.loads(x)
-        except json.JSONDecodeError:
+        except (json.JSONDecodeError, TypeError):
             return x
 
     def render_output(x):
@@ -381,8 +384,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
 
     def _instruction_to_data_column(
         self,
-        task: DataColumnConfigGenerationTask,
-        data_column_type: Type[AIDDColumnT],
+        task: AIDDColumnConfigGenerationTask,
         edit_instruction: Optional[str] = None,
         previous_attempt: Optional[AIDDColumnT] = None,
     ) -> AIDDColumnT:
@@ -390,11 +392,16 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
         _task = deepcopy(task)
 
         if isinstance(task, GenerateColumnConfigFromInstruction):
+            aidd_column_type = LLMGenColumn
             if edit_instruction:
                 _task.instruction = edit_instruction
                 _task.edit_task = GenerateColumnFromTemplateConfig.model_validate(
                     previous_attempt.model_dump()
                 )
+        elif isinstance(task, GenerateSamplingColumnConfigFromInstruction):
+            aidd_column_type = SamplerColumn
+            if edit_instruction:
+                _task.description = edit_instruction
         else:
             raise NotImplementedError(
                 f"Magic is not yet implemented for task type: {type(task)}"
@@ -408,20 +415,23 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
             ),
             verbose=False,
         )
-        new_data_column = data_column_type.model_validate(task_output)
-        pprint_datacolumn(new_data_column)
 
+        if isinstance(task, GenerateSamplingColumnConfigFromInstruction):
+            task_output["type"] = task_output.pop("sampling_type")
+
+        new_data_column = aidd_column_type.model_validate(task_output)
+        pprint_datacolumn(new_data_column)
         self._working_dd_state.columns[task.name] = new_data_column
 
         return new_data_column
 
-    def _instruction_loop_for_data_column_from_prompt(
+    def _instruction_loop_for_aidd_column(
         self,
         task,
         *,
         interactive: bool,
         preview: bool,
-    ) -> Optional[LLMGenColumn]:
+    ) -> Optional[AIDDColumnT]:
         """Common call loop for executing the instruction call task."""
         commands = [
             "accept",
@@ -437,6 +447,15 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
         fail_commands = ["cancel"]
         commands_str = "/".join(commands)
 
+        if isinstance(task, GenerateColumnConfigFromInstruction):
+            original_instruction_or_description = task.instruction
+        elif isinstance(task, GenerateSamplingColumnConfigFromInstruction):
+            original_instruction_or_description = task.description
+        else:
+            raise NotImplementedError(
+                f"Magic is not yet implemented for task type: {type(task)}"
+            )
+
         new_data_column = None
         last_edit_instruction = None
         while command not in terminal_commands:
@@ -445,15 +464,15 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
                 pprint_user_instruction(task.name, last_edit_instruction)
                 new_data_column = self._instruction_to_data_column(
                     task,
-                    LLMGenColumn,
                     edit_instruction=command,
                     previous_attempt=new_data_column,
                 )
             elif command == "preview":
-                self._run_and_display_preview(
-                    task.name,
-                    syntax=new_data_column.data_config.params.get("syntax", None),
-                )
+                syntax = None
+                data_config = getattr(new_data_column, "data_config", None)
+                if data_config:
+                    syntax = data_config.params.get("syntax", None)
+                self._run_and_display_preview(task.name, syntax=syntax)
             elif command == "preview-on":
                 preview = True
                 rich.print(
@@ -470,27 +489,27 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
                     (
                         last_edit_instruction
                         if last_edit_instruction
-                        else task.instruction
+                        else original_instruction_or_description
                     ),
                 )
                 new_data_column = self._instruction_to_data_column(
                     task,
-                    LLMGenColumn,
                     edit_instruction=last_edit_instruction,
                     previous_attempt=new_data_column,
                 )
             elif command == "start-over":
                 last_edit_instruction = None
                 rich.print("[bold]⏮️ Starting over from the top.[/bold]")
-                pprint_user_instruction(task.name, task.instruction)
-                new_data_column = self._instruction_to_data_column(task, LLMGenColumn)
+                pprint_user_instruction(task.name, original_instruction_or_description)
+                new_data_column = self._instruction_to_data_column(task)
 
             ## Handle preview
             if preview:
-                self._run_and_display_preview(
-                    task.name,
-                    syntax=new_data_column.data_config.params.get("syntax", None),
-                )
+                syntax = None
+                data_config = getattr(new_data_column, "data_config", None)
+                if data_config:
+                    syntax = data_config.params.get("syntax", None)
+                self._run_and_display_preview(task.name, syntax=syntax)
 
             if not interactive:
                 ## Halt without prompting, mission accomplished.
@@ -537,7 +556,43 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
             existing_columns=self.existing_columns,
         )
 
-        new_data_column = self._instruction_loop_for_data_column_from_prompt(
+        new_data_column = self._instruction_loop_for_aidd_column(
+            task, interactive=interactive, preview=preview
+        )
+
+        if new_data_column is None:
+            self._working_dd_state = self._source_dd_state.fork()
+            rich.print(f"🗑️ Trashed {pprint_column_name(name)}")
+        elif not save:
+            rich.print(
+                f"🪄 Column {pprint_column_name(name)} buffered! Use .save() to apply later."
+            )
+        else:
+            self.save()
+
+        return self._dd_obj
+
+    @experimental(message=EXPERIMENTAL_WARNING, emoji="🧪")
+    def add_sampling_column(
+        self,
+        name: str,
+        description: str,
+        *,
+        preview: bool = False,
+        save: bool = True,
+        interactive: bool = True,
+    ) -> DataDesignerT:
+        if self.is_known_column_name(name):
+            raise KeyError(
+                f"The column {name} already exists in the config. Did you mean to use `edit_column`?"
+            )
+
+        task = self._task_registry.GenerateSamplingColumnConfigFromInstruction(
+            name=name,
+            description=description,
+        )
+
+        new_data_column = self._instruction_loop_for_aidd_column(
             task, interactive=interactive, preview=preview
         )
 
@@ -582,7 +637,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
             ),
         )
 
-        new_data_column = self._instruction_loop_for_data_column_from_prompt(
+        new_data_column = self._instruction_loop_for_aidd_column(
             task, interactive=interactive, preview=preview
         )
 
@@ -604,6 +659,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
 
         Presently, only LLM prompting columns can be edited.
         """
+
         return self._dd_obj._llm_gen_columns
 
     @property
