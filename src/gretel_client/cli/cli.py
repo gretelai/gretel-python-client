@@ -12,6 +12,7 @@ from gretel_client.cli.workflows import workflows
 from gretel_client.config import (
     ClientConfig,
     configure_session,
+    get_client_version,
     get_session_config,
     GRETEL_TENANT_UNSET,
     RunnerMode,
@@ -193,6 +194,12 @@ def configure(
 def whoami(sc: SessionContext):
     me = users.get_me(session=sc.session)
     sc.print(data={f.EMAIL: me[f.EMAIL], "config": sc.config.masked})
+
+
+@cli.command(help="Client Version")
+@pass_session
+def version(sc: SessionContext):
+    sc.print(data=get_client_version())
 
 
 cli.add_command(models)

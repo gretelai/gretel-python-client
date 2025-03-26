@@ -14,12 +14,12 @@ from urllib3 import HTTPResponse
 from urllib3.exceptions import MaxRetryError
 
 from gretel_client.config import (
-    _get_client_version,
     _load_config,
     add_session_context,
     CLIENT_METRICS_HEADER_KEY,
     ClientConfig,
     configure_session,
+    get_client_version,
     get_session_config,
     GRETEL_PREVIEW_FEATURES,
     GRETEL_RUNNER_MODE,
@@ -297,7 +297,7 @@ def test_metrics_headers(dev_ep):
 
     configure_session(api_key="grtu...", validate=False)
 
-    common = f"python_sdk_version={_get_client_version()}"
+    common = f"python_sdk_version={get_client_version()}"
 
     # Always include the sdk version
     assert get_metrics_header(get_session_config()) == common
