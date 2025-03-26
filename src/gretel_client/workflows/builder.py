@@ -424,6 +424,7 @@ class WorkflowBuilder:
             name=(
                 self._name if self._name != "" else _generate_workflow_name(self._steps)
             ),
+            globals=self._globals,
             steps=self._steps,
         )
 

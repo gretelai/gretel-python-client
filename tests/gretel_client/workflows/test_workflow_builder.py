@@ -179,7 +179,9 @@ def test_does_create_preview(
 
 
 def test_does_submit_batch_job(
-    builder: WorkflowBuilder, api_provider_mock: TestGretelApiFactory
+    builder: WorkflowBuilder,
+    api_provider_mock: TestGretelApiFactory,
+    stub_globals: Globals,
 ):
     # Setup mock API response
     mock_response = create_autospec(ExecBatchResponse)
@@ -215,7 +217,7 @@ def test_does_submit_batch_job(
     # Check that the request contains the expected data
     assert call_args.project_id == "proj_1"
     assert call_args.workflow_config.model_dump() == {
-        "globals": None,
+        "globals": stub_globals.model_dump(exclude_unset=False),
         "inputs": None,
         "name": "test-workflow",
         "steps": [
