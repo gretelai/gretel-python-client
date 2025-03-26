@@ -8,8 +8,15 @@ from typing import Any, Type
 import requests
 
 from pydantic import BaseModel
+from pygments import highlight
+from pygments.formatters import HtmlFormatter
+from pygments.lexers import PythonLexer
 
-from gretel_client.data_designer.constants import TASK_TYPE_EMOJI_MAP
+from gretel_client.data_designer.constants import (
+    DEFAULT_REPR_HTML_STYLE,
+    REPR_HTML_TEMPLATE,
+    TASK_TYPE_EMOJI_MAP,
+)
 from gretel_client.workflows.configs import tasks
 
 
@@ -92,3 +99,31 @@ def get_sampler_params() -> dict[str, Type[BaseModel]]:
         ][0]
 
     return params_cls_dict
+
+
+class WithHTMLRepr:
+    """Mixin class offering stylized HTML Repr rendering of objects.
+
+    For use in notebook displays of objects.
+    """
+
+    def __repr__(self) -> str:
+        """Base Repr reimplementation.
+
+        Puts dict fields on new lines for legibility.
+        """
+        field_reprs = ",\n".join(f"  {k}={v!r}" for k, v in self.__dict__.items())
+        return f"{self.__class__.__name__}(\n{field_reprs}\n)"
+
+    def _repr_html_(self) -> str:
+        """Represent the Repr string of an object as HTML.
+
+        Assumes that the representation string of the object is given as
+        a "python code" object. This is then rendered using Pygments and
+        a module-standard CSS theming.
+        """
+        repr_string = self.__repr__()
+        formatter = HtmlFormatter(style=DEFAULT_REPR_HTML_STYLE, cssclass="code")
+        highlighted_html = highlight(repr_string, PythonLexer(), formatter)
+        css = formatter.get_style_defs(".code")
+        return REPR_HTML_TEMPLATE.format(css=css, highlighted_html=highlighted_html)

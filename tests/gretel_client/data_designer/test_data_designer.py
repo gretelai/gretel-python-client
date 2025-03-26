@@ -90,6 +90,14 @@ def test_data_designer_from_config(stub_aidd_config_str):
     assert dd.model_suite == "apache-2.0"
     assert dd.model_configs[0].alias == "my_own_code_model"
 
+    ## Magic checks
+    assert dd.get_column(column_name="code_id") in dd.magic.known_columns
+    assert dd.get_column(column_name="text") in dd.magic.known_columns
+    assert dd.get_column(column_name="code") in dd.magic.known_columns
+
+    assert dd.get_column(column_name="text") in dd.magic.editable_columns
+    assert dd.get_column(column_name="code") in dd.magic.editable_columns
+
 
 def test_column_operations():
     dd = DataDesigner(gretel_resource_provider=MagicMock())

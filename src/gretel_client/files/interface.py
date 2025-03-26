@@ -2,10 +2,12 @@ import mimetypes
 import os
 import tempfile
 
+from io import BytesIO
 from pathlib import Path
 from typing import BinaryIO, IO, Optional, Union
 
 import pandas as pd
+import pyarrow
 import pydantic
 import requests
 import smart_open
@@ -144,6 +146,38 @@ class FileClient:
             filename=response_body["filename"],
             purpose=response_body["purpose"],
         )
+
+    def download_dataset(self, file_id: str) -> pd.DataFrame:
+        """
+        Download a dataset object into memory as a DataFrame.
+
+        Assumes that the dataset file is stored in Parquet format.
+        An exception will be raised if the downloaded octet-stream cannot be
+        loaded as a parquet file.
+
+        Args:
+            file_id: The unique identifier of the file to download.
+
+        Raises:
+            ValueError: If returned octet-stream cannot be loaded as a
+                parquet file.
+        """
+        response = requests.get(
+            f"{self.api_endpoint}/v1/files/{file_id}/download",
+            headers={"Authorization": self.session.api_key},
+        )
+
+        response.raise_for_status()
+
+        buffer = BytesIO(response.content)
+        try:
+            df = pyarrow.parquet.read_table(buffer).to_pandas()
+        except Exception as exc:
+            raise ValueError(
+                "Error loading dataset file from parquet. Are you sure this was a dataset file?"
+            ) from exc
+
+        return df
 
     def delete(self, file_id: str) -> None:
         """

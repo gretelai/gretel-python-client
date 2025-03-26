@@ -23,6 +23,7 @@ from gretel_client.data_designer.constants import (
     VALIDATE_SQL_COLUMN_SUFFIXES,
 )
 from gretel_client.data_designer.log import get_logger
+from gretel_client.data_designer.magic_data_designer import MagicDataDesignerEditor
 from gretel_client.data_designer.preview import PreviewResults
 from gretel_client.data_designer.types import (
     AIDDColumnT,
@@ -125,6 +126,7 @@ class DataDesigner:
         self._workflow_manager = self._gretel_resource_provider.workflows
         self._repr_html_style = DEFAULT_REPR_HTML_STYLE
         self._latent_columns: dict[str, PersonSamplerParams] = {}
+        self.magic = MagicDataDesignerEditor(self)
         if person_samplers:
             self.with_person_samplers(person_samplers)
 
@@ -148,6 +150,7 @@ class DataDesigner:
                 "Seed columns cannot be deleted. Please update the seed dataset instead."
             )
         self._columns.pop(column_name, None)
+        self.magic.reset()
         return self
 
     def add_column(
@@ -165,6 +168,7 @@ class DataDesigner:
                 f"Column must be of type AIDDColumnT, but got {type(column)}. "
             )
         self._columns[column.name] = column
+        self.magic.reset()
         return self
 
     def get_constraint(self, target_column: str) -> ColumnConstraint | None:
@@ -273,24 +277,44 @@ class DataDesigner:
                 self._latent_columns[name] = person_params
         return self
 
+    def _retrieve_remote_dataset_columns(self, file_id: str) -> list[str]:
+        """Retrieve the columns of a dataset given its file id.
+
+        Args:
+            file_id (str): File identifier for the dataset.
+
+        Returns:
+            list[str]: A list of column names present in the dataset.
+        """
+        retrieved_df = self._files.download_dataset(file_id)
+        return retrieved_df.columns.tolist()
+
     def with_seed_dataset(
         self,
-        dataset: pd.DataFrame | Path | str,
+        dataset: pd.DataFrame | Path | str | File,
         sampling_strategy: SamplingStrategy = SamplingStrategy.ORDERED,
         with_replacement: bool = False,
     ) -> Self:
         if isinstance(dataset, File):
             file_id = dataset.id
+            dataset_columns = self._retrieve_remote_dataset_columns(file_id)
 
         elif isinstance(dataset, str) and dataset.startswith("file_"):
             file_id = dataset
+            dataset_columns = self._retrieve_remote_dataset_columns(file_id)
+
+        elif isinstance(dataset, pd.DataFrame):
+            file_id = self._files.upload(dataset, "dataset").id
+            dataset_columns = dataset.columns.tolist()
 
         else:
             file_id = self._files.upload(dataset, "dataset").id
+            dataset_columns = self._retrieve_remote_dataset_columns(file_id)
 
         logger.info(f"🌱 Using seed dataset with file ID: {file_id}")
 
-        # TODO: Add seed columns to self._columns.
+        for column in dataset_columns:
+            self._columns[column] = DataSeedColumn(name=column, file_id=file_id)
 
         self._seed_dataset = SeedDataset(
             file_id=file_id,

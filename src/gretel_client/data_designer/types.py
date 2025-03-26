@@ -2,12 +2,15 @@ import json
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Self, TypeAlias
+from typing import Literal, Self, TypeAlias
+from uuid import UUID
 
 import pandas as pd
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from rich.pretty import Pretty
 
+from gretel_client.data_designer.utils import WithHTMLRepr
 from gretel_client.workflows.configs import tasks
 
 ##########################################################
@@ -54,6 +57,29 @@ class DataPipelineMetadata:
     eval_type: LLMJudgePromptTemplateType | None = None
 
 
+class Person(BaseModel):
+    first_name: str
+    middle_name: str | None
+    last_name: str
+    sex: Literal["Male", "Female"]
+    age: int
+    postcode: str = Field(alias="zipcode")
+    street_number: int | str
+    street_name: str
+    unit: str
+    city: str
+    region: str | None = Field(alias="state")
+    district: str | None = Field(alias="county")
+    country: str
+    ethnic_background: str | None
+    marital_status: str | None
+    education_level: str | None
+    bachelors_field: str | None
+    occupation: str | None
+    uuid: UUID
+    locale: str = "en_US"
+
+
 ##########################################################
 # Helper task configurations
 ##########################################################
@@ -89,10 +115,12 @@ class SeedDataset(AIDDConfigBase):
 ##########################################################
 
 
-class SamplerColumn(tasks.ConditionalDataColumn): ...
+class SamplerColumn(tasks.ConditionalDataColumn, WithHTMLRepr):
+    def __rich_console__(self, console, options):
+        yield Pretty(self)
 
 
-class LLMGenColumn(tasks.GenerateColumnFromTemplate):
+class LLMGenColumn(tasks.GenerateColumnFromTemplate, WithHTMLRepr):
     data_config: tasks.DataConfig = Field(
         default_factory=lambda: tasks.DataConfig(type=tasks.OutputType.TEXT, params={})
     )
@@ -112,24 +140,36 @@ class LLMGenColumn(tasks.GenerateColumnFromTemplate):
                 raise ValueError("Missing `syntax` parameter for code column.")
         return self
 
+    def __rich_console__(self, console, options):
+        yield Pretty(self)
 
-class LLMJudgeColumn(tasks.JudgeWithLlm):
+
+class LLMJudgeColumn(tasks.JudgeWithLlm, WithHTMLRepr):
     result_column: str = Field(..., alias="name")
 
     @property
     def name(self) -> str:
         return self.result_column
 
+    def __rich_console__(self, console, options):
+        yield Pretty(self)
 
-class CodeValidationColumn(AIDDConfigBase):
+
+class CodeValidationColumn(AIDDConfigBase, WithHTMLRepr):
     name: str
     code_lang: tasks.CodeLang
     target_column: str
 
+    def __rich_console__(self, console, options):
+        yield Pretty(self)
 
-class DataSeedColumn(AIDDConfigBase):
+
+class DataSeedColumn(AIDDConfigBase, WithHTMLRepr):
     name: str
     file_id: str
+
+    def __rich_console__(self, console, options):
+        yield Pretty(self)
 
 
 ##########################################################
