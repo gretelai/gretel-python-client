@@ -110,7 +110,7 @@ class Context:
         )
 
 
-def _get_client_version() -> str:
+def get_client_version() -> str:
     try:
         return version("gretel_client")
     except PackageNotFoundError:
@@ -118,7 +118,7 @@ def _get_client_version() -> str:
 
 
 def _metrics_headers(context: Optional[Context] = None) -> dict[str, str]:
-    metadata = {"python_sdk_version": _get_client_version()}
+    metadata = {"python_sdk_version": get_client_version()}
     if context:
         metadata |= context.client_metrics
 
@@ -565,6 +565,7 @@ class DefaultClientConfig(ClientConfig):
             api_key={"ApiKey": self.api_key},
             ssl_ca_cert=self._cert_file(),
         )
+
         client_kwargs = {}
         if "ApiKey" not in configuration.auth_settings():
             # ApiKey not recognized as authentication method by config,
