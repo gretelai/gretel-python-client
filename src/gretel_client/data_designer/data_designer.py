@@ -27,6 +27,7 @@ from gretel_client.data_designer.types import (
     AIDDColumnT,
     CodeValidationColumn,
     ColumnProviderTypeT,
+    DAGColumnT,
     DataPipelineMetadata,
     DataSeedColumn,
     EvaluateDatasetSettings,
@@ -172,7 +173,7 @@ class DataDesigner:
         if not isinstance(column, AIDDColumnT):
             raise ValueError(
                 f"{_type_builtin(column)} is not a valid column type. "
-                f"Columns must be one of {AIDDColumnT}."
+                f"Columns must be one of {[t.__name__ for t in AIDDColumnT.__args__]}."
             )
         self._columns[column.name] = column
         self.magic.reset()
@@ -359,7 +360,7 @@ class DataDesigner:
         return self.get_columns_of_type(ExpressionColumn)
 
     @property
-    def _dag_columns(self) -> list[AIDDColumnT]:
+    def _dag_columns(self) -> list[DAGColumnT]:
         return (
             self._llm_gen_columns
             + self._llm_judge_columns
@@ -479,7 +480,7 @@ class DataDesigner:
         ########################################################
 
         sorted_columns_names = topologically_sort_columns(
-            self._dag_columns, logger=logger, verbose_logging=verbose_logging
+            self._dag_columns, logger=logger if verbose_logging else None
         )
 
         for column_name in sorted_columns_names:

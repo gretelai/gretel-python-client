@@ -215,13 +215,10 @@ class DataSeedColumn(AIDDConfigBase, WithPrettyRepr):
 # Type aliases
 ##########################################################
 
-AIDDColumnT: TypeAlias = (
-    SamplerColumn
-    | LLMGenColumn
-    | LLMJudgeColumn
-    | CodeValidationColumn
-    | ExpressionColumn
+DAGColumnT: TypeAlias = (
+    LLMGenColumn | LLMJudgeColumn | CodeValidationColumn | ExpressionColumn
 )
+AIDDColumnT: TypeAlias = SamplerColumn | DAGColumnT
 MagicColumnT: TypeAlias = AIDDColumnT | DataSeedColumn
 ColumnProviderTypeT: TypeAlias = tasks.SamplingSourceType | ProviderType
 EvaluationReportT: TypeAlias = GeneralDatasetEvaluation

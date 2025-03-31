@@ -48,6 +48,12 @@ def test_dag_construction():
         )
     )
     dd.add_column(
+        C.ExpressionColumn(
+            name="uses_all_the_stuff",
+            expr="{{ test_code }} {{ depends_on_validation }} {{ test_judge }}",
+        )
+    )
+    dd.add_column(
         C.CodeValidationColumn(
             name="test_validation",
             code_lang=P.CodeLang.PYTHON,
@@ -60,6 +66,7 @@ def test_dag_construction():
         "test_validation",
         "depends_on_validation",
         "test_judge",
+        "uses_all_the_stuff",
     ]
 
 
