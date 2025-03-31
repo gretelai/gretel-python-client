@@ -23,15 +23,13 @@ from typing import Any, ClassVar, Dict, List, Optional, Set
 from pydantic import BaseModel, ConfigDict, StrictStr
 from typing_extensions import Self
 
-from gretel_client._api.models.workflow_input import WorkflowInput
-
 
 class ExecBatchRetryRequest(BaseModel):
     """
     ExecBatchRetryRequest
     """  # noqa: E501
 
-    workflow: Optional[WorkflowInput] = None
+    workflow: Optional[Dict[str, Any]] = None
     workflow_run_id: StrictStr
     __properties: ClassVar[List[str]] = ["workflow", "workflow_run_id"]
 
@@ -72,9 +70,6 @@ class ExecBatchRetryRequest(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of workflow
-        if self.workflow:
-            _dict["workflow"] = self.workflow.to_dict()
         # set to None if workflow (nullable) is None
         # and model_fields_set contains the field
         if self.workflow is None and "workflow" in self.model_fields_set:
@@ -93,11 +88,7 @@ class ExecBatchRetryRequest(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "workflow": (
-                    WorkflowInput.from_dict(obj["workflow"])
-                    if obj.get("workflow") is not None
-                    else None
-                ),
+                "workflow": obj.get("workflow"),
                 "workflow_run_id": obj.get("workflow_run_id"),
             }
         )

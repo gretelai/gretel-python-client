@@ -23,8 +23,6 @@ from typing import Any, ClassVar, Dict, List, Optional, Set
 from pydantic import BaseModel, ConfigDict, StrictStr
 from typing_extensions import Self
 
-from gretel_client._api.models.workflow_input import WorkflowInput
-
 
 class ExecBatchRequest(BaseModel):
     """
@@ -32,7 +30,7 @@ class ExecBatchRequest(BaseModel):
     """  # noqa: E501
 
     project_id: Optional[StrictStr] = None
-    workflow_config: WorkflowInput
+    workflow_config: Dict[str, Any]
     workflow_id: Optional[StrictStr] = None
     __properties: ClassVar[List[str]] = ["project_id", "workflow_config", "workflow_id"]
 
@@ -73,9 +71,6 @@ class ExecBatchRequest(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of workflow_config
-        if self.workflow_config:
-            _dict["workflow_config"] = self.workflow_config.to_dict()
         # set to None if project_id (nullable) is None
         # and model_fields_set contains the field
         if self.project_id is None and "project_id" in self.model_fields_set:
@@ -100,11 +95,7 @@ class ExecBatchRequest(BaseModel):
         _obj = cls.model_validate(
             {
                 "project_id": obj.get("project_id"),
-                "workflow_config": (
-                    WorkflowInput.from_dict(obj["workflow_config"])
-                    if obj.get("workflow_config") is not None
-                    else None
-                ),
+                "workflow_config": obj.get("workflow_config"),
                 "workflow_id": obj.get("workflow_id"),
             }
         )

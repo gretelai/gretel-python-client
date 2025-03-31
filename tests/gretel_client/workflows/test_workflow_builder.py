@@ -9,8 +9,9 @@ from gretel_client._api.api.default_api import DefaultApi
 from gretel_client._api.exceptions import ApiException
 from gretel_client._api.models.exec_batch_request import ExecBatchRequest
 from gretel_client._api.models.exec_batch_response import ExecBatchResponse
-from gretel_client._api.models.task_envelope import TaskEnvelope
-from gretel_client._api.models.workflow_input import WorkflowInput
+from gretel_client._api.models.task_envelope_for_validation import (
+    TaskEnvelopeForValidation,
+)
 from gretel_client.test_utils import TestGretelApiFactory, TestGretelResourceProvider
 from gretel_client.workflows.builder import (
     _generate_workflow_name,
@@ -93,8 +94,9 @@ def test_workflow_task_validation(
     api_provider_mock.get_mock(
         DefaultApi
     ).tasks_validate_v2_workflows_tasks_validate_post.assert_called_with(
-        TaskEnvelope(
+        TaskEnvelopeForValidation(
             name="id_generator",
+            globals={},
             config=tasks.IdGenerator().model_dump(exclude_defaults=True),
         )
     )
@@ -216,9 +218,8 @@ def test_does_submit_batch_job(
 
     # Check that the request contains the expected data
     assert call_args.project_id == "proj_1"
-    assert call_args.workflow_config.model_dump() == {
-        "globals": stub_globals.model_dump(exclude_unset=False),
-        "inputs": None,
+    assert call_args.workflow_config == {
+        "globals": {},
         "name": "test-workflow",
         "steps": [
             {
@@ -228,7 +229,6 @@ def test_does_submit_batch_job(
                 "task": "id_generator",
             }
         ],
-        "version": "2",
     }
 
 
@@ -265,7 +265,7 @@ def test_workflow_session_management(
     ).workflows_exec_batch_v2_workflows_exec_batch_post.assert_called_once_with(
         ExecBatchRequest(
             project_id="proj_1",
-            workflow_config=WorkflowInput(**builder_two.to_dict()),
+            workflow_config=builder_two.to_dict(),
             workflow_id="w_1",
         )
     )

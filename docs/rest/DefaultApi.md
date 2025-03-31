@@ -348,7 +348,7 @@ No authorization required
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **tasks_validate_v2_workflows_tasks_validate_post**
-> TaskValidationResult tasks_validate_v2_workflows_tasks_validate_post(task_envelope)
+> TaskValidationResult tasks_validate_v2_workflows_tasks_validate_post(task_envelope_for_validation)
 
 Tasks Validate
 
@@ -357,7 +357,7 @@ Tasks Validate
 
 ```python
 import gretel_client._api
-from gretel_client._api.models.task_envelope import TaskEnvelope
+from gretel_client._api.models.task_envelope_for_validation import TaskEnvelopeForValidation
 from gretel_client._api.models.task_validation_result import TaskValidationResult
 from gretel_client._api.rest import ApiException
 from pprint import pprint
@@ -373,11 +373,11 @@ configuration = gretel_client._api.Configuration(
 with gretel_client._api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = gretel_client._api.DefaultApi(api_client)
-    task_envelope = gretel_client._api.TaskEnvelope() # TaskEnvelope | 
+    task_envelope_for_validation = gretel_client._api.TaskEnvelopeForValidation() # TaskEnvelopeForValidation | 
 
     try:
         # Tasks Validate
-        api_response = api_instance.tasks_validate_v2_workflows_tasks_validate_post(task_envelope)
+        api_response = api_instance.tasks_validate_v2_workflows_tasks_validate_post(task_envelope_for_validation)
         print("The response of DefaultApi->tasks_validate_v2_workflows_tasks_validate_post:\n")
         pprint(api_response)
     except Exception as e:
@@ -391,7 +391,7 @@ with gretel_client._api.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **task_envelope** | [**TaskEnvelope**](TaskEnvelope.md)|  | 
+ **task_envelope_for_validation** | [**TaskEnvelopeForValidation**](TaskEnvelopeForValidation.md)|  | 
 
 ### Return type
 
@@ -643,7 +643,7 @@ Name | Type | Description  | Notes
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **workflows_validate_v2_workflows_validate_post**
-> ValidateWorkflowConfigResponse workflows_validate_v2_workflows_validate_post(workflow_input)
+> ValidateWorkflowConfigResponse workflows_validate_v2_workflows_validate_post(body)
 
 Workflows Validate
 
@@ -653,7 +653,6 @@ Workflows Validate
 ```python
 import gretel_client._api
 from gretel_client._api.models.validate_workflow_config_response import ValidateWorkflowConfigResponse
-from gretel_client._api.models.workflow_input import WorkflowInput
 from gretel_client._api.rest import ApiException
 from pprint import pprint
 
@@ -668,11 +667,11 @@ configuration = gretel_client._api.Configuration(
 with gretel_client._api.ApiClient(configuration) as api_client:
     # Create an instance of the API class
     api_instance = gretel_client._api.DefaultApi(api_client)
-    workflow_input = gretel_client._api.WorkflowInput() # WorkflowInput | 
+    body = None # object | 
 
     try:
         # Workflows Validate
-        api_response = api_instance.workflows_validate_v2_workflows_validate_post(workflow_input)
+        api_response = api_instance.workflows_validate_v2_workflows_validate_post(body)
         print("The response of DefaultApi->workflows_validate_v2_workflows_validate_post:\n")
         pprint(api_response)
     except Exception as e:
@@ -686,7 +685,7 @@ with gretel_client._api.ApiClient(configuration) as api_client:
 
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
- **workflow_input** | [**WorkflowInput**](WorkflowInput.md)|  | 
+ **body** | **object**|  | 
 
 ### Return type
 

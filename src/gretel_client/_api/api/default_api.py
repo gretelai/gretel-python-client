@@ -38,12 +38,13 @@ from gretel_client._api.models.exec_batch_response import ExecBatchResponse
 from gretel_client._api.models.exec_batch_retry_request import ExecBatchRetryRequest
 from gretel_client._api.models.file import File
 from gretel_client._api.models.file_delete_response import FileDeleteResponse
-from gretel_client._api.models.task_envelope import TaskEnvelope
+from gretel_client._api.models.task_envelope_for_validation import (
+    TaskEnvelopeForValidation,
+)
 from gretel_client._api.models.task_validation_result import TaskValidationResult
 from gretel_client._api.models.validate_workflow_config_response import (
     ValidateWorkflowConfigResponse,
 )
-from gretel_client._api.models.workflow_input import WorkflowInput
 from gretel_client._api.rest import RESTResponseType
 
 
@@ -1273,7 +1274,7 @@ class DefaultApi:
     @validate_call
     def tasks_validate_v2_workflows_tasks_validate_post(
         self,
-        task_envelope: TaskEnvelope,
+        task_envelope_for_validation: TaskEnvelopeForValidation,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -1289,8 +1290,8 @@ class DefaultApi:
         """Tasks Validate
 
 
-        :param task_envelope: (required)
-        :type task_envelope: TaskEnvelope
+        :param task_envelope_for_validation: (required)
+        :type task_envelope_for_validation: TaskEnvelopeForValidation
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -1314,7 +1315,7 @@ class DefaultApi:
         """  # noqa: E501
 
         _param = self._tasks_validate_v2_workflows_tasks_validate_post_serialize(
-            task_envelope=task_envelope,
+            task_envelope_for_validation=task_envelope_for_validation,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -1337,7 +1338,7 @@ class DefaultApi:
     @validate_call
     def tasks_validate_v2_workflows_tasks_validate_post_with_http_info(
         self,
-        task_envelope: TaskEnvelope,
+        task_envelope_for_validation: TaskEnvelopeForValidation,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -1353,8 +1354,8 @@ class DefaultApi:
         """Tasks Validate
 
 
-        :param task_envelope: (required)
-        :type task_envelope: TaskEnvelope
+        :param task_envelope_for_validation: (required)
+        :type task_envelope_for_validation: TaskEnvelopeForValidation
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -1378,7 +1379,7 @@ class DefaultApi:
         """  # noqa: E501
 
         _param = self._tasks_validate_v2_workflows_tasks_validate_post_serialize(
-            task_envelope=task_envelope,
+            task_envelope_for_validation=task_envelope_for_validation,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -1401,7 +1402,7 @@ class DefaultApi:
     @validate_call
     def tasks_validate_v2_workflows_tasks_validate_post_without_preload_content(
         self,
-        task_envelope: TaskEnvelope,
+        task_envelope_for_validation: TaskEnvelopeForValidation,
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -1417,8 +1418,8 @@ class DefaultApi:
         """Tasks Validate
 
 
-        :param task_envelope: (required)
-        :type task_envelope: TaskEnvelope
+        :param task_envelope_for_validation: (required)
+        :type task_envelope_for_validation: TaskEnvelopeForValidation
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -1442,7 +1443,7 @@ class DefaultApi:
         """  # noqa: E501
 
         _param = self._tasks_validate_v2_workflows_tasks_validate_post_serialize(
-            task_envelope=task_envelope,
+            task_envelope_for_validation=task_envelope_for_validation,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -1460,7 +1461,7 @@ class DefaultApi:
 
     def _tasks_validate_v2_workflows_tasks_validate_post_serialize(
         self,
-        task_envelope,
+        task_envelope_for_validation,
         _request_auth,
         _content_type,
         _headers,
@@ -1483,8 +1484,8 @@ class DefaultApi:
         # process the header parameters
         # process the form parameters
         # process the body parameter
-        if task_envelope is not None:
-            _body_params = task_envelope
+        if task_envelope_for_validation is not None:
+            _body_params = task_envelope_for_validation
 
         # set the HTTP header `Accept`
         if "Accept" not in _header_params:
@@ -2288,7 +2289,7 @@ class DefaultApi:
     @validate_call
     def workflows_validate_v2_workflows_validate_post(
         self,
-        workflow_input: WorkflowInput,
+        body: Dict[str, Any],
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -2304,8 +2305,8 @@ class DefaultApi:
         """Workflows Validate
 
 
-        :param workflow_input: (required)
-        :type workflow_input: WorkflowInput
+        :param body: (required)
+        :type body: object
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -2329,7 +2330,7 @@ class DefaultApi:
         """  # noqa: E501
 
         _param = self._workflows_validate_v2_workflows_validate_post_serialize(
-            workflow_input=workflow_input,
+            body=body,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -2352,7 +2353,7 @@ class DefaultApi:
     @validate_call
     def workflows_validate_v2_workflows_validate_post_with_http_info(
         self,
-        workflow_input: WorkflowInput,
+        body: Dict[str, Any],
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -2368,8 +2369,8 @@ class DefaultApi:
         """Workflows Validate
 
 
-        :param workflow_input: (required)
-        :type workflow_input: WorkflowInput
+        :param body: (required)
+        :type body: object
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -2393,7 +2394,7 @@ class DefaultApi:
         """  # noqa: E501
 
         _param = self._workflows_validate_v2_workflows_validate_post_serialize(
-            workflow_input=workflow_input,
+            body=body,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -2416,7 +2417,7 @@ class DefaultApi:
     @validate_call
     def workflows_validate_v2_workflows_validate_post_without_preload_content(
         self,
-        workflow_input: WorkflowInput,
+        body: Dict[str, Any],
         _request_timeout: Union[
             None,
             Annotated[StrictFloat, Field(gt=0)],
@@ -2432,8 +2433,8 @@ class DefaultApi:
         """Workflows Validate
 
 
-        :param workflow_input: (required)
-        :type workflow_input: WorkflowInput
+        :param body: (required)
+        :type body: object
         :param _request_timeout: timeout setting for this request. If one
                                  number provided, it will be total request
                                  timeout. It can also be a pair (tuple) of
@@ -2457,7 +2458,7 @@ class DefaultApi:
         """  # noqa: E501
 
         _param = self._workflows_validate_v2_workflows_validate_post_serialize(
-            workflow_input=workflow_input,
+            body=body,
             _request_auth=_request_auth,
             _content_type=_content_type,
             _headers=_headers,
@@ -2475,7 +2476,7 @@ class DefaultApi:
 
     def _workflows_validate_v2_workflows_validate_post_serialize(
         self,
-        workflow_input,
+        body,
         _request_auth,
         _content_type,
         _headers,
@@ -2498,8 +2499,8 @@ class DefaultApi:
         # process the header parameters
         # process the form parameters
         # process the body parameter
-        if workflow_input is not None:
-            _body_params = workflow_input
+        if body is not None:
+            _body_params = body
 
         # set the HTTP header `Accept`
         if "Accept" not in _header_params:

@@ -23,15 +23,13 @@ from typing import Any, ClassVar, Dict, List, Optional, Set
 from pydantic import BaseModel, ConfigDict
 from typing_extensions import Self
 
-from gretel_client._api.models.workflow_output import WorkflowOutput
-
 
 class CompileWorkflowConfigResponse(BaseModel):
     """
     CompileWorkflowConfigResponse
     """  # noqa: E501
 
-    workflow: WorkflowOutput
+    workflow: Dict[str, Any]
     __properties: ClassVar[List[str]] = ["workflow"]
 
     model_config = ConfigDict(
@@ -71,9 +69,6 @@ class CompileWorkflowConfigResponse(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of workflow
-        if self.workflow:
-            _dict["workflow"] = self.workflow.to_dict()
         return _dict
 
     @classmethod
@@ -85,13 +80,5 @@ class CompileWorkflowConfigResponse(BaseModel):
         if not isinstance(obj, dict):
             return cls.model_validate(obj)
 
-        _obj = cls.model_validate(
-            {
-                "workflow": (
-                    WorkflowOutput.from_dict(obj["workflow"])
-                    if obj.get("workflow") is not None
-                    else None
-                )
-            }
-        )
+        _obj = cls.model_validate({"workflow": obj.get("workflow")})
         return _obj

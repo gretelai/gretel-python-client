@@ -5,7 +5,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**workflow** | [**WorkflowInput**](WorkflowInput.md) |  | [optional] 
+**workflow** | **object** |  | [optional] 
 **workflow_run_id** | **str** |  | 
 
 ## Example

@@ -6,7 +6,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **project_id** | **str** |  | [optional] 
-**workflow_config** | [**WorkflowInput**](WorkflowInput.md) |  | 
+**workflow_config** | **object** |  | 
 **workflow_id** | **str** |  | [optional] 
 
 ## Example

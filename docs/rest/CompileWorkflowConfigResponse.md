@@ -5,7 +5,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**workflow** | [**WorkflowOutput**](WorkflowOutput.md) |  | 
+**workflow** | **object** |  | 
 
 ## Example
 

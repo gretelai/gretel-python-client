@@ -62,8 +62,9 @@ from gretel_client._api.models.model_config_input import ModelConfigInput
 from gretel_client._api.models.model_config_output import ModelConfigOutput
 from gretel_client._api.models.source_config_type import SourceConfigType
 from gretel_client._api.models.step import Step
-from gretel_client._api.models.streaming_globals import StreamingGlobals
-from gretel_client._api.models.task_envelope import TaskEnvelope
+from gretel_client._api.models.task_envelope_for_validation import (
+    TaskEnvelopeForValidation,
+)
 from gretel_client._api.models.task_input import TaskInput
 from gretel_client._api.models.task_validation_result import TaskValidationResult
 from gretel_client._api.models.temperature import Temperature

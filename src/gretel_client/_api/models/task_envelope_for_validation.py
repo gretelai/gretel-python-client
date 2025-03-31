@@ -18,34 +18,24 @@ import json
 import pprint
 import re  # noqa: F401
 
-from typing import Any, ClassVar, Dict, List, Optional, Set, Union
+from typing import Any, ClassVar, Dict, List, Optional, Set
 
-from pydantic import BaseModel, ConfigDict, Field, StrictStr
-from typing_extensions import Annotated, Self
+from pydantic import BaseModel, ConfigDict, StrictStr
+from typing_extensions import Self
 
-from gretel_client._api.models.model_config_input import ModelConfigInput
+from gretel_client._api.models.task_input import TaskInput
 
 
-class StreamingGlobals(BaseModel):
+class TaskEnvelopeForValidation(BaseModel):
     """
-    StreamingGlobals
+    TaskEnvelopeForValidation
     """  # noqa: E501
 
-    error_rate: Optional[
-        Union[
-            Annotated[float, Field(le=1.0, strict=True, ge=0.0)],
-            Annotated[int, Field(le=1, strict=True, ge=0)],
-        ]
-    ] = 1.0
-    model_configs: Optional[List[ModelConfigInput]] = None
-    model_suite: Optional[StrictStr] = "apache-2.0"
-    num_records: Optional[Annotated[int, Field(le=100, strict=True, ge=1)]] = 50
-    __properties: ClassVar[List[str]] = [
-        "error_rate",
-        "model_configs",
-        "model_suite",
-        "num_records",
-    ]
+    config: Dict[str, Any]
+    globals: Optional[Dict[str, Any]] = None
+    inputs: Optional[List[TaskInput]] = None
+    name: StrictStr
+    __properties: ClassVar[List[str]] = ["config", "globals", "inputs", "name"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -64,7 +54,7 @@ class StreamingGlobals(BaseModel):
 
     @classmethod
     def from_json(cls, json_str: str) -> Optional[Self]:
-        """Create an instance of StreamingGlobals from a JSON string"""
+        """Create an instance of TaskEnvelopeForValidation from a JSON string"""
         return cls.from_dict(json.loads(json_str))
 
     def to_dict(self) -> Dict[str, Any]:
@@ -84,23 +74,18 @@ class StreamingGlobals(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of each item in model_configs (list)
+        # override the default output from pydantic by calling `to_dict()` of each item in inputs (list)
         _items = []
-        if self.model_configs:
-            for _item in self.model_configs:
+        if self.inputs:
+            for _item in self.inputs:
                 if _item:
                     _items.append(_item.to_dict())
-            _dict["model_configs"] = _items
-        # set to None if model_configs (nullable) is None
-        # and model_fields_set contains the field
-        if self.model_configs is None and "model_configs" in self.model_fields_set:
-            _dict["model_configs"] = None
-
+            _dict["inputs"] = _items
         return _dict
 
     @classmethod
     def from_dict(cls, obj: Optional[Dict[str, Any]]) -> Optional[Self]:
-        """Create an instance of StreamingGlobals from a dict"""
+        """Create an instance of TaskEnvelopeForValidation from a dict"""
         if obj is None:
             return None
 
@@ -109,25 +94,14 @@ class StreamingGlobals(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "error_rate": (
-                    obj.get("error_rate") if obj.get("error_rate") is not None else 1.0
-                ),
-                "model_configs": (
-                    [
-                        ModelConfigInput.from_dict(_item)
-                        for _item in obj["model_configs"]
-                    ]
-                    if obj.get("model_configs") is not None
+                "config": obj.get("config"),
+                "globals": obj.get("globals"),
+                "inputs": (
+                    [TaskInput.from_dict(_item) for _item in obj["inputs"]]
+                    if obj.get("inputs") is not None
                     else None
                 ),
-                "model_suite": (
-                    obj.get("model_suite")
-                    if obj.get("model_suite") is not None
-                    else "apache-2.0"
-                ),
-                "num_records": (
-                    obj.get("num_records") if obj.get("num_records") is not None else 50
-                ),
+                "name": obj.get("name"),
             }
         )
         return _obj

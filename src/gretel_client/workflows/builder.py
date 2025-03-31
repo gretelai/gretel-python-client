@@ -16,9 +16,12 @@ from pydantic import BaseModel
 from requests.exceptions import ChunkedEncodingError
 from typing_extensions import Self
 
-from gretel_client._api.api.default_api import DefaultApi, TaskEnvelope
+from gretel_client._api.api.default_api import DefaultApi
 from gretel_client._api.api_client import ApiException
 from gretel_client._api.models.exec_batch_request import ExecBatchRequest
+from gretel_client._api.models.task_envelope_for_validation import (
+    TaskEnvelopeForValidation,
+)
 from gretel_client._api.models.workflow_input import WorkflowInput
 from gretel_client.errors import (
     BROKEN_RESPONSE_STREAM_ERROR_MESSAGE,
@@ -360,7 +363,11 @@ class WorkflowBuilder:
         """
         try:
             resp = self._data_api.tasks_validate_v2_workflows_tasks_validate_post(
-                TaskEnvelope(name=step.task, config=step.config)
+                TaskEnvelopeForValidation(
+                    name=step.task,
+                    globals=self._globals.model_dump(),
+                    config=step.config,
+                )
             )
         except ApiException as ex:
             if ex.status == 422 and ex.body:
@@ -512,15 +519,11 @@ class WorkflowBuilder:
         if name:
             self.set_name(name)
 
-        # todo: get rid of this model and instead use a dict
-        # from the api route definition
-        workflow_config = WorkflowInput(**self.to_dict())
-
         try:
             response = self._data_api.workflows_exec_batch_v2_workflows_exec_batch_post(
                 ExecBatchRequest(
                     project_id=self._project_id,
-                    workflow_config=workflow_config,
+                    workflow_config=self.to_dict(),
                     workflow_id=self._workflow_session_manager.get_id(),
                 )
             )
