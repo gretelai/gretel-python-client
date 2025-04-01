@@ -5,8 +5,8 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**temperature** | [**Temperature**](Temperature.md) |  | 
-**top_p** | [**TopP**](TopP.md) |  | 
+**temperature** | [**Temperature**](Temperature.md) |  | [optional] 
+**top_p** | [**TopP**](TopP.md) |  | [optional] 
 
 ## Example
 

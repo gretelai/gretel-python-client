@@ -32,8 +32,8 @@ class GenerationParametersInput(BaseModel):
     GenerationParametersInput
     """  # noqa: E501
 
-    temperature: Temperature
-    top_p: TopP
+    temperature: Optional[Temperature] = None
+    top_p: Optional[TopP] = None
     __properties: ClassVar[List[str]] = ["temperature", "top_p"]
 
     model_config = ConfigDict(
@@ -79,6 +79,16 @@ class GenerationParametersInput(BaseModel):
         # override the default output from pydantic by calling `to_dict()` of top_p
         if self.top_p:
             _dict["top_p"] = self.top_p.to_dict()
+        # set to None if temperature (nullable) is None
+        # and model_fields_set contains the field
+        if self.temperature is None and "temperature" in self.model_fields_set:
+            _dict["temperature"] = None
+
+        # set to None if top_p (nullable) is None
+        # and model_fields_set contains the field
+        if self.top_p is None and "top_p" in self.model_fields_set:
+            _dict["top_p"] = None
+
         return _dict
 
     @classmethod
