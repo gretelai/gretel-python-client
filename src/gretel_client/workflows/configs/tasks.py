@@ -10,12 +10,70 @@ from pydantic import Field, RootModel
 from gretel_client.workflows.configs.base import ConfigBase
 
 
+class AzureDestination(ConfigBase):
+    connection_id: Annotated[str, Field(title="Connection Id")]
+    path: Annotated[str, Field(title="Path")]
+    container: Annotated[str, Field(title="Container")]
+
+
+class AzureSource(ConfigBase):
+    connection_id: Annotated[str, Field(title="Connection Id")]
+    path: Annotated[str, Field(title="Path")]
+    container: Annotated[str, Field(title="Container")]
+
+
+class Mode(str, Enum):
+    APPEND = "append"
+    REPLACE = "replace"
+
+
+class DestinationSyncConfig(ConfigBase):
+    mode: Annotated[Optional[Mode], Field(title="Mode")] = "replace"
+
+
+class BigqueryDestination(ConfigBase):
+    connection_id: Annotated[str, Field(title="Connection Id")]
+    database: Annotated[Optional[str], Field(title="Database")] = None
+    table: Annotated[str, Field(title="Table")]
+    sync: Optional[DestinationSyncConfig] = None
+    bq_dataset: Annotated[Optional[str], Field(title="Bq Dataset")] = None
+
+
+class Query(ConfigBase):
+    name: Annotated[str, Field(title="Name")]
+    query: Annotated[str, Field(title="Query")]
+
+
+class BigquerySource(ConfigBase):
+    connection_id: Annotated[str, Field(title="Connection Id")]
+    queries: Annotated[List[Query], Field(max_length=1, min_length=1, title="Queries")]
+
+
 class Combiner(ConfigBase):
     pass
 
 
 class ConcatDatasets(ConfigBase):
     pass
+
+
+class DataSource(ConfigBase):
+    data_source: Annotated[str, Field(title="Data Source")]
+
+
+class DatabricksDestination(ConfigBase):
+    connection_id: Annotated[str, Field(title="Connection Id")]
+    database: Annotated[Optional[str], Field(title="Database")] = None
+    table: Annotated[str, Field(title="Table")]
+    sync: Optional[DestinationSyncConfig] = None
+    volume: Annotated[Optional[str], Field(title="Volume")] = (
+        "gretel_databricks_connector"
+    )
+
+
+class DatabricksSource(ConfigBase):
+    connection_id: Annotated[str, Field(title="Connection Id")]
+    queries: Annotated[List[Query], Field(max_length=1, min_length=1, title="Queries")]
 
 
 class DropColumns(ConfigBase):
@@ -88,6 +146,18 @@ class ExtractDataSeedsFromSampleRecords(ConfigBase):
     dataset_context: Annotated[Optional[str], Field(title="Dataset Context")] = ""
     system_prompt_type: Optional[SystemPromptType] = "cognition"
     num_samples: Annotated[Optional[int], Field(title="Num Samples")] = 25
+
+
+class GcsDestination(ConfigBase):
+    connection_id: Annotated[str, Field(title="Connection Id")]
+    path: Annotated[str, Field(title="Path")]
+    bucket: Annotated[str, Field(title="Bucket")]
+
+
+class GcsSource(ConfigBase):
+    connection_id: Annotated[str, Field(title="Connection Id")]
+    path: Annotated[str, Field(title="Path")]
+    bucket: Annotated[str, Field(title="Bucket")]
 
 
 class DistributionType(str, Enum):
@@ -446,11 +516,59 @@ class Rubric(ConfigBase):
     ] = ""
 
 
+class MssqlDestination(ConfigBase):
+    connection_id: Annotated[str, Field(title="Connection Id")]
+    database: Annotated[Optional[str], Field(title="Database")] = None
+    table: Annotated[str, Field(title="Table")]
+    sync: Optional[DestinationSyncConfig] = None
+
+
+class MssqlSource(ConfigBase):
+    connection_id: Annotated[str, Field(title="Connection Id")]
+    queries: Annotated[List[Query], Field(max_length=1, min_length=1, title="Queries")]
+
+
+class MysqlDestination(ConfigBase):
+    connection_id: Annotated[str, Field(title="Connection Id")]
+    database: Annotated[Optional[str], Field(title="Database")] = None
+    table: Annotated[str, Field(title="Table")]
+    sync: Optional[DestinationSyncConfig] = None
+
+
+class MysqlSource(ConfigBase):
+    connection_id: Annotated[str, Field(title="Connection Id")]
+    queries: Annotated[List[Query], Field(max_length=1, min_length=1, title="Queries")]
+
+
 class NameGenerator(ConfigBase):
     column_name: Annotated[Optional[str], Field(title="Column Name")] = "name"
     num_records: Annotated[Optional[int], Field(title="Num Records")] = 5
     seed: Annotated[Optional[int], Field(title="Seed")] = None
     should_fail: Annotated[Optional[bool], Field(title="Should Fail")] = False
+
+
+class OracleDestination(ConfigBase):
+    connection_id: Annotated[str, Field(title="Connection Id")]
+    database: Annotated[Optional[str], Field(title="Database")] = None
+    table: Annotated[str, Field(title="Table")]
+    sync: Optional[DestinationSyncConfig] = None
+
+
+class OracleSource(ConfigBase):
+    connection_id: Annotated[str, Field(title="Connection Id")]
+    queries: Annotated[List[Query], Field(max_length=1, min_length=1, title="Queries")]
+
+
+class PostgresDestination(ConfigBase):
+    connection_id: Annotated[str, Field(title="Connection Id")]
+    database: Annotated[Optional[str], Field(title="Database")] = None
+    table: Annotated[str, Field(title="Table")]
+    sync: Optional[DestinationSyncConfig] = None
+
+
+class PostgresSource(ConfigBase):
+    connection_id: Annotated[str, Field(title="Connection Id")]
+    queries: Annotated[List[Query], Field(max_length=1, min_length=1, title="Queries")]
 
 
 class GenerateParams(ConfigBase):
@@ -553,6 +671,18 @@ class PromptPretrainedModel(ConfigBase):
     generate: Optional[GenerateParams] = None
 
 
+class S3Destination(ConfigBase):
+    connection_id: Annotated[str, Field(title="Connection Id")]
+    path: Annotated[str, Field(title="Path")]
+    bucket: Annotated[str, Field(title="Bucket")]
+
+
+class S3Source(ConfigBase):
+    connection_id: Annotated[str, Field(title="Connection Id")]
+    path: Annotated[str, Field(title="Path")]
+    bucket: Annotated[str, Field(title="Bucket")]
+
+
 class SampleDataSeeds(ConfigBase):
     num_records: Annotated[Optional[int], Field(title="Num Records")] = 10
 
@@ -570,6 +700,18 @@ class SampleFromDataset(ConfigBase):
 
 class SeedFromRecords(ConfigBase):
     records: Annotated[List[Dict[str, Any]], Field(title="Records")]
+
+
+class SnowflakeDestination(ConfigBase):
+    connection_id: Annotated[str, Field(title="Connection Id")]
+    database: Annotated[Optional[str], Field(title="Database")] = None
+    table: Annotated[str, Field(title="Table")]
+    sync: Optional[DestinationSyncConfig] = None
+
+
+class SnowflakeSource(ConfigBase):
+    connection_id: Annotated[str, Field(title="Connection Id")]
+    queries: Annotated[List[Query], Field(max_length=1, min_length=1, title="Queries")]
 
 
 class LRScheduler(str, Enum):
