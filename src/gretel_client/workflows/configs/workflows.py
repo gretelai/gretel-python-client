@@ -44,12 +44,13 @@ class UniformDistribution(ConfigBase):
 
 class GenerationParameters(ConfigBase):
     temperature: Annotated[
-        Union[float, UniformDistribution, ManualDistribution],
+        Optional[Union[float, UniformDistribution, ManualDistribution]],
         Field(title="Temperature"),
-    ]
+    ] = None
     top_p: Annotated[
-        Union[float, UniformDistribution, ManualDistribution], Field(title="Top P")
-    ]
+        Optional[Union[float, UniformDistribution, ManualDistribution]],
+        Field(title="Top P"),
+    ] = None
 
 
 class ModelConfig(ConfigBase):

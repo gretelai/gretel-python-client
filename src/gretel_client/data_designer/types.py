@@ -1,6 +1,5 @@
 import json
 
-from dataclasses import dataclass
 from enum import Enum
 from typing import Literal, Self, TypeAlias
 from uuid import UUID
@@ -21,7 +20,7 @@ from gretel_client.data_designer.utils import (
 from gretel_client.workflows.configs import tasks
 
 ##########################################################
-# Enums and dataclasses
+# Enums
 ##########################################################
 
 
@@ -45,24 +44,6 @@ class ProviderType(str, Enum):
     LLM_JUDGE = "llm-judge"
     CODE_VALIDATION = "code-validation"
     EXPRESSION = "expression"
-
-
-@dataclass
-class DataPipelineMetadata:
-    """Specification for dataset created by DataDesigner.
-
-    We pass this object around to enable streamlined helper methods like
-    `display_sample_record`, `fetch_dataset`, and `download_evaluation_report`.
-    """
-
-    sampling_based_columns: list[str]
-    prompt_based_columns: list[str]
-    llm_judge_columns: list[str] | None = None
-    validation_columns: list[str] | None = None
-    evaluation_columns: list[str] | None = None
-    code_column_names: list[str] | None = None
-    code_lang: tasks.CodeLang | None = None
-    eval_type: LLMJudgePromptTemplateType | None = None
 
 
 class Person(BaseModel):

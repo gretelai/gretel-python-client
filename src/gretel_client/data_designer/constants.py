@@ -36,6 +36,8 @@ TASK_TYPE_EMOJI_MAP = {
 
 DEFAULT_REPR_HTML_STYLE = "nord"
 
+REPR_LIST_LENGTH_USE_JSON = 4
+
 REPR_HTML_TEMPLATE = (
     '<meta charset="UTF-8">'
     "<style>{css}</style>"
@@ -72,3 +74,8 @@ class NordColor(Enum):
     NORD13 = "#EBCB8B"  # Yellow
     NORD14 = "#A3BE8C"  # Green
     NORD15 = "#B48EAD"  # Purple
+
+
+DEFAULT_HIST_NAME_COLOR = "medium_purple1"
+
+DEFAULT_HIST_VALUE_COLOR = "pale_green3"

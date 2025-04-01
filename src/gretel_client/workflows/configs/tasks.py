@@ -694,7 +694,7 @@ class TabularFTGenerateStopParams(ConfigBase):
             le=1.0,
             title="invalid_fraction_threshold",
         ),
-    ] = 0.9
+    ] = 0.8
 
 
 class Delta(RootModel[float]):
@@ -1787,7 +1787,7 @@ class Transform(ConfigBase):
             title="Steps",
         ),
     ]
-    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
     error_rate: Annotated[
         Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
     ] = 0.2
@@ -1795,12 +1795,13 @@ class Transform(ConfigBase):
 
 class GenerationParameters(ConfigBase):
     temperature: Annotated[
-        Union[float, UniformDistribution, ManualDistribution],
+        Optional[Union[float, UniformDistribution, ManualDistribution]],
         Field(title="Temperature"),
-    ]
+    ] = None
     top_p: Annotated[
-        Union[float, UniformDistribution, ManualDistribution], Field(title="Top P")
-    ]
+        Optional[Union[float, UniformDistribution, ManualDistribution]],
+        Field(title="Top P"),
+    ] = None
 
 
 class ModelConfig(ConfigBase):

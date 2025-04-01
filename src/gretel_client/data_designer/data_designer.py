@@ -18,6 +18,7 @@ from gretel_client.data_designer.constants import (
     DEFAULT_REPR_HTML_STYLE,
     MODEL_DUMP_KWARGS,
     REPR_HTML_TEMPLATE,
+    REPR_LIST_LENGTH_USE_JSON,
 )
 from gretel_client.data_designer.dag import topologically_sort_columns
 from gretel_client.data_designer.log import get_logger
@@ -28,7 +29,6 @@ from gretel_client.data_designer.types import (
     CodeValidationColumn,
     ColumnProviderTypeT,
     DAGColumnT,
-    DataPipelineMetadata,
     DataSeedColumn,
     EvaluateDatasetSettings,
     EvaluationReportT,
@@ -48,6 +48,7 @@ from gretel_client.data_designer.utils import (
     make_date_obj_serializable,
     smart_load_dataframe,
 )
+from gretel_client.data_designer.viz_tools import AIDDMetadata
 from gretel_client.files.interface import File
 from gretel_client.gretel.config_setup import smart_load_yaml
 from gretel_client.navigator_client_protocols import GretelResourceProviderProtocol
@@ -216,15 +217,14 @@ class DataDesigner:
         preview = self._capture_preview_result(
             workflow, verbose_logging=verbose_logging
         )
-        if preview.dataset is not None:
-            if preview.success:
-                logger.info("🎉 Your dataset preview is ready!")
-            else:
-                logger.warning(
-                    "⚠️ Something has gone wrong during preview generation. Please inspect "
-                    "the generated data and adjust your configuration as needed. If the issue "
-                    "persists please contact support."
-                )
+        if preview.dataset is not None and preview.success:
+            logger.info("🎉 Your dataset preview is ready!")
+        else:
+            logger.warning(
+                "⚠️ Something has gone wrong during preview generation. Please inspect "
+                "the generated data and adjust your configuration as needed. If the issue "
+                "persists please contact support."
+            )
 
         # TODO: Re-visit how we display evaluation results in light of generalized judge-with-llm
         # if preview.evaluation_results is not None:
@@ -291,18 +291,6 @@ class DataDesigner:
             if not keep_person_columns:
                 self._latent_columns[name] = person_params
         return self
-
-    def _retrieve_remote_dataset_columns(self, file_id: str) -> list[str]:
-        """Retrieve the columns of a dataset given its file id.
-
-        Args:
-            file_id (str): File identifier for the dataset.
-
-        Returns:
-            list[str]: A list of column names present in the dataset.
-        """
-        retrieved_df = self._files.download_dataset(file_id)
-        return retrieved_df.columns.tolist()
 
     def with_seed_dataset(
         self,
@@ -378,32 +366,6 @@ class DataDesigner:
                 or col.type == SamplingSourceType.SUBCATEGORY
             )
         ]
-
-    def _get_next_dag_step(self, column_name: str) -> TaskConfig:
-        column = self.get_column(column_name)
-        if isinstance(column, LLMGenColumn):
-            next_step = self._task_registry.GenerateColumnFromTemplate(
-                **column.model_dump(**MODEL_DUMP_KWARGS)
-            )
-        elif isinstance(column, LLMJudgeColumn):
-            next_step = self._task_registry.JudgeWithLlm(
-                **column.model_dump(**MODEL_DUMP_KWARGS)
-            )
-        elif isinstance(column, CodeValidationColumn):
-            next_step = self._task_registry.ValidateCode(
-                code_lang=CodeLang(column.code_lang),
-                target_columns=[column.target_column],
-                result_columns=[column.name],
-            )
-        elif isinstance(column, ExpressionColumn):
-            next_step = self._task_registry.GenerateColumnFromExpression(
-                name=column.name,
-                expr=column.expr,
-                dtype=ExprDtype(column.dtype),
-            )
-        else:
-            raise ValueError(f"🛑 Columns of type {type(column)} do not go in the DAG.")
-        return next_step
 
     def _build_workflow(
         self, num_records: int, verbose_logging: bool = False
@@ -600,7 +562,7 @@ class DataDesigner:
         return PreviewResults(
             output=final_output,
             evaluation_results=evaluation_results,
-            data_pipeline_metadata=self._get_data_pipeline_metadata(),
+            aidd_metadata=AIDDMetadata.from_aidd(self),
             success=success,
         )
 
@@ -625,37 +587,43 @@ class DataDesigner:
                 column = SamplerColumn(name=name, type=type, **kwargs)
         return column
 
-    def _get_data_pipeline_metadata(
-        self,
-    ) -> DataPipelineMetadata:
-        """Return a DataPipelineMetadata instance that defines the schema and other relevant info."""
-        code_lang = None
-        code_columns = []
-        code_validation_columns = []
-        llm_judge_columns = []
-        eval_type = None
-
-        for code_val_col in self._code_validation_columns:
-            code_validation_columns.extend(
-                [code_val_col.name] + list(code_val_col.side_effect_columns)
+    def _get_next_dag_step(self, column_name: str) -> TaskConfig:
+        column = self.get_column(column_name)
+        if isinstance(column, LLMGenColumn):
+            next_step = self._task_registry.GenerateColumnFromTemplate(
+                **column.model_dump(**MODEL_DUMP_KWARGS)
             )
+        elif isinstance(column, LLMJudgeColumn):
+            next_step = self._task_registry.JudgeWithLlm(
+                **column.model_dump(**MODEL_DUMP_KWARGS)
+            )
+        elif isinstance(column, CodeValidationColumn):
+            next_step = self._task_registry.ValidateCode(
+                code_lang=CodeLang(column.code_lang),
+                target_columns=[column.target_column],
+                result_columns=[column.name],
+            )
+        elif isinstance(column, ExpressionColumn):
+            next_step = self._task_registry.GenerateColumnFromExpression(
+                name=column.name,
+                expr=column.expr,
+                dtype=ExprDtype(column.dtype),
+            )
+        else:
+            raise ValueError(f"🛑 Columns of type {type(column)} do not go in the DAG.")
+        return next_step
 
-        sampling_based_columns = [
-            col.name
-            for col in self._sampler_columns
-            if col.name not in list(self._latent_columns.keys())
-        ]
-        prompt_based_columns = [col.name for col in self._llm_gen_columns]
-        llm_judge_columns = [col.name for col in self._llm_judge_columns]
-        return DataPipelineMetadata(
-            sampling_based_columns=sampling_based_columns,
-            prompt_based_columns=prompt_based_columns,
-            llm_judge_columns=llm_judge_columns,
-            validation_columns=code_validation_columns,
-            code_column_names=code_columns,
-            code_lang=code_lang,
-            eval_type=eval_type,
-        )
+    def _retrieve_remote_dataset_columns(self, file_id: str) -> list[str]:
+        """Retrieve the columns of a dataset given its file id.
+
+        Args:
+            file_id (str): File identifier for the dataset.
+
+        Returns:
+            list[str]: A list of column names present in the dataset.
+        """
+        retrieved_df = self._files.download_dataset(file_id)
+        return retrieved_df.columns.tolist()
 
     @staticmethod
     def _get_last_evaluation_step_name(workflow_step_names: list[str]) -> str | None:
@@ -665,8 +633,6 @@ class DataDesigner:
         return None if len(eval_steps) == 0 else eval_steps[-1]
 
     def __repr__(self) -> str:
-        max_list_elements = 3
-
         model_suite = (
             self.model_suite.value
             if isinstance(self.model_suite, ModelSuite)
@@ -676,64 +642,27 @@ class DataDesigner:
         if len(self._columns) == 0:
             return f"{self.__class__.__name__}(model_suite: {model_suite})"
 
-        md = self._get_data_pipeline_metadata()
+        md = AIDDMetadata.from_aidd(self)
 
         props_to_repr = {
             "model_suite": model_suite,
+            "person_samplers": _check_convert_to_json_str(md.person_samplers),
             "seed_dataset": (
                 None if self._seed_dataset is None else self._seed_dataset.file_id
             ),
-            "seed_columns": (
-                None
-                if len(self._seed_columns) == 0
-                else (
-                    json.dumps([col.name for col in self._seed_columns], indent=8)
-                    if len(self._seed_columns) > max_list_elements
-                    else [col.name for col in self._seed_columns]
-                )
-            ),
-            "person_samplers": (
-                None
-                if len(self._latent_columns) == 0
-                else list(self._latent_columns.keys())
-            ),
-            "sampling_based_columns": (
-                None
-                if len(md.sampling_based_columns) == 0
-                else (
-                    json.dumps(md.sampling_based_columns, indent=8)
-                    if len(md.sampling_based_columns) > max_list_elements
-                    else md.sampling_based_columns
-                )
-            ),
-            "llm_based_columns": (
-                None
-                if len(md.prompt_based_columns) == 0
-                else (
-                    json.dumps(md.prompt_based_columns, indent=8)
-                    if len(md.prompt_based_columns) > max_list_elements
-                    else md.prompt_based_columns
-                )
-            ),
-            "llm_judge_columns": (
-                None
-                if len(md.llm_judge_columns) == 0
-                else (
-                    json.dumps(md.llm_judge_columns, indent=8)
-                    if len(md.llm_judge_columns) > max_list_elements
-                    else md.llm_judge_columns
-                )
-            ),
-            "validation_columns": (
-                None
-                if len(md.validation_columns) == 0
-                else (
-                    json.dumps(md.validation_columns, indent=8)
-                    if len(md.validation_columns) > max_list_elements
-                    else md.validation_columns
-                )
-            ),
         }
+
+        for name in [
+            "seed_columns",
+            "sampler_columns",
+            "llm_gen_columns",
+            "llm_judge_columns",
+            "validation_columns",
+            "expression_columns",
+        ]:
+            props_to_repr[name] = _check_convert_to_json_str(
+                getattr(md, name), indent=8
+            )
 
         repr_string = f"{self.__class__.__name__}(\n"
         for k, v in props_to_repr.items():
@@ -749,3 +678,17 @@ class DataDesigner:
         highlighted_html = highlight(repr_string, PythonLexer(), formatter)
         css = formatter.get_style_defs(".code")
         return REPR_HTML_TEMPLATE.format(css=css, highlighted_html=highlighted_html)
+
+
+def _check_convert_to_json_str(
+    column_names: list[str], *, indent: int | str | None = None
+) -> list[str] | str | None:
+    return (
+        None
+        if len(column_names) == 0
+        else (
+            column_names
+            if len(column_names) < REPR_LIST_LENGTH_USE_JSON
+            else json.dumps(column_names, indent=indent)
+        )
+    )

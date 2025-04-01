@@ -1,11 +1,12 @@
 import json
 import numbers
 
-from typing import Optional, Union
+from typing import Self, TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
 
+from pydantic import BaseModel
 from rich.align import Align
 from rich.columns import Columns
 from rich.console import Console, Group
@@ -16,25 +17,97 @@ from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
 
+from gretel_client.data_designer.constants import (
+    DEFAULT_HIST_NAME_COLOR,
+    DEFAULT_HIST_VALUE_COLOR,
+)
 from gretel_client.data_designer.judge_rubrics import JudgeRubric
 from gretel_client.data_designer.types import EvaluationType, LLMJudgePromptTemplateType
 from gretel_client.data_designer.utils import code_lang_to_syntax_lexer
-from gretel_client.workflows.configs.tasks import CodeLang
+from gretel_client.workflows.configs.tasks import CodeLang, OutputType
+
+if TYPE_CHECKING:
+    from gretel_client.data_designer.data_designer import DataDesigner
+
 
 console = Console()
 
-DEFAULT_HIST_NAME_COLOR = "medium_purple1"
-DEFAULT_HIST_VALUE_COLOR = "pale_green3"
 
+class AIDDMetadata(BaseModel):
+    """Metadata related to the dataset created by DataDesigner.
 
-def _pad_console_element(elem, padding=(1, 0, 1, 0)):
-    return Padding(elem, padding)
+    We pass this object around to enable streamlined helper methods like
+    `display_sample_record`, `fetch_dataset`, and `download_evaluation_report`.
+    """
+
+    sampler_columns: list[str] = []
+    llm_gen_text_columns: list[str] = []
+    llm_gen_code_columns: list[str] = []
+    llm_gen_structured_columns: list[str] = []
+    seed_columns: list[str] = []
+    llm_judge_columns: list[str] = []
+    validation_columns: list[str] = []
+    expression_columns: list[str] = []
+    evaluation_columns: list[str] = []
+    person_samplers: list[str] = []
+    code_langs: list[CodeLang] = []
+    eval_type: LLMJudgePromptTemplateType | None = None
+
+    @property
+    def llm_gen_columns(self) -> list[str]:
+        return (
+            (self.llm_gen_text_columns or [])
+            + (self.llm_gen_code_columns or [])
+            + (self.llm_gen_structured_columns or [])
+        )
+
+    @classmethod
+    def from_aidd(cls, aidd: "DataDesigner") -> Self:
+        code_langs = []
+        llm_gen_code_columns = []
+        llm_gen_text_columns = []
+        llm_gen_structured_columns = []
+        code_validation_columns = []
+
+        for col in aidd._llm_gen_columns:
+            if col.data_config.type == OutputType.CODE:
+                llm_gen_code_columns.append(col.name)
+                code_langs.append(col.data_config.params["syntax"])
+            elif col.data_config.type == OutputType.STRUCTURED:
+                llm_gen_structured_columns.append(col.name)
+            else:
+                llm_gen_text_columns.append(col.name)
+
+        for code_val_col in aidd._code_validation_columns:
+            code_validation_columns.extend(
+                [code_val_col.name] + list(code_val_col.side_effect_columns)
+            )
+
+        sampling_based_columns = [
+            col.name
+            for col in aidd._sampler_columns
+            if col.name not in list(aidd._latent_columns.keys())
+        ]
+
+        return cls(
+            sampler_columns=sampling_based_columns,
+            llm_gen_text_columns=llm_gen_text_columns,
+            llm_gen_code_columns=llm_gen_code_columns,
+            llm_gen_structured_columns=llm_gen_structured_columns,
+            seed_columns=[col.name for col in aidd._seed_columns],
+            llm_judge_columns=[col.name for col in aidd._llm_judge_columns],
+            validation_columns=code_validation_columns,
+            expression_columns=[col.name for col in aidd._expression_columns],
+            person_samplers=list(aidd._latent_columns.keys()),
+            code_langs=code_langs,
+            eval_type=None,
+        )
 
 
 def create_rich_histogram_table(
-    data: dict[str, Union[int, float]],
+    data: dict[str, int | float],
     column_names: tuple[int, int],
-    title: Optional[str] = None,
+    title: str | None = None,
     name_color: str = DEFAULT_HIST_NAME_COLOR,
     value_color: str = DEFAULT_HIST_VALUE_COLOR,
 ) -> Table:
@@ -52,16 +125,12 @@ def create_rich_histogram_table(
 
 
 def display_sample_record(
-    record: Union[dict, pd.Series, pd.DataFrame],
-    sampling_based_columns: Optional[list[str]],
-    prompt_based_columns: Optional[list[str]],
-    llm_judge_columns: Optional[list[str]] = None,
-    code_lang: Optional[CodeLang] = None,
-    code_columns: Optional[list[str]] = None,
-    validation_columns: Optional[list[str]] = None,
-    background_color: Optional[str] = None,
+    record: dict | pd.Series | pd.DataFrame,
+    aidd_metadata: AIDDMetadata,
+    background_color: str | None = None,
     syntax_highlighting_theme: str = "dracula",
-    record_index: Optional[int] = None,
+    record_index: int | None = None,
+    hide_seed_columns: bool = False,
 ):
     if isinstance(record, (dict, pd.Series)):
         record = pd.DataFrame([record]).iloc[0]
@@ -78,38 +147,41 @@ def display_sample_record(
             f"or pandas DataFrame. You provided: {type(record)}."
         )
 
-    code_columns = code_columns or []
-    sampling_based_columns = sampling_based_columns or []
-    prompt_based_columns = prompt_based_columns or []
-    validation_columns = validation_columns or []
-
     table_kws = dict(show_lines=True, expand=True)
 
     render_list = []
 
-    columns_combined = sampling_based_columns + prompt_based_columns
-    if len(columns_combined) > 0:
+    if not hide_seed_columns and len(aidd_metadata.seed_columns) > 0:
+        table = Table(title="Seed Columns", **table_kws)
+        table.add_column("Name")
+        table.add_column("Value")
+        for col in aidd_metadata.seed_columns:
+            table.add_row(col, _convert_to_row_element(record[col]))
+        render_list.append(_pad_console_element(table))
+
+    non_code_columns = (
+        aidd_metadata.sampler_columns
+        + aidd_metadata.llm_gen_text_columns
+        + aidd_metadata.llm_gen_structured_columns
+    )
+
+    if len(non_code_columns) > 0:
         table = Table(title="Generated Columns", **table_kws)
         table.add_column("Name")
         table.add_column("Value")
-        for col in [c for c in columns_combined if c not in code_columns]:
-            ## Pretty-print for structured outputs
-            _element = record[col]
-            try:
-                _element = Pretty(json.loads(_element))
-            except (TypeError, json.JSONDecodeError):
-                pass
-            if isinstance(_element, (np.integer, np.floating, np.ndarray)):
-                _element = str(_element)
-            elif isinstance(_element, (list, dict)):
-                _element = Pretty(_element)
-            table.add_row(col, _element)
+        for col in [c for c in non_code_columns]:
+            table.add_row(col, _convert_to_row_element(record[col]))
         render_list.append(_pad_console_element(table))
 
-    for col in code_columns:
+    for num, col in enumerate(aidd_metadata.llm_gen_code_columns):
+        if not aidd_metadata.code_langs:
+            raise ValueError(
+                "`code_langs` must be provided when code columns are specified."
+            )
+        code_lang = aidd_metadata.code_langs[num]
         if code_lang is None:
             raise ValueError(
-                "`code_lang` must be provided when code_columns are specified."
+                "`code_lang` must be provided when code columns are specified."
                 f"Valid options are: {', '.join([c.value for c in CodeLang])}"
             )
         panel = Panel(
@@ -125,10 +197,10 @@ def display_sample_record(
         )
         render_list.append(_pad_console_element(panel))
 
-    if len(validation_columns) > 0:
+    if len(aidd_metadata.validation_columns) > 0:
         table = Table(title="Validation", **table_kws)
         row = []
-        for col in validation_columns:
+        for col in aidd_metadata.validation_columns:
             value = record[col]
             if isinstance(value, numbers.Number):
                 table.add_column(col)
@@ -144,9 +216,8 @@ def display_sample_record(
         table.add_row(*row)
         render_list.append(_pad_console_element(table, (1, 0, 1, 0)))
 
-    if len(llm_judge_columns) > 0:
-
-        for col in llm_judge_columns:
+    if len(aidd_metadata.llm_judge_columns) > 0:
+        for col in aidd_metadata.llm_judge_columns:
             table = Table(title=f"LLM-as-a-Judge: {col}", **table_kws)
             row = []
             judge = record[col]
@@ -167,7 +238,7 @@ def display_sample_record(
 
 
 def display_preview_evaluation_summary(
-    eval_type: Union[EvaluationType, LLMJudgePromptTemplateType],
+    eval_type: EvaluationType | LLMJudgePromptTemplateType,
     eval_results: dict,
     hist_name_color: str = DEFAULT_HIST_NAME_COLOR,
     hist_value_color: str = DEFAULT_HIST_VALUE_COLOR,
@@ -253,3 +324,19 @@ def display_preview_evaluation_summary(
     render_list.append(dash_sep)
 
     console.print(Group(*render_list), markup=False)
+
+
+def _convert_to_row_element(elem):
+    try:
+        elem = Pretty(json.loads(elem))
+    except (TypeError, json.JSONDecodeError):
+        pass
+    if isinstance(elem, (np.integer, np.floating, np.ndarray)):
+        elem = str(elem)
+    elif isinstance(elem, (list, dict)):
+        elem = Pretty(elem)
+    return elem
+
+
+def _pad_console_element(elem, padding=(1, 0, 1, 0)):
+    return Padding(elem, padding)
