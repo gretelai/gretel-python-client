@@ -81,11 +81,11 @@ class DropColumns(ConfigBase):
 
 
 class DummyTaskWithInputs(ConfigBase):
-    num_records: Annotated[Optional[int], Field(title="Num Records")] = 5
+    num_records: Annotated[Optional[int], Field(title="Num Records")] = 100
 
 
 class DummyTaskWithListOfInputs(ConfigBase):
-    num_records: Annotated[Optional[int], Field(title="Num Records")] = 5
+    num_records: Annotated[Optional[int], Field(title="Num Records")] = 100
 
 
 class EvaluateDataset(ConfigBase):
@@ -132,7 +132,7 @@ class SystemPromptType(str, Enum):
 
 
 class ExtractDataSeedsFromSampleRecords(ConfigBase):
-    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
     error_rate: Annotated[
         Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
     ] = 0.2
@@ -171,7 +171,7 @@ class ManualDistributionParams(ConfigBase):
 
 
 class ModelAlias(str, Enum):
-    NATURAL_LANGUAGE = "natural_language"
+    TEXT = "text"
     CODE = "code"
     JUDGE = "judge"
 
@@ -439,7 +439,7 @@ class UniformSamplerParams(ConfigBase):
 
 
 class GenerateDatasetFromSampleRecords(ConfigBase):
-    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
     error_rate: Annotated[
         Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
     ] = 0.2
@@ -490,7 +490,7 @@ class Holdout(ConfigBase):
 
 
 class IdGenerator(ConfigBase):
-    num_records: Annotated[Optional[int], Field(title="Num Records")] = 5
+    num_records: Annotated[Optional[int], Field(title="Num Records")] = 100
 
 
 class Rubric(ConfigBase):
@@ -541,8 +541,8 @@ class MysqlSource(ConfigBase):
 
 
 class NameGenerator(ConfigBase):
+    num_records: Annotated[Optional[int], Field(title="Num Records")] = 100
     column_name: Annotated[Optional[str], Field(title="Column Name")] = "name"
-    num_records: Annotated[Optional[int], Field(title="Num Records")] = 5
     seed: Annotated[Optional[int], Field(title="Seed")] = None
     should_fail: Annotated[Optional[bool], Field(title="Should Fail")] = False
 
@@ -684,7 +684,7 @@ class S3Source(ConfigBase):
 
 
 class SampleDataSeeds(ConfigBase):
-    num_records: Annotated[Optional[int], Field(title="Num Records")] = 10
+    num_records: Annotated[Optional[int], Field(title="Num Records")] = 100
 
 
 class SamplingStrategy(str, Enum):
@@ -1052,7 +1052,7 @@ class TabularGan(ConfigBase):
 
 
 class TestFailingTask(ConfigBase):
-    num_records: Annotated[Optional[int], Field(title="Num Records")] = 5
+    num_records: Annotated[Optional[int], Field(title="Num Records")] = 100
 
 
 class TestOptionalArgTask(ConfigBase):
@@ -1638,7 +1638,7 @@ class DataSchema(ConfigBase):
 
 
 class GenerateColumnsUsingSamplers(ConfigBase):
-    num_records: Annotated[int, Field(title="Num Records")]
+    num_records: Annotated[Optional[int], Field(title="Num Records")] = 100
     data_schema: DataSchema
     max_rejections_factor: Annotated[
         Optional[int], Field(title="Max Rejections Factor")
@@ -1808,7 +1808,7 @@ class ModelConfig(ConfigBase):
 
 
 class GenerateColumnFromTemplate(ConfigBase):
-    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
     error_rate: Annotated[
         Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
     ] = 0.2
@@ -1817,7 +1817,7 @@ class GenerateColumnFromTemplate(ConfigBase):
     ] = None
     model_alias: Annotated[
         Optional[Union[str, ModelAlias]], Field(title="Model Alias")
-    ] = "natural_language"
+    ] = "text"
     prompt: Annotated[str, Field(title="Prompt")]
     name: Annotated[Optional[str], Field(title="Name")] = "response"
     system_prompt: Annotated[Optional[str], Field(title="System Prompt")] = None
@@ -1826,7 +1826,7 @@ class GenerateColumnFromTemplate(ConfigBase):
 
 
 class GenerateSamplingColumnConfigFromInstruction(ConfigBase):
-    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
     error_rate: Annotated[
         Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
     ] = 0.2
@@ -1841,7 +1841,7 @@ class GenerateSamplingColumnConfigFromInstruction(ConfigBase):
 
 
 class GenerateSeedCategoryValues(ConfigBase):
-    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
     error_rate: Annotated[
         Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
     ] = 0.2
@@ -1850,13 +1850,13 @@ class GenerateSeedCategoryValues(ConfigBase):
     ] = None
     model_alias: Annotated[
         Optional[Union[str, ModelAlias]], Field(title="Model Alias")
-    ] = "natural_language"
+    ] = "text"
     seed_categories: Annotated[List[SeedCategory], Field(title="Seed Categories")]
     dataset_context: Annotated[Optional[str], Field(title="Dataset Context")] = ""
 
 
 class JudgeWithLlm(ConfigBase):
-    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
     error_rate: Annotated[
         Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
     ] = 0.2
@@ -1895,7 +1895,7 @@ class JudgeWithLlm(ConfigBase):
 
 
 class GenerateColumnFromTemplateConfig(ConfigBase):
-    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
     error_rate: Annotated[
         Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
     ] = 0.2
@@ -1904,7 +1904,7 @@ class GenerateColumnFromTemplateConfig(ConfigBase):
     ] = None
     model_alias: Annotated[
         Optional[Union[str, ModelAlias]], Field(title="Model Alias")
-    ] = "natural_language"
+    ] = "text"
     prompt: Annotated[str, Field(title="Prompt")]
     name: Annotated[Optional[str], Field(title="Name")] = "response"
     system_prompt: Annotated[Optional[str], Field(title="System Prompt")] = None
@@ -1913,7 +1913,7 @@ class GenerateColumnFromTemplateConfig(ConfigBase):
 
 
 class GenerateColumnConfigFromInstruction(ConfigBase):
-    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
     error_rate: Annotated[
         Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
     ] = 0.2

@@ -342,7 +342,7 @@ class DataDesigner:
         *,
         generation_prompt: str,
         columns_to_list_in_prompt: Optional[list[str]] = None,
-        llm_type: LLMType = LLMType.NATURAL_LANGUAGE,
+        llm_type: LLMType = LLMType.TEXT,
         data_config: Optional[dict] = None,
     ) -> None:
         """Add a generated data column to the data design.

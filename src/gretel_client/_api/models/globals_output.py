@@ -20,8 +20,8 @@ import re  # noqa: F401
 
 from typing import Any, ClassVar, Dict, List, Optional, Set, Union
 
-from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr
-from typing_extensions import Annotated, Self
+from pydantic import BaseModel, ConfigDict, StrictFloat, StrictInt, StrictStr
+from typing_extensions import Self
 
 from gretel_client._api.models.model_config_output import ModelConfigOutput
 
@@ -31,15 +31,10 @@ class GlobalsOutput(BaseModel):
     GlobalsOutput
     """  # noqa: E501
 
-    error_rate: Optional[
-        Union[
-            Annotated[float, Field(le=1.0, strict=True, ge=0.0)],
-            Annotated[int, Field(le=1, strict=True, ge=0)],
-        ]
-    ] = 0.2
+    error_rate: Optional[Union[StrictFloat, StrictInt]] = None
     model_configs: Optional[List[ModelConfigOutput]] = None
-    model_suite: Optional[StrictStr] = "apache-2.0"
-    num_records: Optional[StrictInt] = 100
+    model_suite: Optional[StrictStr] = None
+    num_records: Optional[StrictInt] = None
     __properties: ClassVar[List[str]] = [
         "error_rate",
         "model_configs",
@@ -91,10 +86,25 @@ class GlobalsOutput(BaseModel):
                 if _item:
                     _items.append(_item.to_dict())
             _dict["model_configs"] = _items
+        # set to None if error_rate (nullable) is None
+        # and model_fields_set contains the field
+        if self.error_rate is None and "error_rate" in self.model_fields_set:
+            _dict["error_rate"] = None
+
         # set to None if model_configs (nullable) is None
         # and model_fields_set contains the field
         if self.model_configs is None and "model_configs" in self.model_fields_set:
             _dict["model_configs"] = None
+
+        # set to None if model_suite (nullable) is None
+        # and model_fields_set contains the field
+        if self.model_suite is None and "model_suite" in self.model_fields_set:
+            _dict["model_suite"] = None
+
+        # set to None if num_records (nullable) is None
+        # and model_fields_set contains the field
+        if self.num_records is None and "num_records" in self.model_fields_set:
+            _dict["num_records"] = None
 
         return _dict
 
@@ -109,9 +119,7 @@ class GlobalsOutput(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "error_rate": (
-                    obj.get("error_rate") if obj.get("error_rate") is not None else 0.2
-                ),
+                "error_rate": obj.get("error_rate"),
                 "model_configs": (
                     [
                         ModelConfigOutput.from_dict(_item)
@@ -120,16 +128,8 @@ class GlobalsOutput(BaseModel):
                     if obj.get("model_configs") is not None
                     else None
                 ),
-                "model_suite": (
-                    obj.get("model_suite")
-                    if obj.get("model_suite") is not None
-                    else "apache-2.0"
-                ),
-                "num_records": (
-                    obj.get("num_records")
-                    if obj.get("num_records") is not None
-                    else 100
-                ),
+                "model_suite": obj.get("model_suite"),
+                "num_records": obj.get("num_records"),
             }
         )
         return _obj

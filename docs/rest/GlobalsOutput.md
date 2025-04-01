@@ -5,10 +5,10 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**error_rate** | **float** |  | [optional] [default to 0.2]
+**error_rate** | **float** |  | [optional] 
 **model_configs** | [**List[ModelConfigOutput]**](ModelConfigOutput.md) |  | [optional] 
-**model_suite** | **str** |  | [optional] [default to 'apache-2.0']
-**num_records** | **int** |  | [optional] [default to 100]
+**model_suite** | **str** |  | [optional] 
+**num_records** | **int** |  | [optional] 
 
 ## Example
 

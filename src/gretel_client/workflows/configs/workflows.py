@@ -60,14 +60,12 @@ class ModelConfig(ConfigBase):
 
 
 class Globals(ConfigBase):
-    num_records: Annotated[Optional[int], Field(title="Num Records")] = 100
-    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
+    num_records: Annotated[Optional[int], Field(title="Num Records")] = None
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = None
     model_configs: Annotated[
         Optional[List[ModelConfig]], Field(title="Model Configs")
     ] = None
-    error_rate: Annotated[
-        Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
-    ] = 0.2
+    error_rate: Annotated[Optional[float], Field(title="Error Rate")] = None
 
 
 class Workflow(ConfigBase):

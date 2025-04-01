@@ -53,13 +53,13 @@ class ModelConfig(BaseModel):
 
 
 class LLMType(str, Enum):
-    NATURAL_LANGUAGE = "natural_language"
+    TEXT = "text"
     CODE = "code"
     JUDGE = "judge"
 
 
 class TaskConfigWithModelAlias(BaseModel):
-    model_alias: Union[str, LLMType] = LLMType.NATURAL_LANGUAGE
+    model_alias: Union[str, LLMType] = LLMType.TEXT
 
     @field_serializer("model_alias")
     def serialize_model_alias(self, model_alias: Union[str, LLMType]) -> str:

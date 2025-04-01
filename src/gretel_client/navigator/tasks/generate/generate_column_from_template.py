@@ -54,7 +54,7 @@ class GenerateColumnFromTemplate(Task):
         prompt: str,
         data_config: DataConfig,
         name: str = DEFAULT_RESPONSE_COLUMN_NAME,
-        model_alias: Union[str, LLMType] = LLMType.NATURAL_LANGUAGE,
+        model_alias: Union[str, LLMType] = LLMType.TEXT,
         system_prompt: Optional[str] = None,
         workflow_label: Optional[str] = None,
         client: Optional[Client] = None,
