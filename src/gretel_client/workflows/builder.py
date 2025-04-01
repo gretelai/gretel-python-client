@@ -22,7 +22,6 @@ from gretel_client._api.models.exec_batch_request import ExecBatchRequest
 from gretel_client._api.models.task_envelope_for_validation import (
     TaskEnvelopeForValidation,
 )
-from gretel_client._api.models.workflow_input import WorkflowInput
 from gretel_client.errors import (
     BROKEN_RESPONSE_STREAM_ERROR_MESSAGE,
     NavigatorApiClientError,
@@ -466,7 +465,7 @@ class WorkflowBuilder:
         """
         with self._api_provider.requests().post(
             "/v2/workflows/exec_streaming",
-            json=WorkflowInput(**self.to_dict()).model_dump(exclude_unset=True),
+            json=self.to_dict(),
             stream=True,
         ) as response:
             _check_for_error_response(response)
