@@ -11,7 +11,7 @@ from gretel_client._hybrid.creds_encryption import CredentialsEncryption
 # Valid case 2: "//cloudkms.googleapis.com/projects/<PROJECT_ID>/locations/<LOCATION>/keyRings/<KEY_RING_ID>/cryptoKeys/<KEY_ID>"
 # See: https://regex101.com/r/HNe6BX/3
 _REGEX_KMS_PATTERN = re.compile(
-    "^(?://cloudkms\.googleapis\.com/)?projects/(?P<PROJECT_ID>[^/]+)/locations/(?P<LOCATION>[^/]+)/keyRings/(?P<KEY_RING_ID>[^/]+)/cryptoKeys/(?P<KEY_ID>[^/\s]+)$"
+    r"^(?://cloudkms\.googleapis\.com/)?projects/(?P<PROJECT_ID>[^/]+)/locations/(?P<LOCATION>[^/]+)/keyRings/(?P<KEY_RING_ID>[^/]+)/cryptoKeys/(?P<KEY_ID>[^/\s]+)$"
 )
 
 
