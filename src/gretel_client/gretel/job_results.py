@@ -195,7 +195,9 @@ class TransformResults(GretelJobResults):
     transform_logs: Optional[List[dict]] = None
     """Logs created during Transform job."""
 
-    transformed_df: Optional[pd.DataFrame] = None  # type: ignore
+    # `pd.DataFrame` must be quoted because it is conditionally
+    # imported in this file.
+    transformed_df: Optional["pd.DataFrame"] = None
     """A DataFrame of the transformed table. This will
     not be populated until the trasnforms job succeeds."""
 
