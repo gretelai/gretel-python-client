@@ -1,10 +1,11 @@
 from gretel_client.workflows.configs.tasks import (
+    BernoulliMixtureSamplerParams,
     BernoulliSamplerParams,
     BinomialSamplerParams,
     CategorySamplerParams,
     CodeLang,
     DataConfig,
-    DistributionSamplerParams,
+    DatetimeSamplerParams,
     GaussianSamplerParams,
     OutputType,
     PersonSamplerParams,
@@ -12,9 +13,9 @@ from gretel_client.workflows.configs.tasks import (
     Rubric,
     SamplingSourceType,
     SamplingStrategy,
+    ScipySamplerParams,
     SubcategoryParams,
+    TimeDeltaParams,
     UniformSamplerParams,
     UUIDParams,
 )
-
-ScipySamplerParams = DistributionSamplerParams

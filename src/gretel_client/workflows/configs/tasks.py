@@ -200,14 +200,48 @@ class GenerateColumnFromExpression(ConfigBase):
     dtype: Annotated[Optional[Dtype], Field(title="Dtype")] = "str"
 
 
+class BernoulliMixtureSamplerParams(ConfigBase):
+    p: Annotated[
+        float,
+        Field(
+            description="Bernoulli distribution probability of success.",
+            ge=0.0,
+            le=1.0,
+            title="P",
+        ),
+    ]
+    dist_name: Annotated[
+        str,
+        Field(
+            description="Mixture distribution name. Samples will be equal to the distribution sample with probability `p`, otherwise equal to 0. Must be a valid scipy.stats distribution name.",
+            title="Dist Name",
+        ),
+    ]
+    dist_params: Annotated[
+        Dict[str, Any],
+        Field(
+            description="Parameters of the scipy.stats distribution given in `dist_name`.",
+            title="Dist Params",
+        ),
+    ]
+
+
 class BernoulliSamplerParams(ConfigBase):
-    p: Annotated[float, Field(description="Probability of success.", title="P")]
+    p: Annotated[
+        float, Field(description="Probability of success.", ge=0.0, le=1.0, title="P")
+    ]
 
 
 class BinomialSamplerParams(ConfigBase):
     n: Annotated[int, Field(description="Number of trials.", title="N")]
     p: Annotated[
-        float, Field(description="Probability of success on each trial.", title="P")
+        float,
+        Field(
+            description="Probability of success on each trial.",
+            ge=0.0,
+            le=1.0,
+            title="P",
+        ),
     ]
 
 
@@ -267,19 +301,6 @@ class DatetimeSamplerParams(ConfigBase):
     ] = "D"
 
 
-class DistributionSamplerParams(ConfigBase):
-    dist_name: Annotated[
-        str, Field(description="Name of a scipy.stats distribution.", title="Dist Name")
-    ]
-    dist_params: Annotated[
-        Dict[str, Any],
-        Field(
-            description="Parameters of the scipy.stats distribution given in `dist_name`.",
-            title="Dist Params",
-        ),
-    ]
-
-
 class GaussianSamplerParams(ConfigBase):
     mean: Annotated[
         float, Field(description="Mean of the Gaussian distribution", title="Mean")
@@ -331,6 +352,7 @@ class PoissonSamplerParams(ConfigBase):
 
 class SamplingSourceType(str, Enum):
     BERNOULLI = "bernoulli"
+    BERNOULLI_MIXTURE = "bernoulli_mixture"
     BINOMIAL = "binomial"
     CATEGORY = "category"
     DATETIME = "datetime"
@@ -342,6 +364,19 @@ class SamplingSourceType(str, Enum):
     TIMEDELTA = "timedelta"
     UNIFORM = "uniform"
     UUID = "uuid"
+
+
+class ScipySamplerParams(ConfigBase):
+    dist_name: Annotated[
+        str, Field(description="Name of a scipy.stats distribution.", title="Dist Name")
+    ]
+    dist_params: Annotated[
+        Dict[str, Any],
+        Field(
+            description="Parameters of the scipy.stats distribution given in `dist_name`.",
+            title="Dist Params",
+        ),
+    ]
 
 
 class SubcategoryParams(ConfigBase):
@@ -1595,11 +1630,12 @@ class ConditionalDataColumn(ConfigBase):
             TimeDeltaParams,
             UUIDParams,
             BernoulliSamplerParams,
+            BernoulliMixtureSamplerParams,
             BinomialSamplerParams,
             GaussianSamplerParams,
             PoissonSamplerParams,
             UniformSamplerParams,
-            DistributionSamplerParams,
+            ScipySamplerParams,
         ],
         Field(title="Params"),
     ]
@@ -1615,11 +1651,12 @@ class ConditionalDataColumn(ConfigBase):
                     TimeDeltaParams,
                     UUIDParams,
                     BernoulliSamplerParams,
+                    BernoulliMixtureSamplerParams,
                     BinomialSamplerParams,
                     GaussianSamplerParams,
                     PoissonSamplerParams,
                     UniformSamplerParams,
-                    DistributionSamplerParams,
+                    ScipySamplerParams,
                 ],
             ]
         ],
