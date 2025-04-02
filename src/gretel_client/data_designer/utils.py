@@ -11,7 +11,7 @@ import requests
 
 from jinja2 import meta
 from jinja2.sandbox import ImmutableSandboxedEnvironment
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
@@ -157,6 +157,8 @@ class WithPrettyRepr:
 
     For use in notebook displays of objects.
     """
+
+    model_config = ConfigDict(use_enum_values=True)
 
     def __repr__(self) -> str:
         """Base Repr implementation.

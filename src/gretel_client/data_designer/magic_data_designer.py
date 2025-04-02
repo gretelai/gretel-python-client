@@ -11,7 +11,7 @@ from typing import Any, Generic, Optional, Self, TypeAlias, TypeVar
 
 import rich
 
-from rich.console import Console
+from rich.console import Console, Group
 from rich.panel import Panel
 from rich.pretty import Pretty
 from rich.prompt import Prompt
@@ -189,14 +189,8 @@ def pprint_datacolumn(column: AIDDColumnT, use_html: bool = False) -> None:
         pass
     else:
         console = Console(theme=RICH_CONSOLE_THEME)
-        console.print(
-            Panel(
-                column,
-                title=f"🪄 Generated Column Config for {pprint_column_name(column.name)}",
-                title_align="left",
-                style="gold3",
-            )
-        )
+        render_group = Group(column)
+        console.print(render_group)
 
 
 def make_panel_grid(items: list[Any], columns: int, syntax: Optional[str]) -> Table:
