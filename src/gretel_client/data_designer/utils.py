@@ -1,10 +1,11 @@
+import collections
 import inspect
 import json
 import re
 
 from datetime import date
 from pathlib import Path
-from typing import Any, Type
+from typing import Any, Callable, Generic, Self, Type, TypeVar
 
 import pandas as pd
 import requests
@@ -183,3 +184,41 @@ class WithPrettyRepr:
 
     def __rich_console__(self, console, options):
         yield Pretty(self)
+
+
+KT = TypeVar("KT")
+VT = TypeVar("VT")
+
+
+class CallbackOnMutateDict(collections.UserDict, Generic[KT, VT]):
+    """
+    A dictionary-like class that calls a callback function
+    whenever its contents are mutated.
+    """
+
+    _callback: Callable[[], None]
+
+    def __init__(
+        self,
+        callback: Callable[[], None],
+    ):
+        if not callable(callback):
+            raise TypeError("callback must be callable")
+
+        super().__init__()
+        self._callback = callback
+
+    def __setitem__(self, key: KT, value: VT):
+        """Called for: d[key] = value"""
+        super().__setitem__(key, value)
+        self._callback()
+
+    def __delitem__(self, key: KT):
+        """Called for: del d[key]"""
+        super().__delitem__(key)
+        self._callback()
+
+    def __ior__(self, other) -> Self:
+        super().__ior__(other)
+        self._callback()
+        return self

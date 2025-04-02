@@ -42,6 +42,7 @@ from gretel_client.data_designer.types import (
     SeedDataset,
 )
 from gretel_client.data_designer.utils import (
+    CallbackOnMutateDict,
     fetch_config_if_remote,
     get_sampler_params,
     get_task_log_emoji,
@@ -126,15 +127,19 @@ class DataDesigner:
         self._model_suite = model_suite
         self._model_configs = model_configs
         self._seed_dataset = seed_dataset
-        self._columns = columns or {}
-        self._constraints = constraints or {}
         self._evaluation_report = evaluation_report
         self._task_registry = Registry()
         self._files = self._gretel_resource_provider.files
         self._workflow_manager = self._gretel_resource_provider.workflows
         self._repr_html_style = DEFAULT_REPR_HTML_STYLE
         self._latent_columns: dict[str, PersonSamplerParams] = {}
+        self._constraints = constraints or {}
+
+        ## Synchronization: Cause any mutation of these dictionaries to trigger a reset on the magic object
         self.magic = MagicDataDesignerEditor(self)
+        self._columns = CallbackOnMutateDict(self.magic.reset)
+        self._columns |= columns or {}
+
         if person_samplers:
             self.with_person_samplers(person_samplers)
 
@@ -158,7 +163,6 @@ class DataDesigner:
                 "Seed columns cannot be deleted. Please update the seed dataset instead."
             )
         self._columns.pop(column_name, None)
-        self.magic.reset()
         return self
 
     def add_column(
@@ -179,7 +183,6 @@ class DataDesigner:
                 f"Columns must be one of {[t.__name__ for t in AIDDColumnT.__args__]}."
             )
         self._columns[column.name] = column
-        self.magic.reset()
         return self
 
     def get_constraint(self, target_column: str) -> ColumnConstraint | None:
@@ -292,6 +295,7 @@ class DataDesigner:
             )
             if not keep_person_columns:
                 self._latent_columns[name] = person_params
+
         return self
 
     def with_seed_dataset(
@@ -323,6 +327,7 @@ class DataDesigner:
             sampling_strategy=sampling_strategy,
             with_replacement=with_replacement,
         )
+
         return self
 
     @property

@@ -23,6 +23,7 @@ from gretel_client.data_designer.constants import NordColor
 from gretel_client.data_designer.types import (
     AIDDColumnT,
     LLMGenColumn,
+    MagicColumnT,
     ModelSuite,
     Person,
     SamplerColumn,
@@ -305,18 +306,55 @@ def remote_streaming_execute_stateless_task(
 
 @dataclass
 class DataDesignerState:
-    """State mangement object for DD columns."""
+    """State management for the DD object.
 
-    columns: dict[str, AIDDColumnT]
+    This object is used to save, edit, or restore the state of a DataDesigner
+    object.
+
+    Attributes:
+        columns (dict[str, MagicColumnT]): A dictionary mapping of column
+            names to column configuration definitions; includes any columns
+            that may have been given in a seed dataset.
+
+    Methods:
+        from_object(dd_obj: DataDesigner): Class initialization method
+            used to create a DataDesignerState object from an existing
+            DataDesigner object.
+
+        set_data_designer_object(dd_obj: DataDesigner): Update the
+            state of the DataDesigner object in-place using this state
+            object.
+
+        fork(): Create a new copy of this DataDesignerState object.
+    """
+
+    columns: dict[str, MagicColumnT]
 
     @classmethod
     def from_object(cls, dd_obj) -> Self:
-        return cls(columns=deepcopy(dd_obj._columns))
+        """Create DataDesignerState from an existing DataDesigner object.
 
-    def export_to_object(self, dd_obj) -> None:
-        dd_obj._columns = deepcopy(self.columns)
+        Args:
+            dd_obj (DataDesigner): An initialized DataDesigner class object.
+
+        Returns:
+            DataDesignerState: The current "state" of the DD object.
+        """
+        ## We need to copy out the raw dictionary
+        local_copy = deepcopy(dd_obj._columns.data)
+        return cls(columns={**local_copy})
+
+    def set_data_designer_object(self, dd_obj) -> None:
+        """Set the state of a DataDesigner object to exactly match this state.
+
+        Args:
+            dd_obj (DataDesigner): An initialized DataDesigner class object.
+        """
+        ## Don't trigger the _columns update callback
+        dd_obj._columns.data = deepcopy(self.columns)
 
     def fork(self):
+        """Forks a new state copy."""
         return DataDesignerState(columns=deepcopy(self.columns))
 
 
@@ -341,7 +379,6 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
         self.model_suite = model_suite
         self._task_registry = Registry()
         self._dd_obj = dd_obj
-        self.reset()
 
     def reset(self):
         """Start over from scratch."""
@@ -350,7 +387,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
 
     def save(self):
         """Save current state into the source state."""
-        self._working_dd_state.export_to_object(self._dd_obj)
+        self._working_dd_state.set_data_designer_object(self._dd_obj)
 
         ## Print information on newly added columns.
         new_columns = set(self._working_dd_state.columns.keys()) - set(
@@ -365,7 +402,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
 
     def _run_and_display_preview(self, name: str, syntax: Optional[str] = None) -> None:
         # Export and then reset. Wonder if this could be a context manager.
-        self._working_dd_state.export_to_object(self._dd_obj)
+        self._working_dd_state.set_data_designer_object(self._dd_obj)
 
         console = Console(theme=RICH_CONSOLE_THEME)
         status_string = f"{action_fun_name()} samples of {pprint_column_name(name)}..."
@@ -373,7 +410,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
         with console.status(status_string, spinner="toggle10"):
             outs = self._dd_obj.preview()
 
-        self._source_dd_state.export_to_object(self._dd_obj)
+        self._source_dd_state.set_data_designer_object(self._dd_obj)
         pprint_outputs(outs, name, n=3, syntax=syntax)
 
     def _instruction_to_data_column(

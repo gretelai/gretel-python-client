@@ -1,9 +1,10 @@
 import json
 
 from datetime import date
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from gretel_client.data_designer.utils import (
+    CallbackOnMutateDict,
     camel_to_kebab,
     fetch_config_if_remote,
     get_task_log_emoji,
@@ -50,3 +51,54 @@ def test_fetch_config_if_remote():
         mock_get.return_value.content.decode.return_value = json.dumps(local_config)
         assert fetch_config_if_remote(remote_url) == json.dumps(local_config)
         assert fetch_config_if_remote(local_config) == local_config
+
+
+def test_callback_on_mutate_dict():
+    mock_fn = Mock()
+    mock_fn.return_value = None
+
+    test_dict = CallbackOnMutateDict(mock_fn)
+    test_dict["foo"] = "bar"
+    assert mock_fn.call_count == 1
+    mock_fn.reset_mock()
+
+    test_dict = CallbackOnMutateDict(mock_fn)
+    test_dict |= {"hi": "bye", "foo": "baz"}
+    test_dict["foo"] = "bar"
+    assert mock_fn.call_count == 2
+    mock_fn.reset_mock()
+
+    test_dict = CallbackOnMutateDict(mock_fn)
+    test_dict |= {"hi": "bye", "foo": "baz"}
+    test_dict.popitem()
+    test_dict.popitem()
+    assert mock_fn.call_count == 3
+    mock_fn.reset_mock()
+
+    test_dict = CallbackOnMutateDict(mock_fn)
+    test_dict |= {"hi": "bye", "foo": "baz"}
+    out = test_dict.pop("hi")
+    assert mock_fn.call_count == 2
+    assert out == "bye"
+    mock_fn.reset_mock()
+
+    test_dict = CallbackOnMutateDict(mock_fn)
+    test_dict |= {"hi": "bye", "foo": "baz"}
+    test_dict |= {"super": "hero"}
+    assert mock_fn.call_count == 2
+    assert test_dict == {"hi": "bye", "foo": "baz", "super": "hero"}
+    mock_fn.reset_mock()
+
+    test_dict = CallbackOnMutateDict(mock_fn)
+    test_dict |= {"hi": "bye", "foo": "baz"}
+    del test_dict["hi"]
+    assert mock_fn.call_count == 2
+    assert test_dict == {"foo": "baz"}
+    mock_fn.reset_mock()
+
+    test_dict = CallbackOnMutateDict(mock_fn)
+    test_dict |= {"hi": "bye", "foo": "baz"}
+    test_dict.update({"hi": "hello"})
+    assert mock_fn.call_count == 2
+    assert test_dict == {"hi": "hello", "foo": "baz"}
+    mock_fn.reset_mock()
