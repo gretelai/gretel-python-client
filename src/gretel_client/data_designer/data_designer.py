@@ -170,6 +170,8 @@ class DataDesigner:
         **kwargs,
     ) -> Self:
         if column is None:
+            if isinstance(type, str):
+                type = _validate_column_provider_type(type)
             column = self._get_column_from_kwargs(name=name, type=type, **kwargs)
         if not isinstance(column, AIDDColumnT):
             raise ValueError(
@@ -692,3 +694,18 @@ def _check_convert_to_json_str(
             else json.dumps(column_names, indent=indent)
         )
     )
+
+
+def _validate_column_provider_type(column_provider_type: str) -> ColumnProviderTypeT:
+    valid_provider_types = {t.value for t in list(ProviderType)}
+    valid_sampling_source_types = {t.value for t in list(SamplingSourceType)}
+    combined_valid_types = valid_provider_types.union(valid_sampling_source_types)
+    if column_provider_type not in combined_valid_types:
+        raise ValueError(
+            f"🛑 Invalid column provider type: '{column_provider_type}'. "
+            f"Valid options are: {list(combined_valid_types)}"
+        )
+    elif column_provider_type in valid_provider_types:
+        return ProviderType(column_provider_type)
+    else:
+        return SamplingSourceType(column_provider_type)

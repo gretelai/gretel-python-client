@@ -137,6 +137,12 @@ def test_column_operations():
     )
     assert isinstance(dd.get_column("code_judge_result"), LLMJudgeColumn)
 
+    # add column of invalid type
+    with pytest.raises(
+        ValueError, match="Invalid column provider type: 'invalid-type'."
+    ):
+        _ = dd.add_column(name="some_column", type="invalid-type")
+
 
 def test_constraint_operations():
     dd = (
