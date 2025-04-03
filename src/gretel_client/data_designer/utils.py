@@ -4,6 +4,7 @@ import json
 import re
 
 from datetime import date
+from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Generic, Self, Type, TypeVar
 
@@ -12,11 +13,10 @@ import requests
 
 from jinja2 import meta
 from jinja2.sandbox import ImmutableSandboxedEnvironment
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 from pygments import highlight
 from pygments.formatters import HtmlFormatter
 from pygments.lexers import PythonLexer
-from rich.pretty import Pretty
 
 from gretel_client.data_designer.constants import (
     DEFAULT_REPR_HTML_STYLE,
@@ -159,14 +159,18 @@ class WithPrettyRepr:
     For use in notebook displays of objects.
     """
 
-    model_config = ConfigDict(use_enum_values=True)
-
     def __repr__(self) -> str:
         """Base Repr implementation.
 
         Puts dict fields on new lines for legibility.
         """
-        field_repr = ",\n".join(f"  {k}={v!r}" for k, v in self.__dict__.items())
+
+        def _kv_to_string(k, v):
+            if isinstance(v, Enum):
+                v = v.value
+            return f"  {k}={v!r}"
+
+        field_repr = ",\n".join(_kv_to_string(k, v) for k, v in self.__dict__.items())
         return f"{self.__class__.__name__}(\n{field_repr}\n)"
 
     def _repr_html_(self) -> str:
@@ -183,7 +187,7 @@ class WithPrettyRepr:
         return REPR_HTML_TEMPLATE.format(css=css, highlighted_html=highlighted_html)
 
     def __rich_console__(self, console, options):
-        yield Pretty(self)
+        yield self.__repr__()
 
 
 KT = TypeVar("KT")

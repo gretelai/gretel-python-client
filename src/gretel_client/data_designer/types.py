@@ -114,11 +114,11 @@ class WithDAGColumnMixin:
         return []
 
 
-class SamplerColumn(tasks.ConditionalDataColumn, WithPrettyRepr): ...
+class SamplerColumn(WithPrettyRepr, tasks.ConditionalDataColumn): ...
 
 
 class LLMGenColumn(
-    tasks.GenerateColumnFromTemplate, WithDAGColumnMixin, WithPrettyRepr
+    WithPrettyRepr, tasks.GenerateColumnFromTemplate, WithDAGColumnMixin
 ):
     data_config: tasks.DataConfig = Field(
         default_factory=lambda: tasks.DataConfig(type=tasks.OutputType.TEXT, params={})
@@ -144,7 +144,7 @@ class LLMGenColumn(
         return self
 
 
-class LLMJudgeColumn(tasks.JudgeWithLlm, WithDAGColumnMixin, WithPrettyRepr):
+class LLMJudgeColumn(WithPrettyRepr, tasks.JudgeWithLlm, WithDAGColumnMixin):
     result_column: str = Field(..., alias="name")
 
     @property
@@ -156,7 +156,7 @@ class LLMJudgeColumn(tasks.JudgeWithLlm, WithDAGColumnMixin, WithPrettyRepr):
         return list(get_prompt_template_keywords(self.prompt))
 
 
-class CodeValidationColumn(AIDDConfigBase, WithDAGColumnMixin, WithPrettyRepr):
+class CodeValidationColumn(WithPrettyRepr, AIDDConfigBase, WithDAGColumnMixin):
     name: str
     code_lang: tasks.CodeLang
     target_column: str
@@ -179,7 +179,7 @@ class CodeValidationColumn(AIDDConfigBase, WithDAGColumnMixin, WithPrettyRepr):
 
 
 class ExpressionColumn(
-    tasks.GenerateColumnFromExpression, WithDAGColumnMixin, WithPrettyRepr
+    WithPrettyRepr, tasks.GenerateColumnFromExpression, WithDAGColumnMixin
 ):
 
     @property
@@ -187,7 +187,7 @@ class ExpressionColumn(
         return list(get_prompt_template_keywords(self.expr))
 
 
-class DataSeedColumn(AIDDConfigBase, WithPrettyRepr):
+class DataSeedColumn(WithPrettyRepr, AIDDConfigBase):
     name: str
     file_id: str
 

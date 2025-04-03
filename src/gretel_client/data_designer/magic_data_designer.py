@@ -175,7 +175,7 @@ def cast_datacolumn_to_existingcolumn(data_column: AIDDColumnT) -> ExistingColum
     return ExistingColumn(**args)
 
 
-def pprint_datacolumn(column: AIDDColumnT, use_html: bool = False) -> None:
+def pprint_datacolumn(column: AIDDColumnT, use_html: bool = True) -> None:
     """Pretty print the generation config.
 
     Assumes that a _rich_ implementation has already been made for the
