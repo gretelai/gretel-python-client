@@ -44,7 +44,7 @@ def get_task_log_emoji(task_name: str) -> str:
     return log_emoji
 
 
-def camel_to_kebab(s):
+def camel_to_kebab(s: str) -> str:
     return re.sub(r"(?<!^)(?=[A-Z])", "-", s).lower()
 
 

@@ -314,6 +314,13 @@ class GaussianSamplerParams(ConfigBase):
     ]
 
 
+class InequalityOperator(str, Enum):
+    LT = "lt"
+    LE = "le"
+    GT = "gt"
+    GE = "ge"
+
+
 class Sex(str, Enum):
     MALE = "Male"
     FEMALE = "Female"
@@ -1612,10 +1619,9 @@ class UniformDistribution(ConfigBase):
     params: UniformDistributionParams
 
 
-class ColumnConstraint(ConfigBase):
-    target_column: Annotated[str, Field(title="Target Column")]
-    type: ConstraintType
-    params: Annotated[Dict[str, Union[float, str]], Field(title="Params")]
+class ColumnConstraintParams(ConfigBase):
+    operator: InequalityOperator
+    rhs: Annotated[Union[float, str], Field(title="Rhs")]
 
 
 class ConditionalDataColumn(ConfigBase):
@@ -1663,23 +1669,6 @@ class ConditionalDataColumn(ConfigBase):
         Field(title="Conditional Params"),
     ] = {}
     convert_to: Annotated[Optional[str], Field(title="Convert To")] = None
-
-
-class DataSchema(ConfigBase):
-    columns: Annotated[
-        List[ConditionalDataColumn], Field(min_length=1, title="Columns")
-    ]
-    constraints: Annotated[
-        Optional[List[ColumnConstraint]], Field(title="Constraints")
-    ] = []
-
-
-class GenerateColumnsUsingSamplers(ConfigBase):
-    num_records: Annotated[Optional[int], Field(title="Num Records")] = 100
-    data_schema: DataSchema
-    max_rejections_factor: Annotated[
-        Optional[int], Field(title="Max Rejections Factor")
-    ] = 5
 
 
 class SeedCategory(ConfigBase):
@@ -1860,6 +1849,29 @@ class GenerateColumnFromTemplate(ConfigBase):
     system_prompt: Annotated[Optional[str], Field(title="System Prompt")] = None
     data_config: DataConfig
     description: Annotated[Optional[str], Field(title="Description")] = ""
+
+
+class ColumnConstraint(ConfigBase):
+    target_column: Annotated[str, Field(title="Target Column")]
+    type: ConstraintType
+    params: ColumnConstraintParams
+
+
+class DataSchema(ConfigBase):
+    columns: Annotated[
+        List[ConditionalDataColumn], Field(min_length=1, title="Columns")
+    ]
+    constraints: Annotated[
+        Optional[List[ColumnConstraint]], Field(title="Constraints")
+    ] = []
+
+
+class GenerateColumnsUsingSamplers(ConfigBase):
+    num_records: Annotated[Optional[int], Field(title="Num Records")] = 100
+    data_schema: DataSchema
+    max_rejections_factor: Annotated[
+        Optional[int], Field(title="Max Rejections Factor")
+    ] = 5
 
 
 class GenerateSamplingColumnConfigFromInstruction(ConfigBase):

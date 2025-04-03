@@ -68,13 +68,30 @@ class WorkflowValidationError(Exception):
     Use field_violations to access validation errors by field name.
     """
 
-    def __init__(self, msg, field_violations: Optional[list[FieldViolation]] = None):
+    def __init__(
+        self,
+        msg: str,
+        *,
+        task_name: str | None = None,
+        step_name: str | None = None,
+        field_violations: list[FieldViolation] | None = None,
+    ):
         super().__init__(msg)
         self._field_violations = field_violations or []
+        self._task_name = task_name
+        self._step_name = step_name
 
     @property
     def field_violations(self) -> list[FieldViolation]:
         return self._field_violations
+
+    @property
+    def task_name(self) -> str:
+        return self._task_name or ""
+
+    @property
+    def step_name(self) -> str:
+        return self._step_name or ""
 
 
 @dataclass
@@ -379,19 +396,19 @@ class WorkflowBuilder:
                     )
 
                 message = body.get("message")
-                logger.error(
-                    f"{message}: task: {step.task!r} step: {step.name!r}:",
+                raise WorkflowValidationError(
+                    message,
+                    task_name=step.task,
+                    step_name=step.name,
+                    field_violations=field_violations,
                 )
-
-                for violation in field_violations:
-                    logger.error(f"\t{violation}")
-
-                raise WorkflowValidationError(body.get("message"), field_violations)
             raise ex
 
         if not resp.valid:
             raise WorkflowValidationError(
-                f"Task {step.task!r} is not valid: {resp.message}"
+                f"Task {step.task!r} is not valid: {resp.message}",
+                task_name=step.task,
+                step_name=step.name,
             )
 
         return resp.message if resp.message else ""

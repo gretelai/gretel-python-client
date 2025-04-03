@@ -9,8 +9,11 @@ import yaml
 import gretel_client.data_designer.columns as C
 import gretel_client.data_designer.params as P
 
-from gretel_client.data_designer import DataDesigner
 from gretel_client.data_designer.aidd_config import AIDDConfig
+from gretel_client.data_designer.data_designer import (
+    DataDesigner,
+    DataDesignerValidationError,
+)
 from gretel_client.data_designer.types import (
     CodeValidationColumn,
     EvaluationReportT,
@@ -18,6 +21,7 @@ from gretel_client.data_designer.types import (
     LLMJudgeColumn,
     SamplerColumn,
 )
+from gretel_client.workflows.builder import FieldViolation, WorkflowValidationError
 from gretel_client.workflows.configs.tasks import (
     ConcatDatasets,
     DropColumns,
@@ -152,22 +156,22 @@ def test_constraint_operations():
         .add_constraint(
             target_column="age",
             type="scalar_inequality",
-            params={"operator": "<", "rhs": 35},
+            params={"operator": "lt", "rhs": 35},
         )
         # add another constraint to replace the old one
         .add_constraint(
             target_column="age",
             type="scalar_inequality",
-            params={"operator": ">", "rhs": 30},
+            params={"operator": "gt", "rhs": 30},
         )
         .add_constraint(
             target_column="height",
             type="column_inequality",
-            params={"operator": ">", "rhs_column": "age"},
+            params={"operator": "gt", "rhs": "age"},
         )
     )
-    assert dd.get_constraint(target_column="age").params["operator"] == ">"
-    assert dd.get_constraint(target_column="age").params["rhs"] == 30
+    assert dd.get_constraint(target_column="age").params.operator == "gt"
+    assert dd.get_constraint(target_column="age").params.rhs == 30
 
     # delete constraint by name
     dd.delete_constraint(target_column="height")
@@ -231,6 +235,34 @@ def test_export_operations(stub_aidd_config_str):
 
     with pytest.raises(ValueError, match="The file extension must be one of"):
         dd.export_config(path="config.txt")
+
+
+def test_build_workflow_validation_error_handling(
+    stub_aidd_config_str, mock_low_level_sdk_resources
+):
+    stub_field_err_msg = "stub field error message"
+    stub_violation = FieldViolation(
+        field="stub.field",
+        error_message=stub_field_err_msg,
+    )
+    mock_low_level_sdk_resources.mock_workflow_builder.add_step.side_effect = (
+        WorkflowValidationError(
+            "Stub error message",
+            step_name="stub-step-name",
+            task_name="stub_task_name",
+            field_violations=[stub_violation],
+        )
+    )
+
+    dd = DataDesigner.from_config(
+        gretel_resource_provider=mock_low_level_sdk_resources.mock_resource_provider,
+        config=stub_aidd_config_str,
+    )
+    with pytest.raises(DataDesignerValidationError) as e:
+        _ = dd.preview()
+    err_msg = str(e.value)
+    assert "error(s) found" in err_msg
+    assert stub_field_err_msg in err_msg
 
 
 def test_workflow_builder_preview_integration(

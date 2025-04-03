@@ -124,6 +124,6 @@ constraints:
     - target_column: age
       type: scalar_inequality
       params:
-        operator: "<"
+        operator: "lt"
         rhs: 65
 """

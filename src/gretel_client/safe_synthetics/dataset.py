@@ -14,7 +14,11 @@ from gretel_client.safe_synthetics.blueprints import (
     resolve_task_blueprint,
     TaskConfigError,
 )
-from gretel_client.workflows.builder import task_to_step, WorkflowBuilder
+from gretel_client.workflows.builder import (
+    task_to_step,
+    WorkflowBuilder,
+    WorkflowValidationError,
+)
 from gretel_client.workflows.configs.registry import Registry
 from gretel_client.workflows.configs.tasks import EvaluateSsDataset
 from gretel_client.workflows.configs.workflows import Step
@@ -22,6 +26,20 @@ from gretel_client.workflows.tasks import TaskConfig
 from gretel_client.workflows.workflow import WorkflowRun
 
 logger = logging.getLogger(__name__)
+
+
+def handle_workflow_validation_error(func):
+
+    def wrapper(self, *args, **kwargs):
+        try:
+            return func(self, *args, **kwargs)
+        except WorkflowValidationError as e:
+            logger.error(f"{str(e)}: task: {e.task_name!r} step: {e.step_name!r}:")
+            for violation in e.field_violations:
+                logger.error(f"\t{violation}")
+            raise e
+
+    return wrapper
 
 
 class SafeSyntheticModelRegistry:
@@ -178,6 +196,7 @@ class SafeSyntheticDataset:
     def preview(self) -> None:
         self._builder.preview()
 
+    @handle_workflow_validation_error
     def create(self, new_workflow: bool = False, wait: bool = True) -> WorkflowRun:
         # Ensures that a new workflow is created for the run
         if new_workflow:

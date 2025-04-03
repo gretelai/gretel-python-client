@@ -43,6 +43,7 @@ from gretel_client.data_designer.types import (
 )
 from gretel_client.data_designer.utils import (
     CallbackOnMutateDict,
+    camel_to_kebab,
     fetch_config_if_remote,
     get_sampler_params,
     get_task_log_emoji,
@@ -57,16 +58,19 @@ from gretel_client.workflows.builder import (
     Message,
     WorkflowBuilder,
     WorkflowInterruption,
+    WorkflowValidationError,
 )
 from gretel_client.workflows.configs.registry import Registry
 from gretel_client.workflows.configs.tasks import (
     CodeLang,
     ColumnConstraint,
+    ColumnConstraintParams,
     ConstraintType,
     DataSchema,
 )
 from gretel_client.workflows.configs.tasks import Dtype as ExprDtype
 from gretel_client.workflows.configs.tasks import (
+    GenerateColumnsUsingSamplers,
     PersonSamplerParams,
     SamplingSourceType,
     SamplingStrategy,
@@ -80,6 +84,29 @@ logger = get_logger(__name__, level=logging.INFO)
 
 _type_builtin = type
 _SAMPLER_PARAMS: dict[SamplingSourceType, Type[BaseModel]] = get_sampler_params()
+
+
+class DataDesignerValidationError(Exception): ...
+
+
+def handle_workflow_validation_error(func):
+
+    def wrapper(self, *args, **kwargs):
+        try:
+            return func(self, *args, **kwargs)
+        except WorkflowValidationError as e:
+            err_message = (
+                "🛑 Validation error(s) found! Please correct the following and retry:"
+            )
+            violations = ""
+            for violation in e.field_violations:
+                violations += f"\n|-- {violation.error_message}"
+                if camel_to_kebab(GenerateColumnsUsingSamplers.__name__) == e.step_name:
+                    violations += "\n|  |-- Field path: {violation.field}"
+            err_message += violations
+            raise DataDesignerValidationError(err_message) from None
+
+    return wrapper
 
 
 class DataDesigner:
@@ -193,8 +220,13 @@ class DataDesigner:
         return self
 
     def add_constraint(
-        self, target_column: str, type: ConstraintType, params: dict[str, str | float]
+        self,
+        target_column: str,
+        type: ConstraintType,
+        params: dict[str, str | float] | ColumnConstraintParams,
     ) -> Self:
+        if isinstance(params, dict):
+            params = ColumnConstraintParams.model_validate(params)
         self._constraints[target_column] = ColumnConstraint(
             target_column=target_column,
             type=type,
@@ -218,7 +250,6 @@ class DataDesigner:
     def preview(self, verbose_logging: bool = False) -> PreviewResults:
         logger.info("🚀 Generating preview")
         workflow = self._build_workflow(num_records=10, verbose_logging=verbose_logging)
-
         preview = self._capture_preview_result(
             workflow, verbose_logging=verbose_logging
         )
@@ -374,10 +405,10 @@ class DataDesigner:
             )
         ]
 
+    @handle_workflow_validation_error
     def _build_workflow(
         self, num_records: int, verbose_logging: bool = False
     ) -> WorkflowBuilder:
-
         if self._seed_dataset is None and len(self._sampler_columns) == 0:
             raise ValueError(
                 "🛑 Data Designer needs a seed dataset and/or at least one column that is "
@@ -408,7 +439,8 @@ class DataDesigner:
                 with_replacement=self._seed_dataset.with_replacement,
             )
             builder.add_step(
-                step=sample_from_dataset_step, step_inputs=[self._seed_dataset.file_id]
+                step=sample_from_dataset_step,
+                step_inputs=[self._seed_dataset.file_id],
             )
             last_step_added = sample_from_dataset_step
 
@@ -426,7 +458,10 @@ class DataDesigner:
                     num_records=num_records,
                 )
             )
-            builder.add_step(step=columns_using_samples_step, step_inputs=[])
+            builder.add_step(
+                step=columns_using_samples_step,
+                step_inputs=[],
+            )
             last_step_added = columns_using_samples_step
 
         ########################################################
@@ -454,7 +489,10 @@ class DataDesigner:
 
         for column_name in sorted_columns_names:
             next_step = self._get_next_dag_step(column_name)
-            builder.add_step(step=next_step, step_inputs=[last_step_added])
+            builder.add_step(
+                step=next_step,
+                step_inputs=[last_step_added],
+            )
             last_step_added = next_step
 
         ########################################################
@@ -466,7 +504,8 @@ class DataDesigner:
                 columns=list(self._latent_columns.keys()),
             )
             builder.add_step(
-                step=drop_latent_columns_step, step_inputs=[last_step_added]
+                step=drop_latent_columns_step,
+                step_inputs=[last_step_added],
             )
             last_step_added = drop_latent_columns_step
 
