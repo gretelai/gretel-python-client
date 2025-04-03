@@ -102,7 +102,7 @@ def handle_workflow_validation_error(func):
             for violation in e.field_violations:
                 violations += f"\n|-- {violation.error_message}"
                 if camel_to_kebab(GenerateColumnsUsingSamplers.__name__) == e.step_name:
-                    violations += "\n|  |-- Field path: {violation.field}"
+                    violations += f"\n|  |-- Field path: {violation.field}"
             err_message += violations
             raise DataDesignerValidationError(err_message) from None
 
