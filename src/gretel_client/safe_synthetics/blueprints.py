@@ -6,7 +6,7 @@ import yaml
 
 from smart_open import open
 
-BASE_BLUEPRINT_REPO = "https://raw.githubusercontent.com/gretelai/gretel-blueprints/d6dde2201aa2cf832275625849294daf5d56a6c4/config_templates/gretel/tasks"
+BASE_BLUEPRINT_REPO = "https://raw.githubusercontent.com/gretelai/gretel-blueprints/refs/heads/main/config_templates/gretel/tasks"
 
 
 class TaskConfigError(Exception): ...
