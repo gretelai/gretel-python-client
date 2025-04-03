@@ -451,6 +451,12 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
             task_output["type"] = task_output.pop("sampling_type")
 
         new_data_column = aidd_column_type.model_validate(task_output)
+
+        ## Double check the data column to make sure thats its model_suite
+        ## matches what was specified in the original dd object.
+        if hasattr(new_data_column, "model_suite"):
+            new_data_column.model_suite = self._dd_obj.model_suite
+
         pprint_datacolumn(new_data_column)
         self._working_dd_state.columns[task.name] = new_data_column
 
