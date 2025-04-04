@@ -1,13 +1,16 @@
 """Defines magic interactions with DataDesigner
 """
 
+import functools
+import inspect
 import json
 import logging
 import random
 
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Generic, Optional, Self, TypeAlias, TypeVar
+from itertools import cycle
+from typing import Any, Generator, Generic, Optional, Self, TypeAlias, TypeVar
 
 import rich
 
@@ -29,7 +32,8 @@ from gretel_client.data_designer.types import (
     SamplerColumn,
 )
 from gretel_client.helpers import experimental, is_jupyter
-from gretel_client.workflows.builder import WorkflowInterruption
+from gretel_client.workflows.builder import Message, WorkflowInterruption
+from gretel_client.workflows.configs.base import ConfigBase
 from gretel_client.workflows.configs.registry import Registry
 from gretel_client.workflows.configs.tasks import (
     DataConfig,
@@ -42,6 +46,7 @@ from gretel_client.workflows.configs.tasks import (
     SamplingSourceType,
 )
 from gretel_client.workflows.configs.workflows import Globals
+from gretel_client.workflows.manager import WorkflowManager
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +95,7 @@ RICH_CONSOLE_THEME = Theme(
     }
 )
 
+
 # Aliasing
 AIDDColumnConfigGenerationTask: TypeAlias = (
     GenerateColumnConfigFromInstruction | GenerateSamplingColumnConfigFromInstruction
@@ -97,6 +103,13 @@ AIDDColumnConfigGenerationTask: TypeAlias = (
 DataDesignerT = TypeVar(
     "DataDesignerT"
 )  # Prevent circular imports on DataDesigner object
+
+
+# Error handling
+class MagicError(Exception): ...
+
+
+class RemoteExecutionError(Exception): ...
 
 
 def action_fun_name() -> str:
@@ -123,11 +136,39 @@ def pprint_user_instruction(column: str, instruction: str):
 def with_processing_animation(func):
     def wrapper(task, *args, **kwargs):
         console = Console()
-        column_name = getattr(task, "name", "")
-        status_string = f"{action_fun_name()} {pprint_column_name(column_name)}"
-        with console.status(status_string, spinner="toggle10"):
-            return func(task, *args, **kwargs)
+        column_name = pprint_column_name(getattr(task, "name", ""))
+        action_str = action_fun_name()
+        status_string = f"{action_str} {column_name}"
 
+        with console.status(status_string, spinner="toggle10") as status:
+            # Execute the wrapped function
+            result_or_gen = func(task, *args, **kwargs)
+
+            # Check if the result is a generator
+            if inspect.isgenerator(result_or_gen):
+                final_result = None
+                try:
+                    while True:
+                        # Get the next item from the generator
+                        yielded_item = next(result_or_gen)
+
+                        # If it's a string, treat it as a status update
+                        if isinstance(yielded_item, str):
+                            status_update_message = yielded_item
+                            updated_status = f"{status_string} [cyan]({status_update_message})[/cyan]"
+                            status.update(updated_status)
+                        else:
+                            pass  # Ignore non-string yields for status updates
+
+                except StopIteration as e:
+                    # Generator finished, capture the return value
+                    final_result = e.value
+                return final_result
+            else:
+                # If it's not a generator, return the result directly
+                return result_or_gen
+
+    functools.update_wrapper(wrapper, func)
     return wrapper
 
 
@@ -255,54 +296,63 @@ def pprint_outputs(
     )
 
 
+def is_cant_find_tool_error(interruption: WorkflowInterruption) -> bool:
+    """Check a workflow interruption for sampler failure."""
+    return "could not find an appropriate sampler" in interruption.message.lower()
+
+
+def is_model_usage_log_line(message: Message) -> bool:
+    """Check if the message is a model usage log line"""
+    return message.type == "log_line" and "Model usage" in message.payload["msg"]
+
+
 @with_processing_animation
 def remote_streaming_execute_stateless_task(
-    task, workflow_manager, globals: Globals = Globals(), verbose: bool = False
-) -> Any:
+    task: ConfigBase,
+    workflow_manager: WorkflowManager,
+    output_type_name: str,
+    globals: Globals = Globals(),
+) -> Generator[str, None, dict]:
     """Execute a stateless task in streaming mode.
 
     Args:
-        task: An instanstiated task configuration from the task registry.
+        task (ConfigBase): An instanstiated task configuration from the task registry.
         workflow_manager: An instantiated workflow manager object from
             somewhere else.
+        output_type_name (str): Specifies the output type that
+            should be retrieved from the message stream.
         globals (optional, Globals): Some globals defintion to give to the
             workflwo builder.
 
     Returns:
         Whatever the output of this task run is.
     """
+    processing_emojis = ["🛠️", "🧱", "🏗️", "🪄", "💭", "🧠", "🧐"]
+    processing_emoji_cycle = cycle(processing_emojis)
     workflow = workflow_manager.builder(globals=globals)
     workflow.add_step(task)
-    outputs = []
 
     ## Now we need to call against the task
     for message in workflow.iter_preview():
         if isinstance(message, WorkflowInterruption):
-            logger.error(message.message)
-            raise Exception("Remote task execution failed: WorkflowInterruption")
+            if is_cant_find_tool_error(message):
+                raise MagicError(
+                    "Could not not find an appropriate sampling column type for your request; try rephrasing."
+                )
+            else:
+                raise RemoteExecutionError(message.message)
 
-        if message.has_log_message:
-            log_message = message.log_message
-            log_str = ""
-            log_fn = lambda _: None
+        if message.type == "log_line" and not is_model_usage_log_line(message):
+            yield message.payload.get("msg", next(processing_emoji_cycle))
+        elif message.type == output_type_name:
+            return message.payload
+        else:
+            yield next(processing_emoji_cycle)
 
-            if log_message.is_info and verbose:
-                log_fn = logger.info
-            elif log_message.is_warning:
-                log_fn = logger.warning
-            elif log_message.is_error:
-                raise Exception(f"Remote task execution failed. {log_message}")
-
-            log_fn(log_str)
-
-        if message.has_output:
-            outputs.append(message.payload)
-
-    # We only expected a single output, but catch if something odd happens
-    if len(outputs) > 1:
-        raise Exception(f"Unexpected number of outputs received: {len(outputs)}")
-
-    return outputs[0]
+    # If we never encountered the specified output, then we have a problem
+    raise RemoteExecutionError(
+        "Stream halted before receiving output. Contact support if this issue persists."
+    )
 
 
 @dataclass
@@ -425,6 +475,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
 
         if isinstance(task, GenerateColumnConfigFromInstruction):
             aidd_column_type = LLMGenColumn
+            output_type_name = "generate_column_from_template_config"
             if edit_instruction:
                 _task.instruction = edit_instruction
                 _task.edit_task = GenerateColumnFromTemplateConfig.model_validate(
@@ -432,6 +483,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
                 )
         elif isinstance(task, GenerateSamplingColumnConfigFromInstruction):
             aidd_column_type = SamplerColumn
+            output_type_name = "data_column_from_sampling_config"
             if edit_instruction:
                 _task.description = edit_instruction
         else:
@@ -440,12 +492,12 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
             )
 
         task_output = remote_streaming_execute_stateless_task(
-            _task,
-            self._dd_obj._workflow_manager,
+            task=_task,
+            workflow_manager=self._dd_obj._workflow_manager,
+            output_type_name=output_type_name,
             globals=Globals(
                 model_suite=self.model_suite,
             ),
-            verbose=False,
         )
 
         if isinstance(task, GenerateSamplingColumnConfigFromInstruction):
