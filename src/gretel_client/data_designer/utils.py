@@ -61,7 +61,7 @@ def make_date_obj_serializable(obj: dict) -> dict:
     return json.loads(json.dumps(obj, cls=DateTimeEncoder))
 
 
-def code_lang_to_syntax_lexer(code_lang: tasks.CodeLang) -> str:
+def code_lang_to_syntax_lexer(code_lang: tasks.CodeLang | str) -> str:
     """Convert the code language to a syntax lexer for Pygments.
 
     Reference: https://pygments.org/docs/lexers/
@@ -82,7 +82,7 @@ def code_lang_to_syntax_lexer(code_lang: tasks.CodeLang) -> str:
         case tasks.CodeLang.POSTGRES:
             return "postgres"
         case _:
-            raise ValueError(f"Unsupported code language: {code_lang}")
+            return code_lang
 
 
 class UserJinjaTemplateSyntaxError(Exception): ...

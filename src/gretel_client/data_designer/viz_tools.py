@@ -50,7 +50,7 @@ class AIDDMetadata(BaseModel):
     expression_columns: list[str] = []
     evaluation_columns: list[str] = []
     person_samplers: list[str] = []
-    code_langs: list[CodeLang] = []
+    code_langs: list[CodeLang | str] = []
     eval_type: LLMJudgePromptTemplateType | None = None
 
     @property
