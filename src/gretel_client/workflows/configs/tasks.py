@@ -183,8 +183,8 @@ class OutputType(str, Enum):
 
 
 class UniformDistributionParams(ConfigBase):
-    low: Annotated[float, Field(ge=0.0, le=1.0, title="Low")]
-    high: Annotated[float, Field(ge=0.0, le=1.0, title="High")]
+    low: Annotated[float, Field(title="Low")]
+    high: Annotated[float, Field(title="High")]
 
 
 class Dtype(str, Enum):

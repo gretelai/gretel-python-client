@@ -20,8 +20,8 @@ import re  # noqa: F401
 
 from typing import Any, ClassVar, Dict, List, Optional, Set, Union
 
-from pydantic import BaseModel, ConfigDict, Field
-from typing_extensions import Annotated, Self
+from pydantic import BaseModel, ConfigDict, StrictFloat, StrictInt
+from typing_extensions import Self
 
 
 class UniformDistributionParams(BaseModel):
@@ -29,14 +29,8 @@ class UniformDistributionParams(BaseModel):
     UniformDistributionParams
     """  # noqa: E501
 
-    high: Union[
-        Annotated[float, Field(le=1.0, strict=True, ge=0.0)],
-        Annotated[int, Field(le=1, strict=True, ge=0)],
-    ]
-    low: Union[
-        Annotated[float, Field(le=1.0, strict=True, ge=0.0)],
-        Annotated[int, Field(le=1, strict=True, ge=0)],
-    ]
+    high: Union[StrictFloat, StrictInt]
+    low: Union[StrictFloat, StrictInt]
     __properties: ClassVar[List[str]] = ["high", "low"]
 
     model_config = ConfigDict(
