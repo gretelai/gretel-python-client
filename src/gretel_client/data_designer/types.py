@@ -14,6 +14,7 @@ from gretel_client.data_designer.constants import (
     VALIDATE_SQL_COLUMN_SUFFIXES,
 )
 from gretel_client.data_designer.utils import (
+    assert_valid_jinja2_template,
     get_prompt_template_keywords,
     WithPrettyRepr,
 )
@@ -129,6 +130,11 @@ class LLMGenColumn(
         return list(get_prompt_template_keywords(self.prompt))
 
     @model_validator(mode="after")
+    def assert_prompt_valid_jinja(self) -> Self:
+        assert_valid_jinja2_template(self.prompt)
+        return self
+
+    @model_validator(mode="after")
     def validate_data_config_params(self) -> Self:
         if self.data_config.type == tasks.OutputType.STRUCTURED:
             if "model" in self.data_config.params:
@@ -185,6 +191,11 @@ class ExpressionColumn(
     @property
     def required_columns(self) -> list[str]:
         return list(get_prompt_template_keywords(self.expr))
+
+    @model_validator(mode="after")
+    def assert_expression_valid_jinja(self) -> Self:
+        assert_valid_jinja2_template(self.expr)
+        return self
 
 
 class DataSeedColumn(WithPrettyRepr, AIDDConfigBase):

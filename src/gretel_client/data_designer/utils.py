@@ -3,6 +3,7 @@ import inspect
 import json
 import re
 
+from contextlib import contextmanager
 from datetime import date
 from enum import Enum
 from pathlib import Path
@@ -11,7 +12,7 @@ from typing import Any, Callable, Generic, Self, Type, TypeVar
 import pandas as pd
 import requests
 
-from jinja2 import meta
+from jinja2 import meta, TemplateSyntaxError
 from jinja2.sandbox import ImmutableSandboxedEnvironment
 from pydantic import BaseModel
 from pygments import highlight
@@ -84,10 +85,36 @@ def code_lang_to_syntax_lexer(code_lang: tasks.CodeLang) -> str:
             raise ValueError(f"Unsupported code language: {code_lang}")
 
 
+class UserJinjaTemplateSyntaxError(Exception): ...
+
+
+@contextmanager
+def template_error_handler():
+    try:
+        yield
+    except TemplateSyntaxError as exception:
+        exception_string = (
+            f"Encountered a syntax error in the provided Jinja2 template:\n{str(exception)}\n"
+            "For more information on writing Jinja2 templates, refer to https://jinja.palletsprojects.com/en/stable/templates"
+        )
+        raise UserJinjaTemplateSyntaxError(exception_string)
+    except Exception:
+        raise
+
+
+def assert_valid_jinja2_template(template: str) -> None:
+    """Raises an error if the template cnanot be parsed."""
+    with template_error_handler():
+        meta.find_undeclared_variables(ImmutableSandboxedEnvironment().parse(template))
+
+
 def get_prompt_template_keywords(template: str) -> set[str]:
-    """Extract all keywords from a string template."""
-    ast = ImmutableSandboxedEnvironment().parse(template)
-    return set(meta.find_undeclared_variables(ast))
+    """Extract all keywords from a valid string template."""
+    with template_error_handler():
+        ast = ImmutableSandboxedEnvironment().parse(template)
+        keywords = set(meta.find_undeclared_variables(ast))
+
+    return keywords
 
 
 def get_sampler_params() -> dict[str, Type[BaseModel]]:
