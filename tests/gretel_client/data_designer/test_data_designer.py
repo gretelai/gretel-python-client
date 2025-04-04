@@ -6,6 +6,8 @@ from unittest.mock import MagicMock
 import pytest
 import yaml
 
+from pydantic import BaseModel
+
 import gretel_client.data_designer.columns as C
 import gretel_client.data_designer.params as P
 
@@ -13,16 +15,20 @@ from gretel_client.data_designer.aidd_config import AIDDConfig
 from gretel_client.data_designer.data_designer import (
     DataDesigner,
     DataDesignerValidationError,
+    get_column_from_kwargs,
 )
 from gretel_client.data_designer.types import (
     CodeValidationColumn,
     EvaluationReportT,
+    ExpressionColumn,
     LLMGenColumn,
     LLMJudgeColumn,
+    ProviderType,
     SamplerColumn,
 )
 from gretel_client.workflows.builder import FieldViolation, WorkflowValidationError
 from gretel_client.workflows.configs.tasks import (
+    CodeLang,
     ConcatDatasets,
     DropColumns,
     EvaluateDataset,
@@ -31,8 +37,13 @@ from gretel_client.workflows.configs.tasks import (
     JudgeWithLlm,
     Rubric,
     SampleFromDataset,
+    SamplingSourceType,
     ValidateCode,
 )
+
+
+def serialize_model_excluding_unset(model: BaseModel) -> str:
+    return json.dumps(model.model_dump(exclude_unset=True), sort_keys=True)
 
 
 def test_build_data_designer_state_using_types():
@@ -336,4 +347,136 @@ def test_workflow_builder_run_integration(
     dd.create(num_records=1000, workflow_run_name="test-run", wait_for_completion=True)
     mock_low_level_sdk_resources.mock_workflow_builder.run.assert_called_with(
         name="test-run", wait=True
+    )
+
+
+def test_get_column_from_kwargs():
+    # Test column creation and serialization
+
+    # Test LLM_GEN column
+    llm_gen_column = get_column_from_kwargs(
+        name="test_llm_gen", type=ProviderType.LLM_GEN, prompt="Write some code"
+    )
+    assert isinstance(llm_gen_column, LLMGenColumn)
+    assert llm_gen_column.name == "test_llm_gen"
+    assert llm_gen_column.prompt == "Write some code"
+    assert llm_gen_column.model_alias == "text"
+    assert (
+        serialize_model_excluding_unset(llm_gen_column)
+        == '{"name": "test_llm_gen", "prompt": "Write some code"}'
+    )
+
+    # Test LLM_JUDGE column
+    llm_judge_column = get_column_from_kwargs(
+        name="test_judge",
+        type=ProviderType.LLM_JUDGE,
+        prompt="Judge this code",
+        rubrics=[
+            Rubric(
+                name="test_rubric",
+                description="test",
+                scoring={"0": "Bad", "1": "Good"},
+            )
+        ],
+    )
+    assert isinstance(llm_judge_column, LLMJudgeColumn)
+    assert llm_judge_column.name == "test_judge"
+    assert llm_judge_column.prompt == "Judge this code"
+    assert len(llm_judge_column.rubrics) == 1
+    assert (
+        serialize_model_excluding_unset(llm_judge_column)
+        == '{"prompt": "Judge this code", "result_column": "test_judge", "rubrics": [{"description": "test", "name": "test_rubric", "scoring": {"0": "Bad", "1": "Good"}}]}'
+    )
+
+    # Test CODE_VALIDATION column
+    code_validation_column = get_column_from_kwargs(
+        name="test_validation",
+        type=ProviderType.CODE_VALIDATION,
+        code_lang=CodeLang.PYTHON,
+        target_column="test_code",
+    )
+    assert isinstance(code_validation_column, CodeValidationColumn)
+    assert code_validation_column.name == "test_validation"
+    assert code_validation_column.code_lang == CodeLang.PYTHON
+    assert code_validation_column.target_column == "test_code"
+    assert (
+        serialize_model_excluding_unset(code_validation_column)
+        == '{"code_lang": "python", "name": "test_validation", "target_column": "test_code"}'
+    )
+
+    # Test EXPRESSION column
+    expression_column = get_column_from_kwargs(
+        name="test_expression", type=ProviderType.EXPRESSION, expr="1 + 1"
+    )
+    assert isinstance(expression_column, ExpressionColumn)
+    assert expression_column.name == "test_expression"
+    assert expression_column.expr == "1 + 1"
+    assert (
+        serialize_model_excluding_unset(expression_column)
+        == '{"expr": "1 + 1", "name": "test_expression"}'
+    )
+
+    # Test Sampler columns with nullable params
+    # UUID type with params provided
+    sampler_column = get_column_from_kwargs(
+        name="test_sampler",
+        type=SamplingSourceType.UUID,
+        params={"prefix": "test_", "short_form": True},
+    )
+    assert isinstance(sampler_column, SamplerColumn)
+    assert sampler_column.name == "test_sampler"
+    assert sampler_column.type == SamplingSourceType.UUID
+    assert sampler_column.params.prefix == "test_"
+    assert sampler_column.params.short_form is True
+    assert sampler_column.params.uppercase is False
+    assert (
+        serialize_model_excluding_unset(sampler_column)
+        == '{"conditional_params": {}, "convert_to": null, "name": "test_sampler", "params": {"prefix": "test_", "short_form": true, "uppercase": false}, "type": "uuid"}'
+    )
+
+    # UUID type without params provided
+    sampler_column_no_params = get_column_from_kwargs(
+        name="test_sampler_no_params", type=SamplingSourceType.UUID
+    )
+    assert isinstance(sampler_column_no_params, SamplerColumn)
+    assert sampler_column_no_params.name == "test_sampler_no_params"
+    assert sampler_column_no_params.type == SamplingSourceType.UUID
+    assert sampler_column_no_params.params.prefix == None
+    assert sampler_column_no_params.params.short_form is False
+    assert sampler_column_no_params.params.uppercase is False
+    assert (
+        serialize_model_excluding_unset(sampler_column_no_params)
+        == '{"conditional_params": {}, "convert_to": null, "name": "test_sampler_no_params", "params": {"prefix": null, "short_form": false, "uppercase": false}, "type": "uuid"}'
+    )
+
+    # PERSON type with params provided
+    person_sampler_column = get_column_from_kwargs(
+        name="test_person_sampler",
+        type=SamplingSourceType.PERSON,
+        params={"locale": "en_BR", "sex": "Male", "city": "New York"},
+    )
+    assert isinstance(person_sampler_column, SamplerColumn)
+    assert person_sampler_column.name == "test_person_sampler"
+    assert person_sampler_column.type == SamplingSourceType.PERSON
+    assert person_sampler_column.params.locale == "en_BR"
+    assert person_sampler_column.params.sex == "Male"
+    assert person_sampler_column.params.city == "New York"
+    assert (
+        serialize_model_excluding_unset(person_sampler_column)
+        == '{"conditional_params": {}, "convert_to": null, "name": "test_person_sampler", "params": {"city": "New York", "locale": "en_BR", "sex": "Male"}, "type": "person"}'
+    )
+
+    # PersonSampler type without params provided
+    person_sampler_column_no_params = get_column_from_kwargs(
+        name="test_person_sampler_no_params", type=SamplingSourceType.PERSON
+    )
+    assert isinstance(person_sampler_column_no_params, SamplerColumn)
+    assert person_sampler_column_no_params.name == "test_person_sampler_no_params"
+    assert person_sampler_column_no_params.type == SamplingSourceType.PERSON
+    assert person_sampler_column_no_params.params.locale == "en_US"
+    assert person_sampler_column_no_params.params.sex == None
+    assert person_sampler_column_no_params.params.city == None
+    assert (
+        serialize_model_excluding_unset(person_sampler_column_no_params)
+        == '{"conditional_params": {}, "convert_to": null, "name": "test_person_sampler_no_params", "params": {"city": null, "locale": "en_US", "sex": null}, "type": "person"}'
     )

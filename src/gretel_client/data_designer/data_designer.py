@@ -101,7 +101,7 @@ def handle_workflow_validation_error(func):
             violations = ""
             for violation in e.field_violations:
                 violations += f"\n|-- {violation.error_message}"
-                if camel_to_kebab(GenerateColumnsUsingSamplers.__name__) == e.step_name:
+                if camel_to_kebab(GenerateColumnsUsingSamplers.__name__) == e.task_name:
                     violations += f"\n|  |-- Field path: {violation.field}"
             err_message += violations
             raise DataDesignerValidationError(err_message) from None
@@ -203,7 +203,7 @@ class DataDesigner:
         if column is None:
             if isinstance(type, str):
                 type = _validate_column_provider_type(type)
-            column = self._get_column_from_kwargs(name=name, type=type, **kwargs)
+            column = get_column_from_kwargs(name=name, type=type, **kwargs)
         if not isinstance(column, AIDDColumnT):
             raise ValueError(
                 f"{_type_builtin(column)} is not a valid column type. "
@@ -612,27 +612,6 @@ class DataDesigner:
             success=success,
         )
 
-    def _get_column_from_kwargs(
-        self, name: str, type: ColumnProviderTypeT, **kwargs
-    ) -> AIDDColumnT:
-        if name is None or type is None:
-            raise ValueError(
-                "You must provide both `name` and `type` to add a column using kwargs."
-            )
-        match type:
-            case ProviderType.LLM_GEN:
-                column = LLMGenColumn(name=name, **kwargs)
-            case ProviderType.LLM_JUDGE:
-                column = LLMJudgeColumn(name=name, **kwargs)
-            case ProviderType.CODE_VALIDATION:
-                column = CodeValidationColumn(name=name, **kwargs)
-            case ProviderType.EXPRESSION:
-                column = ExpressionColumn(name=name, **kwargs)
-            case _:
-                kwargs["params"] = _SAMPLER_PARAMS[type](**kwargs.get("params", {}))
-                column = SamplerColumn(name=name, type=type, **kwargs)
-        return column
-
     def _get_next_dag_step(self, column_name: str) -> TaskConfig:
         column = self.get_column(column_name)
         if isinstance(column, LLMGenColumn):
@@ -724,6 +703,34 @@ class DataDesigner:
         highlighted_html = highlight(repr_string, PythonLexer(), formatter)
         css = formatter.get_style_defs(".code")
         return REPR_HTML_TEMPLATE.format(css=css, highlighted_html=highlighted_html)
+
+
+def get_column_from_kwargs(
+    name: str, type: ColumnProviderTypeT, **kwargs
+) -> AIDDColumnT:
+    if name is None or type is None:
+        raise ValueError(
+            "You must provide both `name` and `type` to add a column using kwargs."
+        )
+    match type:
+        case ProviderType.LLM_GEN:
+            column = LLMGenColumn(name=name, **kwargs)
+        case ProviderType.LLM_JUDGE:
+            column = LLMJudgeColumn(name=name, **kwargs)
+        case ProviderType.CODE_VALIDATION:
+            column = CodeValidationColumn(name=name, **kwargs)
+        case ProviderType.EXPRESSION:
+            column = ExpressionColumn(name=name, **kwargs)
+        case _:
+            # Downstream serialization excludes unset props so we need to first
+            # serialize params with exclude_unset=False to preserve default values
+            # before creating a new instance with values set concretely during construction
+            kwargs["params"] = _SAMPLER_PARAMS[type](**kwargs.get("params", {}))
+            column_serialized_without_exclude_unset = SamplerColumn(
+                name=name, type=type, **kwargs
+            ).model_dump(exclude_unset=False)
+            column = SamplerColumn(**column_serialized_without_exclude_unset)
+    return column
 
 
 def _check_convert_to_json_str(
