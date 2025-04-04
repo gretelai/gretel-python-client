@@ -67,6 +67,7 @@ SAMPLER_DESCRIPTION_MAPPING = {
     SamplingSourceType.UNIFORM: "Value sampled from a uniform distribution.",
     SamplingSourceType.UUID: "Random UUID-derived identifier.",
 }
+
 # Nord theme for Rich
 RICH_CONSOLE_THEME = Theme(
     {
@@ -565,16 +566,18 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
     def add_column(
         self,
         name: str,
-        description: str,
+        instruction_or_description: str,
         *,
         must_depend_on: Optional[list[str]] = None,
         preview: bool = False,
         save: bool = True,
         interactive: bool = True,
     ) -> DataDesignerT:
-        if self.is_known_column_name(name):
+        if self.is_known_column_name(name) and not self.is_editable_column(name):
+            _col = self._dd_obj.get_column(name)
+            _type_name = _col.__class__.__name__
             raise KeyError(
-                f"The column {name} already exists in the config. Did you mean to use `edit_column`?"
+                f"The column '{name}' already exists as type {_type_name}, it cannot be updated with this function. "
             )
 
         if must_depend_on is None:
@@ -586,11 +589,20 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
                     f"Required dependency {dependency_column_name} does not exist."
                 )
 
+        ## Get previously existing column if present
+        edit_task = None
+        if self.is_known_column_name(name):
+            edit_data_column = self._dd_obj.get_column(name)
+            edit_task = GenerateColumnFromTemplateConfig.model_validate(
+                edit_data_column.model_dump()
+            )
+
         task = self._task_registry.GenerateColumnConfigFromInstruction(
             name=name,
-            instruction=description,
+            instruction=instruction_or_description,
             must_depend_on=must_depend_on,
             existing_columns=self.existing_columns,
+            edit_task=edit_task,
         )
 
         new_data_column = self._instruction_loop_for_aidd_column(
@@ -617,61 +629,26 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
         *,
         preview: bool = False,
         save: bool = True,
-        interactive: bool = True,
+        interactive: bool = False,
     ) -> DataDesignerT:
         if self.is_known_column_name(name):
-            raise KeyError(
-                f"The column {name} already exists in the config. Did you mean to use `edit_column`?"
-            )
+            _col = self._dd_obj.get_column(name)
+
+            if not isinstance(_col, SamplerColumn):
+                _type_name = _col.__class__.__name__
+                raise KeyError(
+                    f"The column '{name}' already exists as type {_type_name}, it cannot be updated with this function. "
+                )
+            else:
+                _type_name = _col.type
+                logger.warning(
+                    f"The column '{name}' already exists as a sampling column of type {_type_name}. "
+                    "It will be overwritten."
+                )
 
         task = self._task_registry.GenerateSamplingColumnConfigFromInstruction(
             name=name,
             description=description,
-        )
-
-        new_data_column = self._instruction_loop_for_aidd_column(
-            task, interactive=interactive, preview=preview
-        )
-
-        if new_data_column is None:
-            self._working_dd_state = self._source_dd_state.fork()
-            rich.print(f"🗑️ Trashed {pprint_column_name(name)}")
-        elif not save:
-            rich.print(
-                f"🪄 Column {pprint_column_name(name)} buffered! Use .save() to apply later."
-            )
-        else:
-            self.save()
-
-        return self._dd_obj
-
-    @experimental(message=EXPERIMENTAL_WARNING, emoji="🧪")
-    def edit_column(
-        self,
-        name: str,
-        instruction: str,
-        *,
-        preview: bool = False,
-        save: bool = True,
-        interactive: bool = True,
-    ) -> DataDesignerT:
-        if not self.is_known_column_name(name):
-            raise KeyError(f"Unknown column name {name}")
-
-        if not self.is_editable_column(name):
-            raise NotImplementedError(
-                f"Instruction-based editing not yet implemented for column: {name}."
-            )
-
-        # Setup an existing column
-        edit_data_column = self._dd_obj.get_column(name)
-        task = self._task_registry.GenerateColumnConfigFromInstruction(
-            name=name,
-            instruction=instruction,
-            existing_columns=self.existing_columns,
-            edit_task=GenerateColumnFromTemplateConfig.model_validate(
-                edit_data_column.model_dump()
-            ),
         )
 
         new_data_column = self._instruction_loop_for_aidd_column(

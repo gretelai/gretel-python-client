@@ -168,7 +168,7 @@ class WithPrettyRepr:
         def _kv_to_string(k, v):
             if isinstance(v, Enum):
                 v = v.value
-            return f"  {k}={v!r}"
+            return f"    {k}={v!r}"
 
         field_repr = ",\n".join(_kv_to_string(k, v) for k, v in self.__dict__.items())
         return f"{self.__class__.__name__}(\n{field_repr}\n)"
