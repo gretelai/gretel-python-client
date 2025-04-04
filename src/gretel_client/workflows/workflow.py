@@ -109,7 +109,7 @@ class WorkflowRun:
             # todo: this needs to be more flexible. we should lookup
             # tasks that emit some sort of report base class from
             # the registry.
-            if output_type in ("evaluate_ss_dataset", "evaluate_dataset"):
+            if output_type in ("evaluate_safe_synthetics_dataset", "evaluate_dataset"):
                 return Report.from_bytes(response_bytes, self.download_report)
 
             return PydanticModel.from_bytes(response_bytes)

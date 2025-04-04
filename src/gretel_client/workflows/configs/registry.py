@@ -33,12 +33,12 @@ class Registry(metaclass=RegistryMeta):
     GenerateSamplingColumnConfigFromInstruction = (
         tasks.GenerateSamplingColumnConfigFromInstruction
     )
-    EvaluateSsDataset = tasks.EvaluateSsDataset
     Holdout = tasks.Holdout
     GenerateColumnConfigFromInstruction = tasks.GenerateColumnConfigFromInstruction
     SampleFromDataset = tasks.SampleFromDataset
     JudgeWithLlm = tasks.JudgeWithLlm
     GenerateColumnsUsingSamplers = tasks.GenerateColumnsUsingSamplers
+    EvaluateSafeSyntheticsDataset = tasks.EvaluateSafeSyntheticsDataset
     ValidateCode = tasks.ValidateCode
     SeedFromRecords = tasks.SeedFromRecords
     EvaluateDataset = tasks.EvaluateDataset

@@ -102,7 +102,7 @@ class EvaluateDataset(ConfigBase):
     ] = None
 
 
-class EvaluateSsDataset(ConfigBase):
+class EvaluateSafeSyntheticsDataset(ConfigBase):
     skip_attribute_inference_protection: Annotated[
         Optional[bool], Field(title="Skip Attribute Inference Protection")
     ] = False

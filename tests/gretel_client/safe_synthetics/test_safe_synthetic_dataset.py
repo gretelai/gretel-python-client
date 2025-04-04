@@ -71,9 +71,9 @@ def test_ssd_factory(ssd_factory: SafeSyntheticDatasetFactory, tasks: Registry):
     assert steps[2].inputs == []
     assert steps[2].task == "tabular_ft"
 
-    assert steps[3].name == "evaluate-ss-dataset"
+    assert steps[3].name == "evaluate-safe-synthetics-dataset"
     assert steps[3].inputs == ["tabular-ft", "holdout"]
-    assert steps[3].task == "evaluate_ss_dataset"
+    assert steps[3].task == "evaluate_safe_synthetics_dataset"
 
     assert steps[0].config is not None
     assert steps[1].config is not None
@@ -144,7 +144,7 @@ def test_multiple_tasks(ssd_factory: SafeSyntheticDatasetFactory):
         ("transform", []),
         ("transform-1", []),
         ("tabular-ft", []),
-        ("evaluate-ss-dataset", ["tabular-ft", "holdout"]),
+        ("evaluate-safe-synthetics-dataset", ["tabular-ft", "holdout"]),
     ]
 
 
@@ -163,7 +163,7 @@ def test_multiple_tasks_no_hold_out(ssd_factory: SafeSyntheticDatasetFactory):
         ("transform", ["file_1"]),
         ("transform-1", []),
         ("tabular-ft", []),
-        ("evaluate-ss-dataset", ["tabular-ft", "file_1"]),
+        ("evaluate-safe-synthetics-dataset", ["tabular-ft", "file_1"]),
     ]
 
 

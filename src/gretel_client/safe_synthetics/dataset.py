@@ -20,7 +20,7 @@ from gretel_client.workflows.builder import (
     WorkflowValidationError,
 )
 from gretel_client.workflows.configs.registry import Registry
-from gretel_client.workflows.configs.tasks import EvaluateSsDataset
+from gretel_client.workflows.configs.tasks import EvaluateSafeSyntheticsDataset
 from gretel_client.workflows.configs.workflows import Step
 from gretel_client.workflows.tasks import TaskConfig
 from gretel_client.workflows.workflow import WorkflowRun
@@ -80,7 +80,7 @@ class SafeSyntheticDataset:
 
         # steps with fixed positions
         self._holdout = None
-        self._evaluate_config = EvaluateSsDataset()
+        self._evaluate_config = EvaluateSafeSyntheticsDataset()
         self._synthesis_task = None
 
         # these steps are ordered
@@ -179,13 +179,13 @@ class SafeSyntheticDataset:
 
     def evaluate(
         self,
-        config: Optional[Union[dict, EvaluateSsDataset]] = None,
+        config: Optional[Union[dict, EvaluateSafeSyntheticsDataset]] = None,
         disable: bool = False,
     ) -> Self:
         if config:
             logger.info("Configuring evaluate step")
             if isinstance(config, dict):
-                self._evaluate_config = EvaluateSsDataset(**config)
+                self._evaluate_config = EvaluateSafeSyntheticsDataset(**config)
             else:
                 self._evaluate_config = config
         if disable:
