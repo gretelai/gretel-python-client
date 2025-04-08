@@ -52,9 +52,7 @@ REPR_HTML_TEMPLATE = (
 )
 
 
-MODEL_DUMP_KWARGS = dict(
-    exclude_unset=False, exclude={"model_configs", "model_suite", "error_rate"}
-)
+MODEL_DUMP_KWARGS = dict(exclude={"model_configs", "model_suite", "error_rate"})
 
 
 class NordColor(Enum):

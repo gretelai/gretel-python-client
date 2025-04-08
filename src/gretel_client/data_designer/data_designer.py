@@ -620,8 +620,9 @@ class DataDesigner:
     def _get_next_dag_step(self, column_name: str) -> TaskConfig:
         column = self.get_column(column_name)
         if isinstance(column, LLMGenColumn):
+            # TODO: remove exclude_unset after server-side updates to DataConfig.
             next_step = self._task_registry.GenerateColumnFromTemplate(
-                **column.model_dump(**MODEL_DUMP_KWARGS)
+                **column.model_dump(exclude_unset=False, **MODEL_DUMP_KWARGS)
             )
         elif isinstance(column, LLMJudgeColumn):
             next_step = self._task_registry.JudgeWithLlm(
@@ -727,14 +728,8 @@ def get_column_from_kwargs(
         case ProviderType.EXPRESSION:
             column = ExpressionColumn(name=name, **kwargs)
         case _:
-            # Downstream serialization excludes unset props so we need to first
-            # serialize params with exclude_unset=False to preserve default values
-            # before creating a new instance with values set concretely during construction
             kwargs["params"] = _SAMPLER_PARAMS[type](**kwargs.get("params", {}))
-            column_serialized_without_exclude_unset = SamplerColumn(
-                name=name, type=type, **kwargs
-            ).model_dump(exclude_unset=False)
-            column = SamplerColumn(**column_serialized_without_exclude_unset)
+            column = SamplerColumn(name=name, type=type, **kwargs)
     return column
 
 
