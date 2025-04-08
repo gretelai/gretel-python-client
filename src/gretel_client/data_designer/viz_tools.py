@@ -86,7 +86,7 @@ class AIDDMetadata(BaseModel):
         sampling_based_columns = [
             col.name
             for col in aidd._sampler_columns
-            if col.name not in list(aidd._latent_columns.keys())
+            if col.name not in list(aidd._latent_person_columns.keys())
         ]
 
         return cls(
@@ -98,7 +98,7 @@ class AIDDMetadata(BaseModel):
             llm_judge_columns=[col.name for col in aidd._llm_judge_columns],
             validation_columns=code_validation_columns,
             expression_columns=[col.name for col in aidd._expression_columns],
-            person_samplers=list(aidd._latent_columns.keys()),
+            person_samplers=list(aidd._latent_person_columns.keys()),
             code_langs=code_langs,
             eval_type=None,
         )

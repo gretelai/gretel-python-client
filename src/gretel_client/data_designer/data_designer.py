@@ -159,7 +159,7 @@ class DataDesigner:
         self._files = self._gretel_resource_provider.files
         self._workflow_manager = self._gretel_resource_provider.workflows
         self._repr_html_style = DEFAULT_REPR_HTML_STYLE
-        self._latent_columns: dict[str, PersonSamplerParams] = {}
+        self._latent_person_columns: dict[str, PersonSamplerParams] = {}
         self._constraints = constraints or {}
 
         ## Synchronization: Cause any mutation of these dictionaries to trigger a reset on the magic object
@@ -206,8 +206,13 @@ class DataDesigner:
             column = get_column_from_kwargs(name=name, type=type, **kwargs)
         if not isinstance(column, AIDDColumnT):
             raise ValueError(
-                f"{_type_builtin(column)} is not a valid column type. "
+                f"🛑 {_type_builtin(column)} is not a valid column type. "
                 f"Columns must be one of {[t.__name__ for t in AIDDColumnT.__args__]}."
+            )
+        if column.name in self._latent_person_columns:
+            raise ValueError(
+                f"🛑 The name `{column.name}` is already the name of a person sampler. Please "
+                "ensure that all person sampler and column names are unique."
             )
         self._columns[column.name] = column
         return self
@@ -325,7 +330,7 @@ class DataDesigner:
                 )
             )
             if not keep_person_columns:
-                self._latent_columns[name] = person_params
+                self._latent_person_columns[name] = person_params
 
         return self
 
@@ -499,9 +504,9 @@ class DataDesigner:
         # Drop all latent columns from the final dataset
         ########################################################
 
-        if len(self._latent_columns) > 0:
+        if len(self._latent_person_columns) > 0:
             drop_latent_columns_step = self._task_registry.DropColumns(
-                columns=list(self._latent_columns.keys()),
+                columns=list(self._latent_person_columns.keys()),
             )
             builder.add_step(
                 step=drop_latent_columns_step,

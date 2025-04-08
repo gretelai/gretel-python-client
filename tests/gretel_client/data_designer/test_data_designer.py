@@ -248,6 +248,20 @@ def test_export_operations(stub_aidd_config_str):
         dd.export_config(path="config.txt")
 
 
+def test_error_on_column_name_same_as_latent_person_sampler():
+    dd = DataDesigner(gretel_resource_provider=MagicMock())
+    dd.with_person_samplers({"dude": {"locale": "en_GB"}})
+
+    dd.add_column(name="dude_2", type="category", params={"values": ["John", "Jane"]})
+
+    # add_column is an upsert, so no error
+    dd.add_column(name="dude_2", type="category", params={"values": ["Mike", "Jane"]})
+
+    # latent person samplers can't be overwritten with add_column
+    with pytest.raises(ValueError, match="already the name of a person sampler."):
+        dd.add_column(name="dude", type="category", params={"values": ["John", "Jane"]})
+
+
 def test_build_workflow_validation_error_handling(
     stub_aidd_config_str, mock_low_level_sdk_resources
 ):
