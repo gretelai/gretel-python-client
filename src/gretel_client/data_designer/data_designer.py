@@ -31,7 +31,6 @@ from gretel_client.data_designer.types import (
     DAGColumnT,
     DataSeedColumn,
     EvaluateDatasetSettings,
-    EvaluateDdDatasetSettings,
     EvaluationReportT,
     ExpressionColumn,
     GeneralDatasetEvaluation,
@@ -248,18 +247,14 @@ class DataDesigner:
         return self
 
     def with_evaluation_report(
-        self, settings: EvaluateDdDatasetSettings | None = None
+        self, settings: EvaluateDatasetSettings | None = None
     ) -> Self:
-        self._evaluation_report = GeneralDatasetEvaluation(
-            settings=settings or EvaluateDdDatasetSettings()
-        )
+        self._evaluation_report = GeneralDatasetEvaluation(settings=settings or {})
         return self
 
     def preview(self, verbose_logging: bool = False) -> PreviewResults:
         logger.info("🚀 Generating preview")
-        workflow = self._build_workflow(
-            num_records=10, verbose_logging=verbose_logging, streaming=True
-        )
+        workflow = self._build_workflow(num_records=10, verbose_logging=verbose_logging)
         preview = self._capture_preview_result(
             workflow, verbose_logging=verbose_logging
         )
@@ -417,7 +412,7 @@ class DataDesigner:
 
     @handle_workflow_validation_error
     def _build_workflow(
-        self, num_records: int, verbose_logging: bool = False, streaming: bool = False
+        self, num_records: int, verbose_logging: bool = False
     ) -> WorkflowBuilder:
         if self._seed_dataset is None and len(self._sampler_columns) == 0:
             raise ValueError(
@@ -525,25 +520,18 @@ class DataDesigner:
 
         if self._evaluation_report is not None:
             settings = self._evaluation_report.settings
-            if streaming:
-                general_eval_step = self._task_registry.EvaluateDataset(
-                    seed_columns=[col.name for col in self._categorical_columns],
-                    # No longer available, we are passing in EvaluateDdDatasetSettings now
-                    # other_list_like_columns=settings.list_like_columns,
-                    # ordered_list_like_columns=settings.ordered_list_like_columns,
-                    columns_to_ignore=settings.columns_to_ignore,
-                )
-            else:
-                general_eval_step = self._task_registry.EvaluateDdDataset(
-                    # TODO: Update to use all judge columns once the evaluate-dataset task is updated.
-                    llm_judge_column=(
-                        ""
-                        if len(self._llm_judge_columns) == 0
-                        else self._llm_judge_columns[0].name
-                    ),
-                    columns_to_ignore=settings.columns_to_ignore,
-                    validation_columns=settings.validation_columns,
-                )
+            general_eval_step = self._task_registry.EvaluateDataset(
+                seed_columns=[col.name for col in self._categorical_columns],
+                other_list_like_columns=settings.list_like_columns,
+                ordered_list_like_columns=settings.ordered_list_like_columns,
+                # TODO: Update to use all judge columns once the evaluate-dataset task is updated.
+                llm_judge_column=(
+                    ""
+                    if len(self._llm_judge_columns) == 0
+                    else self._llm_judge_columns[0].name
+                ),
+                columns_to_ignore=settings.columns_to_ignore,
+            )
             builder.add_step(
                 step=general_eval_step,
                 step_inputs=[last_step_added],
