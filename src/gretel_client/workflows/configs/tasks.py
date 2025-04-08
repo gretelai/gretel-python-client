@@ -348,6 +348,15 @@ class PersonSamplerParams(ConfigBase):
             title="City",
         ),
     ] = None
+    age_range: Annotated[
+        Optional[List[int]],
+        Field(
+            description="If specified, then only synthetic people within this age range will be sampled.",
+            max_length=2,
+            min_length=2,
+            title="Age Range",
+        ),
+    ] = [18, 120]
 
 
 class PoissonSamplerParams(ConfigBase):

@@ -467,7 +467,12 @@ def test_get_column_from_kwargs():
     person_sampler_column = get_column_from_kwargs(
         name="test_person_sampler",
         type=SamplingSourceType.PERSON,
-        params={"locale": "en_BR", "sex": "Male", "city": "New York"},
+        params={
+            "locale": "en_BR",
+            "sex": "Male",
+            "city": "New York",
+            "age_range": [18, 30],
+        },
     )
     assert isinstance(person_sampler_column, SamplerColumn)
     assert person_sampler_column.name == "test_person_sampler"
@@ -477,7 +482,7 @@ def test_get_column_from_kwargs():
     assert person_sampler_column.params.city == "New York"
     assert (
         serialize_model_excluding_unset(person_sampler_column)
-        == '{"conditional_params": {}, "convert_to": null, "name": "test_person_sampler", "params": {"city": "New York", "locale": "en_BR", "sex": "Male"}, "type": "person"}'
+        == '{"conditional_params": {}, "convert_to": null, "name": "test_person_sampler", "params": {"age_range": [18, 30], "city": "New York", "locale": "en_BR", "sex": "Male"}, "type": "person"}'
     )
 
     # PersonSampler type without params provided
@@ -492,5 +497,5 @@ def test_get_column_from_kwargs():
     assert person_sampler_column_no_params.params.city == None
     assert (
         serialize_model_excluding_unset(person_sampler_column_no_params)
-        == '{"conditional_params": {}, "convert_to": null, "name": "test_person_sampler_no_params", "params": {"city": null, "locale": "en_US", "sex": null}, "type": "person"}'
+        == '{"conditional_params": {}, "convert_to": null, "name": "test_person_sampler_no_params", "params": {"age_range": [18, 120], "city": null, "locale": "en_US", "sex": null}, "type": "person"}'
     )
