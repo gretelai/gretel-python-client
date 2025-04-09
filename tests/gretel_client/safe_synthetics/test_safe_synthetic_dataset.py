@@ -1,6 +1,7 @@
 from unittest.mock import Mock
 
 import pytest
+import yaml
 
 from gretel_client.safe_synthetics.blueprints import load_blueprint_or_config
 from gretel_client.safe_synthetics.dataset import (
@@ -168,3 +169,43 @@ def test_multiple_tasks_no_hold_out(ssd_factory: SafeSyntheticDatasetFactory):
 
 
 def test_evaluate_can_be_disabled(ssd_factory: SafeSyntheticDatasetFactory): ...
+
+
+def test_can_load_yaml_strings(ssd_factory: SafeSyntheticDatasetFactory):
+
+    xf = """\
+steps:
+- columns:
+    drop:
+        - name: "temp_column"
+    """
+
+    synth_config = """\
+train:
+    group_training_examples_by: null
+    order_training_examples_by: null
+    params:
+        num_input_records_to_sample: auto
+
+generate:
+    num_records: 5000
+
+"""
+
+    evaluate_config = """\
+skip_attribute_inference_protection: true
+"""
+
+    ssd = (
+        ssd_factory.from_data_source("file_1", holdout=None)
+        .transform(xf)
+        .synthesize("tabular_ft", synth_config)
+        .evaluate(evaluate_config)
+    )
+    ssd.create(wait=False)
+
+    assert ssd.builder().get_step("transform").config == yaml.safe_load(xf)
+    assert ssd.builder().get_step("tabular-ft").config == yaml.safe_load(synth_config)
+    assert ssd.builder().get_step(
+        "evaluate-safe-synthetics-dataset"
+    ).config == yaml.safe_load(evaluate_config)

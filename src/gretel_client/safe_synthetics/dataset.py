@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 import pandas as pd
+import yaml
 
 from pydantic import BaseModel
 from typing_extensions import Self
@@ -86,28 +87,26 @@ class SafeSyntheticDataset:
         # these steps are ordered
         self._tasks = []
 
-    def transform(self, config: Union[str, dict] = "transform/default") -> Self:
+    def transform(self, config: str | dict = "transform/default") -> Self:
         logger.info(f"Configuring transform step")
         self._tasks.append(self._registry.Transform(**load_blueprint_or_config(config)))
         return self
 
-    def data_source(self, data_source: Union[str, Path, pd.DataFrame]) -> Self:
+    def data_source(self, data_source: str | Path | pd.DataFrame) -> Self:
         logger.info(f"Configuring generator for data source: {data_source}")
         self._builder.with_data_source(data_source)
         return self
 
-    def holdout(self, holdout: Union[float, int]) -> Self:
+    def holdout(self, holdout: float | int) -> Self:
         logger.info(f"Configuring holdout: {holdout}")
         self._holdout = self._registry.Holdout(holdout=holdout)
         return self
 
     def synthesize(
         self,
-        model_or_blueprint_or_task: Optional[
-            Union[str, BaseModel]
-        ] = "tabular_ft/default",
-        config: Optional[dict] = None,
-        num_records: Optional[int] = None,
+        model_or_blueprint_or_task: str | BaseModel | None = "tabular_ft/default",
+        config: dict | str | None = None,
+        num_records: int | None = None,
     ):
         logger.info(
             f"Configuring synthetic data generation model: {model_or_blueprint_or_task}"
@@ -120,9 +119,11 @@ class SafeSyntheticDataset:
             task_klass = model_or_blueprint_or_task.__class__
             task_config = model_or_blueprint_or_task.model_dump()
 
-        # a config can be either a pydantic base class, or
-        # dictionary with a model key
+        # a config can be either a pydantic base class, a
+        # dictionary with a model key, or a yaml config
         elif config:
+            if isinstance(config, str):
+                config = yaml.safe_load(config)
             # if it's a dictionary, use the model key to
             # lookup the concrete class
             if isinstance(config, dict):
@@ -179,11 +180,15 @@ class SafeSyntheticDataset:
 
     def evaluate(
         self,
-        config: Optional[Union[dict, EvaluateSafeSyntheticsDataset]] = None,
+        config: dict | str | EvaluateSafeSyntheticsDataset | None = None,
         disable: bool = False,
     ) -> Self:
         if config:
             logger.info("Configuring evaluate step")
+            # if config is a string, we can safely assume it's
+            # supposed to be a yaml string
+            if isinstance(config, str):
+                config = yaml.safe_load(config)
             if isinstance(config, dict):
                 self._evaluate_config = EvaluateSafeSyntheticsDataset(**config)
             else:

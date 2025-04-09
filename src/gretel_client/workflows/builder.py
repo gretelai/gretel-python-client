@@ -433,6 +433,11 @@ class WorkflowBuilder:
         """Return the list of steps in the workflow."""
         return self._steps
 
+    def get_step(self, step_name: str) -> Step | None:
+        for step in self._steps:
+            if step.name == step_name:
+                return step
+
     def to_workflow(self) -> Workflow:
         """Convert the builder to a Workflow object.
 

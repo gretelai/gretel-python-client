@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Union
 
 import requests
 import yaml
@@ -12,16 +11,28 @@ BASE_BLUEPRINT_REPO = "https://raw.githubusercontent.com/gretelai/gretel-bluepri
 class TaskConfigError(Exception): ...
 
 
-def load_blueprint_or_config(blueprint_or_config: Union[dict, str]) -> dict:
+def load_blueprint_or_config(blueprint_or_config: dict | str) -> dict:
     """
     Try and load either a blueprint or config. Valid identifiers include
         - transform/default
         - my-transform-config.yaml
         - {...} (python dictionaries)
+        - valid yaml strings
 
     """
     # if the input is a dict, we already know it's a concrete
     # config and can return it
+    if isinstance(blueprint_or_config, dict):
+        return blueprint_or_config
+
+    try:
+        blueprint_or_config = yaml.safe_load(blueprint_or_config)
+    except yaml.YAMLError:
+        pass
+
+    # if attempting to parse the string into a dictionary worked,
+    # then we got a yaml string as input, and now have a dictionary
+    # to return
     if isinstance(blueprint_or_config, dict):
         return blueprint_or_config
 
@@ -33,7 +44,7 @@ def load_blueprint_or_config(blueprint_or_config: Union[dict, str]) -> dict:
     try:
         return resolve_task_blueprint(blueprint_or_config)["task"]["config"]
     except TaskConfigError:
-        ...
+        pass
 
     raise TaskConfigError(
         f"Could not load config for: {blueprint_or_config}. "
