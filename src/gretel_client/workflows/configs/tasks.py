@@ -361,7 +361,7 @@ class PersonSamplerParams(ConfigBase):
             min_length=2,
             title="Age Range",
         ),
-    ] = [18, 120]
+    ] = [18, 114]
     state: Annotated[
         Optional[Union[str, List[str]]],
         Field(
@@ -1626,7 +1626,7 @@ class UniformDistribution(ConfigBase):
 class ExistingColumn(ConfigBase):
     name: Annotated[str, Field(title="Name")]
     description: Annotated[str, Field(title="Description")]
-    output_type: Optional[OutputType] = "text"
+    output_type: OutputType
     output_format: Annotated[
         Optional[Union[str, Dict[str, Any]]], Field(title="Output Format")
     ] = None
