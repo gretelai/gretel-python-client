@@ -102,6 +102,27 @@ class EvaluateDataset(ConfigBase):
     ] = None
 
 
+class DistributionType(str, Enum):
+    UNIFORM = "uniform"
+    MANUAL = "manual"
+
+
+class ManualDistributionParams(ConfigBase):
+    values: Annotated[List[float], Field(min_length=1, title="Values")]
+    weights: Annotated[Optional[List[float]], Field(title="Weights")] = None
+
+
+class ModelAlias(str, Enum):
+    TEXT = "text"
+    CODE = "code"
+    JUDGE = "judge"
+
+
+class UniformDistributionParams(ConfigBase):
+    low: Annotated[float, Field(title="Low")]
+    high: Annotated[float, Field(title="High")]
+
+
 class EvaluateSafeSyntheticsDataset(ConfigBase):
     skip_attribute_inference_protection: Annotated[
         Optional[bool], Field(title="Skip Attribute Inference Protection")
@@ -160,31 +181,10 @@ class GcsSource(ConfigBase):
     bucket: Annotated[str, Field(title="Bucket")]
 
 
-class DistributionType(str, Enum):
-    UNIFORM = "uniform"
-    MANUAL = "manual"
-
-
-class ManualDistributionParams(ConfigBase):
-    values: Annotated[List[float], Field(min_length=1, title="Values")]
-    weights: Annotated[Optional[List[float]], Field(title="Weights")] = None
-
-
-class ModelAlias(str, Enum):
-    TEXT = "text"
-    CODE = "code"
-    JUDGE = "judge"
-
-
 class OutputType(str, Enum):
     CODE = "code"
     TEXT = "text"
     STRUCTURED = "structured"
-
-
-class UniformDistributionParams(ConfigBase):
-    low: Annotated[float, Field(title="Low")]
-    high: Annotated[float, Field(title="High")]
 
 
 class Dtype(str, Enum):
@@ -1237,7 +1237,7 @@ class PeftParams(ConfigBase):
         ),
     ] = 1
     target_modules: Annotated[
-        Optional[Union[str, List[str]]],
+        Optional[Union[List[str], str]],
         Field(
             description="List of module names or regex expression of the module names to replace with LoRA. For example, ['q', 'v'] or '.*decoder.*(SelfAttention|EncDecAttention).*(q|v)$'. This can also be a wildcard 'all-linear' which matches all linear/Conv1D layers except the output layer. If not specified, modules will be chosen according to the model architecture. If the architecture is not known, an error will be raised -- in this case, you should specify the target modules manually.",
             title="Target Modules",
@@ -1489,11 +1489,11 @@ class Column(ConfigBase):
         Optional[str], Field(description="Rename to value.", title="Value")
     ] = None
     entity: Annotated[
-        Optional[Union[str, List[str]]],
+        Optional[Union[List[str], str]],
         Field(description="Column entity match.", title="Entity"),
     ] = None
     type: Annotated[
-        Optional[Union[str, List[str]]],
+        Optional[Union[List[str], str]],
         Field(description="Column type match.", title="Type"),
     ] = None
 
@@ -1537,7 +1537,7 @@ class NERConfig(ConfigBase):
 
 class Row(ConfigBase):
     name: Annotated[
-        Optional[Union[str, List[str]]], Field(description="Row name.", title="Name")
+        Optional[Union[List[str], str]], Field(description="Row name.", title="Name")
     ] = None
     condition: Annotated[
         Optional[str], Field(description="Row condition match.", title="Condition")
@@ -1549,11 +1549,11 @@ class Row(ConfigBase):
         Optional[str], Field(description="Row value definition.", title="Value")
     ] = None
     entity: Annotated[
-        Optional[Union[str, List[str]]],
+        Optional[Union[List[str], str]],
         Field(description="Row entity match.", title="Entity"),
     ] = None
     type: Annotated[
-        Optional[Union[str, List[str]]],
+        Optional[Union[List[str], str]],
         Field(description="Row type match.", title="Type"),
     ] = None
     fallback_value: Annotated[
@@ -1601,6 +1601,16 @@ class ValidateCode(ConfigBase):
     result_columns: Annotated[List[str], Field(title="Result Columns")]
 
 
+class ManualDistribution(ConfigBase):
+    distribution_type: Optional[DistributionType] = "manual"
+    params: ManualDistributionParams
+
+
+class UniformDistribution(ConfigBase):
+    distribution_type: Optional[DistributionType] = "uniform"
+    params: UniformDistributionParams
+
+
 class DataConfig(ConfigBase):
     type: Optional[OutputType] = "text"
     params: Annotated[Optional[Dict[str, Any]], Field(title="Params")] = None
@@ -1616,16 +1626,6 @@ class ExistingColumns(ConfigBase):
     variables: Annotated[Optional[List[ExistingColumn]], Field(title="Variables")] = (
         None
     )
-
-
-class ManualDistribution(ConfigBase):
-    distribution_type: Optional[DistributionType] = "manual"
-    params: ManualDistributionParams
-
-
-class UniformDistribution(ConfigBase):
-    distribution_type: Optional[DistributionType] = "uniform"
-    params: UniformDistributionParams
 
 
 class ColumnConstraintParams(ConfigBase):
@@ -1842,6 +1842,63 @@ class ModelConfig(ConfigBase):
     generation_parameters: GenerationParameters
 
 
+class EvaluateDdDataset(ConfigBase):
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
+    error_rate: Annotated[
+        Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
+    ] = 0.2
+    model_configs: Annotated[
+        Optional[List[ModelConfig]], Field(title="Model Configs")
+    ] = None
+    model_alias: Annotated[
+        Optional[Union[str, ModelAlias]], Field(title="Model Alias")
+    ] = "text"
+    llm_judge_column: Annotated[Optional[str], Field(title="Llm Judge Column")] = ""
+    columns_to_ignore: Annotated[
+        Optional[List[str]], Field(title="Columns To Ignore")
+    ] = None
+    validation_columns: Annotated[
+        Optional[List[str]], Field(title="Validation Columns")
+    ] = None
+
+
+class GenerateColumnFromTemplateConfig(ConfigBase):
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
+    error_rate: Annotated[
+        Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
+    ] = 0.2
+    model_configs: Annotated[
+        Optional[List[ModelConfig]], Field(title="Model Configs")
+    ] = None
+    model_alias: Annotated[
+        Optional[Union[str, ModelAlias]], Field(title="Model Alias")
+    ] = "text"
+    prompt: Annotated[str, Field(title="Prompt")]
+    name: Annotated[Optional[str], Field(title="Name")] = "response"
+    system_prompt: Annotated[Optional[str], Field(title="System Prompt")] = None
+    data_config: DataConfig
+    description: Annotated[Optional[str], Field(title="Description")] = ""
+
+
+class GenerateColumnConfigFromInstruction(ConfigBase):
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
+    error_rate: Annotated[
+        Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
+    ] = 0.2
+    model_configs: Annotated[
+        Optional[List[ModelConfig]], Field(title="Model Configs")
+    ] = None
+    model_alias: Annotated[
+        Optional[Union[str, ModelAlias]], Field(title="Model Alias")
+    ] = "code"
+    name: Annotated[str, Field(title="Name")]
+    instruction: Annotated[str, Field(title="Instruction")]
+    edit_task: Optional[GenerateColumnFromTemplateConfig] = None
+    existing_columns: Annotated[Optional[ExistingColumns], Field()] = {"variables": []}
+    use_reasoning: Annotated[Optional[bool], Field(title="Use Reasoning")] = True
+    must_depend_on: Annotated[Optional[List[str]], Field(title="Must Depend On")] = None
+
+
 class GenerateColumnFromTemplate(ConfigBase):
     model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
     error_rate: Annotated[
@@ -1950,40 +2007,3 @@ class JudgeWithLlm(ConfigBase):
         Optional[str],
         Field(description="Column name to store judge results.", title="Result Column"),
     ] = "llm_judge_results"
-
-
-class GenerateColumnFromTemplateConfig(ConfigBase):
-    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
-    error_rate: Annotated[
-        Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
-    ] = 0.2
-    model_configs: Annotated[
-        Optional[List[ModelConfig]], Field(title="Model Configs")
-    ] = None
-    model_alias: Annotated[
-        Optional[Union[str, ModelAlias]], Field(title="Model Alias")
-    ] = "text"
-    prompt: Annotated[str, Field(title="Prompt")]
-    name: Annotated[Optional[str], Field(title="Name")] = "response"
-    system_prompt: Annotated[Optional[str], Field(title="System Prompt")] = None
-    data_config: DataConfig
-    description: Annotated[Optional[str], Field(title="Description")] = ""
-
-
-class GenerateColumnConfigFromInstruction(ConfigBase):
-    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
-    error_rate: Annotated[
-        Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
-    ] = 0.2
-    model_configs: Annotated[
-        Optional[List[ModelConfig]], Field(title="Model Configs")
-    ] = None
-    model_alias: Annotated[
-        Optional[Union[str, ModelAlias]], Field(title="Model Alias")
-    ] = "code"
-    name: Annotated[str, Field(title="Name")]
-    instruction: Annotated[str, Field(title="Instruction")]
-    edit_task: Optional[GenerateColumnFromTemplateConfig] = None
-    existing_columns: Annotated[Optional[ExistingColumns], Field()] = {"variables": []}
-    use_reasoning: Annotated[Optional[bool], Field(title="Use Reasoning")] = True
-    must_depend_on: Annotated[Optional[List[str]], Field(title="Must Depend On")] = None

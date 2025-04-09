@@ -32,6 +32,7 @@ from gretel_client.workflows.configs.tasks import (
     ConcatDatasets,
     DropColumns,
     EvaluateDataset,
+    EvaluateDdDataset,
     GenerateColumnFromTemplate,
     GenerateColumnsUsingSamplers,
     JudgeWithLlm,
@@ -207,7 +208,7 @@ def test_evaluation_operations():
             DataDesigner(gretel_resource_provider=MagicMock())
             .add_column(name="text", prompt="Write a description of python code")
             .add_column(name="code", prompt="Write Python code")
-            .with_evaluation_report(settings={"list_like_columns": 123})
+            .with_evaluation_report(settings={"validation_columns": 123})
         )
 
 

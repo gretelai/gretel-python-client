@@ -18,6 +18,7 @@ class Registry(metaclass=RegistryMeta):
     LoadDataSeeds = tasks.LoadDataSeeds
     DropColumns = tasks.DropColumns
     NameGenerator = tasks.NameGenerator
+    EvaluateDdDataset = tasks.EvaluateDdDataset
     GenerateDatasetFromSampleRecords = tasks.GenerateDatasetFromSampleRecords
     SampleDataSeeds = tasks.SampleDataSeeds
     GetGretelDataset = tasks.GetGretelDataset
