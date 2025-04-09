@@ -53,13 +53,13 @@ class Person(BaseModel):
     last_name: str
     sex: Literal["Male", "Female"]
     age: int
-    postcode: str = Field(alias="zipcode")
+    zipcode: str = Field(alias="postcode")
     street_number: int | str
     street_name: str
     unit: str
     city: str
-    region: str | None = Field(alias="state")
-    district: str | None = Field(alias="county")
+    state: str | None = Field(alias="region")
+    county: str | None = Field(alias="district")
     country: str
     ethnic_background: str | None
     marital_status: str | None

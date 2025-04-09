@@ -362,6 +362,13 @@ class PersonSamplerParams(ConfigBase):
             title="Age Range",
         ),
     ] = [18, 120]
+    state: Annotated[
+        Optional[Union[str, List[str]]],
+        Field(
+            description="Only supported for 'en_US' locale. If specified, then only synthetic people from these states will be sampled. States must be given as two-letter abbreviations.",
+            title="State",
+        ),
+    ] = None
 
 
 class PoissonSamplerParams(ConfigBase):
