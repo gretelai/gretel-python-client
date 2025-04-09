@@ -202,7 +202,13 @@ class SafeSyntheticDataset:
         self._builder.preview()
 
     @handle_workflow_validation_error
-    def create(self, new_workflow: bool = False, wait: bool = True) -> WorkflowRun:
+    def create(
+        self,
+        new_workflow: bool = False,
+        name: Optional[str] = None,
+        run_name: Optional[str] = None,
+        wait: bool = True,
+    ) -> WorkflowRun:
         # Ensures that a new workflow is created for the run
         if new_workflow:
             self._builder.for_workflow(None)
@@ -244,7 +250,7 @@ class SafeSyntheticDataset:
                     "Evaluate requires both training and synthetic datasets. No Evaluate step added."
                 )
 
-        return self._builder.run(wait=wait)
+        return self._builder.run(name=name, run_name=run_name, wait=wait)
 
     def _last_step_for_prefix(self, prefix: str, steps: list[Step]) -> Optional[Step]:
         found = None

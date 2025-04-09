@@ -374,9 +374,14 @@ def test_workflow_builder_run_integration(
         gretel_resource_provider=mock_low_level_sdk_resources.mock_resource_provider,
         config=stub_aidd_config_str,
     )
-    dd.create(num_records=1000, workflow_run_name="test-run", wait_for_completion=True)
+    dd.create(
+        num_records=1000,
+        name="test-wfl",
+        run_name="test-run",
+        wait_for_completion=True,
+    )
     mock_low_level_sdk_resources.mock_workflow_builder.run.assert_called_with(
-        name="test-run", wait=True
+        name="test-wfl", run_name="test-run", wait=True
     )
 
 

@@ -161,16 +161,21 @@ def update(sc: SessionContext, workflow_id: str, config: Path):
     default=WAIT_UNTIL_DONE,
 )
 @click.option(
+    "--workflow-run-name",
+    metavar="WORKFLOW-RUN-NAME",
+    help="Gretel workflow run name.",
+)
+@click.option(
     "--workflow-id",
     metavar="WORKFLOW-ID",
     help="Gretel workflow id.",
     required=True,
 )
 @pass_session
-def run(sc: SessionContext, workflow_id: str, wait: int):
+def run(sc: SessionContext, workflow_id: str, workflow_run_name: str, wait: int):
     workflow_api = _get_workflows_api(session=sc.session)
     workflow_run: WorkflowRun = workflow_api.create_workflow_run(
-        CreateWorkflowRunRequest(workflow_id=workflow_id)
+        CreateWorkflowRunRequest(workflow_id=workflow_id, name=workflow_run_name)
     )
     sc.log.info("Workflow run:")
     sc.print(data=workflow_run.to_dict())

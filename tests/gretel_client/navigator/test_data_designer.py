@@ -141,12 +141,18 @@ def test_data_designer_reuses_workflow_for_session(dd_workflow, fixture_config):
     print(dd_workflow.call_args)
 
     dd_workflow.return_value.submit_batch_job.assert_called_with(
-        num_records=100, project_name=None, workflow_id=None
+        num_records=100,
+        project_name=None,
+        workflow_id=None,
+        workflow_run_name=None,
     )
 
     dd_session.submit_batch_workflow(num_records=200)
     dd_workflow.return_value.submit_batch_job.assert_called_with(
-        num_records=200, project_name="proj_1", workflow_id="w_1"
+        num_records=200,
+        project_name="proj_1",
+        workflow_id="w_1",
+        workflow_run_name=None,
     )
 
 

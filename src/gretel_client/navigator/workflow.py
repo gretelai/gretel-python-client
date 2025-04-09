@@ -583,6 +583,7 @@ class DataDesignerWorkflow:
         *,
         project_name: Optional[str] = None,
         workflow_id: Optional[str] = None,
+        workflow_run_name: Optional[str] = None,
     ) -> DataDesignerBatchJob:
         self._globals.update({"num_records": num_records})
 
@@ -594,6 +595,7 @@ class DataDesignerWorkflow:
             num_records,
             project_name or self.project_id,
             workflow_id or self.workflow_id,
+            workflow_run_name,
         )
 
         self.workflow_id = response.workflow_id

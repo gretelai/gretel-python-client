@@ -7,6 +7,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **workflow** | **object** |  | [optional] 
 **workflow_run_id** | **str** |  | 
+**workflow_run_name** | **str** |  | [optional] 
 
 ## Example
 

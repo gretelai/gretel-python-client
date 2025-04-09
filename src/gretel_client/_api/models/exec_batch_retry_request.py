@@ -31,7 +31,12 @@ class ExecBatchRetryRequest(BaseModel):
 
     workflow: Optional[Dict[str, Any]] = None
     workflow_run_id: StrictStr
-    __properties: ClassVar[List[str]] = ["workflow", "workflow_run_id"]
+    workflow_run_name: Optional[StrictStr] = None
+    __properties: ClassVar[List[str]] = [
+        "workflow",
+        "workflow_run_id",
+        "workflow_run_name",
+    ]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -75,6 +80,14 @@ class ExecBatchRetryRequest(BaseModel):
         if self.workflow is None and "workflow" in self.model_fields_set:
             _dict["workflow"] = None
 
+        # set to None if workflow_run_name (nullable) is None
+        # and model_fields_set contains the field
+        if (
+            self.workflow_run_name is None
+            and "workflow_run_name" in self.model_fields_set
+        ):
+            _dict["workflow_run_name"] = None
+
         return _dict
 
     @classmethod
@@ -90,6 +103,7 @@ class ExecBatchRetryRequest(BaseModel):
             {
                 "workflow": obj.get("workflow"),
                 "workflow_run_id": obj.get("workflow_run_id"),
+                "workflow_run_name": obj.get("workflow_run_name"),
             }
         )
         return _obj

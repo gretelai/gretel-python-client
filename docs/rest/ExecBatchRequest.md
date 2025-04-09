@@ -8,6 +8,7 @@ Name | Type | Description | Notes
 **project_id** | **str** |  | [optional] 
 **workflow_config** | **object** |  | 
 **workflow_id** | **str** |  | [optional] 
+**workflow_run_name** | **str** |  | [optional] 
 
 ## Example
 

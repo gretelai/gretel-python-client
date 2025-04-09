@@ -284,12 +284,13 @@ class DataDesigner:
         self,
         *,
         num_records: int,
-        workflow_run_name: str,
+        name: str | None = None,
+        run_name: str | None = None,
         wait_for_completion: bool = False,
     ) -> WorkflowRun:
         logger.info("🚀 Submitting batch workflow")
         workflow = self._build_workflow(num_records=num_records)
-        return workflow.run(name=workflow_run_name, wait=wait_for_completion)
+        return workflow.run(name=name, run_name=run_name, wait=wait_for_completion)
 
     def to_aidd_config(self) -> AIDDConfig:
         return AIDDConfig(

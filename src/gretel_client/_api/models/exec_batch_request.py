@@ -32,7 +32,13 @@ class ExecBatchRequest(BaseModel):
     project_id: Optional[StrictStr] = None
     workflow_config: Dict[str, Any]
     workflow_id: Optional[StrictStr] = None
-    __properties: ClassVar[List[str]] = ["project_id", "workflow_config", "workflow_id"]
+    workflow_run_name: Optional[StrictStr] = None
+    __properties: ClassVar[List[str]] = [
+        "project_id",
+        "workflow_config",
+        "workflow_id",
+        "workflow_run_name",
+    ]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -81,6 +87,14 @@ class ExecBatchRequest(BaseModel):
         if self.workflow_id is None and "workflow_id" in self.model_fields_set:
             _dict["workflow_id"] = None
 
+        # set to None if workflow_run_name (nullable) is None
+        # and model_fields_set contains the field
+        if (
+            self.workflow_run_name is None
+            and "workflow_run_name" in self.model_fields_set
+        ):
+            _dict["workflow_run_name"] = None
+
         return _dict
 
     @classmethod
@@ -97,6 +111,7 @@ class ExecBatchRequest(BaseModel):
                 "project_id": obj.get("project_id"),
                 "workflow_config": obj.get("workflow_config"),
                 "workflow_id": obj.get("workflow_id"),
+                "workflow_run_name": obj.get("workflow_run_name"),
             }
         )
         return _obj

@@ -806,6 +806,7 @@ class DataDesigner:
         num_records: int,
         project_name: Optional[str] = None,
         data_seeds: Optional[CategoricalDataSeeds] = None,
+        workflow_run_name: Optional[str] = None,
         **kwargs,
     ) -> DataDesignerBatchJob:
         """Submit a batch job to generate a synthetic dataset.
@@ -818,6 +819,7 @@ class DataDesigner:
                 This is useful if you have pre-generated data seeds or want to experiment with
                 different seed categories/values. If None, the data seeds defined in the
                 configuration will be used, including generating new values if needed.
+            workflow_run_name: Optional name to assign to workflow runs.
 
         Returns:
             NavigatorWorkflowBatchJob instance containing the workflow run details and helper
@@ -850,6 +852,7 @@ class DataDesigner:
             num_records=num_records,
             project_name=project_id,
             workflow_id=workflow_id,
+            workflow_run_name=workflow_run_name,
         )
 
         # cache the project and workflow ids so we can reuse it

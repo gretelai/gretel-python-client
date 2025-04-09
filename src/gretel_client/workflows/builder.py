@@ -521,7 +521,12 @@ class WorkflowBuilder:
         for log in self.iter_preview():
             log_printer(log)
 
-    def run(self, name: Optional[str] = None, wait: bool = False) -> WorkflowRun:
+    def run(
+        self,
+        name: Optional[str] = None,
+        run_name: Optional[str] = None,
+        wait: bool = False,
+    ) -> WorkflowRun:
         """Execute the workflow as a batch job.
 
         This method creates a persistent workflow and runs it as a batch job on
@@ -531,7 +536,7 @@ class WorkflowBuilder:
         Args:
             name: Optional name to assign to the workflow. If provided,
                 this will override any name previously set with the name() method.
-
+            run_name: Optional name to assign to this specific run of the workflow.
         Returns:
             WorkflowRun: A WorkflowRun object representing the running workflow.
                 This can be used to track the status of the workflow and retrieve
@@ -546,6 +551,7 @@ class WorkflowBuilder:
                     project_id=self._project_id,
                     workflow_config=self.to_dict(),
                     workflow_id=self._workflow_session_manager.get_id(),
+                    workflow_run_name=run_name,
                 )
             )
 

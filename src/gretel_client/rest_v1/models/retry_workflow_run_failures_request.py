@@ -44,9 +44,9 @@ class RetryWorkflowRunFailuresRequest(BaseModel):
         if value is None:
             return value
 
-        if not re.match(r"^(?i)[a-z][a-z0-9_-]*$", value):
+        if not re.match(r"^[a-zA-Z][a-zA-Z0-9_-]*$", value):
             raise ValueError(
-                r"must validate the regular expression /^(?i)[a-z][a-z0-9_-]*$/"
+                r"must validate the regular expression /^[a-zA-Z][a-zA-Z0-9_-]*$/"
             )
         return value
 

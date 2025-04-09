@@ -41,7 +41,9 @@ def test_does_pass_batch_params(mock_gretel, mock_post):
         api_endpoint="http://test.endpoint", client_session=client_config
     )
 
-    client.submit_batch_workflow({"steps": []}, 100, "test-project", "w_1")
+    client.submit_batch_workflow(
+        {"steps": []}, 100, "test-project", "w_1", "wfl-test-name"
+    )
 
     gretel_instance.set_project.assert_called_once_with(name="test-project")
     gretel_instance.get_project.assert_called_once()
@@ -52,6 +54,7 @@ def test_does_pass_batch_params(mock_gretel, mock_post):
             "workflow_config": {"steps": []},
             "project_id": "proj_1",
             "workflow_id": "w_1",
+            "name": "wfl-test-name",
         },
         headers={"Authorization": "grtu-test"},
     )
