@@ -111,7 +111,7 @@ def template_error_handler():
 
 
 def assert_valid_jinja2_template(template: str) -> None:
-    """Raises an error if the template cnanot be parsed."""
+    """Raises an error if the template cannot be parsed."""
     with template_error_handler():
         meta.find_undeclared_variables(ImmutableSandboxedEnvironment().parse(template))
 

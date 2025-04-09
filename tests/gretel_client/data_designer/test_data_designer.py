@@ -227,41 +227,38 @@ def test_evaluation_operations():
         )
 
 
-def test_export_operations(stub_aidd_config_str):
+def test_config_operations(stub_aidd_config_str):
     dd = DataDesigner.from_config(
         gretel_resource_provider=MagicMock(), config=stub_aidd_config_str
     )
     # verify transformation back to AIDDConfig
-    aidd_config = dd.to_aidd_config()
+    aidd_config = dd.config
     assert isinstance(aidd_config, AIDDConfig)
     assert aidd_config.model_suite == dd.model_suite
 
     # verify transformation to dict
-    aidd_config_dict = dd.to_config_dict()
+    aidd_config_dict = dd.config.to_dict()
     assert isinstance(aidd_config_dict, dict)
     assert aidd_config_dict["model_suite"] == dd.model_suite
 
     # verify config export to files
     with tempfile.NamedTemporaryFile(prefix="config", suffix=".json") as tmp_file:
-        dd.export_config(path=tmp_file.name)
+        dd.config.to_json(path=tmp_file.name)
         with open(tmp_file.name, "r") as f:
             assert json.loads(f.read())["model_suite"] == dd.model_suite
 
     with tempfile.NamedTemporaryFile(prefix="config", suffix=".yaml") as tmp_file:
-        dd.export_config(path=tmp_file.name)
+        dd.config.to_yaml(path=tmp_file.name)
         with open(tmp_file.name, "r") as f:
-            deserialzied_config = yaml.safe_load(f.read())
-            assert deserialzied_config["model_suite"] == dd.model_suite
+            deserialized_config = yaml.safe_load(f.read())
+            assert deserialized_config["model_suite"] == dd.model_suite
             # verify enums are rendered as plain strings in the yaml file
-            assert isinstance(deserialzied_config["model_suite"], str)
+            assert isinstance(deserialized_config["model_suite"], str)
 
     with tempfile.NamedTemporaryFile(prefix="config", suffix=".yml") as tmp_file:
-        dd.export_config(path=tmp_file.name)
+        dd.config.to_yaml(path=tmp_file.name)
         with open(tmp_file.name, "r") as f:
             assert yaml.safe_load(f.read())["model_suite"] == dd.model_suite
-
-    with pytest.raises(ValueError, match="The file extension must be one of"):
-        dd.export_config(path="config.txt")
 
 
 def test_error_on_column_name_same_as_latent_person_sampler():

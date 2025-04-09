@@ -1,5 +1,4 @@
-"""Defines magic interactions with DataDesigner
-"""
+"""Defines magic interactions with DataDesigner"""
 
 import functools
 import inspect
@@ -20,9 +19,8 @@ from rich.pretty import Pretty
 from rich.prompt import Prompt
 from rich.syntax import Syntax
 from rich.table import Table
-from rich.theme import Theme
 
-from gretel_client.data_designer.constants import NordColor
+from gretel_client.data_designer.constants import RICH_CONSOLE_THEME
 from gretel_client.data_designer.types import (
     AIDDColumnT,
     LLMGenColumn,
@@ -72,29 +70,6 @@ SAMPLER_DESCRIPTION_MAPPING = {
     SamplingSourceType.UNIFORM: "Value sampled from a uniform distribution.",
     SamplingSourceType.UUID: "Random UUID-derived identifier.",
 }
-
-# Nord theme for Rich
-RICH_CONSOLE_THEME = Theme(
-    {
-        "repr.number": NordColor.NORD15.value,  # Purple for numbers
-        "repr.string": NordColor.NORD14.value,  # Green for strings
-        "repr.bool_true": NordColor.NORD9.value,  # Blue for True
-        "repr.bool_false": NordColor.NORD9.value,  # Blue for False
-        "repr.none": NordColor.NORD11.value,  # Red for None
-        "repr.brace": NordColor.NORD7.value,  # Teal for brackets/braces
-        "repr.comma": NordColor.NORD7.value,  # Teal for commas
-        "repr.ellipsis": NordColor.NORD7.value,  # Teal for ellipsis
-        "repr.attrib_name": NordColor.NORD3.value,  # Light gray for dict keys
-        "repr.attrib_equal": NordColor.NORD7.value,  # Teal for equals signs
-        "repr.call": NordColor.NORD10.value,  # Darker blue for function calls
-        "repr.function_name": NordColor.NORD10.value,  # Darker blue for function names
-        "repr.class_name": NordColor.NORD12.value,  # Orange for class names
-        "repr.module_name": NordColor.NORD8.value,  # Light cyan for module names
-        "repr.error": NordColor.NORD11.value,  # Red for errors
-        "repr.warning": NordColor.NORD13.value,  # Yellow for warnings
-    }
-)
-
 
 # Aliasing
 AIDDColumnConfigGenerationTask: TypeAlias = (

@@ -1,5 +1,7 @@
 from enum import Enum
 
+from rich.theme import Theme
+
 from gretel_client.workflows.configs.tasks import CodeLang
 
 SQL_DIALECTS = {
@@ -72,6 +74,28 @@ class NordColor(Enum):
     NORD13 = "#EBCB8B"  # Yellow
     NORD14 = "#A3BE8C"  # Green
     NORD15 = "#B48EAD"  # Purple
+
+
+RICH_CONSOLE_THEME = Theme(
+    {
+        "repr.number": NordColor.NORD15.value,  # Purple for numbers
+        "repr.string": NordColor.NORD14.value,  # Green for strings
+        "repr.bool_true": NordColor.NORD9.value,  # Blue for True
+        "repr.bool_false": NordColor.NORD9.value,  # Blue for False
+        "repr.none": NordColor.NORD11.value,  # Red for None
+        "repr.brace": NordColor.NORD7.value,  # Teal for brackets/braces
+        "repr.comma": NordColor.NORD7.value,  # Teal for commas
+        "repr.ellipsis": NordColor.NORD7.value,  # Teal for ellipsis
+        "repr.attrib_name": NordColor.NORD3.value,  # Light gray for dict keys
+        "repr.attrib_equal": NordColor.NORD7.value,  # Teal for equals signs
+        "repr.call": NordColor.NORD10.value,  # Darker blue for function calls
+        "repr.function_name": NordColor.NORD10.value,  # Darker blue for function names
+        "repr.class_name": NordColor.NORD12.value,  # Orange for class names
+        "repr.module_name": NordColor.NORD8.value,  # Light cyan for module names
+        "repr.error": NordColor.NORD11.value,  # Red for errors
+        "repr.warning": NordColor.NORD13.value,  # Yellow for warnings
+    }
+)
 
 
 DEFAULT_HIST_NAME_COLOR = "medium_purple1"

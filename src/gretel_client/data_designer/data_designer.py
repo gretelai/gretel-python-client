@@ -2,10 +2,9 @@ import json
 import logging
 
 from pathlib import Path
-from typing import Any, Type
+from typing import Type
 
 import pandas as pd
-import yaml
 
 from pydantic import BaseModel
 from pygments import highlight
@@ -30,7 +29,6 @@ from gretel_client.data_designer.types import (
     ColumnProviderTypeT,
     DAGColumnT,
     DataSeedColumn,
-    EvaluateDatasetSettings,
     EvaluateDdDatasetSettings,
     EvaluationReportT,
     ExpressionColumn,
@@ -50,6 +48,11 @@ from gretel_client.data_designer.utils import (
     get_task_log_emoji,
     make_date_obj_serializable,
     smart_load_dataframe,
+)
+from gretel_client.data_designer.validate import (
+    rich_print_violations,
+    validate_aidd_columns,
+    Violation,
 )
 from gretel_client.data_designer.viz_tools import AIDDMetadata
 from gretel_client.files.interface import File
@@ -169,8 +172,48 @@ class DataDesigner:
         self._columns = CallbackOnMutateDict(self.magic.reset)
         self._columns |= columns or {}
 
+        if seed_dataset:
+            self.with_seed_dataset(
+                seed_dataset.file_id,
+                sampling_strategy=seed_dataset.sampling_strategy,
+                with_replacement=seed_dataset.with_replacement,
+            )
+
         if person_samplers:
             self.with_person_samplers(person_samplers)
+
+    @property
+    def allowed_references(self) -> list[str]:
+        seed_column_names = [c.name for c in self._seed_columns]
+        sampler_column_names = [c.name for c in self._sampler_columns]
+        dag_column_names = sum(
+            [[c.name] + c.side_effect_columns for c in self._dag_columns], []
+        )
+        return seed_column_names + sampler_column_names + dag_column_names
+
+    @property
+    def config(self) -> AIDDConfig:
+        columns = [
+            c
+            for c in self._columns.values()
+            if c.name not in self._latent_person_columns
+            if not isinstance(c, DataSeedColumn)
+        ]
+        person_samplers = {
+            c.name: c.params
+            for c in self._sampler_columns
+            if c.type == SamplingSourceType.PERSON
+            if c.name in self._latent_person_columns
+        }
+        return AIDDConfig(
+            model_suite=self.model_suite,
+            model_configs=self.model_configs,
+            seed_dataset=self._seed_dataset,
+            person_samplers=person_samplers or None,
+            columns=columns,
+            constraints=list(self._constraints.values()),
+            evaluation_report=self._evaluation_report,
+        )
 
     @property
     def model_suite(self) -> ModelSuite:
@@ -256,11 +299,17 @@ class DataDesigner:
         )
         return self
 
-    def preview(self, verbose_logging: bool = False) -> PreviewResults:
+    def preview(
+        self, verbose_logging: bool = False, validate: bool = True
+    ) -> PreviewResults:
+        if validate:
+            self._run_semantic_validation(raise_exceptions=True)
+
         logger.info("🚀 Generating preview")
         workflow = self._build_workflow(
             num_records=10, verbose_logging=verbose_logging, streaming=True
         )
+
         preview = self._capture_preview_result(
             workflow, verbose_logging=verbose_logging
         )
@@ -291,35 +340,6 @@ class DataDesigner:
         logger.info("🚀 Submitting batch workflow")
         workflow = self._build_workflow(num_records=num_records)
         return workflow.run(name=name, run_name=run_name, wait=wait_for_completion)
-
-    def to_aidd_config(self) -> AIDDConfig:
-        return AIDDConfig(
-            model_suite=self.model_suite,
-            model_configs=self.model_configs,
-            seed_dataset=self._seed_dataset,
-            columns=list(self._columns.values()),
-            constraints=list(self._constraints.values()),
-            evaluation_report=self._evaluation_report,
-        )
-
-    def to_config_dict(self) -> dict[str, Any]:
-        return self.to_aidd_config().model_dump(mode="json")
-
-    def export_config(self, path: str | Path) -> None:
-        config_dict = self.to_config_dict()
-        path = Path(path)
-        match path.suffix.lower():
-            case ".yaml" | ".yml":
-                with open(path, "w") as f:
-                    yaml.dump(config_dict, f, sort_keys=False)
-            case ".json":
-                with open(path, "w") as f:
-                    json.dump(config_dict, f, sort_keys=False, indent=4)
-            case _:
-                raise ValueError(
-                    "The file extension must be one of .yaml, .yml, or .json."
-                    f"You provided: {path.suffix}"
-                )
 
     def with_person_samplers(
         self,
@@ -372,6 +392,14 @@ class DataDesigner:
         )
 
         return self
+
+    def validate(self) -> None:
+        # Run task-level validation.
+        self._build_workflow(num_records=10)
+        # Run semantic validation on full schema.
+        violations = self._run_semantic_validation()
+        if len(violations) == 0:
+            logger.info("Validation passed ✅")
 
     @property
     def _seed_columns(self) -> list[DataSeedColumn]:
@@ -668,6 +696,21 @@ class DataDesigner:
         """
         retrieved_df = self._files.download_dataset(file_id)
         return retrieved_df.columns.tolist()
+
+    def _run_semantic_validation(
+        self, raise_exceptions: bool = False
+    ) -> list[Violation]:
+        violations = validate_aidd_columns(
+            columns=list(self._columns.values()),
+            allowed_references=self.allowed_references,
+        )
+        rich_print_violations(violations)
+        if raise_exceptions and len([v for v in violations if v.level == "ERROR"]) > 0:
+            raise DataDesignerValidationError(
+                "🛑 Your dataset contains validation errors. "
+                "Please address the indicated issues and try again."
+            )
+        return violations
 
     @staticmethod
     def _get_last_evaluation_step_name(workflow_step_names: list[str]) -> str | None:
