@@ -19,9 +19,8 @@ def test_dag_construction():
             name="test_code",
             prompt="Write some zig but call it Python.",
             model_alias="code",
-            data_config=P.DataConfig(
-                type=P.OutputType.CODE, params={"syntax": P.CodeLang.PYTHON}
-            ),
+            output_type=P.OutputType.CODE,
+            output_format=P.CodeLang.PYTHON,
         )
     )
     dd.add_column(
@@ -29,9 +28,8 @@ def test_dag_construction():
             name="depends_on_validation",
             prompt="Write {{ test_code_pylint_score }}.",
             model_alias="code",
-            data_config=P.DataConfig(
-                type=P.OutputType.CODE, params={"syntax": P.CodeLang.PYTHON}
-            ),
+            output_type=P.OutputType.CODE,
+            output_format=P.CodeLang.PYTHON,
         )
     )
     dd.add_column(

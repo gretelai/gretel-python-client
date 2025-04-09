@@ -6,6 +6,7 @@ from unittest.mock import Mock, patch
 from gretel_client.data_designer.utils import (
     CallbackOnMutateDict,
     camel_to_kebab,
+    camel_to_snake,
     fetch_config_if_remote,
     get_task_log_emoji,
     make_date_obj_serializable,
@@ -35,6 +36,13 @@ def test_camel_to_kebab():
     assert camel_to_kebab("anotherExampleString") == "another-example-string"
     assert camel_to_kebab("CamelCase") == "camel-case"
     assert camel_to_kebab("simple") == "simple"
+
+
+def test_camel_to_snake():
+    assert camel_to_snake("camelCaseString") == "camel_case_string"
+    assert camel_to_snake("anotherExampleString") == "another_example_string"
+    assert camel_to_snake("CamelCase") == "camel_case"
+    assert camel_to_snake("simple") == "simple"
 
 
 def test_get_task_log_emoji():

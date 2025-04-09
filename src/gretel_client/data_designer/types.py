@@ -1,7 +1,5 @@
-import json
-
 from enum import Enum
-from typing import Literal, Self, TypeAlias
+from typing import Any, Literal, Self, Type, TypeAlias
 from uuid import UUID
 
 import pandas as pd
@@ -41,7 +39,9 @@ class EvaluationType(str, Enum):
 
 
 class ProviderType(str, Enum):
-    LLM_GEN = "llm-gen"
+    LLM_TEXT = "llm-text"
+    LLM_CODE = "llm-code"
+    LLM_STRUCTURED = "llm-structured"
     LLM_JUDGE = "llm-judge"
     CODE_VALIDATION = "code-validation"
     EXPRESSION = "expression"
@@ -127,11 +127,20 @@ class SamplerColumn(WithPrettyRepr, tasks.ConditionalDataColumn): ...
 
 
 class LLMGenColumn(
-    WithPrettyRepr, tasks.GenerateColumnFromTemplate, WithDAGColumnMixin
+    WithPrettyRepr, tasks.GenerateColumnFromTemplateV2, WithDAGColumnMixin
 ):
-    data_config: tasks.DataConfig = Field(
-        default_factory=lambda: tasks.DataConfig(type=tasks.OutputType.TEXT, params={})
-    )
+    @model_validator(mode="before")
+    @classmethod
+    def _set_output_format(cls, data: Any) -> Any:
+        if "output_format" not in data:
+            return data
+
+        if isinstance(data["output_format"], type) and issubclass(
+            data["output_format"], BaseModel
+        ):
+            data["output_format"] = data["output_format"].model_json_schema()
+
+        return data
 
     @property
     def required_columns(self) -> list[str]:
@@ -140,21 +149,6 @@ class LLMGenColumn(
     @model_validator(mode="after")
     def assert_prompt_valid_jinja(self) -> Self:
         assert_valid_jinja2_template(self.prompt)
-        return self
-
-    @model_validator(mode="after")
-    def validate_data_config_params(self) -> Self:
-        if self.data_config.type == tasks.OutputType.STRUCTURED:
-            if "model" in self.data_config.params:
-                model = self.data_config.params.pop("model")
-                self.data_config.params["json_schema"] = model.model_json_schema()
-            elif isinstance(self.data_config.params.get("json_schema"), str):
-                self.data_config.params["json_schema"] = json.loads(
-                    self.data_config.params["json_schema"]
-                )
-        elif self.data_config.type == tasks.OutputType.CODE:
-            if "syntax" not in self.data_config.params:
-                raise ValueError("Missing `syntax` parameter for code column.")
         return self
 
 

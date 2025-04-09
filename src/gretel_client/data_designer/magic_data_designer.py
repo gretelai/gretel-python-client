@@ -31,16 +31,16 @@ from gretel_client.data_designer.types import (
     Person,
     SamplerColumn,
 )
+from gretel_client.data_designer.utils import camel_to_snake
 from gretel_client.helpers import experimental, is_jupyter
 from gretel_client.workflows.builder import Message, WorkflowInterruption
 from gretel_client.workflows.configs.base import ConfigBase
 from gretel_client.workflows.configs.registry import Registry
 from gretel_client.workflows.configs.tasks import (
-    DataConfig,
     ExistingColumn,
     ExistingColumns,
     GenerateColumnConfigFromInstruction,
-    GenerateColumnFromTemplateConfig,
+    GenerateColumnFromTemplateV2Config,
     GenerateSamplingColumnConfigFromInstruction,
     OutputType,
     SamplingSourceType,
@@ -177,7 +177,8 @@ def cast_datacolumn_to_existingcolumn(data_column: AIDDColumnT) -> ExistingColum
     args = {
         "name": data_column.name,
         "description": data_column.name,
-        "data_config": DataConfig(type=OutputType.TEXT),
+        "output_type": OutputType.TEXT,
+        "output_format": None,
     }
 
     if isinstance(data_column, LLMGenColumn):
@@ -194,7 +195,8 @@ def cast_datacolumn_to_existingcolumn(data_column: AIDDColumnT) -> ExistingColum
             prompt=data_column.prompt,
         )
 
-        args["data_config"] = data_column.data_config
+        args["output_type"] = data_column.output_type
+        args["output_format"] = data_column.output_format
 
     elif isinstance(data_column, SamplerColumn):
         description = SAMPLER_DESCRIPTION_MAPPING.get(
@@ -207,12 +209,10 @@ def cast_datacolumn_to_existingcolumn(data_column: AIDDColumnT) -> ExistingColum
         args["description"] = description
 
         if data_column.type == SamplingSourceType.PERSON:
-            ## Replace the data config with the Person
+            ## Replace the output config with the Person
             ## data structure.
-            args["data_config"] = DataConfig(
-                type=OutputType.STRUCTURED,
-                params={"json_schema": Person.model_json_schema()},
-            )
+            args["output_type"] = OutputType.STRUCTURED
+            args["output_format"] = Person.model_json_schema()
 
     return ExistingColumn(**args)
 
@@ -475,10 +475,12 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
 
         if isinstance(task, GenerateColumnConfigFromInstruction):
             aidd_column_type = LLMGenColumn
-            output_type_name = "generate_column_from_template_config"
+            output_type_name = camel_to_snake(
+                GenerateColumnFromTemplateV2Config.__name__
+            )
             if edit_instruction:
                 _task.instruction = edit_instruction
-                _task.edit_task = GenerateColumnFromTemplateConfig.model_validate(
+                _task.edit_task = GenerateColumnFromTemplateV2Config.model_validate(
                     previous_attempt.model_dump()
                 )
         elif isinstance(task, GenerateSamplingColumnConfigFromInstruction):
@@ -559,9 +561,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
                 )
             elif command == "preview":
                 syntax = None
-                data_config = getattr(new_data_column, "data_config", None)
-                if data_config:
-                    syntax = data_config.params.get("syntax", None)
+                syntax = getattr(new_data_column, "output_format", None)
                 self._run_and_display_preview(task.name, syntax=syntax)
             elif command == "preview-on":
                 preview = True
@@ -595,10 +595,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
 
             ## Handle preview
             if preview:
-                syntax = None
-                data_config = getattr(new_data_column, "data_config", None)
-                if data_config:
-                    syntax = data_config.params.get("syntax", None)
+                syntax = getattr(new_data_column, "output_format", None)
                 self._run_and_display_preview(task.name, syntax=syntax)
 
             if not interactive:
@@ -645,7 +642,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
         edit_task = None
         if self.is_known_column_name(name):
             edit_data_column = self._dd_obj.get_column(name)
-            edit_task = GenerateColumnFromTemplateConfig.model_validate(
+            edit_task = GenerateColumnFromTemplateV2Config.model_validate(
                 edit_data_column.model_dump()
             )
 

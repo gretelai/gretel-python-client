@@ -70,10 +70,10 @@ class AIDDMetadata(BaseModel):
         code_validation_columns = []
 
         for col in aidd._llm_gen_columns:
-            if col.data_config.type == OutputType.CODE:
+            if col.output_type == OutputType.CODE:
                 llm_gen_code_columns.append(col.name)
-                code_langs.append(col.data_config.params["syntax"])
-            elif col.data_config.type == OutputType.STRUCTURED:
+                code_langs.append(col.output_format)
+            elif col.output_type == OutputType.STRUCTURED:
                 llm_gen_structured_columns.append(col.name)
             else:
                 llm_gen_text_columns.append(col.name)

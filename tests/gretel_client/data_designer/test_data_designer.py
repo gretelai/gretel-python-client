@@ -32,8 +32,7 @@ from gretel_client.workflows.configs.tasks import (
     ConcatDatasets,
     DropColumns,
     EvaluateDataset,
-    EvaluateDdDataset,
-    GenerateColumnFromTemplate,
+    GenerateColumnFromTemplateV2,
     GenerateColumnsUsingSamplers,
     JudgeWithLlm,
     Rubric,
@@ -41,6 +40,10 @@ from gretel_client.workflows.configs.tasks import (
     SamplingSourceType,
     ValidateCode,
 )
+
+
+class DummyStructuredModel(BaseModel):
+    stub: str
 
 
 def serialize_model_excluding_unset(model: BaseModel) -> str:
@@ -57,9 +60,16 @@ def test_build_data_designer_state_using_types():
             name="test_code",
             prompt="Write some zig but call it Python.",
             model_alias="code",
-            data_config=P.DataConfig(
-                type=P.OutputType.CODE, params={"syntax": P.CodeLang.PYTHON}
-            ),
+            output_type=P.OutputType.CODE,
+            output_format="python",
+        )
+    )
+    dd.add_column(
+        C.LLMGenColumn(
+            name="test_structured_output",
+            prompt="Generate a structured output",
+            output_type=P.OutputType.STRUCTURED,
+            output_format=DummyStructuredModel.model_json_schema(),
         )
     )
     dd.add_column(
@@ -84,9 +94,14 @@ def test_build_data_designer_state_using_types():
     )
     assert dd.get_columns_of_type(C.SamplerColumn)[0].name == "test_id"
     assert dd.get_columns_of_type(C.LLMGenColumn)[0].name == "test_code"
+    assert dd.get_columns_of_type(C.LLMGenColumn)[1].name == "test_structured_output"
+    assert (
+        dd.get_columns_of_type(C.LLMGenColumn)[1].output_format
+        == DummyStructuredModel.model_json_schema()
+    )
     assert dd.get_columns_of_type(C.LLMJudgeColumn)[0].name == "test_judge"
     assert dd.get_columns_of_type(C.CodeValidationColumn)[0].name == "test_validation"
-    assert len(dd._columns) == 4
+    assert len(dd._columns) == 5
 
 
 def test_data_designer_from_config(stub_aidd_config_str):
@@ -332,10 +347,10 @@ def test_workflow_builder_preview_integration(
     assert steps[1].data_schema.constraints[0].target_column == "age"
 
     assert isinstance(steps[2], ConcatDatasets)
-    assert isinstance(steps[3], GenerateColumnFromTemplate)
+    assert isinstance(steps[3], GenerateColumnFromTemplateV2)
     assert steps[3].name == "text"
 
-    assert isinstance(steps[4], GenerateColumnFromTemplate)
+    assert isinstance(steps[4], GenerateColumnFromTemplateV2)
     assert steps[4].name == "code"
 
     assert isinstance(steps[5], JudgeWithLlm)
@@ -370,7 +385,7 @@ def test_get_column_from_kwargs():
 
     # Test LLM_GEN column
     llm_gen_column = get_column_from_kwargs(
-        name="test_llm_gen", type=ProviderType.LLM_GEN, prompt="Write some code"
+        name="test_llm_gen", type=ProviderType.LLM_TEXT, prompt="Write some code"
     )
     assert isinstance(llm_gen_column, LLMGenColumn)
     assert llm_gen_column.name == "test_llm_gen"
@@ -378,7 +393,7 @@ def test_get_column_from_kwargs():
     assert llm_gen_column.model_alias == "text"
     assert (
         serialize_model_excluding_unset(llm_gen_column)
-        == '{"name": "test_llm_gen", "prompt": "Write some code"}'
+        == '{"name": "test_llm_gen", "output_type": "text", "prompt": "Write some code"}'
     )
 
     # Test LLM_JUDGE column

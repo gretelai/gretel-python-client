@@ -72,6 +72,7 @@ from gretel_client.workflows.configs.tasks import (
 from gretel_client.workflows.configs.tasks import Dtype as ExprDtype
 from gretel_client.workflows.configs.tasks import (
     GenerateColumnsUsingSamplers,
+    OutputType,
     PersonSamplerParams,
     SamplingSourceType,
     SamplingStrategy,
@@ -198,7 +199,7 @@ class DataDesigner:
         column: AIDDColumnT | None = None,
         *,
         name: str | None = None,
-        type: ColumnProviderTypeT = ProviderType.LLM_GEN,
+        type: ColumnProviderTypeT = ProviderType.LLM_TEXT,
         **kwargs,
     ) -> Self:
         if column is None:
@@ -632,9 +633,8 @@ class DataDesigner:
     def _get_next_dag_step(self, column_name: str) -> TaskConfig:
         column = self.get_column(column_name)
         if isinstance(column, LLMGenColumn):
-            # TODO: remove exclude_unset after server-side updates to DataConfig.
-            next_step = self._task_registry.GenerateColumnFromTemplate(
-                **column.model_dump(exclude_unset=False, **MODEL_DUMP_KWARGS)
+            next_step = self._task_registry.GenerateColumnFromTemplateV2(
+                **column.model_dump(**MODEL_DUMP_KWARGS)
             )
         elif isinstance(column, LLMJudgeColumn):
             next_step = self._task_registry.JudgeWithLlm(
@@ -731,7 +731,18 @@ def get_column_from_kwargs(
             "You must provide both `name` and `type` to add a column using kwargs."
         )
     match type:
-        case ProviderType.LLM_GEN:
+        case (
+            ProviderType.LLM_TEXT | ProviderType.LLM_STRUCTURED | ProviderType.LLM_CODE
+        ):
+            match type:
+                case ProviderType.LLM_STRUCTURED:
+                    kwargs["output_type"] = OutputType.STRUCTURED
+                case ProviderType.LLM_CODE:
+                    kwargs["output_type"] = OutputType.CODE
+                case ProviderType.LLM_TEXT:
+                    kwargs["output_type"] = OutputType.TEXT
+                case _:
+                    pass
             column = LLMGenColumn(name=name, **kwargs)
         case ProviderType.LLM_JUDGE:
             column = LLMJudgeColumn(name=name, **kwargs)

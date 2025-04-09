@@ -4,7 +4,6 @@ from gretel_client.workflows.configs.tasks import (
     BinomialSamplerParams,
     CategorySamplerParams,
     CodeLang,
-    DataConfig,
     DatetimeSamplerParams,
     GaussianSamplerParams,
     OutputType,

@@ -45,8 +45,16 @@ def get_task_log_emoji(task_name: str) -> str:
     return log_emoji
 
 
+def _split_camel_case(s: str, sep: str) -> str:
+    return re.sub(r"(?<!^)(?=[A-Z])", sep, s).lower()
+
+
 def camel_to_kebab(s: str) -> str:
-    return re.sub(r"(?<!^)(?=[A-Z])", "-", s).lower()
+    return _split_camel_case(s, "-")
+
+
+def camel_to_snake(s: str) -> str:
+    return _split_camel_case(s, "_")
 
 
 def make_date_obj_serializable(obj: dict) -> dict:

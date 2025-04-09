@@ -85,16 +85,14 @@ columns:
       params:
         values: [Web Development, Data Science, Machine Learning, Cloud Computing]
     - name: text
-      type: llm-gen
+      type: llm-text
       prompt: Write a description of python code in topic {topic} and domain {domain}
     - name: code
-      type: llm-gen
+      type: llm-code
       prompt: Write Python code that will be paired with the following prompt {text}
       model_alias: my_own
-      data_config:
-        type: code
-        params:
-          syntax: python
+      output_type: code
+      output_format: python
     - name: code_validation_result
       type: code-validation
       code_lang: python

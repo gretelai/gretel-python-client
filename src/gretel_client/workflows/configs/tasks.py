@@ -200,6 +200,11 @@ class GenerateColumnFromExpression(ConfigBase):
     dtype: Annotated[Optional[Dtype], Field(title="Dtype")] = "str"
 
 
+class DataConfig(ConfigBase):
+    type: Optional[OutputType] = "text"
+    params: Annotated[Optional[Dict[str, Any]], Field(title="Params")] = None
+
+
 class BernoulliMixtureSamplerParams(ConfigBase):
     p: Annotated[
         float,
@@ -1237,7 +1242,7 @@ class PeftParams(ConfigBase):
         ),
     ] = 1
     target_modules: Annotated[
-        Optional[Union[List[str], str]],
+        Optional[Union[str, List[str]]],
         Field(
             description="List of module names or regex expression of the module names to replace with LoRA. For example, ['q', 'v'] or '.*decoder.*(SelfAttention|EncDecAttention).*(q|v)$'. This can also be a wildcard 'all-linear' which matches all linear/Conv1D layers except the output layer. If not specified, modules will be chosen according to the model architecture. If the architecture is not known, an error will be raised -- in this case, you should specify the target modules manually.",
             title="Target Modules",
@@ -1489,11 +1494,11 @@ class Column(ConfigBase):
         Optional[str], Field(description="Rename to value.", title="Value")
     ] = None
     entity: Annotated[
-        Optional[Union[List[str], str]],
+        Optional[Union[str, List[str]]],
         Field(description="Column entity match.", title="Entity"),
     ] = None
     type: Annotated[
-        Optional[Union[List[str], str]],
+        Optional[Union[str, List[str]]],
         Field(description="Column type match.", title="Type"),
     ] = None
 
@@ -1537,7 +1542,7 @@ class NERConfig(ConfigBase):
 
 class Row(ConfigBase):
     name: Annotated[
-        Optional[Union[List[str], str]], Field(description="Row name.", title="Name")
+        Optional[Union[str, List[str]]], Field(description="Row name.", title="Name")
     ] = None
     condition: Annotated[
         Optional[str], Field(description="Row condition match.", title="Condition")
@@ -1549,11 +1554,11 @@ class Row(ConfigBase):
         Optional[str], Field(description="Row value definition.", title="Value")
     ] = None
     entity: Annotated[
-        Optional[Union[List[str], str]],
+        Optional[Union[str, List[str]]],
         Field(description="Row entity match.", title="Entity"),
     ] = None
     type: Annotated[
-        Optional[Union[List[str], str]],
+        Optional[Union[str, List[str]]],
         Field(description="Row type match.", title="Type"),
     ] = None
     fallback_value: Annotated[
@@ -1611,15 +1616,13 @@ class UniformDistribution(ConfigBase):
     params: UniformDistributionParams
 
 
-class DataConfig(ConfigBase):
-    type: Optional[OutputType] = "text"
-    params: Annotated[Optional[Dict[str, Any]], Field(title="Params")] = None
-
-
 class ExistingColumn(ConfigBase):
     name: Annotated[str, Field(title="Name")]
     description: Annotated[str, Field(title="Description")]
-    data_config: DataConfig
+    output_type: Optional[OutputType] = "text"
+    output_format: Annotated[
+        Optional[Union[str, Dict[str, Any]]], Field(title="Output Format")
+    ] = None
 
 
 class ExistingColumns(ConfigBase):
@@ -1862,7 +1865,7 @@ class EvaluateDdDataset(ConfigBase):
     ] = None
 
 
-class GenerateColumnFromTemplateConfig(ConfigBase):
+class GenerateColumnFromTemplateV2Config(ConfigBase):
     model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
     error_rate: Annotated[
         Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
@@ -1876,8 +1879,11 @@ class GenerateColumnFromTemplateConfig(ConfigBase):
     prompt: Annotated[str, Field(title="Prompt")]
     name: Annotated[Optional[str], Field(title="Name")] = "response"
     system_prompt: Annotated[Optional[str], Field(title="System Prompt")] = None
-    data_config: DataConfig
     description: Annotated[Optional[str], Field(title="Description")] = ""
+    output_type: Optional[OutputType] = "text"
+    output_format: Annotated[
+        Optional[Union[str, Dict[str, Any]]], Field(title="Output Format")
+    ] = None
 
 
 class GenerateColumnConfigFromInstruction(ConfigBase):
@@ -1893,7 +1899,7 @@ class GenerateColumnConfigFromInstruction(ConfigBase):
     ] = "code"
     name: Annotated[str, Field(title="Name")]
     instruction: Annotated[str, Field(title="Instruction")]
-    edit_task: Optional[GenerateColumnFromTemplateConfig] = None
+    edit_task: Optional[GenerateColumnFromTemplateV2Config] = None
     existing_columns: Annotated[Optional[ExistingColumns], Field()] = {"variables": []}
     use_reasoning: Annotated[Optional[bool], Field(title="Use Reasoning")] = True
     must_depend_on: Annotated[Optional[List[str]], Field(title="Must Depend On")] = None
@@ -1915,6 +1921,27 @@ class GenerateColumnFromTemplate(ConfigBase):
     system_prompt: Annotated[Optional[str], Field(title="System Prompt")] = None
     data_config: DataConfig
     description: Annotated[Optional[str], Field(title="Description")] = ""
+
+
+class GenerateColumnFromTemplateV2(ConfigBase):
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
+    error_rate: Annotated[
+        Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
+    ] = 0.2
+    model_configs: Annotated[
+        Optional[List[ModelConfig]], Field(title="Model Configs")
+    ] = None
+    model_alias: Annotated[
+        Optional[Union[str, ModelAlias]], Field(title="Model Alias")
+    ] = "text"
+    prompt: Annotated[str, Field(title="Prompt")]
+    name: Annotated[Optional[str], Field(title="Name")] = "response"
+    system_prompt: Annotated[Optional[str], Field(title="System Prompt")] = None
+    description: Annotated[Optional[str], Field(title="Description")] = ""
+    output_type: Optional[OutputType] = "text"
+    output_format: Annotated[
+        Optional[Union[str, Dict[str, Any]]], Field(title="Output Format")
+    ] = None
 
 
 class ColumnConstraint(ConfigBase):
