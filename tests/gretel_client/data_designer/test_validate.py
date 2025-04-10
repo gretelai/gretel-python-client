@@ -10,6 +10,7 @@ from gretel_client.data_designer.validate import (
     _validate_prompt_templates,
     ViolationType,
 )
+from gretel_client.workflows.configs.tasks import CodeLang, OutputType
 
 VALID_COLUMNS = [
     SamplerColumn(
@@ -50,18 +51,27 @@ INVALID_COLUMNS = [
     ),
     CodeValidationColumn(
         name="code_validation_python",
-        code_lang="ansi",
+        code_lang=CodeLang.SQL_ANSI,
         target_column="code_column_missing",
     ),
     CodeValidationColumn(
         name="code_validation_ansi",
-        code_lang="ansi",
+        code_lang=CodeLang.SQL_ANSI,
         target_column="code_column_python",
     ),
     CodeValidationColumn(
         name="code_validation_not_code",
-        code_lang="python",
+        code_lang=CodeLang.PYTHON,
         target_column="text_no_references",
+    ),
+]
+
+COLUMNS_WITH_WARNINGS = [
+    LLMGenColumn(
+        name="unsupported_code_lang",
+        output_type=OutputType.CODE,
+        prompt="Generate some code for me.",
+        output_format="some_new_lang",
     ),
 ]
 

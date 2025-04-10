@@ -5,12 +5,12 @@ from rich.theme import Theme
 from gretel_client.workflows.configs.tasks import CodeLang
 
 SQL_DIALECTS = {
-    CodeLang.SQLITE,
-    CodeLang.TSQL,
-    CodeLang.BIGQUERY,
-    CodeLang.MYSQL,
-    CodeLang.POSTGRES,
-    CodeLang.ANSI,
+    CodeLang.SQL_SQLITE,
+    CodeLang.SQL_TSQL,
+    CodeLang.SQL_BIGQUERY,
+    CodeLang.SQL_MYSQL,
+    CodeLang.SQL_POSTGRES,
+    CodeLang.SQL_ANSI,
 }
 
 VALIDATE_PYTHON_COLUMN_SUFFIXES = [

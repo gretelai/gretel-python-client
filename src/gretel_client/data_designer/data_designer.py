@@ -625,7 +625,6 @@ class DataDesigner:
                     if log_msg.is_info:
                         logger.info(formatted_msg)
                     elif log_msg.is_warning:
-                        success = False
                         logger.warning(formatted_msg)
                     else:
                         success = False

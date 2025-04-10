@@ -75,19 +75,35 @@ def code_lang_to_syntax_lexer(code_lang: tasks.CodeLang | str) -> str:
     Reference: https://pygments.org/docs/lexers/
     """
     match code_lang:
+        case tasks.CodeLang.GO:
+            return "golang"
+        case tasks.CodeLang.JAVASCRIPT:
+            return "javascript"
+        case tasks.CodeLang.JAVA:
+            return "java"
+        case tasks.CodeLang.KOTLIN:
+            return "kotlin"
         case tasks.CodeLang.PYTHON:
             return "python"
-        case tasks.CodeLang.SQLITE:
+        case tasks.CodeLang.RUBY:
+            return "ruby"
+        case tasks.CodeLang.RUST:
+            return "rust"
+        case tasks.CodeLang.SCALA:
+            return "scala"
+        case tasks.CodeLang.SWIFT:
+            return "swift"
+        case tasks.CodeLang.SQL_SQLITE:
             return "sql"
-        case tasks.CodeLang.ANSI:
+        case tasks.CodeLang.SQL_ANSI:
             return "sql"
-        case tasks.CodeLang.TSQL:
+        case tasks.CodeLang.SQL_TSQL:
             return "tsql"
-        case tasks.CodeLang.BIGQUERY:
+        case tasks.CodeLang.SQL_BIGQUERY:
             return "sql"
-        case tasks.CodeLang.MYSQL:
+        case tasks.CodeLang.SQL_MYSQL:
             return "mysql"
-        case tasks.CodeLang.POSTGRES:
+        case tasks.CodeLang.SQL_POSTGRES:
             return "postgres"
         case _:
             return code_lang

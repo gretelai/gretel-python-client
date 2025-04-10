@@ -119,7 +119,7 @@ class LogMessage:
 
     @property
     def is_warning(self) -> bool:
-        return self.level == "warning"
+        return self.level == "warn"
 
 
 @dataclass

@@ -1598,13 +1598,22 @@ class StepDefinition(ConfigBase):
 
 
 class CodeLang(str, Enum):
+    GO = "go"
+    JAVASCRIPT = "javascript"
+    JAVA = "java"
+    KOTLIN = "kotlin"
     PYTHON = "python"
-    SQLITE = "sqlite"
-    TSQL = "tsql"
-    BIGQUERY = "bigquery"
-    MYSQL = "mysql"
-    POSTGRES = "postgres"
-    ANSI = "ansi"
+    RUBY = "ruby"
+    RUST = "rust"
+    SCALA = "scala"
+    SWIFT = "swift"
+    TYPESCRIPT = "typescript"
+    SQL_SQLITE = "sql:sqlite"
+    SQL_TSQL = "sql:tsql"
+    SQL_BIGQUERY = "sql:bigquery"
+    SQL_MYSQL = "sql:mysql"
+    SQL_POSTGRES = "sql:postgres"
+    SQL_ANSI = "sql:ansi"
 
 
 class ValidateCode(ConfigBase):
