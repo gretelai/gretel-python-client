@@ -17,6 +17,7 @@ from gretel_client.data_designer.utils import (
     WithPrettyRepr,
 )
 from gretel_client.workflows.configs import tasks
+from gretel_client.workflows.configs.tasks import ModelAlias, OutputType
 
 ##########################################################
 # Enums
@@ -151,6 +152,32 @@ class LLMGenColumn(
         assert_valid_jinja2_template(self.prompt)
         return self
 
+    ## Need to set exclude_unset=False in order to preserve
+    ## the default values for these columns that otherwise get stripped
+    ## when sending this to API.
+    def model_dump(self, **kwargs) -> dict:
+        kwargs.setdefault("exclude_unset", False)
+        return super().model_dump(**kwargs)
+
+    def model_dump_json(self, **kwargs) -> str:
+        kwargs.setdefault("exclude_unset", False)
+        return super().model_dump_json(**kwargs)
+
+
+class LLMTextColumn(LLMGenColumn):
+    model_alias: str | ModelAlias = Field(default=ModelAlias.TEXT)
+    output_type: OutputType = Field(default=OutputType.TEXT)
+
+
+class LLMCodeColumn(LLMGenColumn):
+    model_alias: str | ModelAlias = Field(default=ModelAlias.CODE)
+    output_type: OutputType = Field(default=OutputType.CODE)
+
+
+class LLMStructuredColumn(LLMGenColumn):
+    model_alias: str | ModelAlias = Field(default=ModelAlias.STRUCTURED)
+    output_type: OutputType = Field(default=OutputType.STRUCTURED)
+
 
 class LLMJudgeColumn(WithPrettyRepr, tasks.JudgeWithLlm, WithDAGColumnMixin):
     result_column: str = Field(..., alias="name")
@@ -210,7 +237,13 @@ class DataSeedColumn(WithPrettyRepr, AIDDConfigBase):
 ##########################################################
 
 DAGColumnT: TypeAlias = (
-    LLMGenColumn | LLMJudgeColumn | CodeValidationColumn | ExpressionColumn
+    LLMGenColumn
+    | LLMTextColumn
+    | LLMCodeColumn
+    | LLMStructuredColumn
+    | LLMJudgeColumn
+    | CodeValidationColumn
+    | ExpressionColumn
 )
 AIDDColumnT: TypeAlias = SamplerColumn | DAGColumnT
 MagicColumnT: TypeAlias = AIDDColumnT | DataSeedColumn

@@ -33,8 +33,11 @@ from gretel_client.data_designer.types import (
     EvaluationReportT,
     ExpressionColumn,
     GeneralDatasetEvaluation,
+    LLMCodeColumn,
     LLMGenColumn,
     LLMJudgeColumn,
+    LLMStructuredColumn,
+    LLMTextColumn,
     ModelSuite,
     ProviderType,
     SamplerColumn,
@@ -81,6 +84,7 @@ from gretel_client.workflows.configs.tasks import (
     SamplingStrategy,
 )
 from gretel_client.workflows.configs.workflows import Globals, ModelConfig
+from gretel_client.workflows.manager import WorkflowManager
 from gretel_client.workflows.tasks import TaskConfig
 from gretel_client.workflows.workflow import WorkflowRun
 
@@ -126,7 +130,18 @@ class DataDesigner:
             smart_load_yaml(fetch_config_if_remote(config))
         )
         valid_config: AIDDConfig = AIDDConfig.model_validate(json_config)
-        columns = {col.name: col for col in valid_config.columns}
+        columns = {}
+        for col in valid_config.columns:
+            if isinstance(col, LLMGenColumn):
+                col_dict = col.model_dump()
+                match col.output_type:
+                    case OutputType.STRUCTURED:
+                        col = LLMStructuredColumn(**col_dict)
+                    case OutputType.CODE:
+                        col = LLMCodeColumn(**col_dict)
+                    case _:
+                        col = LLMTextColumn(**col_dict)
+            columns[col.name] = col
         constraints = (
             {c.target_column: c for c in valid_config.constraints}
             if len(valid_config.constraints or []) > 0
@@ -184,8 +199,8 @@ class DataDesigner:
 
     @property
     def allowed_references(self) -> list[str]:
-        seed_column_names = [c.name for c in self._seed_columns]
-        sampler_column_names = [c.name for c in self._sampler_columns]
+        seed_column_names = [c.name for c in self.seed_columns]
+        sampler_column_names = [c.name for c in self.sampler_columns]
         dag_column_names = sum(
             [[c.name] + c.side_effect_columns for c in self._dag_columns], []
         )
@@ -201,7 +216,7 @@ class DataDesigner:
         ]
         person_samplers = {
             c.name: c.params
-            for c in self._sampler_columns
+            for c in self.sampler_columns
             if c.type == SamplingSourceType.PERSON
             if c.name in self._latent_person_columns
         }
@@ -410,43 +425,59 @@ class DataDesigner:
             logger.info("Validation passed ✅")
 
     @property
-    def _seed_columns(self) -> list[DataSeedColumn]:
+    def seed_columns(self) -> list[DataSeedColumn]:
         return self.get_columns_of_type(DataSeedColumn)
 
     @property
-    def _sampler_columns(self) -> list[SamplerColumn]:
+    def sampler_columns(self) -> list[SamplerColumn]:
         return self.get_columns_of_type(SamplerColumn)
 
     @property
-    def _llm_gen_columns(self) -> list[LLMGenColumn]:
+    def llm_gen_columns(self) -> list[LLMGenColumn]:
         return self.get_columns_of_type(LLMGenColumn)
 
     @property
-    def _llm_judge_columns(self) -> list[LLMJudgeColumn]:
+    def llm_text_columns(self) -> list[LLMTextColumn]:
+        return self.get_columns_of_type(LLMTextColumn)
+
+    @property
+    def llm_code_columns(self) -> list[LLMCodeColumn]:
+        return self.get_columns_of_type(LLMCodeColumn)
+
+    @property
+    def llm_structured_columns(self) -> list[LLMStructuredColumn]:
+        return self.get_columns_of_type(LLMStructuredColumn)
+
+    @property
+    def llm_judge_columns(self) -> list[LLMJudgeColumn]:
         return self.get_columns_of_type(LLMJudgeColumn)
 
     @property
-    def _code_validation_columns(self) -> list[CodeValidationColumn]:
+    def code_validation_columns(self) -> list[CodeValidationColumn]:
         return self.get_columns_of_type(CodeValidationColumn)
 
     @property
-    def _expression_columns(self) -> list[ExpressionColumn]:
+    def expression_columns(self) -> list[ExpressionColumn]:
         return self.get_columns_of_type(ExpressionColumn)
+
+    @property
+    def workflow_manager(self) -> WorkflowManager:
+        return self._workflow_manager
 
     @property
     def _dag_columns(self) -> list[DAGColumnT]:
         return (
-            self._llm_gen_columns
-            + self._llm_judge_columns
-            + self._code_validation_columns
-            + self._expression_columns
+            self.llm_gen_columns
+            + self.llm_judge_columns
+            + self.code_validation_columns
+            + self.expression_columns
         )
 
     @property
     def _categorical_columns(self) -> list[SamplerColumn]:
         return [
             col
-            for col in self._sampler_columns
+            for col in self.sampler_columns
             if (
                 col.type == SamplingSourceType.CATEGORY
                 or col.type == SamplingSourceType.SUBCATEGORY
@@ -457,7 +488,7 @@ class DataDesigner:
     def _build_workflow(
         self, num_records: int, verbose_logging: bool = False, streaming: bool = False
     ) -> WorkflowBuilder:
-        if self._seed_dataset is None and len(self._sampler_columns) == 0:
+        if self._seed_dataset is None and len(self.sampler_columns) == 0:
             raise ValueError(
                 "🛑 Data Designer needs a seed dataset and/or at least one column that is "
                 "generated using a non-LLM sampler. Seeding data is an essential ingredient "
@@ -496,11 +527,11 @@ class DataDesigner:
         # Add all sampler columns to workflow (single step)
         ########################################################
 
-        if len(self._sampler_columns) > 0:
+        if len(self.sampler_columns) > 0:
             columns_using_samples_step = (
                 self._task_registry.GenerateColumnsUsingSamplers(
                     data_schema=DataSchema(
-                        columns=[c for c in self._sampler_columns],
+                        columns=[c for c in self.sampler_columns],
                         constraints=[c for c in list(self._constraints.values())],
                     ),
                     num_records=num_records,
@@ -576,8 +607,8 @@ class DataDesigner:
                     # TODO: Update to use all judge columns once the evaluate-dataset task is updated.
                     llm_judge_column=(
                         ""
-                        if len(self._llm_judge_columns) == 0
-                        else self._llm_judge_columns[0].name
+                        if len(self.llm_judge_columns) == 0
+                        else self.llm_judge_columns[0].name
                     ),
                     columns_to_ignore=settings.columns_to_ignore,
                     validation_columns=settings.validation_columns,
@@ -737,7 +768,6 @@ class DataDesigner:
             return f"{self.__class__.__name__}(model_suite: {model_suite})"
 
         md = AIDDMetadata.from_aidd(self)
-
         props_to_repr = {
             "model_suite": model_suite,
             "person_samplers": _check_convert_to_json_str(md.person_samplers),
@@ -749,7 +779,9 @@ class DataDesigner:
         for name in [
             "seed_columns",
             "sampler_columns",
-            "llm_gen_columns",
+            "llm_text_columns",
+            "llm_code_columns",
+            "llm_structured_columns",
             "llm_judge_columns",
             "validation_columns",
             "expression_columns",
@@ -781,30 +813,25 @@ def get_column_from_kwargs(
         raise ValueError(
             "You must provide both `name` and `type` to add a column using kwargs."
         )
+    column_klass = None
     match type:
-        case (
-            ProviderType.LLM_TEXT | ProviderType.LLM_STRUCTURED | ProviderType.LLM_CODE
-        ):
-            match type:
-                case ProviderType.LLM_STRUCTURED:
-                    kwargs["output_type"] = OutputType.STRUCTURED
-                case ProviderType.LLM_CODE:
-                    kwargs["output_type"] = OutputType.CODE
-                case ProviderType.LLM_TEXT:
-                    kwargs["output_type"] = OutputType.TEXT
-                case _:
-                    pass
-            column = LLMGenColumn(name=name, **kwargs)
+        case ProviderType.LLM_TEXT:
+            column_klass = LLMTextColumn
+        case ProviderType.LLM_CODE:
+            column_klass = LLMCodeColumn
+        case ProviderType.LLM_STRUCTURED:
+            column_klass = LLMStructuredColumn
         case ProviderType.LLM_JUDGE:
-            column = LLMJudgeColumn(name=name, **kwargs)
+            column_klass = LLMJudgeColumn
         case ProviderType.CODE_VALIDATION:
-            column = CodeValidationColumn(name=name, **kwargs)
+            column_klass = CodeValidationColumn
         case ProviderType.EXPRESSION:
-            column = ExpressionColumn(name=name, **kwargs)
+            column_klass = ExpressionColumn
         case _:
             kwargs["params"] = _SAMPLER_PARAMS[type](**kwargs.get("params", {}))
-            column = SamplerColumn(name=name, type=type, **kwargs)
-    return column
+            kwargs["type"] = type
+            column_klass = SamplerColumn
+    return column_klass(name=name, **kwargs)
 
 
 def _check_convert_to_json_str(

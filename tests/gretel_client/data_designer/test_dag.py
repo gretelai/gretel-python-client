@@ -2,42 +2,44 @@ from unittest.mock import MagicMock
 
 import pytest
 
-import gretel_client.data_designer.columns as C
-import gretel_client.data_designer.params as P
-
-from gretel_client.data_designer import DataDesigner
 from gretel_client.data_designer.dag import topologically_sort_columns
+from gretel_client.data_designer.data_designer import DataDesigner
+from gretel_client.data_designer.types import (
+    CodeValidationColumn,
+    ExpressionColumn,
+    LLMCodeColumn,
+    LLMJudgeColumn,
+    LLMTextColumn,
+    SamplerColumn,
+)
+from gretel_client.workflows.configs.tasks import CodeLang, Rubric, SamplingSourceType
 
 
 def test_dag_construction():
     dd = DataDesigner(gretel_resource_provider=MagicMock())
     dd.add_column(
-        C.SamplerColumn(name="test_id", type=P.SamplingSourceType.UUID, params={})
+        SamplerColumn(name="test_id", type=SamplingSourceType.UUID, params={})
     )
     dd.add_column(
-        C.LLMGenColumn(
+        LLMCodeColumn(
             name="test_code",
             prompt="Write some zig but call it Python.",
-            model_alias="code",
-            output_type=P.OutputType.CODE,
-            output_format=P.CodeLang.PYTHON,
+            output_format=CodeLang.PYTHON,
         )
     )
     dd.add_column(
-        C.LLMGenColumn(
+        LLMCodeColumn(
             name="depends_on_validation",
             prompt="Write {{ test_code_pylint_score }}.",
-            model_alias="code",
-            output_type=P.OutputType.CODE,
-            output_format=P.CodeLang.PYTHON,
+            output_format=CodeLang.PYTHON,
         )
     )
     dd.add_column(
-        C.LLMJudgeColumn(
+        LLMJudgeColumn(
             name="test_judge",
             prompt="Judge this {{ test_code }} {{ depends_on_validation }}",
             rubrics=[
-                P.Rubric(
+                Rubric(
                     name="test_rubric",
                     description="test",
                     scoring={"0": "Not Good", "1": "Good"},
@@ -46,15 +48,15 @@ def test_dag_construction():
         )
     )
     dd.add_column(
-        C.ExpressionColumn(
+        ExpressionColumn(
             name="uses_all_the_stuff",
             expr="{{ test_code }} {{ depends_on_validation }} {{ test_judge }}",
         )
     )
     dd.add_column(
-        C.CodeValidationColumn(
+        CodeValidationColumn(
             name="test_validation",
-            code_lang=P.CodeLang.PYTHON,
+            code_lang=CodeLang.PYTHON,
             target_column="test_code",
         )
     )
@@ -71,16 +73,16 @@ def test_dag_construction():
 def test_circular_dependencies():
     dd = DataDesigner(gretel_resource_provider=MagicMock())
     dd.add_column(
-        C.SamplerColumn(name="test_id", type=P.SamplingSourceType.UUID, params={})
+        SamplerColumn(name="test_id", type=SamplingSourceType.UUID, params={})
     )
     dd.add_column(
-        C.LLMGenColumn(
+        LLMTextColumn(
             name="col_1",
             prompt="I need you {{ col_2 }}",
         )
     )
     dd.add_column(
-        C.LLMGenColumn(
+        LLMTextColumn(
             name="col_2",
             prompt="I need you {{ col_1 }}",
         )

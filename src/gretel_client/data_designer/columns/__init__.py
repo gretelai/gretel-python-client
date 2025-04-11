@@ -1,7 +1,9 @@
 from gretel_client.data_designer.types import (
     CodeValidationColumn,
     ExpressionColumn,
-    LLMGenColumn,
+    LLMCodeColumn,
     LLMJudgeColumn,
+    LLMStructuredColumn,
+    LLMTextColumn,
     SamplerColumn,
 )

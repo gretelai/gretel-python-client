@@ -116,6 +116,7 @@ class ModelAlias(str, Enum):
     TEXT = "text"
     CODE = "code"
     JUDGE = "judge"
+    STRUCTURED = "structured"
 
 
 class UniformDistributionParams(ConfigBase):

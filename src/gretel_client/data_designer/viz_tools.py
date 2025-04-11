@@ -41,10 +41,10 @@ class AIDDMetadata(BaseModel):
     """
 
     sampler_columns: list[str] = []
-    llm_gen_text_columns: list[str] = []
-    llm_gen_code_columns: list[str] = []
-    llm_gen_structured_columns: list[str] = []
     seed_columns: list[str] = []
+    llm_text_columns: list[str] = []
+    llm_code_columns: list[str] = []
+    llm_structured_columns: list[str] = []
     llm_judge_columns: list[str] = []
     validation_columns: list[str] = []
     expression_columns: list[str] = []
@@ -56,50 +56,35 @@ class AIDDMetadata(BaseModel):
     @property
     def llm_gen_columns(self) -> list[str]:
         return (
-            (self.llm_gen_text_columns or [])
-            + (self.llm_gen_code_columns or [])
-            + (self.llm_gen_structured_columns or [])
+            self.llm_text_columns + self.llm_code_columns + self.llm_structured_columns
         )
 
     @classmethod
     def from_aidd(cls, aidd: "DataDesigner") -> Self:
-        code_langs = []
-        llm_gen_code_columns = []
-        llm_gen_text_columns = []
-        llm_gen_structured_columns = []
         code_validation_columns = []
 
-        for col in aidd._llm_gen_columns:
-            if col.output_type == OutputType.CODE:
-                llm_gen_code_columns.append(col.name)
-                code_langs.append(col.output_format)
-            elif col.output_type == OutputType.STRUCTURED:
-                llm_gen_structured_columns.append(col.name)
-            else:
-                llm_gen_text_columns.append(col.name)
-
-        for code_val_col in aidd._code_validation_columns:
+        for code_val_col in aidd.code_validation_columns:
             code_validation_columns.extend(
                 [code_val_col.name] + list(code_val_col.side_effect_columns)
             )
 
         sampling_based_columns = [
             col.name
-            for col in aidd._sampler_columns
+            for col in aidd.sampler_columns
             if col.name not in list(aidd._latent_person_columns.keys())
         ]
 
         return cls(
             sampler_columns=sampling_based_columns,
-            llm_gen_text_columns=llm_gen_text_columns,
-            llm_gen_code_columns=llm_gen_code_columns,
-            llm_gen_structured_columns=llm_gen_structured_columns,
-            seed_columns=[col.name for col in aidd._seed_columns],
-            llm_judge_columns=[col.name for col in aidd._llm_judge_columns],
+            seed_columns=[col.name for col in aidd.seed_columns],
+            llm_text_columns=[col.name for col in aidd.llm_text_columns],
+            llm_code_columns=[col.name for col in aidd.llm_code_columns],
+            llm_structured_columns=[col.name for col in aidd.llm_structured_columns],
+            llm_judge_columns=[col.name for col in aidd.llm_judge_columns],
             validation_columns=code_validation_columns,
-            expression_columns=[col.name for col in aidd._expression_columns],
+            expression_columns=[col.name for col in aidd.expression_columns],
             person_samplers=list(aidd._latent_person_columns.keys()),
-            code_langs=code_langs,
+            code_langs=[col.output_format for col in aidd.llm_code_columns],
             eval_type=None,
         )
 
@@ -162,8 +147,8 @@ def display_sample_record(
     non_code_columns = (
         aidd_metadata.sampler_columns
         + aidd_metadata.expression_columns
-        + aidd_metadata.llm_gen_text_columns
-        + aidd_metadata.llm_gen_structured_columns
+        + aidd_metadata.llm_text_columns
+        + aidd_metadata.llm_structured_columns
     )
 
     if len(non_code_columns) > 0:
@@ -174,7 +159,7 @@ def display_sample_record(
             table.add_row(col, _convert_to_row_element(record[col]))
         render_list.append(_pad_console_element(table))
 
-    for num, col in enumerate(aidd_metadata.llm_gen_code_columns):
+    for num, col in enumerate(aidd_metadata.llm_code_columns):
         if not aidd_metadata.code_langs:
             raise ValueError(
                 "`code_langs` must be provided when code columns are specified."

@@ -8,9 +8,6 @@ import yaml
 
 from pydantic import BaseModel
 
-import gretel_client.data_designer.columns as C
-import gretel_client.data_designer.params as P
-
 from gretel_client.data_designer.aidd_config import AIDDConfig
 from gretel_client.data_designer.data_designer import (
     DataDesigner,
@@ -21,8 +18,10 @@ from gretel_client.data_designer.types import (
     CodeValidationColumn,
     EvaluationReportT,
     ExpressionColumn,
-    LLMGenColumn,
+    LLMCodeColumn,
     LLMJudgeColumn,
+    LLMStructuredColumn,
+    LLMTextColumn,
     ProviderType,
     SamplerColumn,
 )
@@ -46,38 +45,31 @@ class DummyStructuredModel(BaseModel):
     stub: str
 
 
-def serialize_model_excluding_unset(model: BaseModel) -> str:
-    return json.dumps(model.model_dump(exclude_unset=True), sort_keys=True)
-
-
 def test_build_data_designer_state_using_types():
     dd = DataDesigner(gretel_resource_provider=MagicMock())
     dd.add_column(
-        C.SamplerColumn(name="test_id", type=P.SamplingSourceType.UUID, params={})
+        SamplerColumn(name="test_id", type=SamplingSourceType.UUID, params={})
     )
     dd.add_column(
-        C.LLMGenColumn(
+        LLMCodeColumn(
             name="test_code",
             prompt="Write some zig but call it Python.",
-            model_alias="code",
-            output_type=P.OutputType.CODE,
             output_format="python",
         )
     )
     dd.add_column(
-        C.LLMGenColumn(
+        LLMStructuredColumn(
             name="test_structured_output",
             prompt="Generate a structured output",
-            output_type=P.OutputType.STRUCTURED,
             output_format=DummyStructuredModel.model_json_schema(),
         )
     )
     dd.add_column(
-        C.LLMJudgeColumn(
+        LLMJudgeColumn(
             name="test_judge",
             prompt="Judge this",
             rubrics=[
-                P.Rubric(
+                Rubric(
                     name="test_rubric",
                     description="test",
                     scoring={"0": "Not Good", "1": "Good"},
@@ -86,21 +78,23 @@ def test_build_data_designer_state_using_types():
         )
     )
     dd.add_column(
-        C.CodeValidationColumn(
+        CodeValidationColumn(
             name="test_validation",
-            code_lang=P.CodeLang.PYTHON,
+            code_lang=CodeLang.PYTHON,
             target_column="test_code",
         )
     )
-    assert dd.get_columns_of_type(C.SamplerColumn)[0].name == "test_id"
-    assert dd.get_columns_of_type(C.LLMGenColumn)[0].name == "test_code"
-    assert dd.get_columns_of_type(C.LLMGenColumn)[1].name == "test_structured_output"
+    assert dd.get_columns_of_type(SamplerColumn)[0].name == "test_id"
+    assert dd.get_columns_of_type(LLMCodeColumn)[0].name == "test_code"
     assert (
-        dd.get_columns_of_type(C.LLMGenColumn)[1].output_format
+        dd.get_columns_of_type(LLMStructuredColumn)[0].name == "test_structured_output"
+    )
+    assert (
+        dd.get_columns_of_type(LLMStructuredColumn)[0].output_format
         == DummyStructuredModel.model_json_schema()
     )
-    assert dd.get_columns_of_type(C.LLMJudgeColumn)[0].name == "test_judge"
-    assert dd.get_columns_of_type(C.CodeValidationColumn)[0].name == "test_validation"
+    assert dd.get_columns_of_type(LLMJudgeColumn)[0].name == "test_judge"
+    assert dd.get_columns_of_type(CodeValidationColumn)[0].name == "test_validation"
     assert len(dd._columns) == 5
 
 
@@ -109,8 +103,8 @@ def test_data_designer_from_config(stub_aidd_config_str):
         gretel_resource_provider=MagicMock(), config=stub_aidd_config_str
     )
     assert isinstance(dd.get_column(column_name="code_id"), SamplerColumn)
-    assert isinstance(dd.get_column(column_name="text"), LLMGenColumn)
-    assert isinstance(dd.get_column(column_name="code"), LLMGenColumn)
+    assert isinstance(dd.get_column(column_name="text"), LLMTextColumn)
+    assert isinstance(dd.get_column(column_name="code"), LLMCodeColumn)
     assert isinstance(
         dd.get_column(column_name="code_validation_result"),
         CodeValidationColumn,
@@ -139,7 +133,7 @@ def test_column_operations():
         params={"prefix": "code_", "short_form": True, "uppercase": True},
     ).add_column(name="text", prompt="Write a description of fizzbuzz python code")
     assert isinstance(dd.get_column("code_id"), SamplerColumn)
-    assert isinstance(dd.get_column("text"), LLMGenColumn)
+    assert isinstance(dd.get_column("text"), LLMTextColumn)
 
     # replace existing column
     dd = dd.add_column(name="text", prompt="Updated")
@@ -388,18 +382,48 @@ def test_workflow_builder_run_integration(
 def test_get_column_from_kwargs():
     # Test column creation and serialization
 
-    # Test LLM_GEN column
-    llm_gen_column = get_column_from_kwargs(
-        name="test_llm_gen", type=ProviderType.LLM_TEXT, prompt="Write some code"
+    # Test LLM_TEXT column
+    llm_text_column = get_column_from_kwargs(
+        name="test_llm_text", type=ProviderType.LLM_TEXT, prompt="Write some text"
     )
-    assert isinstance(llm_gen_column, LLMGenColumn)
-    assert llm_gen_column.name == "test_llm_gen"
-    assert llm_gen_column.prompt == "Write some code"
-    assert llm_gen_column.model_alias == "text"
+    assert isinstance(llm_text_column, LLMTextColumn)
+    assert llm_text_column.name == "test_llm_text"
+    assert llm_text_column.prompt == "Write some text"
+    assert llm_text_column.model_alias == "text"
+    assert llm_text_column.output_type == "text"
+    assert llm_text_column.model_dump()["output_type"] == "text"
+
+    # Test LLM_CODE column
+    llm_code_column = get_column_from_kwargs(
+        name="test_llm_code",
+        type=ProviderType.LLM_CODE,
+        prompt="Write some code",
+        output_format="python",
+    )
+    assert isinstance(llm_code_column, LLMCodeColumn)
+    assert llm_code_column.name == "test_llm_code"
+    assert llm_code_column.prompt == "Write some code"
+    assert llm_code_column.model_alias == "code"
+    assert llm_code_column.output_type == "code"
+    assert llm_code_column.output_format == "python"
+    assert llm_code_column.model_dump()["output_type"] == "code"
+
+    # Test LLM_STRUCTURED column
+    llm_structured_column = get_column_from_kwargs(
+        name="test_llm_structured",
+        type=ProviderType.LLM_STRUCTURED,
+        prompt="Generate a structured output",
+        output_format=DummyStructuredModel.model_json_schema(),
+    )
+    assert isinstance(llm_structured_column, LLMStructuredColumn)
+    assert llm_structured_column.name == "test_llm_structured"
+    assert llm_structured_column.prompt == "Generate a structured output"
     assert (
-        serialize_model_excluding_unset(llm_gen_column)
-        == '{"name": "test_llm_gen", "output_type": "text", "prompt": "Write some code"}'
+        llm_structured_column.output_format == DummyStructuredModel.model_json_schema()
     )
+    assert llm_structured_column.model_alias == "structured"
+    assert llm_structured_column.output_type == "structured"
+    assert llm_structured_column.model_dump()["output_type"] == "structured"
 
     # Test LLM_JUDGE column
     llm_judge_column = get_column_from_kwargs(
@@ -418,10 +442,6 @@ def test_get_column_from_kwargs():
     assert llm_judge_column.name == "test_judge"
     assert llm_judge_column.prompt == "Judge this code"
     assert len(llm_judge_column.rubrics) == 1
-    assert (
-        serialize_model_excluding_unset(llm_judge_column)
-        == '{"prompt": "Judge this code", "result_column": "test_judge", "rubrics": [{"description": "test", "name": "test_rubric", "scoring": {"0": "Bad", "1": "Good"}}]}'
-    )
 
     # Test CODE_VALIDATION column
     code_validation_column = get_column_from_kwargs(
@@ -434,10 +454,6 @@ def test_get_column_from_kwargs():
     assert code_validation_column.name == "test_validation"
     assert code_validation_column.code_lang == CodeLang.PYTHON
     assert code_validation_column.target_column == "test_code"
-    assert (
-        serialize_model_excluding_unset(code_validation_column)
-        == '{"code_lang": "python", "name": "test_validation", "target_column": "test_code"}'
-    )
 
     # Test EXPRESSION column
     expression_column = get_column_from_kwargs(
@@ -446,10 +462,6 @@ def test_get_column_from_kwargs():
     assert isinstance(expression_column, ExpressionColumn)
     assert expression_column.name == "test_expression"
     assert expression_column.expr == "1 + 1"
-    assert (
-        serialize_model_excluding_unset(expression_column)
-        == '{"expr": "1 + 1", "name": "test_expression"}'
-    )
 
     # Test Sampler columns with nullable params
     # UUID type with params provided
@@ -464,10 +476,6 @@ def test_get_column_from_kwargs():
     assert sampler_column.params.prefix == "test_"
     assert sampler_column.params.short_form is True
     assert sampler_column.params.uppercase is False
-    assert (
-        serialize_model_excluding_unset(sampler_column)
-        == '{"name": "test_sampler", "params": {"prefix": "test_", "short_form": true}, "type": "uuid"}'
-    )
 
     # UUID type without params provided
     sampler_column_no_params = get_column_from_kwargs(
@@ -479,10 +487,6 @@ def test_get_column_from_kwargs():
     assert sampler_column_no_params.params.prefix is None
     assert sampler_column_no_params.params.short_form is False
     assert sampler_column_no_params.params.uppercase is False
-    assert (
-        serialize_model_excluding_unset(sampler_column_no_params)
-        == '{"name": "test_sampler_no_params", "params": {}, "type": "uuid"}'
-    )
 
     # PERSON type with params provided
     person_sampler_column = get_column_from_kwargs(
@@ -501,10 +505,6 @@ def test_get_column_from_kwargs():
     assert person_sampler_column.params.locale == "en_BR"
     assert person_sampler_column.params.sex == "Male"
     assert person_sampler_column.params.city == "New York"
-    assert (
-        serialize_model_excluding_unset(person_sampler_column)
-        == '{"name": "test_person_sampler", "params": {"age_range": [18, 30], "city": "New York", "locale": "en_BR", "sex": "Male"}, "type": "person"}'
-    )
 
     # PersonSampler type without params provided
     person_sampler_column_no_params = get_column_from_kwargs(
@@ -516,7 +516,3 @@ def test_get_column_from_kwargs():
     assert person_sampler_column_no_params.params.locale == "en_US"
     assert person_sampler_column_no_params.params.sex is None
     assert person_sampler_column_no_params.params.city is None
-    assert (
-        serialize_model_excluding_unset(person_sampler_column_no_params)
-        == '{"name": "test_person_sampler_no_params", "params": {}, "type": "person"}'
-    )

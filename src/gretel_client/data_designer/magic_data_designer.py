@@ -504,7 +504,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
 
         task_output = remote_streaming_execute_stateless_task(
             task=_task,
-            workflow_manager=self._dd_obj._workflow_manager,
+            workflow_manager=self._dd_obj.workflow_manager,
             output_type_name=output_type_name,
             globals=Globals(
                 model_suite=self.model_suite,
@@ -980,17 +980,17 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
         Presently, only LLM prompting columns can be edited.
         """
 
-        return self._dd_obj._llm_gen_columns
+        return self._dd_obj.llm_gen_columns
 
     @property
     def known_columns(self) -> list[AIDDColumnT]:
         """List all known columns in the current DD state."""
         return [
-            *self._dd_obj._seed_columns,
-            *self._dd_obj._sampler_columns,
-            *self._dd_obj._llm_gen_columns,
-            *self._dd_obj._llm_judge_columns,
-            *self._dd_obj._code_validation_columns,
+            *self._dd_obj.seed_columns,
+            *self._dd_obj.sampler_columns,
+            *self._dd_obj.llm_gen_columns,
+            *self._dd_obj.llm_judge_columns,
+            *self._dd_obj.code_validation_columns,
         ]
 
     def is_known_column_name(self, name: str) -> bool:
