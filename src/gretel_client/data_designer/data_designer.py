@@ -255,10 +255,16 @@ class DataDesigner:
                 f"Columns must be one of {[t.__name__ for t in AIDDColumnT.__args__]}."
             )
         if column.name in self._latent_person_columns:
-            raise ValueError(
-                f"🛑 The name `{column.name}` is already the name of a person sampler. Please "
-                "ensure that all person sampler and column names are unique."
-            )
+            if (
+                not isinstance(column, SamplerColumn)
+                or column.type != SamplingSourceType.PERSON
+            ):
+                raise ValueError(
+                    f"🛑 The name `{column.name}` is already the name of a person sampler created "
+                    "using `with_person_samplers`. Please ensure that all person sampler and "
+                    "column names are unique."
+                )
+            self._latent_person_columns[column.name] = column.params
         self._columns[column.name] = column
         return self
 

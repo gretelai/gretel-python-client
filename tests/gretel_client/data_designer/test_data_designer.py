@@ -265,9 +265,12 @@ def test_error_on_column_name_same_as_latent_person_sampler():
     dd = DataDesigner(gretel_resource_provider=MagicMock())
     dd.with_person_samplers({"dude": {"locale": "en_GB"}})
 
+    # this is an upsert, so no error
+    dd.with_person_samplers({"dude": {"locale": "en_GB"}})
+
     dd.add_column(name="dude_2", type="category", params={"values": ["John", "Jane"]})
 
-    # add_column is an upsert, so no error
+    # this is an upsert, so no error
     dd.add_column(name="dude_2", type="category", params={"values": ["Mike", "Jane"]})
 
     # latent person samplers can't be overwritten with add_column
