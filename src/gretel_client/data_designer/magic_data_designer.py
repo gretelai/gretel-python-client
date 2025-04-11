@@ -477,6 +477,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
         task: AIDDColumnConfigGenerationTask,
         edit_instruction: Optional[str] = None,
         previous_attempt: Optional[EditableColumnT] = None,
+        verbose: bool = True,
     ) -> AIDDColumnT:
         """Single call to get a generation config."""
         _task = deepcopy(task)
@@ -520,7 +521,9 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
         if hasattr(new_data_column, "model_suite"):
             new_data_column.model_suite = self._dd_obj.model_suite
 
-        pprint_datacolumn(new_data_column)
+        if verbose:
+            pprint_datacolumn(new_data_column)
+
         self._working_dd_state.columns[task.name] = new_data_column
 
         return new_data_column
@@ -850,6 +853,124 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
         else:
             self.save()
 
+        return self._dd_obj
+
+    @experimental(message=EXPERIMENTAL_WARNING, emoji="🧪")
+    def extend_category(
+        self, name: str, *, n: int = 5, max_attempts: int = 3
+    ) -> DataDesignerT:
+        """Extend the values of a category sampler with new entries.
+
+        When called on an existing category sampler column, an LLM call
+        is made to edit the `values` field, resulting in an updated list
+        containing novel entries. These entries are the LLM's best-effort
+        at drawing new values matching the intented distribution of
+        the existing category.
+
+        ```
+        designer.add_column(
+            name="programming_concepts",
+            type="category",
+            params={"values": ["Linked Lists"]}
+        )
+
+        aidd.magic.extend_category("programming_concepts")
+        # ['Linked Lists', 'Trees', 'Graphs', 'Hash Tables', 'Heaps', 'Stacks']
+
+        aidd.magic.extend_category("programming_concepts", n=1)
+        # ['Linked Lists', 'Trees', 'Graphs', 'Hash Tables', 'Heaps', 'Stacks', 'Queues']
+
+        ```
+
+        Args:
+            name (str): The name of an existing categorical sampler
+                column.
+
+            n (int, optional): The number of new unique values to add
+                to the category, with a maximum of 25. To add more
+                entries beyond 25, simply call this function multiple
+                times. Defaults to 5 if not specified.
+
+            max_attempts (int, optional): Maximum number of internal
+                retry calls to attempt if responses contain fewer
+                than `n` new entries. After the number of attempts
+                exceeds this threshold, then the function will return
+                with the best-effort extension.
+
+        Returns:
+            An updated DataDesigner object.
+
+        Raises:
+            KeyError: If attempting to refine the prompt of a non-existant column or
+                if the column specified isn't a categoy sampler.
+
+            ValueError: If a too-large value of `n` is specified.
+        """
+        if n > 25:
+            raise ValueError("Please specify a value n < 25")
+
+        if not self.is_known_column_name(name):
+            ## The column has to exist in order to extend
+            raise KeyError(f"The column '{name}' does not exist.")
+        else:
+            _col = self._dd_obj.get_column(name)
+            _class_name = _col.__class__.__name__
+            if not isinstance(_col, SamplerColumn):
+                ## It has to at least be a SamplerColumn...
+                raise KeyError(
+                    f"The column '{name}' already exists as type {_class_name}, it cannot be updated with this function. "
+                )
+            elif _col.type != SamplingSourceType.CATEGORY:
+                ## And furthermore, it has to be a Category sampler
+                _type_name = _col.type
+                raise KeyError(
+                    f"The column '{name}' already exists as type {_class_name}(type={_type_name}), it cannot be updated with this function. "
+                )
+
+        ## Get previously existing column if present. If it is,
+        ## then we know at this point that it is a SamplerColumn
+        task = self._task_registry.GenerateSamplingColumnConfigFromInstruction(
+            name=name,
+            instruction="",
+        )
+
+        ## Extension instruction
+        needed_values = n
+        last_okay_column = self._working_dd_state.columns[name]
+        original_values = self._working_dd_state.columns[name].params.values
+        created_values = set()
+        attempts = 0
+        while needed_values > 0:
+            instruction = f"Add {needed_values} new unique, in-distribution values to the category_sampler definition."
+            updated_column = self._instruction_to_data_column(
+                task,
+                edit_instruction=instruction,
+                previous_attempt=last_okay_column,
+                verbose=False,
+            )
+
+            if updated_column.type != SamplingSourceType.CATEGORY:
+                ## Server made a whoopsie and got a wrong sampler type
+                continue
+            elif len(new_values := updated_column.params.values) <= len(
+                original_values
+            ):
+                ## Server didn't give us new values
+                continue
+
+            last_okay_column = self._working_dd_state.columns[name]
+            new_values = updated_column.params.values
+            created_values = set(new_values) - set(original_values)
+            needed_values -= len(created_values)
+            attempts += 1
+
+            if attempts > max_attempts:
+                Console().print(
+                    f"[bold]⚠️ Only found {created_values} out of {n} new values![/bold]"
+                )
+
+        self.save()
+        pprint_datacolumn(last_okay_column)
         return self._dd_obj
 
     @property
