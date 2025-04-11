@@ -60,6 +60,9 @@ class FieldViolation(BaseModel):
     def from_api_response(field_violations: list[dict]) -> list[FieldViolation]:
         return [FieldViolation(**violation) for violation in field_violations]
 
+    def __str__(self) -> str:
+        return f"{self.field}: {self.error_message}"
+
 
 class WorkflowValidationError(Exception):
     """
@@ -92,6 +95,10 @@ class WorkflowValidationError(Exception):
     @property
     def step_name(self) -> str:
         return self._step_name or ""
+
+    def __str__(self) -> str:
+        violations = "\n".join(str(fv) for fv in self._field_violations)
+        return f"{super().__str__()}\n{violations}"
 
 
 @dataclass

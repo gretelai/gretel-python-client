@@ -682,6 +682,125 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
         return self._dd_obj
 
     @experimental(message=EXPERIMENTAL_WARNING, emoji="🧪")
+    def refine_prompt(
+        self,
+        name: str,
+        instruction: str | None = None,
+        *,
+        must_depend_on: list[str] | None = None,
+    ) -> DataDesignerT:
+        """Refine the prompt of an LLM generation column.
+
+        When called on an existing LLM generation column, an LLM call is
+        made to edit the `prompt` field, resulting in an updated Jinja
+        template prompt for the column. Successive calls of this function
+        can be used to repeatedly edit the prompt in place.
+
+        ```python
+        designer.add_column(
+            "question",
+            "Ask {{ farmer.first_name }} about the price of apples today."
+        )
+
+        designer.magic.refine_prompt("question", "User the farmer's full name.")
+        # "Ask {{ farmer.first_name }} {{ farmer.last_name }} about the price of apples today."
+
+        designer.magic.refine_prompt("question", "Ask about pears instead.")
+        # "Ask {{ farmer.first_name }} {{ farmer.last_name }} about the price of pears today."
+
+        designer.magic.refine_prompt("question", "Use Jinja to ask for a random poundage of pears.")
+        # Ask {{ farmer.first_name }} {{ farmer.last_name }} about the price of
+        # {{ range(1, 10)|random }} pounds of pears today.
+        ```
+
+        This function can also be used to simply *vary* a prompt without altering
+        its intention. To do this, simply call `refine_prompt` without specifying
+        any instruction.
+
+        ```python
+        designer.add_column(
+            "question",
+            "Ask {{ farmer.first_name }} about the price of apples today."
+        )
+
+        designer.magic.refine_prompt("question")
+        # You are speaking with {{ farmer.first_name }} {{ farmer.last_name }}, a local farmer.
+        # Please ask {{ farmer.first_name }} about the price of apples today.
+        # Make sure to include a polite greeting and a clear question.
+
+        designer.magic.refine_prompt("question")
+        # You are speaking with {{ farmer.first_name }} {{ farmer.last_name }}, a local farmer.
+        # Please greet {{ farmer.first_name }} politely and ask about the price of apples today.
+        # Your question should be clear and direct.
+
+        designer.magic.refine_prompt("question")
+        # You are speaking with {{ farmer.first_name }} {{ farmer.last_name }}, a local farmer.
+        # Please greet {{ farmer.first_name }} politely and ask about the price of apples today.
+        # Your question should be clear and to the point.
+
+        ```
+
+
+        Args:
+            name (str): The name of an existing prompt-based LLM generation
+                column in the DataDesigner object.
+
+            instruction (str, optional): An instruction to guide the refinement
+                of the prompt template of the specified LLM generation column.
+                If no instruction is given, then the prompt template will be
+                varied while attempting to retain its intent and objective.
+
+            must_depend_on (str, optional): A list of column names that must be
+                referred to within the prompt template. Use this option to force
+                conditioning of LLM prompts on a set of existing columns. If not
+                specified (or empty), then the updated prompt template may refer
+                to any *or none* of the existing columns, stochastically (the LLM
+                is free to choose).
+
+        Returns:
+            An updated DataDesigner object.
+
+        Raises:
+            KeyError: If attempting to refine the prompt of a non-existant column or
+                if the column specified doesn't have a prompt field to edit.
+        """
+        if self.is_known_column_name(name):
+            if not isinstance(_col := self._dd_obj.get_column(name), LLMGenColumn):
+                _type_name = _col.__class__.__name__
+                raise KeyError(
+                    f"The column '{name}' of type {_type_name} cannot be updated with this function."
+                )
+        else:
+            raise KeyError(f"The column '{name}' does not exist.")
+
+        ## If no instruction, we give a generic one.
+        if instruction is None:
+            instruction = "Rephrase, reorder, or reformat ONLY the Jinja prompt template without changing its intent."
+
+        starting_col = self._dd_obj.get_column(name)
+        task = self._task_registry.GenerateColumnConfigFromInstruction(
+            name=name,
+            instruction=instruction,
+            must_depend_on=must_depend_on or [],
+            existing_columns=self.existing_columns,
+        )
+
+        ## This function updates the working state
+        updated_column = self._instruction_to_data_column(
+            task,
+            edit_instruction=instruction,
+            previous_attempt=starting_col,
+        )
+
+        ## Make sure that we _only_ take updates to prompt
+        self._working_dd_state.columns[name] = starting_col
+        self._working_dd_state.columns[name].prompt = updated_column.prompt
+        self.save()
+
+        ## Make sure that we only retain prompt changes.
+        return self._dd_obj
+
+    @experimental(message=EXPERIMENTAL_WARNING, emoji="🧪")
     def add_sampling_column(
         self,
         name: str,
