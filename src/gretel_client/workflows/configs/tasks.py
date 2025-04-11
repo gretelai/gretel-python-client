@@ -523,6 +523,12 @@ class GenerateDatasetFromSampleRecords(ConfigBase):
     dataset_context: Annotated[Optional[str], Field(title="Dataset Context")] = ""
 
 
+class DataColumnFromSamplingConfig(ConfigBase):
+    name: Annotated[str, Field(title="Name")]
+    sampling_type: Annotated[str, Field(title="Sampling Type")]
+    params: Annotated[Dict[str, Any], Field(title="Params")]
+
+
 class NumNewValuesToGenerate(RootModel[int]):
     root: Annotated[int, Field(gt=0, le=25, title="Num New Values To Generate")]
 
@@ -1895,11 +1901,11 @@ class GenerateColumnFromTemplateV2Config(ConfigBase):
     prompt: Annotated[str, Field(title="Prompt")]
     name: Annotated[Optional[str], Field(title="Name")] = "response"
     system_prompt: Annotated[Optional[str], Field(title="System Prompt")] = None
-    description: Annotated[Optional[str], Field(title="Description")] = ""
     output_type: Optional[OutputType] = "text"
     output_format: Annotated[
         Optional[Union[str, Dict[str, Any]]], Field(title="Output Format")
     ] = None
+    description: Annotated[Optional[str], Field(title="Description")] = ""
 
 
 class GenerateColumnConfigFromInstruction(ConfigBase):
@@ -1953,11 +1959,11 @@ class GenerateColumnFromTemplateV2(ConfigBase):
     prompt: Annotated[str, Field(title="Prompt")]
     name: Annotated[Optional[str], Field(title="Name")] = "response"
     system_prompt: Annotated[Optional[str], Field(title="System Prompt")] = None
-    description: Annotated[Optional[str], Field(title="Description")] = ""
     output_type: Optional[OutputType] = "text"
     output_format: Annotated[
         Optional[Union[str, Dict[str, Any]]], Field(title="Output Format")
     ] = None
+    description: Annotated[Optional[str], Field(title="Description")] = ""
 
 
 class ColumnConstraint(ConfigBase):
@@ -1995,7 +2001,8 @@ class GenerateSamplingColumnConfigFromInstruction(ConfigBase):
         Optional[Union[str, ModelAlias]], Field(title="Model Alias")
     ] = "code"
     name: Annotated[str, Field(title="Name")]
-    description: Annotated[str, Field(title="Description")]
+    instruction: Annotated[str, Field(title="Instruction")]
+    edit_task: Optional[DataColumnFromSamplingConfig] = None
 
 
 class GenerateSeedCategoryValues(ConfigBase):

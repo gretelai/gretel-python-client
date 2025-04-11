@@ -35,6 +35,7 @@ from gretel_client.workflows.builder import Message, WorkflowInterruption
 from gretel_client.workflows.configs.base import ConfigBase
 from gretel_client.workflows.configs.registry import Registry
 from gretel_client.workflows.configs.tasks import (
+    DataColumnFromSamplingConfig,
     ExistingColumn,
     ExistingColumns,
     GenerateColumnConfigFromInstruction,
@@ -78,6 +79,11 @@ AIDDColumnConfigGenerationTask: TypeAlias = (
 DataDesignerT = TypeVar(
     "DataDesignerT"
 )  # Prevent circular imports on DataDesigner object
+
+EditableColumnT: TypeAlias = LLMGenColumn | SamplerColumn
+EditTaskConfigT: TypeAlias = (
+    GenerateColumnFromTemplateV2Config | DataColumnFromSamplingConfig
+)
 
 
 # Error handling
@@ -190,6 +196,33 @@ def cast_datacolumn_to_existingcolumn(data_column: AIDDColumnT) -> ExistingColum
             args["output_format"] = Person.model_json_schema()
 
     return ExistingColumn(**args)
+
+
+def cast_column_cfg_to_edit_task_cfg(column_cfg: EditableColumnT) -> EditTaskConfigT:
+    """Cast an existing data column into the server-side edit-task format.
+
+    Args:
+
+        task_cfg: An existing editable column configuration.
+
+    Returns:
+        EditTaskConfigT: A matching type that the server expects for Edit tasks.
+
+    Raises:
+        NotImplementedError: If the colum type is not editable.
+    """
+    if isinstance(column_cfg, LLMGenColumn):
+        return GenerateColumnFromTemplateV2Config.model_validate(
+            column_cfg.model_dump()
+        )
+    elif isinstance(column_cfg, SamplerColumn):
+        col_cfg_dict = column_cfg.model_dump()
+        col_cfg_dict["sampling_type"] = col_cfg_dict.pop("type")
+        return DataColumnFromSamplingConfig.model_validate(col_cfg_dict)
+    else:
+        raise NotImplementedError(
+            f"Task configuration editing not supported for columns of type {type(column_cfg)}"
+        )
 
 
 def pprint_datacolumn(column: AIDDColumnT, use_html: bool = True) -> None:
@@ -443,7 +476,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
         self,
         task: AIDDColumnConfigGenerationTask,
         edit_instruction: Optional[str] = None,
-        previous_attempt: Optional[AIDDColumnT] = None,
+        previous_attempt: Optional[EditableColumnT] = None,
     ) -> AIDDColumnT:
         """Single call to get a generation config."""
         _task = deepcopy(task)
@@ -453,16 +486,16 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
             output_type_name = camel_to_snake(
                 GenerateColumnFromTemplateV2Config.__name__
             )
-            if edit_instruction:
+            if edit_instruction and previous_attempt:
                 _task.instruction = edit_instruction
-                _task.edit_task = GenerateColumnFromTemplateV2Config.model_validate(
-                    previous_attempt.model_dump()
-                )
+                _task.edit_task = cast_column_cfg_to_edit_task_cfg(previous_attempt)
         elif isinstance(task, GenerateSamplingColumnConfigFromInstruction):
             aidd_column_type = SamplerColumn
             output_type_name = "data_column_from_sampling_config"
-            if edit_instruction:
-                _task.description = edit_instruction
+            if edit_instruction and previous_attempt:
+                assert isinstance(previous_attempt, SamplerColumn)
+                _task.instruction = edit_instruction
+                _task.edit_task = cast_column_cfg_to_edit_task_cfg(previous_attempt)
         else:
             raise NotImplementedError(
                 f"Magic is not yet implemented for task type: {type(task)}"
@@ -515,9 +548,9 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
         commands_str = "/".join(commands)
 
         if isinstance(task, GenerateColumnConfigFromInstruction):
-            original_instruction_or_description = task.instruction
+            original_instruction = task.instruction
         elif isinstance(task, GenerateSamplingColumnConfigFromInstruction):
-            original_instruction_or_description = task.description
+            original_instruction = task.instruction
         else:
             raise NotImplementedError(
                 f"Magic is not yet implemented for task type: {type(task)}"
@@ -535,8 +568,9 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
                     previous_attempt=new_data_column,
                 )
             elif command == "preview":
-                syntax = None
-                syntax = getattr(new_data_column, "output_format", None)
+                output_type = getattr(new_data_column, "output_type", None)
+                output_format = getattr(new_data_column, "output_format", None)
+                syntax = output_format if output_type == "code" else None
                 self._run_and_display_preview(task.name, syntax=syntax)
             elif command == "preview-on":
                 preview = True
@@ -554,7 +588,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
                     (
                         last_edit_instruction
                         if last_edit_instruction
-                        else original_instruction_or_description
+                        else original_instruction
                     ),
                 )
                 new_data_column = self._instruction_to_data_column(
@@ -565,12 +599,14 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
             elif command == "start-over":
                 last_edit_instruction = None
                 rich.print("[bold]⏮️ Starting over from the top.[/bold]")
-                pprint_user_instruction(task.name, original_instruction_or_description)
+                pprint_user_instruction(task.name, original_instruction)
                 new_data_column = self._instruction_to_data_column(task)
 
             ## Handle preview
             if preview:
-                syntax = getattr(new_data_column, "output_format", None)
+                output_type = getattr(new_data_column, "output_type", None)
+                output_format = getattr(new_data_column, "output_format", None)
+                syntax = output_format if output_type == "code" else None
                 self._run_and_display_preview(task.name, syntax=syntax)
 
             if not interactive:
@@ -590,12 +626,12 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
     def add_column(
         self,
         name: str,
-        instruction_or_description: str,
+        instruction: str,
         *,
         must_depend_on: Optional[list[str]] = None,
         preview: bool = False,
         save: bool = True,
-        interactive: bool = True,
+        interactive: bool = False,
     ) -> DataDesignerT:
         if self.is_known_column_name(name) and not self.is_editable_column(name):
             _col = self._dd_obj.get_column(name)
@@ -623,7 +659,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
 
         task = self._task_registry.GenerateColumnConfigFromInstruction(
             name=name,
-            instruction=instruction_or_description,
+            instruction=instruction,
             must_depend_on=must_depend_on,
             existing_columns=self.existing_columns,
             edit_task=edit_task,
@@ -649,7 +685,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
     def add_sampling_column(
         self,
         name: str,
-        description: str,
+        instruction: str,
         *,
         preview: bool = False,
         save: bool = True,
@@ -663,16 +699,22 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
                 raise KeyError(
                     f"The column '{name}' already exists as type {_type_name}, it cannot be updated with this function. "
                 )
-            else:
-                _type_name = _col.type
-                logger.warning(
-                    f"The column '{name}' already exists as a sampling column of type {_type_name}. "
-                    "It will be overwritten."
-                )
+
+        ## Get previously existing column if present. If it is,
+        ## then we know at this point that it is a SamplerColumn
+        edit_task = None
+        if self.is_known_column_name(name):
+            edit_data_column = self._dd_obj.get_column(name)
+            edit_task = DataColumnFromSamplingConfig(
+                name=edit_data_column.name,
+                sampling_type=edit_data_column.type,
+                params=edit_data_column.params.model_dump(),
+            )
 
         task = self._task_registry.GenerateSamplingColumnConfigFromInstruction(
             name=name,
-            description=description,
+            instruction=instruction,
+            edit_task=edit_task,
         )
 
         new_data_column = self._instruction_loop_for_aidd_column(
