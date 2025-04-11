@@ -161,6 +161,7 @@ def display_sample_record(
 
     non_code_columns = (
         aidd_metadata.sampler_columns
+        + aidd_metadata.expression_columns
         + aidd_metadata.llm_gen_text_columns
         + aidd_metadata.llm_gen_structured_columns
     )
