@@ -28,7 +28,7 @@ class TestGretelApiFactory(GretelApiProviderProtocol):
         default_headers: Optional[dict[str, str]] = None,
     ) -> T:
         if api_interface not in self.cached_clients:
-            self.cached_clients[api_interface] = create_autospec(api_interface)
+            self.cached_clients[api_interface] = Mock()
         return self.cached_clients.get(api_interface)
 
     def get_mock(self, api_interface: Type[T]) -> Mock:

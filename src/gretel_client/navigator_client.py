@@ -1,9 +1,12 @@
+from __future__ import annotations
+
 import logging
 import sys
 
+from contextlib import contextmanager
 from enum import Enum
 from getpass import getpass
-from typing import Optional, Type
+from typing import Iterator, Optional, Type
 from urllib.parse import urljoin
 
 import requests
@@ -19,12 +22,13 @@ from gretel_client.config import (
 )
 from gretel_client.data_designer import DataDesignerFactory
 from gretel_client.files.interface import FileClient
+from gretel_client.projects.exceptions import GretelProjectError
 from gretel_client.projects.projects import (
     create_or_get_unique_project,
     get_project,
     Project,
+    tmp_project,
 )
-from gretel_client.rest.api.projects_api import ProjectsApi
 from gretel_client.safe_synthetics.dataset import SafeSyntheticDatasetFactory
 from gretel_client.workflows.configs.registry import Registry
 from gretel_client.workflows.manager import WorkflowManager
@@ -104,8 +108,6 @@ class LogConfiguration(Enum):
 
 
 class GretelApiProvider:
-    # todo: rename me to ApiProvider??
-
     def __init__(
         self,
         *,
@@ -194,12 +196,23 @@ class Gretel:
     def __init__(
         self,
         *,
-        api_key: Optional[str] = None,
-        endpoint: Optional[str] = None,
-        default_project_id: Optional[str] = None,
+        api_key: str | None = None,
+        endpoint: str | None = None,
+        default_project_id: str | None = None,
+        create_project: bool = True,
         log_configuration: LogConfiguration = LogConfiguration.STANDARD,
-        _api_factory: Optional[GretelApiProvider] = None,
+        _api_factory: GretelApiProvider | None = None,
     ):
+        # cache params so we can create new clients from the current one
+        self._init_params = {
+            "api_key": api_key,
+            "endpoint": endpoint,
+            "default_project_id": default_project_id,
+            "create_project": create_project,
+            "log_configuration": log_configuration,
+            "_api_factory": _api_factory,
+        }
+
         self.configure_logger(log_configuration)
         self._api_factory = (
             _api_factory
@@ -210,10 +223,12 @@ class Gretel:
         # setup a project for the client. this project
         # will get used for the entire lifecycle of the
         # Gretel session.
-        self._project_id = self._configure_project(
-            default_project_id or self._api_factory.client_config.default_project_name
+        self._project = self._configure_project(
+            default_project_id or self._api_factory.client_config.default_project_name,
+            create_project,
         )
-        logger.info(f"Gretel client configured to use project: {self.project_id}")
+        logger.info(f"Using project: {self.project_name}")
+        logger.info(f"Project link: {self._project.get_console_url()}")
 
         # public modules
         self._files = FileClient(
@@ -223,6 +238,17 @@ class Gretel:
         self._tasks = TaskRegistry.create()
         self._safe_synthetic_dataset_factory = SafeSyntheticDatasetFactory(self)
         self._data_designer_factory = DataDesignerFactory(self)
+
+    def new_client(self, *, default_project_id: str | None = None) -> Gretel:
+        init_params = self._init_params
+        if default_project_id:
+            init_params["default_project_id"] = default_project_id
+        return Gretel(**init_params)
+
+    @contextmanager
+    def tmp_project(self) -> Iterator[Gretel]:
+        with tmp_project() as proj:
+            yield self.new_client(default_project_id=proj.project_guid)
 
     def configure_logger(self, log_configuration: LogConfiguration) -> None:
         if log_configuration == LogConfiguration.STANDARD:
@@ -236,8 +262,17 @@ class Gretel:
             gretel_logger = logging.getLogger("gretel_client")
             gretel_logger.setLevel(logging.INFO)
 
-    def _configure_project(self, project_id: Optional[str] = None) -> str:
+    def _configure_project(
+        self, project_id: str | None = None, create_project: bool = False
+    ) -> Project:
+        # No project is configured, try and create a default project for the SDK.
         if not project_id:
+            if not create_project:
+                raise ValueError(
+                    "create_project is false, and no project_id was passed. "
+                    "Please configure a project by passing default_project_id."
+                )
+
             project = create_or_get_unique_project(
                 name="default-sdk-project", session=self._api_factory.client_config
             )
@@ -245,21 +280,52 @@ class Gretel:
             if not project.project_guid:
                 raise Exception("Could not get guid for project")
 
-            return project.project_guid
+            return project
 
-        if project_id.startswith("proj_"):
-            return project_id
+        # We have a project id. Try and either load it, or create one.
+        if project_id:
+            # If a project_id is passed, try and load in the project.
+            if project_id.startswith("proj_"):
+                return get_project(name=project_id)
 
-        elif project_id:
-            projects_api = self._api_factory.get_api(ProjectsApi)
-            resp = projects_api.get_project(project_id=project_id)
-            return resp["data"]["project"]["guid"]
+            # Otherwise try and load the project by name.
+            if create_project:
 
-        raise Exception("Could not configure a gretel project")
+                # It's possible we receive a project_name produced by
+                # create_or_get_unique_project, which means it already
+                # contains a unique key, eg my-project-92fbf5bd66089f1. If
+                # that's the case, we should first try to look up that project.
+                try:
+                    return get_project(
+                        name=project_id, session=self._api_factory.client_config
+                    )
+                except GretelProjectError:
+                    pass
+
+                # If it doesn't exist, we can create that project using
+                # the uniqueness logic from create_or_get_unique_project.
+                return create_or_get_unique_project(
+                    name=project_id, session=self._api_factory.client_config
+                )
+
+            # If create project isn't setup, simply try to lookup the project
+            # by it's key.
+            return get_project(
+                name=project_id,
+                session=self._api_factory.client_config,
+            )
+
+        # TODO: link to gretel entrypoint docs in the exception once they
+        # are published.
+        raise GretelProjectError("Could not configure a gretel project")
 
     @property
     def project_id(self) -> str:
-        return self._project_id
+        return self.project.project_guid
+
+    @property
+    def project_name(self) -> str:
+        return self.project.name
 
     @property
     def workflows(self) -> WorkflowManager:
@@ -275,8 +341,6 @@ class Gretel:
 
     @property
     def project(self) -> Project:
-        if not self._project:
-            self._project = get_project(name=self._project_id)
         return self._project
 
     @property
