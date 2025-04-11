@@ -335,11 +335,13 @@ class DataDesigner:
         num_records: int,
         name: str | None = None,
         run_name: str | None = None,
-        wait_for_completion: bool = False,
+        wait_until_done: bool = False,
     ) -> WorkflowRun:
         logger.info("🚀 Submitting batch workflow")
         workflow = self._build_workflow(num_records=num_records)
-        return workflow.run(name=name, run_name=run_name, wait=wait_for_completion)
+        return workflow.run(
+            name=name, run_name=run_name, wait_until_done=wait_until_done
+        )
 
     def with_person_samplers(
         self,

@@ -53,7 +53,7 @@ def ssd_factory(
 
 def test_ssd_factory(ssd_factory: SafeSyntheticDatasetFactory, tasks: Registry):
     ssd = ssd_factory.from_data_source("file_1").transform().synthesize()
-    ssd.create(wait=False)
+    ssd.create(wait_until_done=False)
 
     steps = ssd.builder().to_workflow().steps
 
@@ -86,7 +86,7 @@ def test_ssd_num_records(ssd_factory: SafeSyntheticDatasetFactory):
     ssd = ssd_factory.from_data_source("file_1", holdout=None).synthesize(
         num_records=10
     )
-    ssd.create(wait=False)
+    ssd.create(wait_until_done=False)
 
     steps = ssd.builder().to_workflow().steps
     assert steps
@@ -105,7 +105,7 @@ def test_ssd_model_num_records(
         .synthesize("tabular_ft", tab_ft_config, num_records=10)
         .synthesize(tasks.TabularFt(), num_records=10)
     )
-    ssd.create(wait=False)
+    ssd.create(wait_until_done=False)
 
     steps = ssd.builder().to_workflow().steps
     assert steps
@@ -124,7 +124,7 @@ def test_ssd_model_configs(ssd_factory: SafeSyntheticDatasetFactory, tasks: Regi
         .synthesize(tasks.TabularFt())
         .evaluate(disable=True)
     )
-    ssd.create(wait=False)
+    ssd.create(wait_until_done=False)
 
     steps = ssd.builder().to_workflow().steps
     assert steps
@@ -136,7 +136,7 @@ def test_ssd_model_configs(ssd_factory: SafeSyntheticDatasetFactory, tasks: Regi
 
 def test_multiple_tasks(ssd_factory: SafeSyntheticDatasetFactory):
     ssd = ssd_factory.from_data_source("file_1").transform().transform().synthesize()
-    ssd.create(wait=False)
+    ssd.create(wait_until_done=False)
 
     steps = ssd.builder().to_workflow().steps
     assert steps
@@ -156,7 +156,7 @@ def test_multiple_tasks_no_hold_out(ssd_factory: SafeSyntheticDatasetFactory):
         .transform()
         .synthesize()
     )
-    ssd.create(wait=False)
+    ssd.create(wait_until_done=False)
 
     steps = ssd.builder().to_workflow().steps
     assert steps
@@ -202,7 +202,7 @@ skip_attribute_inference_protection: true
         .synthesize("tabular_ft", synth_config)
         .evaluate(evaluate_config)
     )
-    ssd.create(wait=False)
+    ssd.create(wait_until_done=False)
 
     assert ssd.builder().get_step("transform").config == yaml.safe_load(xf)
     assert ssd.builder().get_step("tabular-ft").config == yaml.safe_load(synth_config)

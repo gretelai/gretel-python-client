@@ -247,7 +247,7 @@ class DataDesignerBatchJob:
         self,
         step_name: str,
         output_format: str,
-        wait_for_completion: bool = False,
+        wait_until_done: bool = False,
         **kwargs,
     ) -> Optional[TaskOutput]:
         statuses = self._get_statuses(step_name)
@@ -285,7 +285,7 @@ class DataDesignerBatchJob:
             logger.warning("⚠️ Workflow run was cancelled.")
             return None
 
-        if wait_for_completion:
+        if wait_until_done:
             logger.info(f"⏳ Waiting for workflow step `{step_name}` to complete...")
             self.wait_for_completion(step_name)
             return self._fetch_artifact(step_name, output_format, **kwargs)
@@ -348,13 +348,13 @@ class DataDesignerBatchJob:
             **kwargs,
         )
 
-    def fetch_dataset(self, *, wait_for_completion: bool = False) -> Optional[Dataset]:
+    def fetch_dataset(self, *, wait_until_done: bool = False) -> Optional[Dataset]:
         if self.last_dataset_step_name is None:
             raise ValueError("The Workflow did not contain a dataset.")
         return self._fetch_artifact(
             step_name=self.last_dataset_step_name,
             output_format="parquet",
-            wait_for_completion=wait_for_completion,
+            wait_until_done=wait_until_done,
         )
 
     def download_evaluation_report(

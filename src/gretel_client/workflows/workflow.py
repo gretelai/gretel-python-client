@@ -44,7 +44,7 @@ class WorkflowRun:
         )
         return cls(workflow, api_provider, resource_provider)
 
-    def poll(
+    def wait_until_done(
         self,
         wait: int = -1,
         verbose: bool = True,

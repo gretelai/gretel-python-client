@@ -532,7 +532,7 @@ class WorkflowBuilder:
         self,
         name: Optional[str] = None,
         run_name: Optional[str] = None,
-        wait: bool = False,
+        wait_until_done: bool = False,
     ) -> WorkflowRun:
         """Execute the workflow as a batch job.
 
@@ -544,6 +544,9 @@ class WorkflowBuilder:
             name: Optional name to assign to the workflow. If provided,
                 this will override any name previously set with the name() method.
             run_name: Optional name to assign to this specific run of the workflow.
+            wait_until_done: Block until the workflow has completed running.
+                If set to false the method will immediately return the WorkflowRun
+                object.
         Returns:
             WorkflowRun: A WorkflowRun object representing the running workflow.
                 This can be used to track the status of the workflow and retrieve
@@ -584,8 +587,8 @@ class WorkflowBuilder:
 
         logger.info(f"🔗 Workflow Run console link: {workflow_run.console_url}")
 
-        if wait:
-            workflow_run.poll()
+        if wait_until_done:
+            workflow_run.wait_until_done()
 
         return workflow_run
 

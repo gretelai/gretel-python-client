@@ -207,7 +207,7 @@ class SafeSyntheticDataset:
         new_workflow: bool = False,
         name: Optional[str] = None,
         run_name: Optional[str] = None,
-        wait: bool = True,
+        wait_until_done: bool = False,
     ) -> WorkflowRun:
         # Ensures that a new workflow is created for the run
         if new_workflow:
@@ -250,7 +250,9 @@ class SafeSyntheticDataset:
                     "Evaluate requires both training and synthetic datasets. No Evaluate step added."
                 )
 
-        return self._builder.run(name=name, run_name=run_name, wait=wait)
+        return self._builder.run(
+            name=name, run_name=run_name, wait_until_done=wait_until_done
+        )
 
     def _last_step_for_prefix(self, prefix: str, steps: list[Step]) -> Optional[Step]:
         found = None

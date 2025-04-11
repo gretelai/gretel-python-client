@@ -108,7 +108,7 @@ class DataDesigner:
     def fetch_dataset(
         workflow_run_id: str,
         *,
-        wait_for_completion: bool = True,
+        wait_until_done: bool = True,
         session: Optional[ClientConfig] = None,
         **session_kwargs,
     ) -> Dataset:
@@ -116,7 +116,7 @@ class DataDesigner:
 
         Args:
             workflow_run_id: Unique id of the batch job.
-            wait_for_completion: Boolean to indicate to wait for the the batch job to complete
+            wait_until_done: Boolean to indicate to wait for the the batch job to complete
                 if it is still running. Defaults to True.
             session: Optional Gretel session configuration object. If not provided, the session
                 will be configured based on the provided session_kwargs or cached session
@@ -128,13 +128,13 @@ class DataDesigner:
             workflow_run_id=workflow_run_id,
             client=get_navigator_client(session=session, **session_kwargs),
         )
-        return batch_job.fetch_dataset(wait_for_completion=wait_for_completion)
+        return batch_job.fetch_dataset(wait_until_done=wait_until_done)
 
     @staticmethod
     def download_evaluation_report(
         workflow_run_id: str,
         *,
-        wait_for_completion: bool = True,
+        wait_until_done: bool = True,
         output_dir: Union[str, Path] = Path("."),
         session: Optional[ClientConfig] = None,
         **session_kwargs,
@@ -143,7 +143,7 @@ class DataDesigner:
 
         Args:
             workflow_run_id: Unique id of the batch job.
-            wait_for_completion: Boolean to indicate to wait for the the batch job to complete
+            wait_until_done: Boolean to indicate to wait for the the batch job to complete
                 if it is still running. Defaults to True.
             outpu_dir: A string or a Path denoting the local directory where the report should be saved.
             session: Optional Gretel session configuration object. If not provided, the session
@@ -157,7 +157,7 @@ class DataDesigner:
             client=get_navigator_client(session=session, **session_kwargs),
         )
         return batch_job.download_evaluation_report(
-            wait_for_completion=wait_for_completion, output_dir=output_dir
+            wait_until_done=wait_until_done, output_dir=output_dir
         )
 
     @staticmethod
@@ -165,7 +165,7 @@ class DataDesigner:
         workflow_run_id: str,
         *,
         step_name: str,
-        wait_for_completion: bool = True,
+        wait_until_done: bool = True,
         session: Optional[ClientConfig] = None,
         **session_kwargs,
     ) -> Optional[TaskOutput]:
@@ -174,7 +174,7 @@ class DataDesigner:
         Args:
             workflow_run_id: Unique id of the batch job.
             step_name: The name of the step.
-            wait_for_completion: Boolean to indicate to wait for the the batch job to complete
+            wait_until_done: Boolean to indicate to wait for the the batch job to complete
                 if it is still running. Defaults to True.
             session: Optional Gretel session configuration object. If not provided, the session
                 will be configured based on the provided session_kwargs or cached session
@@ -188,7 +188,7 @@ class DataDesigner:
         )
         return batch_job.fetch_step_output(
             step_name=step_name,
-            wait_for_completion=wait_for_completion,
+            wait_until_done=wait_until_done,
         )
 
     @classmethod
