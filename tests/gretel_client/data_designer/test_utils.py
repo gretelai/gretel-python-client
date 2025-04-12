@@ -46,7 +46,7 @@ def test_camel_to_snake():
 
 
 def test_get_task_log_emoji():
-    assert get_task_log_emoji("generate") == "🦜 "
+    assert get_task_log_emoji("generating") == "🦜 "
     assert get_task_log_emoji("unknown_task") == ""
 
 

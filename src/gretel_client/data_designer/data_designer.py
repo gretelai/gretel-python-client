@@ -337,10 +337,9 @@ class DataDesigner:
         if preview.dataset is not None and preview.success:
             logger.info("🎉 Your dataset preview is ready!")
         else:
-            logger.warning(
-                "⚠️ Something has gone wrong during preview generation. Please inspect "
-                "the generated data and adjust your configuration as needed. If the issue "
-                "persists please contact support."
+            logger.error(
+                "🛑 Something has gone wrong during preview generation. Please inspect "
+                "the generated data and adjust your configuration as needed."
             )
 
         # TODO: Re-visit how we display evaluation results in light of generalized judge-with-llm
@@ -520,6 +519,7 @@ class DataDesigner:
             builder.add_step(
                 step=sample_from_dataset_step,
                 step_inputs=[self._seed_dataset.file_id],
+                step_name="seeding-workflow-with-dataset",
             )
             last_step_added = sample_from_dataset_step
 
@@ -540,6 +540,7 @@ class DataDesigner:
             builder.add_step(
                 step=columns_using_samples_step,
                 step_inputs=[],
+                step_name=f"using-samplers-to-generate-{len(self.sampler_columns)}-columns",
             )
             last_step_added = columns_using_samples_step
 
@@ -555,6 +556,7 @@ class DataDesigner:
             builder.add_step(
                 step=concat_step,
                 step_inputs=[sample_from_dataset_step, columns_using_samples_step],
+                step_name="concatenating-seed-and-sampler-datasets",
             )
             last_step_added = concat_step
 
@@ -567,10 +569,12 @@ class DataDesigner:
         )
 
         for column_name in sorted_columns_names:
+            column = self.get_column(column_name)
             next_step = self._get_next_dag_step(column_name)
             builder.add_step(
                 step=next_step,
                 step_inputs=[last_step_added],
+                step_name=column.step_name,
             )
             last_step_added = next_step
 
@@ -585,6 +589,10 @@ class DataDesigner:
             builder.add_step(
                 step=drop_latent_columns_step,
                 step_inputs=[last_step_added],
+                step_name=(
+                    f"dropping-{len(self._latent_person_columns)}-latent-person-"
+                    f"column{'s' if len(self._latent_person_columns) > 1 else ''}"
+                ),
             )
             last_step_added = drop_latent_columns_step
 
@@ -616,6 +624,7 @@ class DataDesigner:
             builder.add_step(
                 step=general_eval_step,
                 step_inputs=[last_step_added],
+                step_name="evaluating-dataset",
             )
             last_step_added = general_eval_step
 
@@ -630,25 +639,20 @@ class DataDesigner:
         final_output = None
         outputs_by_step = {}
         success = True
+        column_names = list(self._columns.keys())
         for message in workflow.iter_preview():
             if isinstance(message, WorkflowInterruption):
                 success = False
-                logger.warning(message.message)
+                logger.error(message.message)
                 break
             if not message.step:
                 continue
             if current_step != message.step:
                 current_step = message.step
-                task_name = message.step
-                step_name = task_name.replace("-" + str(step_idx + 1), "")
-                label = (
-                    ""
-                    if task_name == step_name
-                    else f" >>{step_name.split(task_name)[-1].replace('-', ' ')}"
-                )
+                log_name = _add_backticks_to_column_names(message.step, column_names)
                 logger.info(
-                    f"{get_task_log_emoji(task_name)}Step {step_idx + 1}: "
-                    f"{task_name.replace('-', ' ').capitalize()}{label}"
+                    f"{get_task_log_emoji(log_name)}Step {step_idx + 1}: "
+                    f"{log_name.replace('-', ' ').capitalize()}"
                 )
                 step_idx += 1
 
@@ -832,6 +836,20 @@ def get_column_from_kwargs(
             kwargs["type"] = type
             column_klass = SamplerColumn
     return column_klass(name=name, **kwargs)
+
+
+def _add_backticks_to_column_names(step_name: str, column_names: list[str]) -> str:
+    max_overlap = 0
+    best_match = None
+    for name in column_names:
+        if name in step_name:
+            overlap = len(name)
+            if overlap > max_overlap:
+                max_overlap = overlap
+                best_match = name
+    if best_match:
+        step_name = step_name.replace(best_match, f"`{best_match}`")
+    return step_name
 
 
 def _check_convert_to_json_str(

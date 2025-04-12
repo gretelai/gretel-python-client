@@ -24,17 +24,19 @@ VALIDATE_SQL_COLUMN_SUFFIXES = [
 ]
 
 TASK_TYPE_EMOJI_MAP = {
-    "generate": "🦜",
-    "evaluate": "🧐",
-    "validate": "🔍",
-    "judge": "⚖️",
-    "sample": "🎲",
+    "generating": "🦜",
+    "evaluating": "🧐",
+    "validating": "🔍",
+    "using-llm-to-judge": "⚖️",
+    "using-samplers": "🎲",
+    "rendering": "💬",
+    "seeding": "🌱",
     "seed": "🌱",
     "load": "📥",
+    "dropping": "🙈",
     "extract": "💭",
-    "concat": "🔗",
+    "concatenating": "🔗",
 }
-
 
 DEFAULT_REPR_HTML_STYLE = "nord"
 

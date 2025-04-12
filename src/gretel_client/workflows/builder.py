@@ -6,7 +6,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Iterator, Optional, Union
+from typing import Any, Callable, Iterator, Optional
 
 import pandas as pd
 import requests
@@ -200,7 +200,7 @@ class Message:
             )
 
 
-def _default_preview_printer(log: Union[Message, WorkflowInterruption]):
+def _default_preview_printer(log: Message | WorkflowInterruption):
     if isinstance(log, Message) and log.payload:
         if log.has_log_message:
             logger.info(f"[{log.step}] {log.log_message.msg}")
@@ -239,7 +239,7 @@ class WorkflowBuilder:
         globals: Globals,
         api_provider: GretelApiProviderProtocol,
         resource_provider: GretelResourceProviderProtocol,
-        workflow_session_manager: Optional[WorkflowSessionManager] = None,
+        workflow_session_manager: WorkflowSessionManager | None = None,
     ) -> None:
         """Initialize a new WorkflowBuilder with empty name and steps."""
         self._api_provider = api_provider
@@ -276,7 +276,7 @@ class WorkflowBuilder:
         self._name = name
         return self
 
-    def for_workflow(self, workflow_id: Optional[str] = None) -> Self:
+    def for_workflow(self, workflow_id: str | None = None) -> Self:
         """Configure this builder to use an existing workflow.
 
         When a workflow ID is specified, the `run()` method will execute a new run
@@ -296,7 +296,7 @@ class WorkflowBuilder:
 
     def with_data_source(
         self,
-        data_source: Union[str, Path, pd.DataFrame, File],
+        data_source: str | Path | pd.DataFrame | File,
         purpose: str = "dataset",
     ) -> Self:
         """Add a data source to the workflow.
@@ -341,14 +341,15 @@ class WorkflowBuilder:
         return self
 
     @property
-    def data_source(self) -> Optional[str]:
+    def data_source(self) -> str | None:
         return self._input_file_id
 
     def add_step(
         self,
-        step: Union[TaskConfig, Step],
-        step_inputs: Optional[list[Union[TaskConfig, Step, str]]] = None,
+        step: TaskConfig | Step,
+        step_inputs: list[TaskConfig | Step | str] | None = None,
         validate: bool = True,
+        step_name: str | None = None,
     ) -> Self:
         """Add a single step to the workflow.
 
@@ -356,6 +357,8 @@ class WorkflowBuilder:
             step: The workflow step to add.
             step_input: Configure an input for the step or task.
             validate: Whether to validate the step. Defaults to True.
+            step_name: The name of the step. If not provided, the name will be
+                generated based on the name of the task.
 
         Returns:
             Self: The builder instance for method chaining.
@@ -369,6 +372,10 @@ class WorkflowBuilder:
             step = task_to_step(step, inputs=disambiguated_step_input_names)
         else:
             step.inputs = disambiguated_step_input_names
+
+        if step_name is not None:
+            step.name = step_name
+
         step = self._ensure_unique_step_name(step)
 
         if validate:
@@ -433,9 +440,7 @@ class WorkflowBuilder:
 
         return resp.message if resp.message else ""
 
-    def add_steps(
-        self, steps: list[Union[TaskConfig, Step]], validate: bool = True
-    ) -> Self:
+    def add_steps(self, steps: list[TaskConfig | Step], validate: bool = True) -> Self:
         """Add multiple steps to the workflow.
 
         Args:
@@ -492,7 +497,7 @@ class WorkflowBuilder:
         """
         return yaml.dump(self.to_dict(), sort_keys=False)
 
-    def iter_preview(self) -> Iterator[Union[Message, WorkflowInterruption]]:
+    def iter_preview(self) -> Iterator[Message | WorkflowInterruption]:
         """Stream workflow execution messages for preview purposes.
 
         This method executes the workflow in streaming preview mode, returning
@@ -527,7 +532,7 @@ class WorkflowBuilder:
     def preview(
         self,
         log_printer: Callable[
-            [Union[Message, WorkflowInterruption]], None
+            [Message | WorkflowInterruption], None
         ] = _default_preview_printer,
     ):
         """Preview the workflow in realtime.
@@ -543,8 +548,8 @@ class WorkflowBuilder:
 
     def run(
         self,
-        name: Optional[str] = None,
-        run_name: Optional[str] = None,
+        name: str | None = None,
+        run_name: str | None = None,
         wait_until_done: bool = False,
     ) -> WorkflowRun:
         """Execute the workflow as a batch job.
@@ -616,8 +621,8 @@ class WorkflowBuilder:
         return step
 
     def _disambiguate_step_inputs(
-        self, step_inputs: Optional[list[Union[TaskConfig, Step, str]]] = None
-    ) -> Optional[list[str]]:
+        self, step_inputs: list[TaskConfig | Step | str] | None = None
+    ) -> list[str] | None:
         disambiguated_step_input_names = []
         for step_input in step_inputs or []:
             if isinstance(step_input, str) and step_input.startswith("file_"):
@@ -641,7 +646,7 @@ def _check_for_error_response(response: requests.Response) -> None:
             raise NavigatorApiServerError(response.json())
 
 
-def _generate_workflow_name(steps: Optional[list[Step]] = None) -> str:
+def _generate_workflow_name(steps: list[Step] | None = None) -> str:
     """Try and generate a default workflow name.
 
     If there are steps in the workflow, we try and generate a name

@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Literal, Self, Type, TypeAlias
+from typing import Any, Literal, Self, TypeAlias
 from uuid import UUID
 
 import pandas as pd
@@ -147,6 +147,10 @@ class LLMGenColumn(
     def required_columns(self) -> list[str]:
         return list(get_prompt_template_keywords(self.prompt))
 
+    @property
+    def step_name(self) -> str:
+        return f"generating-{self.output_type.value}-column-{self.name}"
+
     @model_validator(mode="after")
     def assert_prompt_valid_jinja(self) -> Self:
         assert_valid_jinja2_template(self.prompt)
@@ -190,6 +194,10 @@ class LLMJudgeColumn(WithPrettyRepr, tasks.JudgeWithLlm, WithDAGColumnMixin):
     def required_columns(self) -> list[str]:
         return list(get_prompt_template_keywords(self.prompt))
 
+    @property
+    def step_name(self) -> str:
+        return f"using-llm-to-judge-column-{self.name}"
+
 
 class CodeValidationColumn(WithPrettyRepr, AIDDConfigBase, WithDAGColumnMixin):
     name: str
@@ -212,6 +220,10 @@ class CodeValidationColumn(WithPrettyRepr, AIDDConfigBase, WithDAGColumnMixin):
             columns.append(f"{self.target_column}{suffix}")
         return columns
 
+    @property
+    def step_name(self) -> str:
+        return f"validating-code-in-column-{self.target_column}"
+
 
 class ExpressionColumn(
     WithPrettyRepr, tasks.GenerateColumnFromExpression, WithDAGColumnMixin
@@ -225,6 +237,10 @@ class ExpressionColumn(
     def assert_expression_valid_jinja(self) -> Self:
         assert_valid_jinja2_template(self.expr)
         return self
+
+    @property
+    def step_name(self) -> str:
+        return f"rendering-expression-column-{self.name}"
 
 
 class DataSeedColumn(WithPrettyRepr, AIDDConfigBase):
