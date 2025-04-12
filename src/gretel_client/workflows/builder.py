@@ -157,7 +157,7 @@ class Message:
         deserialized_message = cls(**message)
 
         if raise_on_error:
-            _raise_on_task_error(deserialized_message)
+            deserialized_message.raise_for_error()
 
         return deserialized_message
 
@@ -185,6 +185,19 @@ class Message:
         if self.has_dataset:
             records = self.payload["dataset"]
         return pd.DataFrame.from_records(records)
+
+    def raise_for_error(self) -> None:
+        """Check for fatal errors and raise an exception if found."""
+        if (
+            self.type == "step_state_change"
+            and self.payload.get("state", "") == "error"
+        ):
+            raise WorkflowTaskError(
+                f"Step {self.step!r} failed: "
+                f"{self.payload.get('msg', '').strip(' .')}. "
+                "Please check your Workflow config. "
+                "If the issue persists please contact support."
+            )
 
 
 def _default_preview_printer(log: Union[Message, WorkflowInterruption]):
@@ -626,22 +639,6 @@ def _check_for_error_response(response: requests.Response) -> None:
             raise NavigatorApiClientError(response.json())
         else:
             raise NavigatorApiServerError(response.json())
-
-
-def _raise_on_task_error(message: Message):
-    """
-    Inspects a message for messages known to contain
-    fatal errors, and raises an exception from those
-    messages.
-    """
-    if (
-        message.type == "step_state_change"
-        and message.payload.get("state", "") == "error"
-    ):
-        raise WorkflowTaskError(
-            f"Step {message.step!r} failed: {message.payload.get('msg')}. Please check your Workflow config. "
-            "If the issue persists please contact support."
-        )
 
 
 def _generate_workflow_name(steps: Optional[list[Step]] = None) -> str:

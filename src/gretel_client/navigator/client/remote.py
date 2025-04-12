@@ -121,6 +121,15 @@ class Message:
 
         return deserialized_message
 
+    @property
+    def step_failure_message(self) -> str:
+        return (
+            f"Step {self.step!r} failed: "
+            f"{self.payload.get('msg', '').strip(' .')}. "
+            "Please check your Workflow config. "
+            "If the issue persists please contact support."
+        )
+
 
 def workflow_preview(workflow_outputs: Iterator, verbose: bool = False) -> TaskOutput:
     terminal_output = None
@@ -146,10 +155,7 @@ def _raise_on_task_error(message: Message):
         message.type == "step_state_change"
         and message.payload.get("state", "") == "error"
     ):
-        raise WorkflowTaskError(
-            f"Step {message.step!r} failed: {message.payload.get('msg')}. Please check your Workflow config. "
-            "If the issue persists please contact support."
-        )
+        raise WorkflowTaskError(message.step_failure_message)
 
 
 class RemoteClient(ClientAdapter[Serializable]):

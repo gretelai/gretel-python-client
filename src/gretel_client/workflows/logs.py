@@ -22,7 +22,7 @@ from gretel_client.rest_v1.models import (
     SearchWorkflowTasksResponse,
     WorkflowTask,
 )
-from gretel_client.workflows.status import Status, TERMINAL_STATES
+from gretel_client.workflows.status import TERMINAL_STATES
 
 WORKFLOW_RUN_ID = "workflow_run_id"
 """Search key to lookup workflow runs"""
