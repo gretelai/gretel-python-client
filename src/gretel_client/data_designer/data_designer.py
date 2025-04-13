@@ -415,13 +415,14 @@ class DataDesigner:
 
         return self
 
-    def validate(self) -> None:
+    def validate(self) -> Self:
         # Run task-level validation.
         self._build_workflow(num_records=10)
         # Run semantic validation on full schema.
         violations = self._run_semantic_validation()
         if len(violations) == 0:
             logger.info("Validation passed ✅")
+        return self
 
     @property
     def seed_columns(self) -> list[DataSeedColumn]:

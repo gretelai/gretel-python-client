@@ -219,6 +219,8 @@ class WithPrettyRepr:
         def _kv_to_string(k, v):
             if isinstance(v, Enum):
                 v = v.value
+            elif isinstance(v, BaseModel):
+                v = v.model_dump(mode="json")
             return f"    {k}={v!r}"
 
         field_repr = ",\n".join(_kv_to_string(k, v) for k, v in self.__dict__.items())
