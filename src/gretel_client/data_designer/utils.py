@@ -257,9 +257,14 @@ class WithPrettyRepr:
 
         Puts dict fields on new lines for legibility.
         """
+        dict_repr = (
+            self.model_dump(mode="json", exclude_unset=True)
+            if isinstance(self, BaseModel)
+            else self.__dict__
+        )
         field_repr = ",\n".join(
             self._kv_to_string(k, v)
-            for k, v in self.__dict__.items()
+            for k, v in dict_repr.items()
             if not k.startswith("_")
         )
         return f"{self.__class__.__name__}(\n{field_repr}\n)"

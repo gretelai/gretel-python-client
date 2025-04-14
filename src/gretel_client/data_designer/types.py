@@ -149,7 +149,7 @@ class LLMGenColumn(
 
     @property
     def step_name(self) -> str:
-        return f"generating-{self.output_type.value}-column-{self.name}"
+        return f"generating-{OutputType(self.output_type).value}-column-{self.name}"
 
     @model_validator(mode="after")
     def assert_prompt_valid_jinja(self) -> Self:

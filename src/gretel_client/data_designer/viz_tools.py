@@ -24,7 +24,7 @@ from gretel_client.data_designer.constants import (
 from gretel_client.data_designer.judge_rubrics import JudgeRubric
 from gretel_client.data_designer.types import EvaluationType, LLMJudgePromptTemplateType
 from gretel_client.data_designer.utils import code_lang_to_syntax_lexer
-from gretel_client.workflows.configs.tasks import CodeLang
+from gretel_client.workflows.configs.tasks import CodeLang, OutputType
 
 if TYPE_CHECKING:
     from gretel_client.data_designer.data_designer import DataDesigner
@@ -53,12 +53,6 @@ class AIDDMetadata(BaseModel):
     code_langs: list[CodeLang | str] = []
     eval_type: LLMJudgePromptTemplateType | None = None
 
-    @property
-    def llm_gen_columns(self) -> list[str]:
-        return (
-            self.llm_text_columns + self.llm_code_columns + self.llm_structured_columns
-        )
-
     @classmethod
     def from_aidd(cls, aidd: "DataDesigner") -> Self:
         code_validation_columns = []
@@ -74,12 +68,34 @@ class AIDDMetadata(BaseModel):
             if col.name not in list(aidd._latent_person_columns.keys())
         ]
 
+        # Temporary logic to funnel LLMGenColumn column names into the correct list.
+        # This can be removed once we migrate magic to the new column types.
+        llm_text_columns = []
+        llm_code_columns = []
+        llm_structured_columns = []
+        for col in aidd.llm_gen_columns:
+            if col.output_type == OutputType.TEXT and col.name not in [
+                c.name for c in aidd.llm_text_columns
+            ]:
+                llm_text_columns.append(col)
+            elif col.output_type == OutputType.CODE and col.name not in [
+                c.name for c in aidd.llm_code_columns
+            ]:
+                llm_code_columns.append(col)
+            elif col.output_type == OutputType.STRUCTURED and col.name not in [
+                c.name for c in aidd.llm_structured_columns
+            ]:
+                llm_structured_columns.append(col)
+        llm_text_columns = aidd.llm_text_columns + llm_text_columns
+        llm_code_columns = aidd.llm_code_columns + llm_code_columns
+        llm_structured_columns = aidd.llm_structured_columns + llm_structured_columns
+
         return cls(
             sampler_columns=sampling_based_columns,
             seed_columns=[col.name for col in aidd.seed_columns],
-            llm_text_columns=[col.name for col in aidd.llm_text_columns],
-            llm_code_columns=[col.name for col in aidd.llm_code_columns],
-            llm_structured_columns=[col.name for col in aidd.llm_structured_columns],
+            llm_text_columns=[col.name for col in llm_text_columns],
+            llm_code_columns=[col.name for col in llm_code_columns],
+            llm_structured_columns=[col.name for col in llm_structured_columns],
             llm_judge_columns=[col.name for col in aidd.llm_judge_columns],
             validation_columns=code_validation_columns,
             expression_columns=[col.name for col in aidd.expression_columns],
