@@ -92,14 +92,25 @@ class SafeSyntheticDataset:
         self._tasks.append(self._registry.Transform(**load_blueprint_or_config(config)))
         return self
 
-    def data_source(self, data_source: str | Path | pd.DataFrame) -> Self:
+    def data_source(
+        self, data_source: str | Path | pd.DataFrame, use_data_source_step: bool = True
+    ) -> Self:
         logger.info(f"Configuring generator for data source: {data_source}")
-        self._builder.with_data_source(data_source)
+        self._builder.with_data_source(
+            data_source, use_data_source_step=use_data_source_step
+        )
         return self
 
-    def holdout(self, holdout: float | int) -> Self:
+    def holdout(
+        self,
+        holdout: float | int,
+        max_holdout: int | None = None,
+        group_by: str | None = None,
+    ) -> Self:
         logger.info(f"Configuring holdout: {holdout}")
-        self._holdout = self._registry.Holdout(holdout=holdout)
+        self._holdout = self._registry.Holdout(
+            holdout=holdout, max_holdout=max_holdout, group_by=group_by
+        )
         return self
 
     def synthesize(
@@ -136,6 +147,15 @@ class SafeSyntheticDataset:
 
         # setting a config takes precedence over blueprint resolution
         elif model_or_blueprint_or_task:
+            # it's possible a customer configures their model with a name
+            # such as "tabular_ft". if no config is specified, we reconfigure
+            # that name to resolve to a blueprint, eg "tabular_ft/default".
+            if (
+                model_or_blueprint_or_task in self._synthetic_model_registry.models
+                and not config
+            ):
+                model_or_blueprint_or_task = f"{model_or_blueprint_or_task}/default"
+
             try:
                 blueprint = resolve_task_blueprint(model_or_blueprint_or_task)
                 task_klass = self._synthetic_model_registry.get_config(
@@ -274,14 +294,19 @@ class SafeSyntheticDatasetFactory:
         self,
         data_source,
         holdout: Optional[Union[float, int]] = 0.05,
+        max_holdout: int | None = 2000,
+        group_by: str | None = None,
+        use_data_source_step: bool = True,
     ) -> SafeSyntheticDataset:
         safe_synthetic_dataset = SafeSyntheticDataset(
             self._resource_provider.workflows.builder(),
             Registry(),
         )
 
-        safe_synthetic_dataset.data_source(data_source)
+        safe_synthetic_dataset.data_source(
+            data_source, use_data_source_step=use_data_source_step
+        )
 
         if holdout:
-            safe_synthetic_dataset.holdout(holdout)
+            safe_synthetic_dataset.holdout(holdout, max_holdout, group_by)
         return safe_synthetic_dataset

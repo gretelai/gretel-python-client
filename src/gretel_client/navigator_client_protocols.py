@@ -2,6 +2,8 @@ from typing import Optional, Protocol, Type, TYPE_CHECKING, TypeVar
 
 from requests import Session
 
+from gretel_client.workflows.configs.registry import Registry
+
 # import submodules to ensure we don't introduce any circular
 # dependencies
 if TYPE_CHECKING:
@@ -98,3 +100,6 @@ class GretelResourceProviderProtocol(Protocol):
     def console_url(self) -> str:
         """Get the Gretel Console URL for this project."""
         ...
+
+    @property
+    def tasks(self) -> Registry: ...

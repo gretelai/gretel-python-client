@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import logging
+import random
+import string
 
 from dataclasses import dataclass
 from datetime import datetime
@@ -33,6 +35,7 @@ from gretel_client.navigator_client_protocols import (
     GretelResourceProviderProtocol,
 )
 from gretel_client.rest_v1.api.workflows_api import WorkflowsApi
+from gretel_client.workflows.configs.tasks import DataSource
 from gretel_client.workflows.configs.workflows import Globals, Step, Workflow
 from gretel_client.workflows.tasks import task_to_step, TaskConfig
 from gretel_client.workflows.workflow import WorkflowRun
@@ -254,11 +257,16 @@ class WorkflowBuilder:
 
         # fields managed by the builder to configure the workflow
         self._name = ""
+        self._globals = globals
+
+        # inputs and data sources
+        self._inputs = None
         self._input_file_id = None
+        self._use_data_source_step = None
+
+        # steps
         self._steps: list[Step] = []
         self._step_hash_to_name_map: dict[int, str] = {}
-        self._globals = globals
-        self._inputs = None
 
     @property
     def step_names(self) -> list[str]:
@@ -298,6 +306,7 @@ class WorkflowBuilder:
         self,
         data_source: str | Path | pd.DataFrame | File,
         purpose: str = "dataset",
+        use_data_source_step: bool = False,
     ) -> Self:
         """Add a data source to the workflow.
 
@@ -311,6 +320,8 @@ class WorkflowBuilder:
                 - A path to a local file (string or Path)
                 - A pandas DataFrame
             purpose: The purpose tag for the uploaded data. Defaults to "dataset".
+            use_data_source_step: Instead of passing a file_id as an input, use
+                the DataSource task. Generally you shouldn't need to set this.
 
         Returns:
             Self: The builder instance for method chaining.
@@ -328,6 +339,7 @@ class WorkflowBuilder:
             # Using a file ID
             builder.with_data_source("file_abc123")
         """
+        self._use_data_source_step = use_data_source_step
         if isinstance(data_source, File):
             self._input_file_id = data_source.id
 
@@ -338,10 +350,25 @@ class WorkflowBuilder:
             file = self._resource_provider.files.upload(data_source, purpose)
             self._input_file_id = file.id
 
+        if self._name == "":
+            if isinstance(data_source, str):
+                self._name = Path(data_source).stem
+
+            if isinstance(data_source, Path):
+                self._name = data_source.stem
+
+            if isinstance(data_source, File):
+                self._name = data_source.filename
+
+            if self._name != "":
+                self._name = f"{self._name}-{_generate_random_string()}"
+
         return self
 
     @property
     def data_source(self) -> str | None:
+        if self._use_data_source_step:
+            return "read-data-source"
         return self._input_file_id
 
     def add_step(
@@ -469,9 +496,26 @@ class WorkflowBuilder:
         Returns:
             Workflow: A new Workflow instance with the configured name and steps.
         """
-        if self._input_file_id and len(self._steps) > 0:
+        if (
+            self._input_file_id
+            and len(self._steps) > 0
+            and not self._use_data_source_step
+        ):
             existing_inputs = self._steps[0].inputs or []
             self._steps[0].inputs = list(set(existing_inputs + [self._input_file_id]))
+
+        if self._use_data_source_step and self._input_file_id:
+            if len(self._steps) > 0 and self._steps[0].name == "read-data-source":
+                pass
+            else:
+                self._steps.insert(
+                    0,
+                    Step(
+                        name="read-data-source",
+                        task="data_source",
+                        config=DataSource(data_source=self._input_file_id).model_dump(),
+                    ),
+                )
 
         return Workflow(
             name=(
@@ -625,7 +669,7 @@ class WorkflowBuilder:
     ) -> list[str] | None:
         disambiguated_step_input_names = []
         for step_input in step_inputs or []:
-            if isinstance(step_input, str) and step_input.startswith("file_"):
+            if isinstance(step_input, str):
                 disambiguated_step_input_names.append(step_input)
                 continue
             step_input_hash = _get_object_hash(step_input)
@@ -652,15 +696,20 @@ def _generate_workflow_name(steps: list[Step] | None = None) -> str:
     If there are steps in the workflow, we try and generate a name
     based on the steps.
     """
-    date_str = datetime.now().strftime("%Y-%m-%d")
-    step_str = "my-workflows"
+    step_str = "my-workflow"
     if steps:
         if len(steps) == 1:
             step_str = f"{steps[0].name}--"
         else:
             step_str = f"{steps[-2].name}--{steps[-1].name}--"
 
-    return f"{step_str}{date_str}"
+    return f"{step_str}{_generate_random_string()}"
+
+
+def _generate_random_string(length=6):
+    """Generate a random string of letters and numbers."""
+    characters = string.ascii_letters + string.digits
+    return "".join(random.choice(characters) for _ in range(length)).lower()
 
 
 def _get_object_hash(obj: Any) -> int:

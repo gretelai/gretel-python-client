@@ -10,7 +10,9 @@ from gretel_client.navigator_client_protocols import (
     GretelResourceProviderProtocol,
 )
 from gretel_client.projects.projects import Project
+from gretel_client.workflows.configs.registry import Registry
 from gretel_client.workflows.manager import WorkflowManager
+from gretel_client.workflows.tasks import TaskRegistry
 
 
 class TestGretelApiFactory(GretelApiProviderProtocol):
@@ -68,3 +70,7 @@ class TestGretelResourceProvider(GretelResourceProviderProtocol):
     @property
     def project(self) -> Project:
         return self._project
+
+    @property
+    def tasks(self) -> Registry:
+        return TaskRegistry.create()

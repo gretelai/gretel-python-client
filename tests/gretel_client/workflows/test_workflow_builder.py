@@ -12,15 +12,15 @@ from gretel_client._api.models.exec_batch_response import ExecBatchResponse
 from gretel_client._api.models.task_envelope_for_validation import (
     TaskEnvelopeForValidation,
 )
+from gretel_client.files.interface import File
 from gretel_client.test_utils import TestGretelApiFactory, TestGretelResourceProvider
 from gretel_client.workflows.builder import (
-    _generate_workflow_name,
     WorkflowBuilder,
     WorkflowSessionManager,
     WorkflowValidationError,
 )
 from gretel_client.workflows.configs.registry import Registry
-from gretel_client.workflows.configs.workflows import Globals, Step, Workflow
+from gretel_client.workflows.configs.workflows import Globals, Step
 
 
 @pytest.fixture
@@ -57,20 +57,16 @@ def test_workflow_builder_add_step_from_task(builder: WorkflowBuilder, tasks: Re
     builder.add_step(tasks.IdGenerator(num_records=5))
 
     actual = builder.to_workflow()
-    expected = Workflow(
-        name=_generate_workflow_name(builder._steps),
-        steps=[
-            Step(
-                name="id-generator",
-                task="id_generator",
-                inputs=[],
-                config={"num_records": 5},
-            )
-        ],
-    )
 
-    assert actual.name == expected.name
-    assert actual.steps == expected.steps
+    assert actual.name.startswith("id-generator")
+    assert actual.steps == [
+        Step(
+            name="id-generator",
+            task="id_generator",
+            inputs=[],
+            config={"num_records": 5},
+        )
+    ]
 
 
 def test_workflow_builder_add_step(builder: WorkflowBuilder):
@@ -256,7 +252,9 @@ def test_workflow_session_management(
     )
 
     builder_one.for_workflow("w_1")
+    builder_one.set_name("test")
 
+    builder_two.set_name("test")
     builder_two.add_step(tasks.IdGenerator())
     builder_two.run()
 
@@ -340,3 +338,27 @@ def test_handle_step_name_duplicates_with_inputs(
     ]
 
     assert actual == expected
+
+
+def test_name_from_datasource(builder: WorkflowBuilder):
+    builder.with_data_source("test/my-dataset.csv")
+    assert builder.to_workflow().name.startswith("my-dataset-")
+
+
+def test_adds_step_with_data_source(
+    builder: WorkflowBuilder,
+    resource_provider_mock: TestGretelResourceProvider,
+):
+    resource_provider_mock.files.upload.return_value = File(
+        id="file_1",
+        object="",
+        bytes=1,
+        created_at=int(datetime.datetime.now().timestamp()),
+        filename="",
+        purpose="dataset",
+    )
+
+    builder.with_data_source("test/my-dataset.csv", use_data_source_step=True)
+    assert builder.to_workflow().steps[0] == Step(
+        name="read-data-source", task="data_source", config={"data_source": "file_1"}
+    )
