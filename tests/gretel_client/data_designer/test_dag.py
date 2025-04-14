@@ -12,14 +12,12 @@ from gretel_client.data_designer.types import (
     LLMTextColumn,
     SamplerColumn,
 )
-from gretel_client.workflows.configs.tasks import CodeLang, Rubric, SamplingSourceType
+from gretel_client.workflows.configs.tasks import CodeLang, Rubric, SamplerType
 
 
 def test_dag_construction():
     dd = DataDesigner(gretel_resource_provider=MagicMock())
-    dd.add_column(
-        SamplerColumn(name="test_id", type=SamplingSourceType.UUID, params={})
-    )
+    dd.add_column(SamplerColumn(name="test_id", type=SamplerType.UUID, params={}))
     dd.add_column(
         LLMCodeColumn(
             name="test_code",
@@ -72,9 +70,7 @@ def test_dag_construction():
 
 def test_circular_dependencies():
     dd = DataDesigner(gretel_resource_provider=MagicMock())
-    dd.add_column(
-        SamplerColumn(name="test_id", type=SamplingSourceType.UUID, params={})
-    )
+    dd.add_column(SamplerColumn(name="test_id", type=SamplerType.UUID, params={}))
     dd.add_column(
         LLMTextColumn(
             name="col_1",

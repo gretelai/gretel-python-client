@@ -379,7 +379,7 @@ class PoissonSamplerParams(ConfigBase):
     ]
 
 
-class SamplingSourceType(str, Enum):
+class SamplerType(str, Enum):
     BERNOULLI = "bernoulli"
     BERNOULLI_MIXTURE = "bernoulli_mixture"
     BINOMIAL = "binomial"
@@ -408,7 +408,7 @@ class ScipySamplerParams(ConfigBase):
     ]
 
 
-class SubcategoryParams(ConfigBase):
+class SubcategorySamplerParams(ConfigBase):
     category: Annotated[
         str,
         Field(
@@ -431,7 +431,7 @@ class Unit1(str, Enum):
     S = "s"
 
 
-class TimeDeltaParams(ConfigBase):
+class TimeDeltaSamplerParams(ConfigBase):
     dt_min: Annotated[
         int,
         Field(
@@ -464,7 +464,7 @@ class TimeDeltaParams(ConfigBase):
     ] = "D"
 
 
-class UUIDParams(ConfigBase):
+class UUIDSamplerParams(ConfigBase):
     prefix: Annotated[
         Optional[str],
         Field(description="String prepended to the front of the UUID.", title="Prefix"),
@@ -1661,15 +1661,15 @@ class ColumnConstraintParams(ConfigBase):
 
 class ConditionalDataColumn(ConfigBase):
     name: Annotated[str, Field(title="Name")]
-    type: SamplingSourceType
+    type: SamplerType
     params: Annotated[
         Union[
-            SubcategoryParams,
+            SubcategorySamplerParams,
             CategorySamplerParams,
             DatetimeSamplerParams,
             PersonSamplerParams,
-            TimeDeltaParams,
-            UUIDParams,
+            TimeDeltaSamplerParams,
+            UUIDSamplerParams,
             BernoulliSamplerParams,
             BernoulliMixtureSamplerParams,
             BinomialSamplerParams,
@@ -1685,12 +1685,12 @@ class ConditionalDataColumn(ConfigBase):
             Dict[
                 str,
                 Union[
-                    SubcategoryParams,
+                    SubcategorySamplerParams,
                     CategorySamplerParams,
                     DatetimeSamplerParams,
                     PersonSamplerParams,
-                    TimeDeltaParams,
-                    UUIDParams,
+                    TimeDeltaSamplerParams,
+                    UUIDSamplerParams,
                     BernoulliSamplerParams,
                     BernoulliMixtureSamplerParams,
                     BinomialSamplerParams,

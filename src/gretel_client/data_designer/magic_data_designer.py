@@ -42,7 +42,7 @@ from gretel_client.workflows.configs.tasks import (
     GenerateColumnFromTemplateV2Config,
     GenerateSamplingColumnConfigFromInstruction,
     OutputType,
-    SamplingSourceType,
+    SamplerType,
 )
 from gretel_client.workflows.configs.workflows import Globals
 from gretel_client.workflows.manager import WorkflowManager
@@ -58,18 +58,18 @@ and will likely change in the future. Please let us know your feedback and any i
 """
 
 SAMPLER_DESCRIPTION_MAPPING = {
-    SamplingSourceType.BERNOULLI: "Value sampled from a Bernoilli distribution.",
-    SamplingSourceType.BINOMIAL: "Value sampled from a Binomial distribution.",
-    SamplingSourceType.CATEGORY: "Value sampled from a categorical distribution.",
-    SamplingSourceType.DATETIME: "Value uniformly sampled from a range of DateTimes.",
-    SamplingSourceType.GAUSSIAN: "Value sampled from a Gaussian distribution.",
-    SamplingSourceType.PERSON: "Data structure of information sampled from a randomly generated synthetic person.",
-    SamplingSourceType.POISSON: "Value sampled from a Poisson distribution.",
-    SamplingSourceType.SCIPY: "Value sampled from a Scipy.stats distribution.",
-    SamplingSourceType.SUBCATEGORY: "Value sampled from a categorical distribution.",
-    SamplingSourceType.TIMEDELTA: "Value uniformly sampled from a range of TimeDelta DateTimes.",
-    SamplingSourceType.UNIFORM: "Value sampled from a uniform distribution.",
-    SamplingSourceType.UUID: "Random UUID-derived identifier.",
+    SamplerType.BERNOULLI: "Value sampled from a Bernoulli distribution.",
+    SamplerType.BINOMIAL: "Value sampled from a Binomial distribution.",
+    SamplerType.CATEGORY: "Value sampled from a categorical distribution.",
+    SamplerType.DATETIME: "Value uniformly sampled from a range of DateTimes.",
+    SamplerType.GAUSSIAN: "Value sampled from a Gaussian distribution.",
+    SamplerType.PERSON: "Data structure of information sampled from a randomly generated synthetic person.",
+    SamplerType.POISSON: "Value sampled from a Poisson distribution.",
+    SamplerType.SCIPY: "Value sampled from a Scipy.stats distribution.",
+    SamplerType.SUBCATEGORY: "Value sampled from a categorical distribution.",
+    SamplerType.TIMEDELTA: "Value uniformly sampled from a range of TimeDelta DateTimes.",
+    SamplerType.UNIFORM: "Value sampled from a uniform distribution.",
+    SamplerType.UUID: "Random UUID-derived identifier.",
 }
 
 # Aliasing
@@ -189,7 +189,7 @@ def cast_datacolumn_to_existingcolumn(data_column: AIDDColumnT) -> ExistingColum
         )
         args["description"] = description
 
-        if data_column.type == SamplingSourceType.PERSON:
+        if data_column.type == SamplerType.PERSON:
             ## Replace the output config with the Person
             ## data structure.
             args["output_type"] = OutputType.STRUCTURED
@@ -920,7 +920,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
                 raise KeyError(
                     f"The column '{name}' already exists as type {_class_name}, it cannot be updated with this function. "
                 )
-            elif _col.type != SamplingSourceType.CATEGORY:
+            elif _col.type != SamplerType.CATEGORY:
                 ## And furthermore, it has to be a Category sampler
                 _type_name = _col.type
                 raise KeyError(
@@ -949,7 +949,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
                 verbose=False,
             )
 
-            if updated_column.type != SamplingSourceType.CATEGORY:
+            if updated_column.type != SamplerType.CATEGORY:
                 ## Server made a whoopsie and got a wrong sampler type
                 continue
             elif len(new_values := updated_column.params.values) <= len(

@@ -36,7 +36,7 @@ from gretel_client.workflows.configs.tasks import (
     JudgeWithLlm,
     Rubric,
     SampleFromDataset,
-    SamplingSourceType,
+    SamplerType,
     ValidateCode,
 )
 
@@ -47,9 +47,7 @@ class DummyStructuredModel(BaseModel):
 
 def test_build_data_designer_state_using_types():
     dd = DataDesigner(gretel_resource_provider=MagicMock())
-    dd.add_column(
-        SamplerColumn(name="test_id", type=SamplingSourceType.UUID, params={})
-    )
+    dd.add_column(SamplerColumn(name="test_id", type=SamplerType.UUID, params={}))
     dd.add_column(
         LLMCodeColumn(
             name="test_code",
@@ -467,23 +465,23 @@ def test_get_column_from_kwargs():
     # UUID type with params provided
     sampler_column = get_column_from_kwargs(
         name="test_sampler",
-        type=SamplingSourceType.UUID,
+        type=SamplerType.UUID,
         params={"prefix": "test_", "short_form": True},
     )
     assert isinstance(sampler_column, SamplerColumn)
     assert sampler_column.name == "test_sampler"
-    assert sampler_column.type == SamplingSourceType.UUID
+    assert sampler_column.type == SamplerType.UUID
     assert sampler_column.params.prefix == "test_"
     assert sampler_column.params.short_form is True
     assert sampler_column.params.uppercase is False
 
     # UUID type without params provided
     sampler_column_no_params = get_column_from_kwargs(
-        name="test_sampler_no_params", type=SamplingSourceType.UUID
+        name="test_sampler_no_params", type=SamplerType.UUID
     )
     assert isinstance(sampler_column_no_params, SamplerColumn)
     assert sampler_column_no_params.name == "test_sampler_no_params"
-    assert sampler_column_no_params.type == SamplingSourceType.UUID
+    assert sampler_column_no_params.type == SamplerType.UUID
     assert sampler_column_no_params.params.prefix is None
     assert sampler_column_no_params.params.short_form is False
     assert sampler_column_no_params.params.uppercase is False
@@ -491,7 +489,7 @@ def test_get_column_from_kwargs():
     # PERSON type with params provided
     person_sampler_column = get_column_from_kwargs(
         name="test_person_sampler",
-        type=SamplingSourceType.PERSON,
+        type=SamplerType.PERSON,
         params={
             "locale": "en_BR",
             "sex": "Male",
@@ -501,18 +499,18 @@ def test_get_column_from_kwargs():
     )
     assert isinstance(person_sampler_column, SamplerColumn)
     assert person_sampler_column.name == "test_person_sampler"
-    assert person_sampler_column.type == SamplingSourceType.PERSON
+    assert person_sampler_column.type == SamplerType.PERSON
     assert person_sampler_column.params.locale == "en_BR"
     assert person_sampler_column.params.sex == "Male"
     assert person_sampler_column.params.city == "New York"
 
     # PersonSampler type without params provided
     person_sampler_column_no_params = get_column_from_kwargs(
-        name="test_person_sampler_no_params", type=SamplingSourceType.PERSON
+        name="test_person_sampler_no_params", type=SamplerType.PERSON
     )
     assert isinstance(person_sampler_column_no_params, SamplerColumn)
     assert person_sampler_column_no_params.name == "test_person_sampler_no_params"
-    assert person_sampler_column_no_params.type == SamplingSourceType.PERSON
+    assert person_sampler_column_no_params.type == SamplerType.PERSON
     assert person_sampler_column_no_params.params.locale == "en_US"
     assert person_sampler_column_no_params.params.sex is None
     assert person_sampler_column_no_params.params.city is None

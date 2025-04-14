@@ -263,6 +263,6 @@ DAGColumnT: TypeAlias = (
 )
 AIDDColumnT: TypeAlias = SamplerColumn | DAGColumnT
 MagicColumnT: TypeAlias = AIDDColumnT | DataSeedColumn
-ColumnProviderTypeT: TypeAlias = tasks.SamplingSourceType | ProviderType
+ColumnProviderTypeT: TypeAlias = tasks.SamplerType | ProviderType
 EvaluationReportT: TypeAlias = GeneralDatasetEvaluation
 TaskOutputT: TypeAlias = pd.DataFrame | dict

@@ -24,7 +24,7 @@ from gretel_client.data_designer.constants import (
 from gretel_client.data_designer.judge_rubrics import JudgeRubric
 from gretel_client.data_designer.types import EvaluationType, LLMJudgePromptTemplateType
 from gretel_client.data_designer.utils import code_lang_to_syntax_lexer
-from gretel_client.workflows.configs.tasks import CodeLang, OutputType
+from gretel_client.workflows.configs.tasks import CodeLang
 
 if TYPE_CHECKING:
     from gretel_client.data_designer.data_designer import DataDesigner

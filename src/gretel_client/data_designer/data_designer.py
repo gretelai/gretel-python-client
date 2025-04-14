@@ -80,7 +80,7 @@ from gretel_client.workflows.configs.tasks import (
     GenerateColumnsUsingSamplers,
     OutputType,
     PersonSamplerParams,
-    SamplingSourceType,
+    SamplerType,
     SamplingStrategy,
 )
 from gretel_client.workflows.configs.workflows import Globals, ModelConfig
@@ -92,7 +92,7 @@ logger = get_logger(__name__, level=logging.INFO)
 
 
 _type_builtin = type
-_SAMPLER_PARAMS: dict[SamplingSourceType, Type[BaseModel]] = get_sampler_params()
+_SAMPLER_PARAMS: dict[SamplerType, Type[BaseModel]] = get_sampler_params()
 
 
 class DataDesignerValidationError(Exception): ...
@@ -217,7 +217,7 @@ class DataDesigner:
         person_samplers = {
             c.name: c.params
             for c in self.sampler_columns
-            if c.type == SamplingSourceType.PERSON
+            if c.type == SamplerType.PERSON
             if c.name in self._latent_person_columns
         }
         return AIDDConfig(
@@ -272,7 +272,7 @@ class DataDesigner:
         if column.name in self._latent_person_columns:
             if (
                 not isinstance(column, SamplerColumn)
-                or column.type != SamplingSourceType.PERSON
+                or column.type != SamplerType.PERSON
             ):
                 raise ValueError(
                     f"🛑 The name `{column.name}` is already the name of a person sampler created "
@@ -374,7 +374,7 @@ class DataDesigner:
             self.add_column(
                 SamplerColumn(
                     name=name,
-                    type=SamplingSourceType.PERSON,
+                    type=SamplerType.PERSON,
                     params=person_params.model_dump(),
                 )
             )
@@ -478,10 +478,7 @@ class DataDesigner:
         return [
             col
             for col in self.sampler_columns
-            if (
-                col.type == SamplingSourceType.CATEGORY
-                or col.type == SamplingSourceType.SUBCATEGORY
-            )
+            if (col.type == SamplerType.CATEGORY or col.type == SamplerType.SUBCATEGORY)
         ]
 
     @handle_workflow_validation_error
@@ -869,7 +866,7 @@ def _check_convert_to_json_str(
 
 def _validate_column_provider_type(column_provider_type: str) -> ColumnProviderTypeT:
     valid_provider_types = {t.value for t in list(ProviderType)}
-    valid_sampling_source_types = {t.value for t in list(SamplingSourceType)}
+    valid_sampling_source_types = {t.value for t in list(SamplerType)}
     combined_valid_types = valid_provider_types.union(valid_sampling_source_types)
     if column_provider_type not in combined_valid_types:
         raise ValueError(
@@ -879,4 +876,4 @@ def _validate_column_provider_type(column_provider_type: str) -> ColumnProviderT
     elif column_provider_type in valid_provider_types:
         return ProviderType(column_provider_type)
     else:
-        return SamplingSourceType(column_provider_type)
+        return SamplerType(column_provider_type)
