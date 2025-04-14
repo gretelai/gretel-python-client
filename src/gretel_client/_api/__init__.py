@@ -17,7 +17,8 @@
 __version__ = "1.0.0"
 
 # import apis into sdk package
-from gretel_client._api.api.default_api import DefaultApi
+from gretel_client._api.api.files_api import FilesApi
+from gretel_client._api.api.workflows_api import WorkflowsApi
 from gretel_client._api.api_client import ApiClient
 
 # import ApiClient

@@ -54,9 +54,7 @@ def ssd_factory(
 
 def extract_workflow_from_mock(dataset: SafeSyntheticDataset) -> Workflow:
     dataset.create()
-    args = (
-        dataset._builder._data_api.workflows_exec_batch_v2_workflows_exec_batch_post.call_args
-    )
+    args = dataset._builder._data_api.exec_workflow_batch.call_args
     return Workflow(**args[0][0].workflow_config)
 
 

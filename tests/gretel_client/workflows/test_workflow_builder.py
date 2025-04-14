@@ -5,7 +5,7 @@ from unittest.mock import ANY, create_autospec, Mock, patch
 
 import pytest
 
-from gretel_client._api.api.default_api import DefaultApi
+from gretel_client._api.api.workflows_api import WorkflowsApi
 from gretel_client._api.exceptions import ApiException
 from gretel_client._api.models.exec_batch_request import ExecBatchRequest
 from gretel_client._api.models.exec_batch_response import ExecBatchResponse
@@ -87,9 +87,7 @@ def test_workflow_task_validation(
     builder: WorkflowBuilder, tasks: Registry, api_provider_mock: TestGretelApiFactory
 ):
     builder.add_step(tasks.IdGenerator())
-    api_provider_mock.get_mock(
-        DefaultApi
-    ).tasks_validate_v2_workflows_tasks_validate_post.assert_called_with(
+    api_provider_mock.get_mock(WorkflowsApi).validate_workflow_task.assert_called_with(
         TaskEnvelopeForValidation(
             name="id_generator",
             globals={},
@@ -105,10 +103,8 @@ def test_workflow_task_validation_error(
     mock_response.status = 422
     mock_response.body = '{"message": "Validation error", "details": [{"field_violations": [{"field": "num_records", "error_message": "Field is required"}]}]}'
 
-    api_provider_mock.get_mock(
-        DefaultApi
-    ).tasks_validate_v2_workflows_tasks_validate_post.side_effect = ApiException(
-        status=422, reason="Unprocessable Entity", body=mock_response.body
+    api_provider_mock.get_mock(WorkflowsApi).validate_workflow_task.side_effect = (
+        ApiException(status=422, reason="Unprocessable Entity", body=mock_response.body)
     )
 
     with pytest.raises(WorkflowValidationError) as excinfo:
@@ -187,9 +183,9 @@ def test_does_submit_batch_job(
     mock_response.workflow_id = "w_1"
 
     # Configure the mock API
-    api_provider_mock.get_mock(
-        DefaultApi
-    ).workflows_exec_batch_v2_workflows_exec_batch_post.return_value = mock_response
+    api_provider_mock.get_mock(WorkflowsApi).exec_workflow_batch.return_value = (
+        mock_response
+    )
 
     # Add a step to the workflow
     builder.add_step(
@@ -205,12 +201,10 @@ def test_does_submit_batch_job(
     from_workflow_run_id.assert_called_once_with("wr_1", ANY, ANY)
 
     # Verify the API was called with correct parameters
-    api_provider_mock.get_mock(
-        DefaultApi
-    ).workflows_exec_batch_v2_workflows_exec_batch_post.assert_called_once()
-    call_args = api_provider_mock.get_mock(
-        DefaultApi
-    ).workflows_exec_batch_v2_workflows_exec_batch_post.call_args[0][0]
+    api_provider_mock.get_mock(WorkflowsApi).exec_workflow_batch.assert_called_once()
+    call_args = api_provider_mock.get_mock(WorkflowsApi).exec_workflow_batch.call_args[
+        0
+    ][0]
 
     # Check that the request contains the expected data
     assert call_args.project_id == "proj_1"
@@ -259,8 +253,8 @@ def test_workflow_session_management(
     builder_two.run()
 
     api_provider_mock.get_mock(
-        DefaultApi
-    ).workflows_exec_batch_v2_workflows_exec_batch_post.assert_called_once_with(
+        WorkflowsApi
+    ).exec_workflow_batch.assert_called_once_with(
         ExecBatchRequest(
             project_id="proj_1",
             workflow_config=builder_two.to_dict(),

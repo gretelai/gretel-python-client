@@ -1,6 +1,6 @@
 from typing import Any
 
-from gretel_client._api.api.default_api import DefaultApi
+from gretel_client._api.api.workflows_api import WorkflowsApi as V2WorkflowsApi
 from gretel_client.navigator_client_protocols import (
     GretelApiProviderProtocol,
     GretelResourceProviderProtocol,
@@ -22,7 +22,7 @@ class WorkflowManager:
     ) -> None:
         self._api_provider = api_factory
         self._workflow_api = api_factory.get_api(WorkflowsApi)
-        self._data_api = api_factory.get_api(DefaultApi)
+        self._data_api = api_factory.get_api(V2WorkflowsApi)
         self._resource_provider = resource_provider
 
         self._workflow_session_manager = WorkflowSessionManager()
@@ -69,7 +69,7 @@ class WorkflowManager:
             object: The workflow registry.
         """
         # todo: create a registry type here
-        return self._data_api.registry_v2_workflows_registry_get()
+        return self._data_api.get_workflow_registry()
 
     def get_workflow_run(self, workflow_run_id) -> WorkflowRun:
         """

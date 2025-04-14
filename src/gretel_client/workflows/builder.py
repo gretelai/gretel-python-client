@@ -18,7 +18,7 @@ from pydantic import BaseModel
 from requests.exceptions import ChunkedEncodingError
 from typing_extensions import Self
 
-from gretel_client._api.api.default_api import DefaultApi
+from gretel_client._api.api.workflows_api import WorkflowsApi as V2WorkflowsApi
 from gretel_client._api.api_client import ApiException
 from gretel_client._api.models.exec_batch_request import ExecBatchRequest
 from gretel_client._api.models.task_envelope_for_validation import (
@@ -249,7 +249,7 @@ class WorkflowBuilder:
         self._resource_provider = resource_provider
         self._project_id = project_id
         self._workflow_api = self._api_provider.get_api(WorkflowsApi)
-        self._data_api = self._api_provider.get_api(DefaultApi)
+        self._data_api = self._api_provider.get_api(V2WorkflowsApi)
 
         if not workflow_session_manager:
             workflow_session_manager = WorkflowSessionManager()
@@ -432,7 +432,7 @@ class WorkflowBuilder:
             ApiException: If there is an issue with the API call not related to validation.
         """
         try:
-            resp = self._data_api.tasks_validate_v2_workflows_tasks_validate_post(
+            resp = self._data_api.validate_workflow_task(
                 TaskEnvelopeForValidation(
                     name=step.task,
                     globals=self._globals.model_dump(),
@@ -618,7 +618,7 @@ class WorkflowBuilder:
             self.set_name(name)
 
         try:
-            response = self._data_api.workflows_exec_batch_v2_workflows_exec_batch_post(
+            response = self._data_api.exec_workflow_batch(
                 ExecBatchRequest(
                     project_id=self._project_id,
                     workflow_config=self.to_dict(),
