@@ -727,10 +727,10 @@ class PromptPretrainedModel(ConfigBase):
     pretrained_model: Annotated[
         Optional[str],
         Field(
-            description="Select the text generation model to fine-tune from HuggingFace. Defaults to `EleutherAI/gpt-neo-125m`.",
+            description="Select the text generation model to fine-tune from HuggingFace. Defaults to `meta-llama/Llama-3.1-8B-Instruct`.",
             title="Pretrained Model",
         ),
-    ] = "EleutherAI/gpt-neo-125m"
+    ] = "meta-llama/Llama-3.1-8B-Instruct"
     prompt_template: Annotated[
         Optional[str],
         Field(
@@ -1439,10 +1439,10 @@ class TrainTextFTConfig(ConfigBase):
     pretrained_model: Annotated[
         Optional[str],
         Field(
-            description="Select the text generation model to fine-tune from HuggingFace. Defaults to `EleutherAI/gpt-neo-125m`.",
+            description="Select the text generation model to fine-tune from HuggingFace. Defaults to `meta-llama/Llama-3.1-8B-Instruct`.",
             title="pretrained_model",
         ),
-    ] = "EleutherAI/gpt-neo-125m"
+    ] = "meta-llama/Llama-3.1-8B-Instruct"
     column_name: Annotated[
         Optional[str],
         Field(
