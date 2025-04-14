@@ -110,7 +110,7 @@ class WorkflowRun:
             # tasks that emit some sort of report base class from
             # the registry.
             if output_type in ("evaluate_safe_synthetics_dataset", "evaluate_dataset"):
-                return Report.from_bytes(response_bytes, self.download_report)
+                return Report.from_bytes(response_bytes, self._download_report)
 
             return PydanticModel.from_bytes(response_bytes)
 
@@ -145,10 +145,12 @@ class WorkflowRun:
     @property
     def report(self) -> Report:
         return Report.from_bytes(
-            self.download_report(format="json"), self.download_report
+            self._download_report(format="json"), self._download_report
         )
 
-    def download_report(self, format: Optional[Literal["json", "html"]] = "json") -> IO:
+    def _download_report(
+        self, format: Optional[Literal["json", "html"]] = "json"
+    ) -> IO:
         with self._api_provider.requests().get(
             f"/v2/workflows/runs/{self.id}/outputs?type=report_{format}",
             stream=True,

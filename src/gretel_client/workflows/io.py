@@ -78,7 +78,7 @@ class Report:
         return self._report_dict
 
     def download(
-        self, file: Union[str, Path, IO], format: Literal["json", "html"] = "json"
+        self, file: Union[str, Path, IO], format: Literal["json", "html"] = "html"
     ):
         if isinstance(file, IO):
             return self._report_downloader(format)
