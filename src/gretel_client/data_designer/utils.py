@@ -210,20 +210,58 @@ class WithPrettyRepr:
     For use in notebook displays of objects.
     """
 
+    _repr_float_precision: int = 3
+
+    @staticmethod
+    def _get_display_value(v: Any, precision: int) -> Any:
+        """Intercept values for custom redisplay.
+
+        Args:
+            v (Any): The value to display.
+            precision (int): number of decimal digits to display
+                for floating point values.
+
+        Returns:
+            A value to use for repr to display.
+        """
+        if isinstance(v, float):
+            return round(v, precision)
+
+        elif isinstance(v, Enum):
+            return v.value
+
+        elif isinstance(v, BaseModel):
+            return WithPrettyRepr._get_display_value(
+                v.model_dump(mode="json"), precision
+            )
+
+        elif isinstance(v, list):
+            return [WithPrettyRepr._get_display_value(x, precision) for x in v]
+
+        elif isinstance(v, set):
+            return {WithPrettyRepr._get_display_value(x, precision) for x in v}
+
+        elif isinstance(v, dict):
+            return {
+                k: WithPrettyRepr._get_display_value(x, precision) for k, x in v.items()
+            }
+
+        return v
+
+    def _kv_to_string(self, k: str, v: Any) -> str:
+        v_display = self._get_display_value(v, self._repr_float_precision)
+        return f"    {k}={v_display!r}"
+
     def __repr__(self) -> str:
         """Base Repr implementation.
 
         Puts dict fields on new lines for legibility.
         """
-
-        def _kv_to_string(k, v):
-            if isinstance(v, Enum):
-                v = v.value
-            elif isinstance(v, BaseModel):
-                v = v.model_dump(mode="json")
-            return f"    {k}={v!r}"
-
-        field_repr = ",\n".join(_kv_to_string(k, v) for k, v in self.__dict__.items())
+        field_repr = ",\n".join(
+            self._kv_to_string(k, v)
+            for k, v in self.__dict__.items()
+            if not k.startswith("_")
+        )
         return f"{self.__class__.__name__}(\n{field_repr}\n)"
 
     def _repr_html_(self) -> str:

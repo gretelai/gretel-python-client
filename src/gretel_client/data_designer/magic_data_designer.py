@@ -684,7 +684,6 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
 
         return self._dd_obj
 
-    @experimental(message=EXPERIMENTAL_WARNING, emoji="🧪")
     def refine_prompt(
         self,
         name: str,
@@ -855,7 +854,6 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
 
         return self._dd_obj
 
-    @experimental(message=EXPERIMENTAL_WARNING, emoji="🧪")
     def extend_category(
         self, name: str, *, n: int = 5, max_attempts: int = 3
     ) -> DataDesignerT:
