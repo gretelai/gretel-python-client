@@ -16,6 +16,7 @@ from gretel_client.data_designer.aidd_config import AIDDConfig
 from gretel_client.data_designer.constants import (
     DEFAULT_REPR_HTML_STYLE,
     MODEL_DUMP_KWARGS,
+    NUM_PREVIEW_RECORDS,
     REPR_HTML_TEMPLATE,
     REPR_LIST_LENGTH_USE_JSON,
 )
@@ -327,9 +328,7 @@ class DataDesigner:
             self._run_semantic_validation(raise_exceptions=True)
 
         logger.info("🚀 Generating preview")
-        workflow = self._build_workflow(
-            num_records=10, verbose_logging=verbose_logging, streaming=True
-        )
+        workflow = self._build_workflow(verbose_logging=verbose_logging, streaming=True)
 
         preview = self._capture_preview_result(
             workflow, verbose_logging=verbose_logging
@@ -417,7 +416,7 @@ class DataDesigner:
 
     def validate(self) -> Self:
         # Run task-level validation.
-        self._build_workflow(num_records=10)
+        self._build_workflow()
         # Run semantic validation on full schema.
         violations = self._run_semantic_validation()
         if len(violations) == 0:
@@ -483,7 +482,10 @@ class DataDesigner:
 
     @handle_workflow_validation_error
     def _build_workflow(
-        self, num_records: int, verbose_logging: bool = False, streaming: bool = False
+        self,
+        num_records: int | None = None,
+        verbose_logging: bool = False,
+        streaming: bool = False,
     ) -> WorkflowBuilder:
         if self._seed_dataset is None and len(self.sampler_columns) == 0:
             raise ValueError(
@@ -491,6 +493,10 @@ class DataDesigner:
                 "generated using a non-LLM sampler. Seeding data is an essential ingredient "
                 "for creating rich and diverse synthetic data."
             )
+
+        num_records = (
+            NUM_PREVIEW_RECORDS if streaming else num_records or NUM_PREVIEW_RECORDS
+        )
 
         builder = self._workflow_manager.builder(
             globals=Globals(

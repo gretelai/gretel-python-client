@@ -58,6 +58,8 @@ REPR_HTML_TEMPLATE = (
 
 MODEL_DUMP_KWARGS = dict(exclude={"model_configs", "model_suite", "error_rate"})
 
+NUM_PREVIEW_RECORDS = 10
+
 
 class NordColor(Enum):
     NORD0 = "#2E3440"  # Darkest gray (background)
