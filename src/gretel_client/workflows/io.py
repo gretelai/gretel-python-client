@@ -1,5 +1,8 @@
 import json
 import logging
+import tempfile
+import time
+import webbrowser
 
 from pathlib import Path
 from typing import Callable, IO, Literal, Optional, Union
@@ -49,6 +52,7 @@ class Report:
     def __init__(self, report_dict: dict, report_downloader: OutputDownloaderT):
         self._report_dict = report_dict
         self._report_downloader = report_downloader
+        self._report_html = None
 
     @classmethod
     def from_bytes(cls, report_bytes: IO, report_downloader: OutputDownloaderT) -> Self:
@@ -89,6 +93,39 @@ class Report:
 
             with open(file_path, "w") as f:
                 f.write(self._report_downloader(format).read())
+
+    def display_in_notebook(self):
+        """Display the HTML report in a notebook."""
+        try:
+            from IPython.display import display, HTML
+        except ImportError:
+            raise ImportError(
+                "IPython is required to display HTML Report in notebooks."
+            )
+        if self._report_html is None:
+            try:
+                self._report_html = (
+                    self._report_downloader("html").read().decode("utf-8")
+                )
+            except:
+                logger.warning("No HTML report to be displayed in notebook.")
+                return
+        display(HTML(data=self._report_html, metadata={"isolated": True}))
+
+    def display_in_browser(self):
+        """Display the HTML report in a browser."""
+        if self._report_html is None:
+            try:
+                self._report_html = (
+                    self._report_downloader("html").read().decode("utf-8")
+                )
+            except:
+                logger.warning("No HTML report to be displayed in browser.")
+                return
+        with tempfile.NamedTemporaryFile(suffix=".html") as file:
+            file.write(bytes(self._report_html, "utf-8"))
+            webbrowser.open_new_tab(f"file:///{file.name}")
+            time.sleep(1)
 
 
 class PydanticModel:
