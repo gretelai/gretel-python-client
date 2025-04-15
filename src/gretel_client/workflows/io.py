@@ -88,7 +88,7 @@ class Report:
             file_path.parent.mkdir(parents=True, exist_ok=True)
 
             with open(file_path, "w") as f:
-                json.dump(self._report_downloader("json"), f, indent=2)
+                f.write(self._report_downloader(format).read())
 
 
 class PydanticModel:
