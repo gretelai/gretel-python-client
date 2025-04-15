@@ -1,6 +1,5 @@
 from enum import Enum
 from string import Formatter
-from typing import Literal
 
 from jinja2 import meta
 from jinja2.sandbox import ImmutableSandboxedEnvironment
@@ -28,11 +27,16 @@ class ViolationType(str, Enum):
     PROMPT_WITHOUT_REFERENCES = "prompt_without_references"
 
 
+class ViolationLevel(str, Enum):
+    ERROR = "ERROR"
+    WARNING = "WARNING"
+
+
 class Violation(BaseModel):
     column: str
     type: ViolationType
     message: str
-    level: Literal["ERROR", "WARNING"]
+    level: ViolationLevel
 
 
 def validate_aidd_columns(
@@ -74,7 +78,7 @@ def rich_print_violations(violations: list[Violation]) -> None:
     )
 
     for v in violations:
-        emoji = "🛑" if v.level == "ERROR" else "⚠️"
+        emoji = "🛑" if v.level == ViolationLevel.ERROR else "⚠️"
 
         error_title = f"{emoji} {v.level.upper()} | {v.type.value.upper()}"
 
@@ -143,7 +147,7 @@ def _validate_prompt_templates(
                         column=column.name,
                         type=ViolationType.INVALID_REFERENCE,
                         message=message,
-                        level="ERROR",
+                        level=ViolationLevel.ERROR,
                     )
                 )
 
@@ -160,7 +164,7 @@ def _validate_prompt_templates(
                         column=column.name,
                         type=ViolationType.PROMPT_WITHOUT_REFERENCES,
                         message=message,
-                        level="WARNING",
+                        level=ViolationLevel.WARNING,
                     )
                 )
 
@@ -180,7 +184,7 @@ def _validate_prompt_templates(
                         column=column.name,
                         type=ViolationType.F_STRING_SYNTAX,
                         message=message,
-                        level="WARNING",
+                        level=ViolationLevel.WARNING,
                     )
                 )
     return violations
@@ -206,7 +210,7 @@ def _validate_code_validation(
                     column=validation_column.name,
                     type=ViolationType.CODE_COLUMN_MISSING,
                     message=message,
-                    level="ERROR",
+                    level=ViolationLevel.ERROR,
                 )
             )
             continue
@@ -224,7 +228,7 @@ def _validate_code_validation(
                         column=validation_column.name,
                         type=ViolationType.CODE_COLUMN_NOT_CODE,
                         message=message,
-                        level="ERROR",
+                        level=ViolationLevel.WARNING,
                     )
                 )
             elif target_column.output_format != validation_column.code_lang.value:
@@ -238,7 +242,7 @@ def _validate_code_validation(
                         column=validation_column.name,
                         type=ViolationType.CODE_LANG_MISMATCH,
                         message=message,
-                        level="ERROR",
+                        level=ViolationLevel.ERROR,
                     )
                 )
 

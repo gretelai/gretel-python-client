@@ -57,6 +57,7 @@ from gretel_client.data_designer.validate import (
     rich_print_violations,
     validate_aidd_columns,
     Violation,
+    ViolationLevel,
 )
 from gretel_client.data_designer.viz_tools import AIDDMetadata
 from gretel_client.files.interface import File
@@ -751,7 +752,10 @@ class DataDesigner:
             allowed_references=self.allowed_references,
         )
         rich_print_violations(violations)
-        if raise_exceptions and len([v for v in violations if v.level == "ERROR"]) > 0:
+        if (
+            raise_exceptions
+            and len([v for v in violations if v.level == ViolationLevel.ERROR]) > 0
+        ):
             raise DataDesignerValidationError(
                 "🛑 Your dataset contains validation errors. "
                 "Please address the indicated issues and try again."

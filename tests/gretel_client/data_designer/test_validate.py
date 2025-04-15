@@ -8,6 +8,7 @@ from gretel_client.data_designer.types import (
 from gretel_client.data_designer.validate import (
     _validate_code_validation,
     _validate_prompt_templates,
+    ViolationLevel,
     ViolationType,
 )
 from gretel_client.workflows.configs.tasks import CodeLang, OutputType
@@ -108,4 +109,4 @@ def test_validate_detect_f_string_syntax():
     violations = _validate_prompt_templates(columns, [c.name for c in columns])
     assert len(violations) == 1
     assert violations[0].type == ViolationType.F_STRING_SYNTAX
-    assert violations[0].level == "WARNING"
+    assert violations[0].level == ViolationLevel.WARNING
