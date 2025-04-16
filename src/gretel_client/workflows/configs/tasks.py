@@ -1023,25 +1023,11 @@ class GenerateFromTabularGANConfig(ConfigBase):
     num_records: Annotated[
         Optional[int],
         Field(
-            description="Number of text outputs to generate.", gt=0, title="num_records"
+            description="Number of output records to generate.",
+            gt=0,
+            title="num_records",
         ),
-    ] = None
-    num_records_multiplier: Annotated[
-        Optional[float],
-        Field(
-            description="Calculate the number of text outputs to generate by applying this multiplier to the number of records in the training data. For example, use 1.0 to generate synthetic data of the same size as the training data.",
-            gt=0.0,
-            title="num_records_multiplier",
-        ),
-    ] = None
-    max_tries: Annotated[
-        Optional[int],
-        Field(
-            description="Max attempts to sample new records, for conditioning/seeding only.",
-            ge=1,
-            title="Max Tries",
-        ),
-    ] = 10
+    ] = 5000
 
 
 class PrivacyFilters(ConfigBase):
@@ -1226,15 +1212,7 @@ class GenerateFromTextFTConfig(ConfigBase):
         Field(
             description="Number of text outputs to generate.", gt=0, title="num_records"
         ),
-    ] = None
-    num_records_multiplier: Annotated[
-        Optional[float],
-        Field(
-            description="Calculate the number of text outputs to generate by applying this multiplier to the number of records in the training data. For example, use 1.0 to generate synthetic data of the same size as the training data.",
-            gt=0.0,
-            title="num_records_multiplier",
-        ),
-    ] = None
+    ] = 5000
 
 
 class PeftParams(ConfigBase):
