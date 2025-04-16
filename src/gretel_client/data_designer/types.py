@@ -152,7 +152,7 @@ class SamplerColumn(WithPrettyRepr, tasks.ConditionalDataColumn):
 
     Example::
 
-        from gretel_client import Gretel
+        from gretel_client.navigator_client import Gretel
         from gretel_client.data_designer.columns import SamplerColumn
         from gretel_client.data_designer.params import (
             GaussianSamplerParams,
