@@ -249,8 +249,13 @@ class WithPrettyRepr:
         return v
 
     def _kv_to_string(self, k: str, v: Any) -> str:
-        v_display = self._get_display_value(v, self._repr_float_precision)
-        return f"    {k}={v_display!r}"
+        v_display_obj = self._get_display_value(v, self._repr_float_precision)
+        if isinstance(v_display_obj, (dict, list)):
+            v_display = json.dumps(v_display_obj, indent=4, ensure_ascii=False)
+        else:
+            v_display = f"{v_display_obj!r}"
+
+        return f"    {k}={v_display}"
 
     def __repr__(self) -> str:
         """Base Repr implementation.

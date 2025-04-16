@@ -42,17 +42,39 @@ DEFAULT_REPR_HTML_STYLE = "nord"
 
 REPR_LIST_LENGTH_USE_JSON = 4
 
-REPR_HTML_TEMPLATE = (
-    '<meta charset="UTF-8">'
-    "<style>{css}</style>"
-    "<div class='code' "
-    "style='padding: 5px;"
-    "background-color: #2F343F;"
-    "border: 1px solid grey;"
-    "border-radius: 5px;"
-    "display:inline-block;'>"
-    "{highlighted_html}"
-    "</div>"
+REPR_HTML_FIXED_WIDTH = 1000
+REPR_HTML_TEMPLATE = """
+<meta charset="UTF-8">
+<style>
+{{css}}
+
+.code {{{{
+  padding: 4px;
+  border: 1px solid grey;
+  border-radius: 4px;
+  max-width: {fixed_width}px;
+  width: 100%;
+  display: inline-block;
+  box-sizing: border-box;
+  text-align: left;
+  vertical-align: top;
+  line-height: normal;
+  overflow-x: auto;
+}}}}
+
+.code pre {{{{
+  white-space: pre-wrap;       /* CSS 3 */
+  white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+  white-space: -pre-wrap;      /* Opera 4-6 */
+  white-space: -o-pre-wrap;    /* Opera 7 */
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  margin: 0;     
+}}}}
+</style>
+{{highlighted_html}}
+""".format(
+    fixed_width=REPR_HTML_FIXED_WIDTH
 )
 
 
