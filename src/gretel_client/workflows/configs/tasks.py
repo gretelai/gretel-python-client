@@ -1864,6 +1864,9 @@ class EvaluateDataDesignerDataset(ConfigBase):
     validation_columns: Annotated[
         Optional[List[str]], Field(title="Validation Columns")
     ] = None
+    defined_categorical_columns: Annotated[
+        Optional[List[str]], Field(title="Defined Categorical Columns")
+    ] = None
 
 
 class GenerateColumnFromTemplateV2Config(ConfigBase):

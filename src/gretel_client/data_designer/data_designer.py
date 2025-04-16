@@ -318,7 +318,16 @@ class DataDesigner:
         self, settings: EvaluateDataDesignerDatasetSettings | None = None
     ) -> Self:
         self._evaluation_report = GeneralDatasetEvaluation(
-            settings=settings or EvaluateDataDesignerDatasetSettings()
+            settings=settings
+            or EvaluateDataDesignerDatasetSettings(
+                llm_judge_column=(
+                    ""
+                    if len(self.llm_judge_columns) == 0
+                    else self.llm_judge_columns[0].name
+                ),
+                validation_columns=[c.name for c in self.code_validation_columns],
+                defined_categorical_columns=[c.name for c in self._categorical_columns],
+            )
         )
         return self
 
@@ -625,6 +634,9 @@ class DataDesigner:
                     ),
                     columns_to_ignore=settings.columns_to_ignore,
                     validation_columns=settings.validation_columns,
+                    defined_categorical_columns=[
+                        c.name for c in self._categorical_columns
+                    ],
                 )
             builder.add_step(
                 step=general_eval_step,

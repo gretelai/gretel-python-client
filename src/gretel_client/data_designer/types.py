@@ -94,6 +94,13 @@ class EvaluateDataDesignerDatasetSettings(AIDDConfigBase):
     llm_judge_column: str = ""
     columns_to_ignore: list[str] = Field(default_factory=list)
     validation_columns: list[str] = Field(default_factory=list)
+    defined_categorical_columns: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def check_for_llm_judge_columns(self) -> Self:
+        if self.llm_judge_column != "":
+            self.columns_to_ignore.append("judged_by_llm")
+        return self
 
 
 class GeneralDatasetEvaluation(AIDDConfigBase):
