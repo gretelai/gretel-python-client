@@ -19,6 +19,16 @@ from gretel_client.workflows.logs import LogLine, LogPrinter, Task, TaskManager
 
 
 class WorkflowRun:
+    """
+    The WorkflowRun class represents a concrete execution of a Workflow,
+    providing methods to monitor execution, retrieve outputs, and access logs.
+    Each workflow execution is composed of :class:`steps<gretel_client.workflows.configs.workflows.Step>`
+    that form a directed acyclic graph (DAG).
+
+    You should never directly instantiate a WorkflowRun, but instead use
+    Workflow methods from the main :class:`Gretel<gretel_client.navigator_client.Gretel>`
+    class.
+    """
 
     def __init__(
         self,
@@ -50,6 +60,14 @@ class WorkflowRun:
         verbose: bool = True,
         log_printer: Optional[LogPrinter] = None,
     ):
+        """
+        Wait for the workflow run to complete, with optional logging.
+
+        Args:
+            wait: Maximum time to wait in seconds. -1 means wait indefinitely
+            verbose: Whether to print detailed logs during execution
+            log_printer: Custom log printer implementation. If None, uses LoggingPrinter
+        """
         if not log_printer:
             log_printer = LoggingPrinter(verbose)
 
@@ -62,6 +80,19 @@ class WorkflowRun:
     def get_step_output(
         self, step_name: str, format: Optional[str] = None
     ) -> Union[PydanticModel, Dataset, Report, IO]:
+        """
+        Retrieve the output from a specific workflow step.
+
+        Args:
+            step_name: Name of the workflow step
+            format: Optional output format specification
+
+        Returns:
+            The step output in the appropriate format (PydanticModel, Dataset, Report, or IO)
+
+        Raises:
+            Exception: If the step cannot be found or output type cannot be determined
+        """
         output_type = None
         endpoint = f"/v2/workflows/runs/{self.id}/{step_name}/outputs"
         params = {}
@@ -116,34 +147,42 @@ class WorkflowRun:
 
     @property
     def name(self) -> str:
+        """Get the name of the Workflow"""
         return self.workflow.name
 
     @property
     def workflow(self) -> Workflow:
+        """Get the Workflow configuration"""
         return Workflow(**self._api_response.config or {})
 
     @property
     def id(self) -> str:
+        """Get the ID of the Workflow Run"""
         return self._api_response.id
 
     @property
     def workflow_id(self) -> str:
+        """Get the ID of the parent Workflow"""
         return self._api_response.workflow_id
 
     @property
     def steps(self) -> list[Step]:
+        """Return a list of steps in the Workflow"""
         return self.workflow.steps or []
 
     @property
     def config(self) -> dict:
+        """Return the Workflow config as a dictionary"""
         return self._api_response.config or {}
 
     @property
     def config_yaml(self) -> str:
+        """Return the Workflow config as yaml"""
         return self._api_response.config_text or ""
 
     @property
     def report(self) -> Report:
+        """Return the report for the Workflow if one exists"""
         return Report.from_bytes(
             self._download_report(format="json"), self._download_report
         )
@@ -168,6 +207,7 @@ class WorkflowRun:
 
     @property
     def dataset(self) -> Dataset:
+        """Get the final output Dataset of the Workflow if one exists"""
         with self._api_provider.requests().get(
             f"/v2/workflows/runs/{self.id}/outputs?type=dataset_parquet",
             stream=True,
@@ -186,6 +226,9 @@ class WorkflowRun:
 
     @property
     def console_url(self) -> str:
+        """
+        Get the URL for viewing this Workflow Run in the Gretel Console.
+        """
         return (
             f"{self._resource_provider.console_url}/workflows/"
             f"{self._api_response.workflow_id}/runs/{self._api_response.id}"

@@ -192,6 +192,23 @@ class GretelApiProvider:
 
 
 class Gretel:
+    """
+    The ``Gretel`` class allows you to interact with Gretel Services with an
+    easy to use python SDK.
+
+    Args:
+        api_key: Configures your Gretel API key. If ``api_key`` is set to
+            "prompt" and no Api Key is found on the system, ``getpass``
+            will be used to prompt for the key.
+        endpoint: Specifies the Gretel API endpoint. This must be a fully
+            qualified URL.
+        default_project_id: Optional project ID to use. If not provided,
+            a default project is created. If a default_project_id is provided
+            that does not exist, we will try and create that project.
+        create_project: If set to True, create a project from default_project_id
+            if one doesn't exist.
+        log_configuration: Logging configuration to use. Defaults to STANDARD.
+    """
 
     def __init__(
         self,
@@ -213,7 +230,7 @@ class Gretel:
             "_api_factory": _api_factory,
         }
 
-        self.configure_logger(log_configuration)
+        self._configure_logger(log_configuration)
         self._api_factory = (
             _api_factory
             if _api_factory
@@ -247,10 +264,16 @@ class Gretel:
 
     @contextmanager
     def tmp_project(self) -> Iterator[Gretel]:
+        """
+        Creates a temporary project exposed as a contextmanager. Once
+        the contextmanager is closed, the project is automatically
+        deleted along with any associated resources bound to that
+        project.
+        """
         with tmp_project() as proj:
             yield self.new_client(default_project_id=proj.project_guid)
 
-    def configure_logger(self, log_configuration: LogConfiguration) -> None:
+    def _configure_logger(self, log_configuration: LogConfiguration) -> None:
         if log_configuration == LogConfiguration.STANDARD:
             handler = logging.StreamHandler(sys.stdout)
             logging.basicConfig(
@@ -321,6 +344,7 @@ class Gretel:
 
     @property
     def project_id(self) -> str:
+        """The project_id associated with the current session."""
         return self.project.project_guid
 
     @property
@@ -329,6 +353,7 @@ class Gretel:
 
     @property
     def workflows(self) -> WorkflowManager:
+        """Provides SDK access to Gretel Workflows."""
         return self._workflows
 
     @property
@@ -349,8 +374,10 @@ class Gretel:
 
     @property
     def data_designer(self) -> DataDesignerFactory:
+        """Create a Data Designer session."""
         return self._data_designer_factory
 
     @property
     def console_url(self) -> str:
+        """Return a URL for accessing the gretel console."""
         return f"https://console{'-dev' if 'dev' in self._api_factory.client_config.endpoint else ''}.gretel.ai"

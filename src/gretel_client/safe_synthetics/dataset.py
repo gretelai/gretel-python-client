@@ -1,5 +1,6 @@
 import logging
 
+from functools import wraps
 from pathlib import Path
 from typing import Optional, Union
 
@@ -31,6 +32,7 @@ logger = logging.getLogger(__name__)
 
 def handle_workflow_validation_error(func):
 
+    @wraps(func)
     def wrapper(self, *args, **kwargs):
         try:
             return func(self, *args, **kwargs)
@@ -69,6 +71,9 @@ class SafeSyntheticModelRegistry:
 
 
 class SafeSyntheticDataset:
+    """
+    A class for configuring and creating synthetic data generation workflows.
+    """
 
     def __init__(
         self,
@@ -88,6 +93,14 @@ class SafeSyntheticDataset:
         self._tasks = []
 
     def transform(self, config: str | dict = "transform/default") -> Self:
+        """
+        Add a data transformation step to the workflow.
+
+        Args:
+            config: Transform configuration, either as a string path to a blueprint
+                   or a dictionary of configuration options. Defaults to
+                   "transform/default".
+        """
         logger.info(f"Configuring transform step")
         self._tasks.append(self._registry.Transform(**load_blueprint_or_config(config)))
         return self
@@ -95,6 +108,14 @@ class SafeSyntheticDataset:
     def data_source(
         self, data_source: str | Path | pd.DataFrame, use_data_source_step: bool = True
     ) -> Self:
+        """
+        Configure the input data source for the workflow.
+
+        Args:
+            data_source: Input data as either a file path, Path object, or pandas DataFrame
+            use_data_source_step: Whether to create a dedicated data source step in the
+                workflow. Defaults to True.
+        """
         logger.info(f"Configuring generator for data source: {data_source}")
         self._builder.with_data_source(
             data_source, use_data_source_step=use_data_source_step
@@ -107,6 +128,16 @@ class SafeSyntheticDataset:
         max_holdout: int | None = None,
         group_by: str | None = None,
     ) -> Self:
+        """
+        Configure a holdout dataset. This holdout will get used during
+        evaluation.
+
+        Args:
+            holdout: Amount of data to holdout, either as a fraction (float) or
+                absolute number of records (int)
+            max_holdout: Maximum number of records to include in holdout set
+            group_by: Column name to use for grouped holdout selection
+        """
         logger.info(f"Configuring holdout: {holdout}")
         self._holdout = self._registry.Holdout(
             holdout=holdout, max_holdout=max_holdout, group_by=group_by
@@ -119,6 +150,18 @@ class SafeSyntheticDataset:
         config: dict | str | None = None,
         num_records: int | None = None,
     ):
+        """
+        Configure the synthetic data generation model.
+
+        Args:
+            model_or_blueprint_or_task: Model specification, either as a
+                string identifier, blueprint path, or BaseModel instance
+            config: Additional configuration options as dict or YAML string
+            num_records: Number of synthetic records to generate
+
+        Raises:
+            TaskConfigError: If the model configuration cannot be determined
+        """
         logger.info(
             f"Configuring synthetic data generation model: {model_or_blueprint_or_task}"
         )
@@ -203,6 +246,14 @@ class SafeSyntheticDataset:
         config: dict | str | EvaluateSafeSyntheticsDataset | None = None,
         disable: bool = False,
     ) -> Self:
+        """
+        Configure the evaluation step for comparing synthetic to original data.
+
+        Args:
+            config: Evaluation configuration as dict, YAML string, or concrete
+                config instance
+            disable: If True, disable the evaluation step. Defaults to False.
+        """
         if config:
             logger.info("Configuring evaluate step")
             # if config is a string, we can safely assume it's
@@ -229,6 +280,22 @@ class SafeSyntheticDataset:
         run_name: Optional[str] = None,
         wait_until_done: bool = False,
     ) -> WorkflowRun:
+        """
+        Create and optionally execute the configured synthetic data generation
+        pipeline.
+
+        Args:
+            new_workflow: If True, create a new workflow instead of using existing
+            name: Name for the workflow
+            run_name: Name for this specific workflow run
+            wait_until_done: If True, wait for workflow completion before returning
+
+        Returns:
+            WorkflowRun instance representing the created workflow
+
+        Raises:
+            WorkflowValidationError: If the workflow configuration is invalid
+        """
         # Ensures that a new workflow is created for the run
         if new_workflow:
             self._builder.for_workflow(None)
@@ -282,6 +349,7 @@ class SafeSyntheticDataset:
         return found
 
     def builder(self) -> WorkflowBuilder:
+        """Get the underlying WorkflowBuilder instance."""
         return self._builder
 
 

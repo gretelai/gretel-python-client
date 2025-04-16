@@ -244,7 +244,6 @@ class WorkflowBuilder:
         resource_provider: GretelResourceProviderProtocol,
         workflow_session_manager: WorkflowSessionManager | None = None,
     ) -> None:
-        """Initialize a new WorkflowBuilder with empty name and steps."""
         self._api_provider = api_provider
         self._resource_provider = resource_provider
         self._project_id = project_id
@@ -270,10 +269,12 @@ class WorkflowBuilder:
 
     @property
     def step_names(self) -> list[str]:
+        """Return a list of step names for the current builder"""
         return [step.name for step in self._steps]
 
     def set_name(self, name: str) -> Self:
-        """Set the name of the workflow.
+        """
+        Set the name of the workflow.
 
         Args:
             name: The name to assign to the workflow.
@@ -285,7 +286,8 @@ class WorkflowBuilder:
         return self
 
     def for_workflow(self, workflow_id: str | None = None) -> Self:
-        """Configure this builder to use an existing workflow.
+        """
+        Configure this builder to use an existing workflow.
 
         When a workflow ID is specified, the `run()` method will execute a new run
         within the context of the existing workflow instead of creating a new workflow.
@@ -308,7 +310,8 @@ class WorkflowBuilder:
         purpose: str = "dataset",
         use_data_source_step: bool = False,
     ) -> Self:
-        """Add a data source to the workflow.
+        """
+        Add a data source to the workflow.
 
         This method allows you to specify the primary data input for your workflow.
         The data source will be connected to the first step in the workflow chain.
@@ -367,6 +370,7 @@ class WorkflowBuilder:
 
     @property
     def data_source(self) -> str | None:
+        """Return the current input data source for the builder."""
         if self._use_data_source_step:
             return "read-data-source"
         return self._input_file_id
@@ -378,7 +382,8 @@ class WorkflowBuilder:
         validate: bool = True,
         step_name: str | None = None,
     ) -> Self:
-        """Add a single step to the workflow.
+        """
+        Add a single step to the workflow.
 
         Args:
             step: The workflow step to add.
@@ -413,7 +418,8 @@ class WorkflowBuilder:
         return self
 
     def validate_step(self, step: Step) -> str:
-        """Validate a workflow step using the Gretel API.
+        """
+        Validate a workflow step using the Gretel API.
 
         This method makes an API call to validate the configuration of a workflow step
         before adding it to the workflow. It ensures the task type and configuration
@@ -468,7 +474,8 @@ class WorkflowBuilder:
         return resp.message if resp.message else ""
 
     def add_steps(self, steps: list[TaskConfig | Step], validate: bool = True) -> Self:
-        """Add multiple steps to the workflow.
+        """
+        Add multiple steps to the workflow.
 
         Args:
             steps: A list of workflow steps to add.
@@ -491,7 +498,8 @@ class WorkflowBuilder:
                 return step
 
     def to_workflow(self) -> Workflow:
-        """Convert the builder to a Workflow object.
+        """
+        Convert the builder to a Workflow object.
 
         Returns:
             Workflow: A new Workflow instance with the configured name and steps.
@@ -526,7 +534,8 @@ class WorkflowBuilder:
         )
 
     def to_dict(self) -> dict:
-        """Convert the workflow to a dictionary representation.
+        """
+        Convert the workflow to a dictionary representation.
 
         Returns:
             dict: A dictionary representation of the workflow.
@@ -534,7 +543,8 @@ class WorkflowBuilder:
         return self.to_workflow().model_dump(exclude_unset=True)
 
     def to_yaml(self) -> str:
-        """Convert the workflow to a YAML string representation.
+        """
+        Convert the workflow to a YAML string representation.
 
         Returns:
             str: A YAML string representation of the workflow.
@@ -542,7 +552,8 @@ class WorkflowBuilder:
         return yaml.dump(self.to_dict(), sort_keys=False)
 
     def iter_preview(self) -> Iterator[Message | WorkflowInterruption]:
-        """Stream workflow execution messages for preview purposes.
+        """
+        Stream workflow execution messages for preview purposes.
 
         This method executes the workflow in streaming preview mode, returning
         an iterator that yields messages as they are received from the workflow
@@ -579,7 +590,8 @@ class WorkflowBuilder:
             [Message | WorkflowInterruption], None
         ] = _default_preview_printer,
     ):
-        """Preview the workflow in realtime.
+        """
+        Preview the workflow in realtime.
 
         Args:
             log_printer: A callable that processes each message or interruption.
@@ -596,7 +608,8 @@ class WorkflowBuilder:
         run_name: str | None = None,
         wait_until_done: bool = False,
     ) -> WorkflowRun:
-        """Execute the workflow as a batch job.
+        """
+        Execute the workflow as a batch job.
 
         This method creates a persistent workflow and runs it as a batch job on
         the Gretel platform. Unlike preview, this creates a permanent record

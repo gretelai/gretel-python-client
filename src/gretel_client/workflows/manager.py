@@ -13,7 +13,21 @@ from gretel_client.workflows.workflow import WorkflowRun
 
 
 class WorkflowManager:
-    """Provides a low-level interface for interacting with Gretel workflow"""
+    """
+    Provides a low-level interface for interacting with Gretel Workflows.
+
+    Note: This class should never be directly instantiated. Instead you
+    should interact with the class from the Gretel client session.
+
+    For example
+
+        To fetch an existing Workflow Run::
+
+            from gretel.navigator_client import Gretel
+
+            gretel = Gretel()
+            workflow = gretel.workflows.get_workflow_run("wr_run_id_here")
+    """
 
     def __init__(
         self,
@@ -31,10 +45,15 @@ class WorkflowManager:
         self,
         globals: Globals | None = None,
     ) -> WorkflowBuilder:
-        """Creates a new workflow builder instance.
+        """
+        Creates a new workflow builder instance. This can be used to construct
+        Workflows using a fluent builder pattern.
+
+        Args:
+            globals: Configure global variables for the Workflow.
 
         Returns:
-            WorkflowBuilder: A builder to construct workflows.
+            WorkflowBuilder: A fluent builder to construct Workflows.
         """
         return WorkflowBuilder(
             self._resource_provider.project_id,
@@ -71,7 +90,7 @@ class WorkflowManager:
         # todo: create a registry type here
         return self._data_api.get_workflow_registry()
 
-    def get_workflow_run(self, workflow_run_id) -> WorkflowRun:
+    def get_workflow_run(self, workflow_run_id: str) -> WorkflowRun:
         """
         Retrieves a specific workflow run by ID.
 
