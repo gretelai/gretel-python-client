@@ -90,15 +90,15 @@ class EvaluateDatasetSettings(AIDDConfigBase):
     columns_to_ignore: list[str] = Field(default_factory=list)
 
 
-class EvaluateDdDatasetSettings(AIDDConfigBase):
+class EvaluateDataDesignerDatasetSettings(AIDDConfigBase):
     llm_judge_column: str = ""
     columns_to_ignore: list[str] = Field(default_factory=list)
     validation_columns: list[str] = Field(default_factory=list)
 
 
 class GeneralDatasetEvaluation(AIDDConfigBase):
-    settings: EvaluateDdDatasetSettings = Field(
-        default_factory=EvaluateDdDatasetSettings
+    settings: EvaluateDataDesignerDatasetSettings = Field(
+        default_factory=EvaluateDataDesignerDatasetSettings
     )
     type: EvaluationType = EvaluationType.GENERAL
 

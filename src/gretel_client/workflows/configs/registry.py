@@ -19,7 +19,6 @@ class Registry(metaclass=RegistryMeta):
     GenerateColumnFromTemplateV2 = tasks.GenerateColumnFromTemplateV2
     DropColumns = tasks.DropColumns
     NameGenerator = tasks.NameGenerator
-    EvaluateDdDataset = tasks.EvaluateDdDataset
     GenerateDatasetFromSampleRecords = tasks.GenerateDatasetFromSampleRecords
     SampleDataSeeds = tasks.SampleDataSeeds
     GetGretelDataset = tasks.GetGretelDataset
@@ -35,6 +34,7 @@ class Registry(metaclass=RegistryMeta):
     GenerateSamplingColumnConfigFromInstruction = (
         tasks.GenerateSamplingColumnConfigFromInstruction
     )
+    EvaluateDataDesignerDataset = tasks.EvaluateDataDesignerDataset
     Holdout = tasks.Holdout
     GenerateColumnConfigFromInstruction = tasks.GenerateColumnConfigFromInstruction
     SampleFromDataset = tasks.SampleFromDataset

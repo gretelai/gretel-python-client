@@ -88,20 +88,6 @@ class DummyTaskWithListOfInputs(ConfigBase):
     num_records: Annotated[Optional[int], Field(title="Num Records")] = 100
 
 
-class EvaluateDataset(ConfigBase):
-    seed_columns: Annotated[List[str], Field(title="Seed Columns")]
-    ordered_list_like_columns: Annotated[
-        Optional[List[str]], Field(title="Ordered List Like Columns")
-    ] = None
-    other_list_like_columns: Annotated[
-        Optional[List[str]], Field(title="Other List Like Columns")
-    ] = None
-    llm_judge_column: Annotated[Optional[str], Field(title="Llm Judge Column")] = ""
-    columns_to_ignore: Annotated[
-        Optional[List[str]], Field(title="Columns To Ignore")
-    ] = None
-
-
 class DistributionType(str, Enum):
     UNIFORM = "uniform"
     MANUAL = "manual"
@@ -122,6 +108,20 @@ class ModelAlias(str, Enum):
 class UniformDistributionParams(ConfigBase):
     low: Annotated[float, Field(title="Low")]
     high: Annotated[float, Field(title="High")]
+
+
+class EvaluateDataset(ConfigBase):
+    seed_columns: Annotated[List[str], Field(title="Seed Columns")]
+    ordered_list_like_columns: Annotated[
+        Optional[List[str]], Field(title="Ordered List Like Columns")
+    ] = None
+    other_list_like_columns: Annotated[
+        Optional[List[str]], Field(title="Other List Like Columns")
+    ] = None
+    llm_judge_column: Annotated[Optional[str], Field(title="Llm Judge Column")] = ""
+    columns_to_ignore: Annotated[
+        Optional[List[str]], Field(title="Columns To Ignore")
+    ] = None
 
 
 class EvaluateSafeSyntheticsDataset(ConfigBase):
@@ -1868,7 +1868,7 @@ class ModelConfig(ConfigBase):
     generation_parameters: GenerationParameters
 
 
-class EvaluateDdDataset(ConfigBase):
+class EvaluateDataDesignerDataset(ConfigBase):
     model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
     error_rate: Annotated[
         Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")

@@ -30,7 +30,7 @@ from gretel_client.data_designer.types import (
     ColumnProviderTypeT,
     DAGColumnT,
     DataSeedColumn,
-    EvaluateDdDatasetSettings,
+    EvaluateDataDesignerDatasetSettings,
     EvaluationReportT,
     ExpressionColumn,
     GeneralDatasetEvaluation,
@@ -315,10 +315,10 @@ class DataDesigner:
         return self
 
     def with_evaluation_report(
-        self, settings: EvaluateDdDatasetSettings | None = None
+        self, settings: EvaluateDataDesignerDatasetSettings | None = None
     ) -> Self:
         self._evaluation_report = GeneralDatasetEvaluation(
-            settings=settings or EvaluateDdDatasetSettings()
+            settings=settings or EvaluateDataDesignerDatasetSettings()
         )
         return self
 
@@ -610,13 +610,13 @@ class DataDesigner:
             if streaming:
                 general_eval_step = self._task_registry.EvaluateDataset(
                     seed_columns=[col.name for col in self._categorical_columns],
-                    # No longer available, we are passing in EvaluateDdDatasetSettings now
+                    # No longer available, we are passing in EvaluateDataDesignerDatasetSettings now
                     # other_list_like_columns=settings.list_like_columns,
                     # ordered_list_like_columns=settings.ordered_list_like_columns,
                     columns_to_ignore=settings.columns_to_ignore,
                 )
             else:
-                general_eval_step = self._task_registry.EvaluateDdDataset(
+                general_eval_step = self._task_registry.EvaluateDataDesignerDataset(
                     # TODO: Update to use all judge columns once the evaluate-dataset task is updated.
                     llm_judge_column=(
                         ""
