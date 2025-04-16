@@ -121,6 +121,23 @@ def handle_workflow_validation_error(func):
 
 
 class DataDesigner:
+    """High-level interface for building datasets with AI Data Designer.
+
+    Instances of this class should always be created using the `DataDesignerFactory`
+    as an attribute of the Gretel object.
+
+    Example::
+
+        from gretel_client import Gretel
+
+        gretel = Gretel(api_key="prompt")
+
+        # Create a DataDesigner instance from scratch
+        aidd = gretel.data_designer.new()
+
+        # Create a DataDesigner instance from a configuration file
+        aidd = gretel.data_designer.from_config("path/to/config.yaml")
+    """
 
     @classmethod
     def from_config(
@@ -201,6 +218,7 @@ class DataDesigner:
 
     @property
     def allowed_references(self) -> list[str]:
+        """All referenceable variables allowed in prompt templates and expressions."""
         seed_column_names = [c.name for c in self.seed_columns]
         sampler_column_names = [c.name for c in self.sampler_columns]
         dag_column_names = sum(
@@ -210,6 +228,7 @@ class DataDesigner:
 
     @property
     def config(self) -> AIDDConfig:
+        """The current configuration object of this Data Designer instance."""
         columns = [
             c
             for c in self._columns.values()
@@ -234,19 +253,24 @@ class DataDesigner:
 
     @property
     def model_suite(self) -> ModelSuite:
+        """The current model suite."""
         return self._model_suite
 
     @property
     def model_configs(self) -> list[ModelConfig] | None:
+        """The current model configurations."""
         return self._model_configs
 
     def get_column(self, column_name: str) -> AIDDColumnT | None:
+        """Returns the column object with the given name."""
         return self._columns.get(column_name, None)
 
     def get_columns_of_type(self, column_type: Type) -> list[AIDDColumnT]:
+        """Returns all columns of the given type."""
         return [col for col in self._columns.values() if isinstance(col, column_type)]
 
     def delete_column(self, column_name: str) -> Self:
+        """Deletes the column with the given name."""
         if isinstance(self._columns.get(column_name), DataSeedColumn):
             raise ValueError(
                 "Seed columns cannot be deleted. Please update the seed dataset instead."
@@ -262,6 +286,22 @@ class DataDesigner:
         type: ColumnProviderTypeT = ProviderType.LLM_TEXT,
         **kwargs,
     ) -> Self:
+        """Add AIDD column to the current Data Designer configuration.
+
+        If no column object is provided, you must provide the `name`, `type`, and any
+        additional keyword arguments that are required by the column constructor. For
+        each column type, you can directly access their constructor parameters by
+        importing from the `params` module: `gretel_client.data_designer.params`.
+
+        Args:
+            column: AIDD column object to add.
+            name: Name of the column to add. This is only used if `column` is not provided.
+            type: Column type to add. This is only used if `column` is not provided.
+            **kwargs: Additional keyword arguments to pass to the column constructor.
+
+        Returns:
+            The current Data Designer instance.
+        """
         if column is None:
             if isinstance(type, str):
                 type = _validate_column_provider_type(type)
@@ -286,9 +326,11 @@ class DataDesigner:
         return self
 
     def get_constraint(self, target_column: str) -> ColumnConstraint | None:
+        """Returns the constraint for the given target column."""
         return self._constraints.get(target_column, None)
 
     def delete_constraint(self, target_column: str) -> Self:
+        """Deletes the constraint for the given target column."""
         self._constraints.pop(target_column, None)
         return self
 
@@ -298,6 +340,30 @@ class DataDesigner:
         type: ConstraintType,
         params: dict[str, str | float] | ColumnConstraintParams,
     ) -> Self:
+        """Add a constraint to the current Data Designer configuration.
+
+        Currently, constraints are only supported for numerical samplers.
+        The `type` must be one of:
+            - "scalar_inequality": Constraint between a column and a scalar value.
+            - "column_inequality": Constraint between two columns.
+
+        The `params` must be a dictionary of `ColumnConstraintParams` object with the
+        following keyword arguments:
+            - "rhs": The right-hand side of the inequality.
+            - "operator": The operator for the inequality. It must be one of:
+                - "gt": Greater than.
+                - "ge": Greater than or equal to.
+                - "lt": Less than.
+                - "le": Less than or equal to.
+
+        Args:
+            target_column: The column that the constraint applies to.
+            type: Type of constraint to add.
+            params: Parameters for the constraint.
+
+        Returns:
+            The current Data Designer instance.
+        """
         if isinstance(params, dict):
             params = ColumnConstraintParams.model_validate(params)
         self._constraints[target_column] = ColumnConstraint(
@@ -308,15 +374,25 @@ class DataDesigner:
         return self
 
     def get_evaluation_report(self) -> EvaluationReportT | None:
+        """Returns the dataset evaluation report configuration if one is set."""
         return self._evaluation_report
 
     def delete_evaluation_report(self) -> Self:
+        """Deletes the current dataset evaluation report configuration."""
         self._evaluation_report = None
         return self
 
     def with_evaluation_report(
         self, settings: EvaluateDataDesignerDatasetSettings | None = None
     ) -> Self:
+        """Add an evaluation report to the current Data Designer configuration.
+
+        Args:
+            settings: Evaluation report settings.
+
+        Returns:
+            The current Data Designer instance.
+        """
         self._evaluation_report = GeneralDatasetEvaluation(
             settings=settings
             or EvaluateDataDesignerDatasetSettings(
@@ -334,9 +410,24 @@ class DataDesigner:
     def preview(
         self, verbose_logging: bool = False, validate: bool = True
     ) -> PreviewResults:
+        """Generate a preview of the dataset.
+
+        The preview consists of 10 records generated from the current configuration.
+        This is a quick way to check that the configuration is working as expected
+        before generating a larger dataset.
+
+        Args:
+            verbose_logging: Whether to enable verbose logging.
+            validate: If True, run semantic validation on the configuration before
+                generating a preview. This is recommended to catch issues like invalid
+                references in prompt templates, which otherwise would only be caught
+                during at runtime.
+
+        Returns:
+            Preview results object.
+        """
         if validate:
             self._run_semantic_validation(raise_exceptions=True)
-
         logger.info("🚀 Generating preview")
         workflow = self._build_workflow(verbose_logging=verbose_logging, streaming=True)
 
@@ -363,14 +454,26 @@ class DataDesigner:
         *,
         num_records: int,
         name: str | None = None,
-        run_name: str | None = None,
         wait_until_done: bool = False,
     ) -> WorkflowRun:
+        """Create a new dataset based on the current Data Designer configuration.
+
+        This method creates a persistent workflow and runs it as a batch job in a
+        managed service. Unlike preview, this creates a permanent record of the
+        workflow execution that can be referenced later.
+
+        Args:
+            num_records: Number of records to generate.
+            name: Name of the workflow.
+            wait_until_done: Block until the workflow has completed running.
+                If False, immediately returns the WorkflowRun object.
+
+        Returns:
+            WorkflowRun object.
+        """
         logger.info("🚀 Submitting batch workflow")
         workflow = self._build_workflow(num_records=num_records)
-        return workflow.run(
-            name=name, run_name=run_name, wait_until_done=wait_until_done
-        )
+        return workflow.run(name=name, wait_until_done=wait_until_done)
 
     def with_person_samplers(
         self,
@@ -378,6 +481,26 @@ class DataDesigner:
         *,
         keep_person_columns: bool = False,
     ) -> Self:
+        """Define latent person samplers that will be dropped at the end of the workflow.
+
+        Person samplers defined with this method are latent in the sense that they give
+        you access to person objects with attributes that can be referenced by other columns,
+        but the objects themselves are dropped from the final dataset. This is useful
+        when you just need access to certain person attributes but don't need the entire
+        object in the final dataset.
+
+        If you want to keep the person sampler columns in the final dataset, you have two
+        options. You can either set `keep_person_columns` to `True` or you can add person
+        samplers as columns using the `add_column` method.
+
+        Args:
+            person_samplers: Dictionary of person sampler parameters. The keys are the names
+                of the person samplers and the values are the parameters for each sampler.
+            keep_person_columns: If True, keep the person sampler columns in the final dataset.
+
+        Returns:
+            The current Data Designer instance.
+        """
         for name, params in person_samplers.items():
             person_params = PersonSamplerParams.model_validate(params)
             self.add_column(
@@ -398,6 +521,21 @@ class DataDesigner:
         sampling_strategy: SamplingStrategy = SamplingStrategy.ORDERED,
         with_replacement: bool = False,
     ) -> Self:
+        """Define a dataset to seed the synthetic data generation process.
+
+        Each row of the seed dataset is treated as a single example. The columns
+        of the seed dataset can be referenced by other columns in prompt templates
+        and/or expressions.
+
+        The seed data will be sampled using one of the following strategies:
+            - "ordered": Maintains the order of the rows in the seed dataset.
+            - "shuffle": Randomly shuffles the rows of the seed dataset.
+
+        Args:
+            dataset: DataFrame, Path, or File object.
+            sampling_strategy: Sampling strategy to use.
+            with_replacement: If True, the same row can be sampled multiple times.
+        """
         if isinstance(dataset, File):
             file_id = dataset.id
             dataset_columns = self._retrieve_remote_dataset_columns(file_id)
@@ -425,6 +563,16 @@ class DataDesigner:
         return self
 
     def validate(self) -> Self:
+        """Validate the current Data Designer configuration.
+
+        This method runs task-level validation on the current configuration and
+        "semantic" validation, which runs a wholistic check of the full schema for
+        issues like references to undefined columns or inconsistent settings between
+        related columns.
+
+        Returns:
+            The current Data Designer instance.
+        """
         # Run task-level validation.
         self._build_workflow()
         # Run semantic validation on full schema.
@@ -435,46 +583,57 @@ class DataDesigner:
 
     @property
     def seed_columns(self) -> list[DataSeedColumn]:
+        """Columns from the seed dataset, if one is defined."""
         return self.get_columns_of_type(DataSeedColumn)
 
     @property
     def sampler_columns(self) -> list[SamplerColumn]:
+        """Columns that use a sampler to generate data."""
         return self.get_columns_of_type(SamplerColumn)
 
     @property
     def llm_gen_columns(self) -> list[LLMGenColumn]:
+        """Columns that use an LLM to generate data."""
         return self.get_columns_of_type(LLMGenColumn)
 
     @property
     def llm_text_columns(self) -> list[LLMTextColumn]:
+        """Columns that use an LLM to generate text data."""
         return self.get_columns_of_type(LLMTextColumn)
 
     @property
     def llm_code_columns(self) -> list[LLMCodeColumn]:
+        """Columns that use an LLM to generate code."""
         return self.get_columns_of_type(LLMCodeColumn)
 
     @property
     def llm_structured_columns(self) -> list[LLMStructuredColumn]:
+        """Columns that use an LLM to generate structured data."""
         return self.get_columns_of_type(LLMStructuredColumn)
 
     @property
     def llm_judge_columns(self) -> list[LLMJudgeColumn]:
+        """Columns that use an LLM to judge the quality of generated data."""
         return self.get_columns_of_type(LLMJudgeColumn)
 
     @property
     def code_validation_columns(self) -> list[CodeValidationColumn]:
+        """Columns with results from validation of columns with code."""
         return self.get_columns_of_type(CodeValidationColumn)
 
     @property
     def expression_columns(self) -> list[ExpressionColumn]:
+        """Columns that generate data from a jinja2 expression."""
         return self.get_columns_of_type(ExpressionColumn)
 
     @property
     def workflow_manager(self) -> WorkflowManager:
+        """Workflow manager for the current Data Designer instance."""
         return self._workflow_manager
 
     @property
     def _dag_columns(self) -> list[DAGColumnT]:
+        """Columns that are topologically sorted using a DAG."""
         return (
             self.llm_gen_columns
             + self.llm_judge_columns
@@ -484,6 +643,7 @@ class DataDesigner:
 
     @property
     def _categorical_columns(self) -> list[SamplerColumn]:
+        """Columns that contain categorical data."""
         return [
             col
             for col in self.sampler_columns
@@ -497,6 +657,7 @@ class DataDesigner:
         verbose_logging: bool = False,
         streaming: bool = False,
     ) -> WorkflowBuilder:
+        """Build a workflow from the current Data Designer configuration."""
         if self._seed_dataset is None and len(self.sampler_columns) == 0:
             raise ValueError(
                 "🛑 Data Designer needs a seed dataset and/or at least one column that is "
@@ -650,6 +811,7 @@ class DataDesigner:
     def _capture_preview_result(
         self, workflow: WorkflowBuilder, verbose_logging: bool
     ) -> PreviewResults:
+        """Capture the results (including logs) of a workflow preview."""
         step_idx = 0
         message: Message
         current_step = None
@@ -719,6 +881,7 @@ class DataDesigner:
         )
 
     def _get_next_dag_step(self, column_name: str) -> TaskConfig:
+        """Return the task for the given column for the next step in the DAG."""
         column = self.get_column(column_name)
         if isinstance(column, LLMGenColumn):
             next_step = self._task_registry.GenerateColumnFromTemplateV2(
@@ -745,20 +908,14 @@ class DataDesigner:
         return next_step
 
     def _retrieve_remote_dataset_columns(self, file_id: str) -> list[str]:
-        """Retrieve the columns of a dataset given its file id.
-
-        Args:
-            file_id (str): File identifier for the dataset.
-
-        Returns:
-            list[str]: A list of column names present in the dataset.
-        """
+        """Return the columns of a dataset given its file id."""
         retrieved_df = self._files.download_dataset(file_id)
         return retrieved_df.columns.tolist()
 
     def _run_semantic_validation(
         self, raise_exceptions: bool = False
     ) -> list[Violation]:
+        """Run semantic validation on the current Data Designer configuration."""
         violations = validate_aidd_columns(
             columns=list(self._columns.values()),
             allowed_references=self.allowed_references,
@@ -776,6 +933,7 @@ class DataDesigner:
 
     @staticmethod
     def _get_last_evaluation_step_name(workflow_step_names: list[str]) -> str | None:
+        """Return the name of the last evaluation step in a workflow."""
         eval_steps = [
             s for s in workflow_step_names if s.startswith("evaluate-dataset")
         ]
@@ -833,6 +991,16 @@ class DataDesigner:
 def get_column_from_kwargs(
     name: str, type: ColumnProviderTypeT, **kwargs
 ) -> AIDDColumnT:
+    """Create a concrete AIDD column object from kwargs.
+
+    Args:
+        name: Name of the column.
+        type: Type of the column.
+        **kwargs: Keyword arguments to pass to the column constructor.
+
+    Returns:
+        AIDD column object of the appropriate type.
+    """
     if name is None or type is None:
         raise ValueError(
             "You must provide both `name` and `type` to add a column using kwargs."
@@ -859,6 +1027,17 @@ def get_column_from_kwargs(
 
 
 def _add_backticks_to_column_names(step_name: str, column_names: list[str]) -> str:
+    """Add backticks to the column names in the step name if they are present.
+
+    This function is used in the context of logging workflow steps.
+
+    Args:
+        step_name: Name of the step.
+        column_names: List of possible column names.
+
+    Returns:
+        Step name with backticks added to the column names if present.
+    """
     max_overlap = 0
     best_match = None
     for name in column_names:
@@ -875,6 +1054,17 @@ def _add_backticks_to_column_names(step_name: str, column_names: list[str]) -> s
 def _check_convert_to_json_str(
     column_names: list[str], *, indent: int | str | None = None
 ) -> list[str] | str | None:
+    """Convert a list of column names to a JSON string if the list is long.
+
+    This function helps keep AIDD's __repr__ output clean and readable.
+
+    Args:
+        column_names: List of column names.
+        indent: Indentation for the JSON string.
+
+    Returns:
+        List of column names or a JSON string if the list is long.
+    """
     return (
         None
         if len(column_names) == 0
@@ -887,6 +1077,7 @@ def _check_convert_to_json_str(
 
 
 def _validate_column_provider_type(column_provider_type: str) -> ColumnProviderTypeT:
+    """Validate the given column provider type and return the appropriate enum."""
     valid_provider_types = {t.value for t in list(ProviderType)}
     valid_sampling_source_types = {t.value for t in list(SamplerType)}
     combined_valid_types = valid_provider_types.union(valid_sampling_source_types)

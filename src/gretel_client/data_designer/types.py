@@ -131,12 +131,62 @@ class WithDAGColumnMixin:
         return []
 
 
-class SamplerColumn(WithPrettyRepr, tasks.ConditionalDataColumn): ...
+class SamplerColumn(WithPrettyRepr, tasks.ConditionalDataColumn):
+    """AIDD column that uses a sampler to generate data.
+
+    Sampler columns can be conditioned on other sampler columns using the `conditional_params` argument,
+    which is a dictionary of conditions and parameters. Conditions are specified as strings involving
+    the names of other sampler columns and the operators `==`, `!=`, `>`, `>=`, `<`, `<=`.
+
+    Args:
+        name: Name of the column.
+        type: Type of sampler to use.
+        params: Parameters for the sampler. If conditional_params are provided,
+            these parameters will be used as the default when no condition is met.
+        conditional_params: Conditional parameters for the sampler. The keys of the
+            dict are conditions from other columns, and the values are the parameters
+            for the sampler.
+        convert_to: Optional data conversion to apply to the generated data. For
+            numerical columns this can be "int" or "float", and for datetime columns,
+            this can be a datetime format string (e.g. "%Y/%m/%d").
+
+    Example::
+
+        from gretel_client import Gretel
+        from gretel_client.data_designer.columns import SamplerColumn
+        from gretel_client.data_designer.params import (
+            GaussianSamplerParams,
+            CategorySamplerParams,
+        )
+
+        aidd = Gretel(api_key="prompt").data_designer.new()
+
+        aidd.add_column(
+            SamplerColumn(
+                name="age",
+                type=P.SamplerType.GAUSSIAN,
+                params=P.GaussianSamplerParams(mean=35, stddev=5),
+                convert_to="int",
+            )
+        )
+
+        aidd.add_column(
+            SamplerColumn(
+                name="pet_type",
+                type=P.SamplerType.CATEGORY,
+                params=P.CategorySamplerParams(values=["dog", "cat", "bird"]),
+                conditional_params={
+                    "age < 20": P.CategorySamplerParams(values=["rabbit", "hamster"]),
+                }
+            )
+        )
+    """
 
 
 class LLMGenColumn(
     WithPrettyRepr, tasks.GenerateColumnFromTemplateV2, WithDAGColumnMixin
 ):
+
     @model_validator(mode="before")
     @classmethod
     def _set_output_format(cls, data: Any) -> Any:
@@ -176,21 +226,66 @@ class LLMGenColumn(
 
 
 class LLMTextColumn(LLMGenColumn):
+    """AIDD column that uses an LLM to generate text.
+
+    Args:
+        name: Name of the column.
+        prompt: Prompt template to use for generation.
+        system_prompt: System prompt for the LLM. Useful for defining the LLM's role,
+            tone, and other instructions. However, do not provide any instructions
+            related to the output format, as this is handled internally by AIDD.
+        model_alias: Model alias to use for the LLM. Defaults to `ModelAlias.TEXT`.
+    """
+
     model_alias: str | ModelAlias = Field(default=ModelAlias.TEXT)
     output_type: OutputType = Field(default=OutputType.TEXT)
 
 
 class LLMCodeColumn(LLMGenColumn):
+    """AIDD column that uses an LLM to generate code.
+
+    Args:
+        name: Name of the column.
+        prompt: Prompt template to use for generation.
+        system_prompt: System prompt for the LLM. Useful for defining the LLM's role,
+            tone, and other instructions. However, do not provide any instructions
+            related to the output format, as this is handled internally by AIDD.
+        model_alias: Model alias to use for the LLM. Defaults to `ModelAlias.CODE`.
+    """
+
     model_alias: str | ModelAlias = Field(default=ModelAlias.CODE)
     output_type: OutputType = Field(default=OutputType.CODE)
 
 
 class LLMStructuredColumn(LLMGenColumn):
+    """AIDD column that uses an LLM to generate structured data.
+
+    Args:
+        name: Name of the column.
+        prompt: Prompt template to use for generation.
+        system_prompt: System prompt for the LLM. Useful for defining the LLM's role,
+            tone, and other instructions. However, do not provide any instructions
+            related to the output format, as this is handled internally by AIDD.
+        model_alias: Model alias to use for the LLM. Defaults to `ModelAlias.STRUCTURED`.
+    """
+
     model_alias: str | ModelAlias = Field(default=ModelAlias.STRUCTURED)
     output_type: OutputType = Field(default=OutputType.STRUCTURED)
 
 
 class LLMJudgeColumn(WithPrettyRepr, tasks.JudgeWithLlm, WithDAGColumnMixin):
+    """AIDD column for llm-as-a-judge with custom rubrics.
+
+    Args:
+        name: Name of the column.
+        prompt: Prompt template to use for llm-as-a-judge.
+        rubrics: List of rubrics to use for evaluation.
+        num_samples_to_judge: Number of samples to judge. If None, the full dataset
+            will be judged. If less than the total number of rows in the dataset,
+            a random sample of the specified size will be judged.
+        model_alias: Model alias to use for the LLM. Defaults to `ModelAlias.JUDGE`.
+    """
+
     result_column: str = Field(..., alias="name")
 
     @property
@@ -207,6 +302,16 @@ class LLMJudgeColumn(WithPrettyRepr, tasks.JudgeWithLlm, WithDAGColumnMixin):
 
 
 class CodeValidationColumn(WithPrettyRepr, AIDDConfigBase, WithDAGColumnMixin):
+    """AIDD column for validating code in another column.
+
+    Code validation is currently supported for Python and SQL.
+
+    Args:
+        name: Name of the column.
+        code_lang: Language of the code to validate.
+        target_column: Column with code to validate.
+    """
+
     name: str
     code_lang: tasks.CodeLang
     target_column: str
@@ -235,6 +340,14 @@ class CodeValidationColumn(WithPrettyRepr, AIDDConfigBase, WithDAGColumnMixin):
 class ExpressionColumn(
     WithPrettyRepr, tasks.GenerateColumnFromExpression, WithDAGColumnMixin
 ):
+    """AIDD column for generated data based on jinja2 expressions.
+
+    Args:
+        name: Name of the column.
+        expr: Expression to use for generation.
+        dtype: Data type of the column. Can be "str" (default), "int",
+            "float", or "bool".
+    """
 
     @property
     def required_columns(self) -> list[str]:
@@ -251,6 +364,15 @@ class ExpressionColumn(
 
 
 class DataSeedColumn(WithPrettyRepr, AIDDConfigBase):
+    """Column in a seed dataset.
+
+    This object is meant for internal bookkeeping and should not be used directly.
+
+    Args:
+        name: Name of the column.
+        file_id: File ID of the seed dataset.
+    """
+
     name: str
     file_id: str
 

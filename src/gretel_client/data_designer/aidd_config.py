@@ -19,6 +19,8 @@ from gretel_client.workflows.configs.workflows import ModelConfig
 
 
 class AIDDConfig(ConfigBase):
+    """Configuration for an AIDD workflow."""
+
     model_suite: ModelSuite
     model_configs: list[ModelConfig] | None = None
     seed_dataset: SeedDataset | None = None
@@ -28,11 +30,13 @@ class AIDDConfig(ConfigBase):
     evaluation_report: EvaluationReportT | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        """Convert the AIDD config to a dictionary."""
         return self.model_dump(mode="json", by_alias=True)
 
     def to_yaml(
         self, path: str | Path | None = None, *, indent: int | None = 2, **kwargs
     ) -> str | None:
+        """Convert the AIDD config to a YAML string or file."""
         yaml_str = yaml.dump(self.to_dict(), indent=indent, **kwargs)
         if path is None:
             return yaml_str
@@ -42,6 +46,7 @@ class AIDDConfig(ConfigBase):
     def to_json(
         self, path: str | Path | None = None, *, indent: int | None = 2, **kwargs
     ) -> str | None:
+        """Convert the AIDD config to a JSON string or file."""
         json_str = json.dumps(self.to_dict(), indent=indent, **kwargs)
         if path is None:
             return json_str

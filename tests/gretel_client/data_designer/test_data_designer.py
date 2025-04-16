@@ -369,11 +369,10 @@ def test_workflow_builder_run_integration(
     dd.create(
         num_records=1000,
         name="test-wfl",
-        run_name="test-run",
         wait_until_done=True,
     )
     mock_low_level_sdk_resources.mock_workflow_builder.run.assert_called_with(
-        name="test-wfl", run_name="test-run", wait_until_done=True
+        name="test-wfl", wait_until_done=True
     )
 
 

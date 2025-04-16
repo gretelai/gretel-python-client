@@ -9,6 +9,16 @@ from gretel_client.workflows.io import Dataset
 
 @dataclass
 class PreviewResults:
+    """Results from an AIDD preview run.
+
+    Args:
+        aidd_metadata: Metadata object with information about the dataset.
+        output: Output of the preview run.
+        evaluation_results: Evaluation results of the preview run if the workflow
+            was configured to run evaluation.
+        success: If True, the preview run was successful.
+    """
+
     aidd_metadata: AIDDMetadata
     output: TaskOutputT | None = None
     evaluation_results: dict | None = None
@@ -17,6 +27,7 @@ class PreviewResults:
 
     @property
     def dataset(self) -> Dataset | None:
+        """Dataset object from the preview."""
         if isinstance(self.output, pd.DataFrame):
             return Dataset(self.output)
         return None
@@ -29,6 +40,17 @@ class PreviewResults:
         syntax_highlighting_theme: str = "dracula",
         background_color: str | None = None,
     ) -> None:
+        """Display a sample record from the AIDD dataset preview.
+
+        Args:
+            index: Index of the record to display. If None, the next record will be displayed.
+                This is useful for running the cell in a notebook multiple times.
+            hide_seed_columns: If True, the columns from the seed dataset (if any) will not be displayed.
+            syntax_highlighting_theme: Theme to use for syntax highlighting. See the `Syntax`
+                documentation from `rich` for information about available themes.
+            background_color: Background color to use for the record. See the `Syntax`
+                documentation from `rich` for information about available background colors.
+        """
         if self.dataset is None:
             raise ValueError("No dataset found in the preview results.")
         i = index or self._display_cycle_index
