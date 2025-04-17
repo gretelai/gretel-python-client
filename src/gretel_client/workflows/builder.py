@@ -83,9 +83,14 @@ class WorkflowValidationError(Exception):
         field_violations: list[FieldViolation] | None = None,
     ):
         super().__init__(msg)
+        self._msg = msg
         self._field_violations = field_violations or []
         self._task_name = task_name
         self._step_name = step_name
+
+    @property
+    def msg(self) -> str:
+        return self._msg
 
     @property
     def field_violations(self) -> list[FieldViolation]:

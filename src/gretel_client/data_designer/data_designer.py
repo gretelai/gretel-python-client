@@ -109,6 +109,7 @@ def handle_workflow_validation_error(func):
             err_message = (
                 "🛑 Validation error(s) found! Please correct the following and retry:"
             )
+            err_message += f"\n|-- {e.msg}"
             violations = ""
             for violation in e.field_violations:
                 violations += f"\n|-- {violation.error_message}"
