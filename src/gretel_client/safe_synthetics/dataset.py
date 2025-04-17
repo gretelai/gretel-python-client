@@ -87,7 +87,7 @@ class SafeSyntheticDataset:
         # steps with fixed positions
         self._holdout = None
         self._evaluate_config = EvaluateSafeSyntheticsDataset()
-        self._synthesis_task = None
+        self._output_task = None
 
         # these steps are ordered
         self._tasks = []
@@ -102,7 +102,9 @@ class SafeSyntheticDataset:
                    "transform/default".
         """
         logger.info(f"Configuring transform step")
-        self._tasks.append(self._registry.Transform(**load_blueprint_or_config(config)))
+        transform_config = self._registry.Transform(**load_blueprint_or_config(config))
+        self._output_task = transform_config
+        self._tasks.append(transform_config)
         return self
 
     def data_source(
@@ -237,7 +239,7 @@ class SafeSyntheticDataset:
                     "We tried configuring num_records, but "
                     "the configuration doesn't support it."
                 )
-        self._synthesis_task = task_config_for_klass
+        self._output_task = task_config_for_klass
         self._tasks.append(task_config_for_klass)
         return self
 
@@ -310,31 +312,31 @@ class SafeSyntheticDataset:
         self._builder.add_steps(self._tasks)
 
         # Evaluate is going to be the final step in the workflow.
-        # We need to determine the training and synthetic
+        # We need to determine the reference and output
         # dataset from the previous steps in the workflow.
         if self._evaluate_config:
             evaluate_step = task_to_step(self._evaluate_config)
 
-            # Training data is either going to be the holdout step
+            # Reference data is either going to be the holdout step
             # if one exists, or the input file to the workflow.
-            train = None
+            reference = None
             if holdout_step:
-                train = holdout_step
+                reference = holdout_step
             elif self._builder.data_source:
-                train = self._builder.data_source
+                reference = self._builder.data_source
 
-            # The training dataset is always going to be the last
+            # The output dataset is always going to be the last
             # step in a SSD based workflow
-            synth = self._synthesis_task
+            output = self._output_task
 
             # For now, using evaluate in a SSD workflow requires both
-            # a synthetic and training dataset. In the future, this might
+            # a output and reference dataset. In the future, this might
             # change.
-            if train and synth:
-                self._builder.add_step(evaluate_step, step_inputs=[synth, train])
+            if reference and output:
+                self._builder.add_step(evaluate_step, step_inputs=[output, reference])
             else:
                 logger.debug(
-                    "Evaluate requires both training and synthetic datasets. No Evaluate step added."
+                    "Evaluate requires both reference and output datasets. No Evaluate step added."
                 )
 
         return self._builder.run(
