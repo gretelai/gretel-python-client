@@ -146,7 +146,7 @@ class Report:
             file_path = Path(file)
             file_path.parent.mkdir(parents=True, exist_ok=True)
 
-            with open(file_path, "w") as f:
+            with open(file_path, "wb") as f:
                 f.write(self._report_downloader(format).read())
 
     def display_in_notebook(self):
