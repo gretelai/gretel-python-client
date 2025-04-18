@@ -68,14 +68,19 @@ class WorkflowRun:
             verbose: Whether to print detailed logs during execution
             log_printer: Custom log printer implementation. If None, uses LoggingPrinter
         """
+
+        task_manager = self._get_task_manager(verbose=verbose, log_printer=log_printer)
+        task_manager.start(wait)
+
+    def _get_task_manager(
+        self, verbose: bool = True, log_printer: Optional[LogPrinter] = None
+    ) -> TaskManager:
         if not log_printer:
             log_printer = LoggingPrinter(verbose)
 
-        task_manager = TaskManager(
+        return TaskManager(
             self._api_response.id, self._workflow_api, self._logs_api, log_printer
         )
-
-        task_manager.start(wait)
 
     def get_step_output(
         self, step_name: str, format: Optional[str] = None
@@ -179,6 +184,10 @@ class WorkflowRun:
     def config_yaml(self) -> str:
         """Return the Workflow config as yaml"""
         return self._api_response.config_text or ""
+
+    def fetch_status(self) -> str:
+        """Fetch the latest status of the Workflow"""
+        return self._get_task_manager().check_run_status()
 
     @property
     def report(self) -> Report:

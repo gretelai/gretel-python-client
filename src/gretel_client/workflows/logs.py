@@ -215,7 +215,7 @@ class TaskManager:
                     self._tasks[task.id] = task_worker
                     task_worker.start()
 
-            new_run_status = self._check_run_status()
+            new_run_status = self.check_run_status()
             if run_status != new_run_status:
                 self._log_printer.info(
                     f"Workflow run is now in status: {new_run_status}"
@@ -237,7 +237,7 @@ class TaskManager:
             logger.debug("waiting for workers to terminate")
             self._wait_for_log_workers()
 
-    def _check_run_status(self) -> str:
+    def check_run_status(self) -> str:
         workflow_run = self._workflows_api.get_workflow_run(
             workflow_run_id=self._workflow_run_id
         )
