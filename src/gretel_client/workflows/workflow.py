@@ -16,6 +16,7 @@ from gretel_client.rest_v1.models import WorkflowRun as WorkflowRunApiResponse
 from gretel_client.workflows.configs.workflows import Step, Workflow
 from gretel_client.workflows.io import Dataset, PydanticModel, Report
 from gretel_client.workflows.logs import LogLine, LogPrinter, Task, TaskManager
+from gretel_client.workflows.status import Status
 
 
 class WorkflowRun:
@@ -68,19 +69,13 @@ class WorkflowRun:
             verbose: Whether to print detailed logs during execution
             log_printer: Custom log printer implementation. If None, uses LoggingPrinter
         """
-
-        task_manager = self._get_task_manager(verbose=verbose, log_printer=log_printer)
-        task_manager.start(wait)
-
-    def _get_task_manager(
-        self, verbose: bool = True, log_printer: Optional[LogPrinter] = None
-    ) -> TaskManager:
         if not log_printer:
             log_printer = LoggingPrinter(verbose)
 
-        return TaskManager(
+        task_manager = TaskManager(
             self._api_response.id, self._workflow_api, self._logs_api, log_printer
         )
+        task_manager.start(wait)
 
     def get_step_output(
         self, step_name: str, format: Optional[str] = None
@@ -185,16 +180,22 @@ class WorkflowRun:
         """Return the Workflow config as yaml"""
         return self._api_response.config_text or ""
 
-    def fetch_status(self) -> str:
-        """Fetch the latest status of the Workflow"""
-        return self._get_task_manager().check_run_status()
-
     @property
     def report(self) -> Report:
         """Return the report for the Workflow if one exists"""
         return Report.from_bytes(
             self._download_report(format="json"), self._download_report
         )
+
+    def fetch_status(self) -> Status:
+        """Fetch the latest status of the Workflow"""
+        return Status[self._refresh_workflow_details_from_api().status]
+
+    def _refresh_workflow_details_from_api(self):
+        self._api_response = self._workflow_api.get_workflow_run(
+            workflow_run_id=self.id
+        )
+        return self._api_response
 
     def _download_report(
         self, format: Optional[Literal["json", "html"]] = "json"
