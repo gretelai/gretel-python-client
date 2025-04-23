@@ -6,6 +6,7 @@ from gretel_client.workflows.configs.tasks import (
     CodeLang,
     DatetimeSamplerParams,
     GaussianSamplerParams,
+    ModelAlias,
     OutputType,
     PersonSamplerParams,
     PoissonSamplerParams,
@@ -17,4 +18,12 @@ from gretel_client.workflows.configs.tasks import (
     TimeDeltaSamplerParams,
     UniformSamplerParams,
     UUIDSamplerParams,
+)
+from gretel_client.workflows.configs.workflows import (
+    GenerationParameters,
+    ManualDistribution,
+    ManualDistributionParams,
+    ModelConfig,
+    UniformDistribution,
+    UniformDistributionParams,
 )

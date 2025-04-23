@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 
 from pydantic import BaseModel
+from rich import box
 from rich.align import Align
 from rich.columns import Columns
 from rich.console import Console, Group
@@ -25,6 +26,7 @@ from gretel_client.data_designer.judge_rubrics import JudgeRubric
 from gretel_client.data_designer.types import EvaluationType, LLMJudgePromptTemplateType
 from gretel_client.data_designer.utils import code_lang_to_syntax_lexer
 from gretel_client.workflows.configs.tasks import CodeLang, OutputType
+from gretel_client.workflows.manager import LLMSuiteConfigWithGenerationParams
 
 if TYPE_CHECKING:
     from gretel_client.data_designer.data_designer import DataDesigner
@@ -324,6 +326,74 @@ def display_preview_evaluation_summary(
         render_list.append(_pad_console_element(text_stats_table, (2, 0, 1, 0)))
 
     render_list.append(dash_sep)
+
+    console.print(Group(*render_list), markup=False)
+
+
+def display_model_suite_info(
+    model_suite_info: LLMSuiteConfigWithGenerationParams,
+) -> None:
+    console = Console()
+    render_list = []
+
+    # Model Suite panel
+    render_list.append(
+        Padding(
+            Panel(
+                f"License: {model_suite_info.license}",
+                title=f"Model Suite",
+                box=box.ROUNDED,
+                title_align="left",
+                padding=(1, 1, 1, 2),
+            ),
+            (2, 0, 0, 0),
+        )
+    )
+
+    # Models panel
+    models_str = ""
+    for index, model in enumerate(model_suite_info.models):
+        params = model.generation_params
+        models_str += f"{model.model_name}\n"
+        models_str += f" -  temperature: {params.get('temperature', 'N/A')}\n"
+        models_str += f" -  max_tokens: {params.get('max_tokens', 'N/A')}\n"
+        models_str += f" -  top_p: {params.get('top_p', 'N/A')}\n"
+        if index < len(model_suite_info.models) - 1:
+            models_str += "\n\n"
+
+    render_list.append(
+        Padding(
+            Panel(
+                models_str,
+                title="Models",
+                box=box.ROUNDED,
+                title_align="left",
+                padding=(2, 1, 1, 2),
+            ),
+            (2, 0, 0, 0),
+        )
+    )
+
+    # Model aliases panel
+    model_aliases_str = ""
+    for index, (alias, model_name) in enumerate(model_suite_info.model_aliases.items()):
+        model_aliases_str += f"{alias}\n"
+        model_aliases_str += f" -  model: {model_name}\n"
+        if index < len(model_suite_info.model_aliases) - 1:
+            model_aliases_str += "\n\n"
+
+    render_list.append(
+        Padding(
+            Panel(
+                model_aliases_str,
+                title="Model Aliases",
+                box=box.ROUNDED,
+                title_align="left",
+                padding=(2, 1, 2, 2),
+            ),
+            (2, 0, 0, 0),
+        )
+    )
 
     console.print(Group(*render_list), markup=False)
 

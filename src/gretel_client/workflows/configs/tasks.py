@@ -1556,6 +1556,12 @@ class Row(ConfigBase):
     fallback_value: Annotated[
         Optional[str], Field(description="Row fallback value.", title="Fallback Value")
     ] = None
+    description: Annotated[
+        Optional[str],
+        Field(
+            description="Rule description for human consumption.", title="Description"
+        ),
+    ] = None
 
 
 class RowActions(ConfigBase):

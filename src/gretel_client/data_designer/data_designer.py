@@ -21,6 +21,8 @@ from gretel_client.data_designer.constants import (
     REPR_LIST_LENGTH_USE_JSON,
 )
 from gretel_client.data_designer.dag import topologically_sort_columns
+from gretel_client.data_designer.exceptions import DataDesignerValidationError
+from gretel_client.data_designer.info import AIDDInfo
 from gretel_client.data_designer.log import get_logger
 from gretel_client.data_designer.magic_data_designer import MagicDataDesignerEditor
 from gretel_client.data_designer.preview import PreviewResults
@@ -55,7 +57,7 @@ from gretel_client.data_designer.utils import (
 )
 from gretel_client.data_designer.validate import (
     rich_print_violations,
-    validate_aidd_columns,
+    validate_aidd,
     Violation,
     ViolationLevel,
 )
@@ -95,9 +97,6 @@ logger = get_logger(__name__, level=logging.INFO)
 
 _type_builtin = type
 _SAMPLER_PARAMS: dict[SamplerType, Type[BaseModel]] = get_sampler_params()
-
-
-class DataDesignerValidationError(Exception): ...
 
 
 def handle_workflow_validation_error(func):
@@ -201,6 +200,9 @@ class DataDesigner:
         self._repr_html_style = DEFAULT_REPR_HTML_STYLE
         self._latent_person_columns: dict[str, PersonSamplerParams] = {}
         self._constraints = constraints or {}
+        self._aidd_info = AIDDInfo(
+            model_suite=model_suite, workflow_manager=self._workflow_manager
+        )
 
         ## Synchronization: Cause any mutation of these dictionaries to trigger a reset on the magic object
         self.magic = MagicDataDesignerEditor(self)
@@ -216,6 +218,10 @@ class DataDesigner:
 
         if person_samplers:
             self.with_person_samplers(person_samplers)
+
+    @property
+    def info(self) -> AIDDInfo:
+        return self._aidd_info
 
     @property
     def allowed_references(self) -> list[str]:
@@ -917,9 +923,12 @@ class DataDesigner:
         self, raise_exceptions: bool = False
     ) -> list[Violation]:
         """Run semantic validation on the current Data Designer configuration."""
-        violations = validate_aidd_columns(
+        violations = validate_aidd(
             columns=list(self._columns.values()),
             allowed_references=self.allowed_references,
+            workflow_manager=self._workflow_manager,
+            model_suite=self._model_suite,
+            model_configs=self._model_configs,
         )
         rich_print_violations(violations)
         if (

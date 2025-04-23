@@ -1,13 +1,19 @@
 from typing import Any
 
 from gretel_client._api.api.workflows_api import WorkflowsApi as V2WorkflowsApi
+from gretel_client._api.models.llm_suite_config_with_generation_params import (
+    LLMSuiteConfigWithGenerationParams,
+)
+from gretel_client._api.models.validate_model_suite_request import (
+    ValidateModelSuiteRequest,
+)
 from gretel_client.navigator_client_protocols import (
     GretelApiProviderProtocol,
     GretelResourceProviderProtocol,
 )
 from gretel_client.rest_v1.api.workflows_api import WorkflowsApi
 from gretel_client.workflows.builder import WorkflowBuilder, WorkflowSessionManager
-from gretel_client.workflows.configs.workflows import Globals
+from gretel_client.workflows.configs.workflows import Globals, ModelConfig
 from gretel_client.workflows.tasks import task_to_step, TaskConfig
 from gretel_client.workflows.workflow import WorkflowRun
 
@@ -103,3 +109,16 @@ class WorkflowManager:
         return WorkflowRun.from_workflow_run_id(
             workflow_run_id, self._api_provider, self._resource_provider
         )
+
+    def get_model_suites(self) -> list[LLMSuiteConfigWithGenerationParams]:
+        return self._data_api.get_model_suites().model_suites
+
+    def validate_model_suite(
+        self, model_suite: str, model_configs: list[ModelConfig]
+    ) -> list[str]:
+        return self._data_api.validate_model_suite(
+            model_suite=model_suite,
+            validate_model_suite_request=ValidateModelSuiteRequest(
+                model_configs=[mc.model_dump() for mc in model_configs]
+            ),
+        ).violations

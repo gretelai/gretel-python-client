@@ -15,7 +15,10 @@ from gretel_client.data_designer.types import (
     CodeValidationColumn,
     LLMGenColumn,
     LLMJudgeColumn,
+    ModelSuite,
 )
+from gretel_client.workflows.configs.workflows import ModelConfig
+from gretel_client.workflows.manager import WorkflowManager
 
 
 class ViolationType(str, Enum):
@@ -25,6 +28,7 @@ class ViolationType(str, Enum):
     CODE_COLUMN_NOT_CODE = "code_column_not_code"
     CODE_LANG_MISMATCH = "code_lang_mismatch"
     PROMPT_WITHOUT_REFERENCES = "prompt_without_references"
+    INVALID_MODEL_CONFIG = "invalid_model_config"
 
 
 class ViolationLevel(str, Enum):
@@ -33,14 +37,22 @@ class ViolationLevel(str, Enum):
 
 
 class Violation(BaseModel):
-    column: str
+    column: str | None = None
     type: ViolationType
     message: str
     level: ViolationLevel
 
+    @property
+    def has_column(self) -> bool:
+        return self.column is not None
 
-def validate_aidd_columns(
-    columns: list[AIDDColumnT], allowed_references: list[str]
+
+def validate_aidd(
+    columns: list[AIDDColumnT],
+    allowed_references: list[str],
+    workflow_manager: WorkflowManager,
+    model_suite: ModelSuite,
+    model_configs: list[ModelConfig] | None = None,
 ) -> list[Violation]:
     violations = []
     violations.extend(
@@ -52,6 +64,13 @@ def validate_aidd_columns(
     violations.extend(
         _validate_code_validation(
             columns=columns,
+        )
+    )
+    violations.extend(
+        _validate_model_suite(
+            workflow_manager=workflow_manager,
+            model_suite=model_suite,
+            model_configs=model_configs,
         )
     )
     return violations
@@ -87,7 +106,7 @@ def rich_print_violations(violations: list[Violation]) -> None:
                 Panel(
                     f"{error_title}\n\n{v.message}",
                     box=box.HORIZONTALS,
-                    title=f"Column: {v.column}",
+                    title=f"Column: {v.column}" if v.has_column else "",
                     padding=(1, 0, 1, 1),
                     highlight=True,
                 ),
@@ -109,7 +128,7 @@ def _get_string_formatter_references(
 
 
 def _validate_prompt_templates(
-    columns: AIDDColumnT,
+    columns: list[AIDDColumnT],
     allowed_references: list[str],
 ) -> list[Violation]:
     env = ImmutableSandboxedEnvironment()
@@ -191,7 +210,7 @@ def _validate_prompt_templates(
 
 
 def _validate_code_validation(
-    columns: dict[str, AIDDColumnT],
+    columns: list[AIDDColumnT],
 ) -> list[Violation]:
 
     code_validation_columns = [
@@ -246,4 +265,25 @@ def _validate_code_validation(
                     )
                 )
 
+    return violations
+
+
+def _validate_model_suite(
+    workflow_manager: WorkflowManager,
+    model_suite: ModelSuite,
+    model_configs: list[ModelConfig] | None = None,
+) -> list[Violation]:
+    violations = []
+    violations.extend(
+        [
+            Violation(
+                type=ViolationType.INVALID_MODEL_CONFIG,
+                message=v,
+                level=ViolationLevel.ERROR,
+            )
+            for v in workflow_manager.validate_model_suite(
+                model_suite=model_suite, model_configs=model_configs or []
+            )
+        ]
+    )
     return violations

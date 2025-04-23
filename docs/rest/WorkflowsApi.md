@@ -7,8 +7,10 @@ Method | HTTP request | Description
 [**check_workflow_run_output**](WorkflowsApi.md#check_workflow_run_output) | **HEAD** /v2/workflows/runs/{workflow_run_id}/output | Workflows Check Run Output
 [**compile_workflow_config**](WorkflowsApi.md#compile_workflow_config) | **POST** /v2/workflows/compile | Compile Workflow Config
 [**exec_workflow_batch**](WorkflowsApi.md#exec_workflow_batch) | **POST** /v2/workflows/exec_batch | Workflows Exec Batch
+[**get_model_suites**](WorkflowsApi.md#get_model_suites) | **GET** /v2/workflows/model_suites | Get Model Suites
 [**get_workflow_registry**](WorkflowsApi.md#get_workflow_registry) | **GET** /v2/workflows/registry | Registry
 [**retry_exec_workflow_batch**](WorkflowsApi.md#retry_exec_workflow_batch) | **POST** /v2/workflows/exec_batch_retry | Workflows Exec Batch Retry
+[**validate_model_suite**](WorkflowsApi.md#validate_model_suite) | **POST** /v2/workflows/model_suites/{model_suite}/validate | Validate Model Suite
 [**validate_workflow**](WorkflowsApi.md#validate_workflow) | **POST** /v2/workflows/validate | Workflows Validate
 [**validate_workflow_task**](WorkflowsApi.md#validate_workflow_task) | **POST** /v2/workflows/tasks/validate | Tasks Validate
 
@@ -228,6 +230,68 @@ Name | Type | Description  | Notes
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
+# **get_model_suites**
+> GetModelSuitesResponse get_model_suites()
+
+Get Model Suites
+
+### Example
+
+
+```python
+import gretel_client._api
+from gretel_client._api.models.get_model_suites_response import GetModelSuitesResponse
+from gretel_client._api.rest import ApiException
+from pprint import pprint
+
+# Defining the host is optional and defaults to http://localhost
+# See configuration.py for a list of all supported configuration parameters.
+configuration = gretel_client._api.Configuration(
+    host = "http://localhost"
+)
+
+
+# Enter a context with an instance of the API client
+with gretel_client._api.ApiClient(configuration) as api_client:
+    # Create an instance of the API class
+    api_instance = gretel_client._api.WorkflowsApi(api_client)
+
+    try:
+        # Get Model Suites
+        api_response = api_instance.get_model_suites()
+        print("The response of WorkflowsApi->get_model_suites:\n")
+        pprint(api_response)
+    except Exception as e:
+        print("Exception when calling WorkflowsApi->get_model_suites: %s\n" % e)
+```
+
+
+
+### Parameters
+
+This endpoint does not need any parameter.
+
+### Return type
+
+[**GetModelSuitesResponse**](GetModelSuitesResponse.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+### HTTP response details
+
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+**200** | Successful Response |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
 # **get_workflow_registry**
 > object get_workflow_registry()
 
@@ -353,6 +417,76 @@ Name | Type | Description  | Notes
 ### Authorization
 
 [GretelAPIKey](../README.md#GretelAPIKey)
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+### HTTP response details
+
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+**200** | Successful Response |  -  |
+**422** | Validation Error |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **validate_model_suite**
+> ValidateModelSuiteResponse validate_model_suite(model_suite, validate_model_suite_request)
+
+Validate Model Suite
+
+### Example
+
+
+```python
+import gretel_client._api
+from gretel_client._api.models.validate_model_suite_request import ValidateModelSuiteRequest
+from gretel_client._api.models.validate_model_suite_response import ValidateModelSuiteResponse
+from gretel_client._api.rest import ApiException
+from pprint import pprint
+
+# Defining the host is optional and defaults to http://localhost
+# See configuration.py for a list of all supported configuration parameters.
+configuration = gretel_client._api.Configuration(
+    host = "http://localhost"
+)
+
+
+# Enter a context with an instance of the API client
+with gretel_client._api.ApiClient(configuration) as api_client:
+    # Create an instance of the API class
+    api_instance = gretel_client._api.WorkflowsApi(api_client)
+    model_suite = 'model_suite_example' # str | 
+    validate_model_suite_request = gretel_client._api.ValidateModelSuiteRequest() # ValidateModelSuiteRequest | 
+
+    try:
+        # Validate Model Suite
+        api_response = api_instance.validate_model_suite(model_suite, validate_model_suite_request)
+        print("The response of WorkflowsApi->validate_model_suite:\n")
+        pprint(api_response)
+    except Exception as e:
+        print("Exception when calling WorkflowsApi->validate_model_suite: %s\n" % e)
+```
+
+
+
+### Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **model_suite** | **str**|  | 
+ **validate_model_suite_request** | [**ValidateModelSuiteRequest**](ValidateModelSuiteRequest.md)|  | 
+
+### Return type
+
+[**ValidateModelSuiteResponse**](ValidateModelSuiteResponse.md)
+
+### Authorization
+
+No authorization required
 
 ### HTTP request headers
 
