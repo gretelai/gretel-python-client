@@ -1,3 +1,6 @@
+# needed for sphinx autodoc_type_aliases
+from __future__ import annotations
+
 import json
 import logging
 
@@ -351,13 +354,16 @@ class DataDesigner:
 
         Currently, constraints are only supported for numerical samplers.
         The `type` must be one of:
+
             - "scalar_inequality": Constraint between a column and a scalar value.
             - "column_inequality": Constraint between two columns.
 
         The `params` must be a dictionary of `ColumnConstraintParams` object with the
         following keyword arguments:
+
             - "rhs": The right-hand side of the inequality.
-            - "operator": The operator for the inequality. It must be one of:
+            - "operator": One of the following inequality operators:
+
                 - "gt": Greater than.
                 - "ge": Greater than or equal to.
                 - "lt": Less than.
@@ -535,6 +541,7 @@ class DataDesigner:
         and/or expressions.
 
         The seed data will be sampled using one of the following strategies:
+
             - "ordered": Maintains the order of the rows in the seed dataset.
             - "shuffle": Randomly shuffles the rows of the seed dataset.
 

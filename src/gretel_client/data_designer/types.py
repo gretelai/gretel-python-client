@@ -1,3 +1,6 @@
+# needed for sphinx autodoc_type_aliases
+from __future__ import annotations
+
 from enum import Enum
 from typing import Any, Literal, Self, TypeAlias
 from uuid import UUID
@@ -161,6 +164,7 @@ class SamplerColumn(WithPrettyRepr, tasks.ConditionalDataColumn):
         from gretel_client.data_designer.params import (
             GaussianSamplerParams,
             CategorySamplerParams,
+            SamplerType,
         )
 
         aidd = Gretel(api_key="prompt").data_designer.new()
@@ -168,8 +172,8 @@ class SamplerColumn(WithPrettyRepr, tasks.ConditionalDataColumn):
         aidd.add_column(
             SamplerColumn(
                 name="age",
-                type=P.SamplerType.GAUSSIAN,
-                params=P.GaussianSamplerParams(mean=35, stddev=5),
+                type=SamplerType.GAUSSIAN,
+                params=GaussianSamplerParams(mean=35, stddev=5),
                 convert_to="int",
             )
         )
@@ -177,10 +181,10 @@ class SamplerColumn(WithPrettyRepr, tasks.ConditionalDataColumn):
         aidd.add_column(
             SamplerColumn(
                 name="pet_type",
-                type=P.SamplerType.CATEGORY,
-                params=P.CategorySamplerParams(values=["dog", "cat", "bird"]),
+                type=SamplerType.CATEGORY,
+                params=CategorySamplerParams(values=["dog", "cat", "bird"]),
                 conditional_params={
-                    "age < 20": P.CategorySamplerParams(values=["rabbit", "hamster"]),
+                    "age < 20": CategorySamplerParams(values=["rabbit", "hamster"]),
                 }
             )
         )

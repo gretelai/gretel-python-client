@@ -27,3 +27,26 @@ from gretel_client.workflows.configs.workflows import (
     UniformDistribution,
     UniformDistributionParams,
 )
+
+# params for sphinx autodoc
+__all__ = [
+    "BernoulliMixtureSamplerParams",
+    "BernoulliSamplerParams",
+    "BinomialSamplerParams",
+    "CategorySamplerParams",
+    "DatetimeSamplerParams",
+    "GaussianSamplerParams",
+    "PersonSamplerParams",
+    "PoissonSamplerParams",
+    "ScipySamplerParams",
+    "SubcategorySamplerParams",
+    "TimeDeltaSamplerParams",
+    "UniformSamplerParams",
+    "UUIDSamplerParams",
+    "ModelConfig",
+    "GenerationParameters",
+    "ManualDistribution",
+    "ManualDistributionParams",
+    "UniformDistribution",
+    "UniformDistributionParams",
+]
