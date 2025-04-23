@@ -17,7 +17,11 @@ from gretel_client.data_designer.utils import (
     WithPrettyRepr,
 )
 from gretel_client.workflows.configs import tasks
-from gretel_client.workflows.configs.tasks import ModelAlias, OutputType
+from gretel_client.workflows.configs.tasks import (
+    ModelAlias,
+    OutputType,
+    SerializableConditionalDataColumn,
+)
 
 ##########################################################
 # Enums
@@ -182,6 +186,22 @@ class SamplerColumn(WithPrettyRepr, tasks.ConditionalDataColumn):
         )
     """
 
+    def pack(self) -> SerializableConditionalDataColumn:
+        col_dict = self.model_dump()
+        col_dict["sampling_type"] = col_dict.pop("type")
+        return SerializableConditionalDataColumn(**col_dict)
+
+    @classmethod
+    def unpack(cls, column: SerializableConditionalDataColumn | dict) -> Self:
+        """This can be used to unpack the true base type."""
+        col_dict = (
+            column.model_dump()
+            if isinstance(column, SerializableConditionalDataColumn)
+            else {**column}
+        )
+        col_dict["type"] = col_dict.pop("sampling_type")
+        return cls(**col_dict)
+
 
 class LLMGenColumn(
     WithPrettyRepr, tasks.GenerateColumnFromTemplateV2, WithDAGColumnMixin
@@ -223,6 +243,16 @@ class LLMGenColumn(
     def model_dump_json(self, **kwargs) -> str:
         kwargs.setdefault("exclude_unset", False)
         return super().model_dump_json(**kwargs)
+
+    def to_specific_column_type(self):
+        if self.output_type == OutputType.TEXT:
+            return LLMTextColumn(**self.model_dump())
+        elif self.output_type == OutputType.CODE:
+            return LLMCodeColumn(**self.model_dump())
+        elif self.output_type == OutputType.STRUCTURED:
+            return LLMStructuredColumn(**self.model_dump())
+        else:
+            raise NotImplementedError(f"Unknown output type: {self.output_type}")
 
 
 class LLMTextColumn(LLMGenColumn):

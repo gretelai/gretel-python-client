@@ -524,10 +524,51 @@ class GenerateDatasetFromSampleRecords(ConfigBase):
     dataset_context: Annotated[Optional[str], Field(title="Dataset Context")] = ""
 
 
-class DataColumnFromSamplingConfig(ConfigBase):
+class SerializableConditionalDataColumn(ConfigBase):
     name: Annotated[str, Field(title="Name")]
-    sampling_type: Annotated[str, Field(title="Sampling Type")]
-    params: Annotated[Dict[str, Any], Field(title="Params")]
+    sampling_type: SamplerType
+    params: Annotated[
+        Union[
+            SubcategorySamplerParams,
+            CategorySamplerParams,
+            DatetimeSamplerParams,
+            PersonSamplerParams,
+            TimeDeltaSamplerParams,
+            UUIDSamplerParams,
+            BernoulliSamplerParams,
+            BernoulliMixtureSamplerParams,
+            BinomialSamplerParams,
+            GaussianSamplerParams,
+            PoissonSamplerParams,
+            UniformSamplerParams,
+            ScipySamplerParams,
+        ],
+        Field(title="Params"),
+    ]
+    conditional_params: Annotated[
+        Optional[
+            Dict[
+                str,
+                Union[
+                    SubcategorySamplerParams,
+                    CategorySamplerParams,
+                    DatetimeSamplerParams,
+                    PersonSamplerParams,
+                    TimeDeltaSamplerParams,
+                    UUIDSamplerParams,
+                    BernoulliSamplerParams,
+                    BernoulliMixtureSamplerParams,
+                    BinomialSamplerParams,
+                    GaussianSamplerParams,
+                    PoissonSamplerParams,
+                    UniformSamplerParams,
+                    ScipySamplerParams,
+                ],
+            ]
+        ],
+        Field(title="Conditional Params"),
+    ] = {}
+    convert_to: Annotated[Optional[str], Field(title="Convert To")] = None
 
 
 class NumNewValuesToGenerate(RootModel[int]):
@@ -1633,9 +1674,7 @@ class ExistingColumn(ConfigBase):
 
 
 class ExistingColumns(ConfigBase):
-    variables: Annotated[Optional[List[ExistingColumn]], Field(title="Variables")] = (
-        None
-    )
+    columns: Annotated[Optional[List[ExistingColumn]], Field(title="Columns")] = None
 
 
 class ColumnConstraintParams(ConfigBase):
@@ -1910,7 +1949,7 @@ class GenerateColumnConfigFromInstruction(ConfigBase):
     name: Annotated[str, Field(title="Name")]
     instruction: Annotated[str, Field(title="Instruction")]
     edit_task: Optional[GenerateColumnFromTemplateV2Config] = None
-    existing_columns: Annotated[Optional[ExistingColumns], Field()] = {"variables": []}
+    existing_columns: Annotated[Optional[ExistingColumns], Field()] = {"columns": []}
     use_reasoning: Annotated[Optional[bool], Field(title="Use Reasoning")] = True
     must_depend_on: Annotated[Optional[List[str]], Field(title="Must Depend On")] = None
 
@@ -1990,7 +2029,11 @@ class GenerateSamplingColumnConfigFromInstruction(ConfigBase):
     ] = "code"
     name: Annotated[str, Field(title="Name")]
     instruction: Annotated[str, Field(title="Instruction")]
-    edit_task: Optional[DataColumnFromSamplingConfig] = None
+    edit_task: Optional[SerializableConditionalDataColumn] = None
+    existing_samplers: Annotated[
+        Optional[List[SerializableConditionalDataColumn]],
+        Field(title="Existing Samplers"),
+    ] = None
 
 
 class GenerateSeedCategoryValues(ConfigBase):
