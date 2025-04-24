@@ -12,15 +12,14 @@ Modules
 .. toctree::
    :maxdepth: 2
 
-   cli.rst
-   gretel/index.rst
-   inference_api/index.rst
-   projects/index.rst
-   config.rst
-   evaluation.rst
-   helpers.rst
+   getting_started.rst
+
+   data_designer.rst
+   safe_synthetics.rst
    bigquery/index.rst
 
+
+   deprecated.rst
 
 
 Indices and tables

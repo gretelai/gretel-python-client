@@ -36,6 +36,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "m2r",
     "sphinx_rtd_theme",
+    "sphinxemoji.sphinxemoji",
 ]
 
 source_suffix = [".rst", ".md"]
@@ -68,6 +69,21 @@ html_theme_options = {
     "logo_only": True,
     "display_version": True,
     "style_nav_header_background": "#0c0c0d",
+}
+
+# Shortens the type names in type hints
+python_use_unqualified_type_names = True
+
+autodoc_default_options = {
+    "exclude-members": (
+        "model_dump, model_dump_json, model_fields, model_config, model_validate, "
+        "model_computed_fields"
+    )
+}
+
+autodoc_type_aliases = {
+    "AIDDColumnT": "AIDDColumnT",
+    "DAGColumnT": "DAGColumnT",
 }
 
 
