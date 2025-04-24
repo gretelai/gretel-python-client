@@ -103,6 +103,7 @@ class ModelAlias(str, Enum):
     CODE = "code"
     JUDGE = "judge"
     STRUCTURED = "structured"
+    REASONING = "reasoning"
 
 
 class UniformDistributionParams(ConfigBase):

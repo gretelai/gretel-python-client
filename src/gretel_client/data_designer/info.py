@@ -21,7 +21,7 @@ class AIDDInfo:
 
     @property
     def model_suite(self) -> None:
-        display_model_suite_info(self.available_model_suites[self._model_suite])
+        self.display_model_suite(self._model_suite)
 
     def display_model_suite(self, model_suite: ModelSuite | None = None) -> None:
         model_suite = model_suite or self._model_suite

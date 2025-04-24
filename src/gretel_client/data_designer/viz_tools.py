@@ -352,7 +352,9 @@ def display_model_suite_info(
 
     # Models panel
     models_str = ""
-    for index, model in enumerate(model_suite_info.models):
+    for index, model in enumerate(
+        sorted(model_suite_info.models, key=lambda x: x.model_name)
+    ):
         params = model.generation_params
         models_str += f"{model.model_name}\n"
         models_str += f" -  temperature: {params.get('temperature', 'N/A')}\n"
@@ -376,7 +378,9 @@ def display_model_suite_info(
 
     # Model aliases panel
     model_aliases_str = ""
-    for index, (alias, model_name) in enumerate(model_suite_info.model_aliases.items()):
+    for index, (alias, model_name) in enumerate(
+        sorted(model_suite_info.model_aliases.items(), key=lambda x: x[0])
+    ):
         model_aliases_str += f"{alias}\n"
         model_aliases_str += f" -  model: {model_name}\n"
         if index < len(model_suite_info.model_aliases) - 1:
