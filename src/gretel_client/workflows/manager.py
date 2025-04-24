@@ -1,6 +1,7 @@
 from typing import Any
 
 from gretel_client._api.api.workflows_api import WorkflowsApi as V2WorkflowsApi
+from gretel_client._api.exceptions import NotFoundException
 from gretel_client._api.models.llm_suite_config_with_generation_params import (
     LLMSuiteConfigWithGenerationParams,
 )
@@ -116,9 +117,13 @@ class WorkflowManager:
     def validate_model_suite(
         self, model_suite: str, model_configs: list[ModelConfig]
     ) -> list[str]:
-        return self._data_api.validate_model_suite(
-            model_suite=model_suite,
-            validate_model_suite_request=ValidateModelSuiteRequest(
-                model_configs=[mc.model_dump() for mc in model_configs]
-            ),
-        ).violations
+        ## TODO: remove this try catch on NotFoundException once the prod API is updated
+        try:
+            return self._data_api.validate_model_suite(
+                model_suite=model_suite,
+                validate_model_suite_request=ValidateModelSuiteRequest(
+                    model_configs=[mc.model_dump() for mc in model_configs]
+                ),
+            ).violations
+        except NotFoundException:
+            return []
