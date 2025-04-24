@@ -159,7 +159,6 @@ class ExtractDataSeedsFromSampleRecords(ConfigBase):
     error_rate: Annotated[
         Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
     ] = 0.2
-    sample_records: Annotated[List[Dict[str, Any]], Field(title="Sample Records")]
     max_num_seeds: Annotated[
         Optional[int], Field(ge=1, le=10, title="Max Num Seeds")
     ] = 5
@@ -508,7 +507,6 @@ class GenerateDatasetFromSampleRecords(ConfigBase):
     error_rate: Annotated[
         Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
     ] = 0.2
-    sample_records: Annotated[List[Dict[str, Any]], Field(title="Sample Records")]
     target_num_records: Annotated[
         Optional[int], Field(ge=50, le=10000, title="Target Num Records")
     ] = 500
@@ -781,6 +779,30 @@ class PromptPretrainedModel(ConfigBase):
         ),
     ] = None
     generate: Optional[GenerateParams] = None
+
+
+class RunSampleToDataset(ConfigBase):
+    target_num_records: Annotated[
+        Optional[int], Field(ge=50, le=10000, title="Target Num Records")
+    ] = 500
+    system_prompt_type: Optional[SystemPromptType] = "cognition"
+    num_records_per_seed: Annotated[
+        Optional[int], Field(ge=1, le=10, title="Num Records Per Seed")
+    ] = 5
+    num_examples_per_prompt: Annotated[
+        Optional[int], Field(ge=1, le=50, title="Num Examples Per Prompt")
+    ] = 5
+    max_num_seeds: Annotated[
+        Optional[int], Field(ge=1, le=10, title="Max Num Seeds")
+    ] = 5
+    num_assistants: Annotated[
+        Optional[int], Field(ge=1, le=8, title="Num Assistants")
+    ] = 5
+    append_seeds_to_dataset: Annotated[
+        Optional[bool], Field(title="Append Seeds To Dataset")
+    ] = True
+    num_samples: Annotated[Optional[int], Field(title="Num Samples")] = 25
+    dataset_context: Annotated[Optional[str], Field(title="Dataset Context")] = ""
 
 
 class S3Destination(ConfigBase):
@@ -1549,6 +1571,21 @@ class ColumnActions(ConfigBase):
     ] = None
 
 
+class GlinerBatchModeConfig(ConfigBase):
+    enable: Annotated[
+        Optional[bool], Field(description="Enable GLiNER batch mode.", title="Enable")
+    ] = False
+    batch_size: Annotated[
+        Optional[int], Field(description="GLiNER batch size.", title="Batch Size")
+    ] = 10
+    chunk_length: Annotated[
+        Optional[int],
+        Field(
+            description="GLiNER batch chunk length in characters.", title="Chunk Length"
+        ),
+    ] = 512
+
+
 class NERConfig(ConfigBase):
     ner_threshold: Annotated[
         Optional[float],
@@ -1572,6 +1609,12 @@ class NERConfig(ConfigBase):
         Optional[bool],
         Field(description="Enable gliner NER module", title="Enable Gliner"),
     ] = True
+    gliner_batch_mode: Annotated[
+        Optional[GlinerBatchModeConfig],
+        Field(
+            description="GLiNER batch mode configuration.", title="Gliner Batch Mode"
+        ),
+    ] = {"enable": False, "batch_size": 10, "chunk_length": 512}
 
 
 class Row(ConfigBase):
@@ -1835,6 +1878,7 @@ class Globals(ConfigBase):
         "ner_optimized": True,
         "enable_regexps": False,
         "enable_gliner": True,
+        "gliner_batch_mode": {"enable": False, "batch_size": 10, "chunk_length": 512},
     }
     lock_columns: Annotated[
         Optional[List[str]],
@@ -1857,6 +1901,11 @@ class Transform(ConfigBase):
             "ner_optimized": True,
             "enable_regexps": False,
             "enable_gliner": True,
+            "gliner_batch_mode": {
+                "enable": False,
+                "batch_size": 10,
+                "chunk_length": 512,
+            },
         },
         "lock_columns": None,
     }

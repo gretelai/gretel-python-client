@@ -21,6 +21,7 @@ class Registry(metaclass=RegistryMeta):
     NameGenerator = tasks.NameGenerator
     GenerateDatasetFromSampleRecords = tasks.GenerateDatasetFromSampleRecords
     SampleDataSeeds = tasks.SampleDataSeeds
+    RunSampleToDataset = tasks.RunSampleToDataset
     GetGretelDataset = tasks.GetGretelDataset
     GenerateColumnFromExpression = tasks.GenerateColumnFromExpression
     Combiner = tasks.Combiner
