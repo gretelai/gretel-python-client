@@ -77,7 +77,7 @@ def test_ssd_factory(ssd_factory: SafeSyntheticDatasetFactory, tasks: Registry):
     assert steps[0].task == "data_source"
 
     assert steps[1].name == "holdout"
-    assert steps[1].inputs == []
+    assert steps[1].inputs == ["read-data-source"]
     assert steps[1].task == "holdout"
 
     assert steps[2].name == "transform"
@@ -97,6 +97,24 @@ def test_ssd_factory(ssd_factory: SafeSyntheticDatasetFactory, tasks: Registry):
     assert steps[2].config is not None
     assert steps[3].config is not None
     assert steps[4].config is not None
+
+
+def test_ssd_factory_custom_holdout(ssd_factory: SafeSyntheticDatasetFactory):
+    ssd = (
+        ssd_factory.from_data_source("file_1", holdout="file_2")
+        .transform()
+        .synthesize()
+        .evaluate()
+    )
+    workflow = extract_workflow_from_mock(ssd)
+
+    steps = workflow.steps
+    assert steps is not None
+    assert len(steps) == 5
+
+    assert steps[1].name == "holdout"
+    assert steps[1].inputs == ["read-data-source", "file_2"]
+    assert steps[1].task == "holdout"
 
 
 def test_ssd_num_records(ssd_factory: SafeSyntheticDatasetFactory):
@@ -152,7 +170,7 @@ def test_multiple_tasks(ssd_factory: SafeSyntheticDatasetFactory):
     assert steps
     assert [(s.name, s.inputs) for s in steps] == [
         ("read-data-source", None),
-        ("holdout", []),
+        ("holdout", ["read-data-source"]),
         ("transform", []),
         ("transform-1", []),
         ("tabular-ft", []),

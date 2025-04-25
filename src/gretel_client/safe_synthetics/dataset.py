@@ -86,6 +86,7 @@ class SafeSyntheticDataset:
 
         # steps with fixed positions
         self._holdout = None
+        self._custom_holdout_id = None
         self._evaluate_config = EvaluateSafeSyntheticsDataset()
         self._output_task = None
 
@@ -101,7 +102,7 @@ class SafeSyntheticDataset:
                    or a dictionary of configuration options. Defaults to
                    "transform/default".
         """
-        logger.info(f"Configuring transform step")
+        logger.info("Configuring transform step")
         transform_config = self._registry.Transform(**load_blueprint_or_config(config))
         self._output_task = transform_config
         self._tasks.append(transform_config)
@@ -118,7 +119,9 @@ class SafeSyntheticDataset:
             use_data_source_step: Whether to create a dedicated data source step in the
                 workflow. Defaults to True.
         """
-        logger.info(f"Configuring generator for data source: {data_source}")
+        logger.info(
+            f"Configuring generator for data source: {self._format_data_source(data_source)}"
+        )
         self._builder.with_data_source(
             data_source, use_data_source_step=use_data_source_step
         )
@@ -126,7 +129,7 @@ class SafeSyntheticDataset:
 
     def holdout(
         self,
-        holdout: float | int,
+        holdout: float | int | str | Path | pd.DataFrame,
         max_holdout: int | None = None,
         group_by: str | None = None,
     ) -> Self:
@@ -135,15 +138,22 @@ class SafeSyntheticDataset:
         evaluation.
 
         Args:
-            holdout: Amount of data to holdout, either as a fraction (float) or
-                absolute number of records (int)
+            holdout: If a numeric value, indicates the amount of data to holdout,
+                either as a fraction (float) or absolute number of records (int).
+                Alternatively can be a file path to, or pandas DataFrame of,
+                pre-configured test holdout data.
             max_holdout: Maximum number of records to include in holdout set
             group_by: Column name to use for grouped holdout selection
         """
-        logger.info(f"Configuring holdout: {holdout}")
-        self._holdout = self._registry.Holdout(
-            holdout=holdout, max_holdout=max_holdout, group_by=group_by
-        )
+        if isinstance(holdout, (str, Path, pd.DataFrame)):
+            logger.info(f"Configuring holdout: {self._format_data_source(holdout)}")
+            self._holdout = self._registry.Holdout()
+            self._custom_holdout_id = self._builder.prepare_data_source(holdout)
+        else:
+            logger.info(f"Configuring holdout: {holdout}")
+            self._holdout = self._registry.Holdout(
+                holdout=holdout, max_holdout=max_holdout, group_by=group_by
+            )
         return self
 
     def synthesize(
@@ -306,7 +316,10 @@ class SafeSyntheticDataset:
         holdout_step = None
         if self._holdout:
             holdout_step = task_to_step(self._holdout)
-            self._builder.add_step(holdout_step)
+            self._builder.add_step(
+                holdout_step,
+                step_inputs=[self._builder.data_source, self._custom_holdout_id],
+            )
 
         # Add all our ordered tasks
         self._builder.add_steps(self._tasks)
@@ -343,6 +356,12 @@ class SafeSyntheticDataset:
             name=name, run_name=run_name, wait_until_done=wait_until_done
         )
 
+    def _format_data_source(self, data_source: str | Path | pd.DataFrame) -> str:
+        if isinstance(data_source, pd.DataFrame):
+            return f"DataFrame {data_source.shape}"
+        else:
+            return str(data_source)
+
     def _last_step_for_prefix(self, prefix: str, steps: list[Step]) -> Optional[Step]:
         found = None
         for step in steps:
@@ -362,8 +381,8 @@ class SafeSyntheticDatasetFactory:
 
     def from_data_source(
         self,
-        data_source,
-        holdout: Optional[Union[float, int]] = 0.05,
+        data_source: str | Path | pd.DataFrame,
+        holdout: float | int | str | Path | pd.DataFrame | None = 0.05,
         max_holdout: int | None = 2000,
         group_by: str | None = None,
         use_data_source_step: bool = True,
@@ -377,6 +396,6 @@ class SafeSyntheticDatasetFactory:
             data_source, use_data_source_step=use_data_source_step
         )
 
-        if holdout:
+        if holdout is not None:
             safe_synthetic_dataset.holdout(holdout, max_holdout, group_by)
         return safe_synthetic_dataset

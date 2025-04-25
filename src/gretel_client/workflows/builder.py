@@ -348,15 +348,7 @@ class WorkflowBuilder:
             builder.with_data_source("file_abc123")
         """
         self._use_data_source_step = use_data_source_step
-        if isinstance(data_source, File):
-            self._input_file_id = data_source.id
-
-        elif isinstance(data_source, str) and data_source.startswith("file_"):
-            self._input_file_id = data_source
-
-        else:
-            file = self._resource_provider.files.upload(data_source, purpose)
-            self._input_file_id = file.id
+        self._input_file_id = self.prepare_data_source(data_source)
 
         if self._name == "":
             if isinstance(data_source, str):
@@ -372,6 +364,25 @@ class WorkflowBuilder:
                 self._name = f"{self._name}-{_generate_random_string()}"
 
         return self
+
+    def prepare_data_source(
+        self,
+        data_source: str | Path | pd.DataFrame | File,
+        purpose: str = "dataset",
+    ) -> str:
+        """
+        Uploads the data source to the Files API if it is not already a File
+        and returns the file ID.
+        """
+        if isinstance(data_source, File):
+            return data_source.id
+
+        elif isinstance(data_source, str) and data_source.startswith("file_"):
+            return data_source
+
+        else:
+            file = self._resource_provider.files.upload(data_source, purpose)
+            return file.id
 
     @property
     def data_source(self) -> str | None:
