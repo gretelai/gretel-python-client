@@ -607,6 +607,17 @@ class DefaultClientConfig(ClientConfig):
             if not prop.startswith("_")
         }
 
+    def __repr__(self):
+        # Purposefully don't show the API key
+        return f"""DefaultClientConfig(
+            endpoint="{self.endpoint}",
+            api_key="grtu...",
+            default_project_name="{self.default_project_name}",
+            default_runner="{self.default_runner}",
+            artifact_endpoint={self.artifact_endpoint},
+            tenant_name={self.tenant_name},
+        )"""
+
 
 class DelegatingClientConfig(ClientConfig):
     _delegate: ClientConfig
@@ -998,10 +1009,10 @@ def get_data_plane_endpoint(session: Optional[ClientConfig] = None) -> str:
     ):
         return session.endpoint
 
-    if "api-dev" in session.endpoint:
-        return "https://dataplane.dev.gretel.cloud"
+    if "api-dev" in session.endpoint or "api.dev" in session.endpoint:
+        return "https://api.dev.gretel.ai"
 
-    return "https://dataplane.gretel.cloud"
+    return "https://api.gretel.ai"
 
 
 def _create_mode_opener(mode):

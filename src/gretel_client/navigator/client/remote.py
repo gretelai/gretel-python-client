@@ -347,7 +347,15 @@ def _check_for_error_response(response: requests.Response) -> None:
         response.raise_for_status()
     except HTTPError:
         if 400 <= response.status_code < 500:
-            raise NavigatorApiClientError(response.json())
+            try:
+                raise NavigatorApiClientError(response.json())
+            except requests.exceptions.JSONDecodeError:
+                raise NavigatorApiClientError(
+                    {
+                        "status_code": response.status_code,
+                        "response_text": response.text,
+                    }
+                )
         else:
             raise NavigatorApiServerError(response.json())
 
