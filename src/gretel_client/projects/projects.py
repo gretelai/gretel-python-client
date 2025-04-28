@@ -36,6 +36,7 @@ from gretel_client.projects.models import Model
 from gretel_client.rest import models
 from gretel_client.rest.api.projects_api import ProjectsApi
 from gretel_client.rest.exceptions import (
+    ApiException,
     ForbiddenException,
     NotFoundException,
     UnauthorizedException,
@@ -429,6 +430,15 @@ def create_project(
                 "cannot specify a hybrid environment for non-hybrid projects"
             )
         payload["cluster_guid"] = hybrid_environment_guid
+
+    if name:
+        # ensure name is unique
+        # we need to check this before, because create_project REST call is now idempotent
+        # so we can support retries
+        project = api.get_project(project_id=name)
+        if project.get(DATA, {}).get("project", {}).get("_id"):
+            raise ApiException(status=400, reason=f"Project '{name}' already exists.")
+
     resp = api.create_project(project=models.Project(**payload))
     project = api.get_project(project_id=resp.get(DATA).get("id"))
 
