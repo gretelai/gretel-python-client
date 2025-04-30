@@ -23,7 +23,6 @@ from typing import Any, ClassVar, Dict, List, Optional, Set
 from pydantic import BaseModel, ConfigDict, StrictStr
 from typing_extensions import Self
 
-from gretel_client._api.models.globals_output import GlobalsOutput
 from gretel_client._api.models.step import Step
 
 
@@ -32,7 +31,7 @@ class WorkflowOutput(BaseModel):
     WorkflowOutput
     """  # noqa: E501
 
-    globals: Optional[GlobalsOutput] = None
+    globals: Optional[Dict[str, Any]] = None
     inputs: Optional[Dict[str, Any]] = None
     name: StrictStr
     steps: Optional[List[Step]] = None
@@ -82,9 +81,6 @@ class WorkflowOutput(BaseModel):
             exclude=excluded_fields,
             exclude_none=True,
         )
-        # override the default output from pydantic by calling `to_dict()` of globals
-        if self.globals:
-            _dict["globals"] = self.globals.to_dict()
         # override the default output from pydantic by calling `to_dict()` of each item in steps (list)
         _items = []
         if self.steps:
@@ -110,11 +106,7 @@ class WorkflowOutput(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "globals": (
-                    GlobalsOutput.from_dict(obj["globals"])
-                    if obj.get("globals") is not None
-                    else None
-                ),
+                "globals": obj.get("globals"),
                 "inputs": obj.get("inputs"),
                 "name": obj.get("name"),
                 "steps": (

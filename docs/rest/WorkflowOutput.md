@@ -5,7 +5,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**globals** | [**GlobalsOutput**](GlobalsOutput.md) |  | [optional] 
+**globals** | **object** |  | [optional] 
 **inputs** | **object** |  | [optional] 
 **name** | **str** |  | 
 **steps** | [**List[Step]**](Step.md) |  | [optional] 

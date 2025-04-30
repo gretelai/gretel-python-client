@@ -34,7 +34,6 @@ from gretel_client._api.models.generation_parameters_output import (
 )
 from gretel_client._api.models.get_model_suites_response import GetModelSuitesResponse
 from gretel_client._api.models.globals_input import GlobalsInput
-from gretel_client._api.models.globals_output import GlobalsOutput
 from gretel_client._api.models.http_validation_error import HTTPValidationError
 from gretel_client._api.models.llm_info import LLMInfo
 from gretel_client._api.models.llm_suite_config_with_generation_params import (
