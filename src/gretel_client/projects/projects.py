@@ -11,6 +11,11 @@ from functools import cached_property, wraps
 from pathlib import Path
 from typing import Any, BinaryIO, Dict, Iterator, List, Optional, Type, TypeVar, Union
 
+from gretel_client._api.exceptions import (
+    ApiException,
+    ForbiddenException,
+    NotFoundException,
+)
 from gretel_client.cli.utils.parser_utils import (
     DataSourceTypes,
     ref_data_factory,
@@ -435,9 +440,14 @@ def create_project(
         # ensure name is unique
         # we need to check this before, because create_project REST call is now idempotent
         # so we can support retries
-        project = api.get_project(project_id=name)
-        if project.get(DATA, {}).get("project", {}).get("_id"):
-            raise ApiException(status=400, reason=f"Project '{name}' already exists.")
+        try:
+            project = api.get_project(project_id=name)
+            if project.get(DATA, {}).get("project", {}).get("_id"):
+                raise ApiException(
+                    status=400, reason=f"Project '{name}' already exists."
+                )
+        except (UnauthorizedException, ForbiddenException, NotFoundException):
+            pass
 
     resp = api.create_project(project=models.Project(**payload))
     project = api.get_project(project_id=resp.get(DATA).get("id"))
