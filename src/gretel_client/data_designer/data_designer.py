@@ -409,11 +409,7 @@ class DataDesigner:
         self._evaluation_report = GeneralDatasetEvaluation(
             settings=settings
             or EvaluateDataDesignerDatasetSettings(
-                llm_judge_column=(
-                    ""
-                    if len(self.llm_judge_columns) == 0
-                    else self.llm_judge_columns[0].name
-                ),
+                llm_judge_columns=[c.name for c in self.llm_judge_columns],
                 validation_columns=[c.name for c in self.code_validation_columns],
                 defined_categorical_columns=[c.name for c in self._categorical_columns],
             )
@@ -801,12 +797,7 @@ class DataDesigner:
                 )
             else:
                 general_eval_step = self._task_registry.EvaluateDataDesignerDataset(
-                    # TODO: Update to use all judge columns once the evaluate-dataset task is updated.
-                    llm_judge_column=(
-                        ""
-                        if len(self.llm_judge_columns) == 0
-                        else self.llm_judge_columns[0].name
-                    ),
+                    llm_judge_columns=[c.name for c in self.llm_judge_columns],
                     columns_to_ignore=settings.columns_to_ignore,
                     validation_columns=settings.validation_columns,
                     defined_categorical_columns=[

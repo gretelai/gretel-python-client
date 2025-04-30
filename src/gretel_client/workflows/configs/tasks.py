@@ -594,8 +594,8 @@ class GetGretelDataset(ConfigBase):
 
 
 class Holdout(ConfigBase):
-    holdout: Annotated[Optional[Union[float, int]], Field(title="Holdout")] = 0.05
-    max_holdout: Annotated[Optional[int], Field(title="Max Holdout")] = 2000
+    holdout: Annotated[Optional[Union[float, int]], Field(title="Holdout")] = None
+    max_holdout: Annotated[Optional[int], Field(title="Max Holdout")] = None
     group_by: Annotated[Optional[str], Field(title="Group By")] = None
 
 
@@ -1615,6 +1615,13 @@ class NERConfig(ConfigBase):
             description="GLiNER batch mode configuration.", title="Gliner Batch Mode"
         ),
     ] = {"enable": False, "batch_size": 10, "chunk_length": 512}
+    entities: Annotated[
+        Optional[List[str]],
+        Field(
+            description="List of entity types to recognize. If unset, classification entity types are used.",
+            title="Entities",
+        ),
+    ] = None
 
 
 class Row(ConfigBase):
@@ -1879,6 +1886,7 @@ class Globals(ConfigBase):
         "enable_regexps": False,
         "enable_gliner": True,
         "gliner_batch_mode": {"enable": False, "batch_size": 10, "chunk_length": 512},
+        "entities": None,
     }
     lock_columns: Annotated[
         Optional[List[str]],
@@ -1906,6 +1914,7 @@ class Transform(ConfigBase):
                 "batch_size": 10,
                 "chunk_length": 512,
             },
+            "entities": None,
         },
         "lock_columns": None,
     }
@@ -1952,7 +1961,9 @@ class EvaluateDataDesignerDataset(ConfigBase):
     model_alias: Annotated[
         Optional[Union[str, ModelAlias]], Field(title="Model Alias")
     ] = "text"
-    llm_judge_column: Annotated[Optional[str], Field(title="Llm Judge Column")] = ""
+    llm_judge_columns: Annotated[
+        Optional[List[str]], Field(title="Llm Judge Columns")
+    ] = None
     columns_to_ignore: Annotated[
         Optional[List[str]], Field(title="Columns To Ignore")
     ] = None
@@ -2138,3 +2149,10 @@ class JudgeWithLlm(ConfigBase):
         Optional[str],
         Field(description="Column name to store judge results.", title="Result Column"),
     ] = "llm_judge_results"
+    judge_random_seed: Annotated[
+        Optional[int],
+        Field(
+            description="Random seed to use for selecting samples to judge. Same seed ensures same samples are selected each time.",
+            title="Judge Random Seed",
+        ),
+    ] = 2025
