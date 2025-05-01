@@ -1,10 +1,13 @@
+import json
 import os
 
-from unittest.mock import MagicMock, patch
+from dataclasses import dataclass
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
 from gretel_client.config import DEFAULT_GRETEL_ARTIFACT_ENDPOINT, RunnerMode
+from gretel_client.projects import create_project
 from gretel_client.projects.artifact_handlers import (
     ArtifactsException,
     CloudArtifactsHandler,
@@ -12,6 +15,13 @@ from gretel_client.projects.artifact_handlers import (
 )
 from gretel_client.projects.models import Model
 from gretel_client.projects.projects import GretelProjectError, Project
+from gretel_client.rest.apis import ProjectsApi
+from gretel_client.rest.exceptions import (
+    ApiException,
+    ForbiddenException,
+    NotFoundException,
+    UnauthorizedException,
+)
 
 
 def test_hybrid_artifacts_handler_requires_custom_endpoint():
@@ -116,3 +126,120 @@ def test_get_artifact_handle_gs(
             "rb",
             transport_params={},
         )
+
+
+@dataclass
+class MockResponse:
+    status: int
+    reason: str
+    resp: dict
+
+    def getheaders(self) -> dict:
+        return {}
+
+    @property
+    def data(self) -> str:
+        return json.dumps(self.resp)
+
+
+@patch("gretel_client.projects.projects.get_session_config")
+def test_create_project_not_found(
+    mock_get_session_config: Mock,
+):
+    expected_name = "my-super-awesome-project"
+    patch_session_config(
+        mock_get_session_config=mock_get_session_config,
+        get_project_side_effect=[
+            NotFoundException(
+                http_resp=MockResponse(
+                    reason="BadRequest",
+                    status=404,
+                    resp={"message": "Project name not available!"},
+                )
+            ),
+            {"data": {"project": {"name": expected_name}}},
+        ],
+        create_project_side_effect=[{"data": {"id": "123"}}],
+    )
+
+    res = create_project(name=expected_name)
+
+    assert res.name == expected_name
+
+
+@patch("gretel_client.projects.projects.get_session_config")
+def test_create_project_unauthorized(
+    mock_get_session_config: Mock,
+):
+    expected_name = "my-super-awesome-project"
+    patch_session_config(
+        mock_get_session_config=mock_get_session_config,
+        get_project_side_effect=[
+            UnauthorizedException(
+                http_resp=MockResponse(
+                    reason="Unauthorized",
+                    status=401,
+                    resp={"message": "Project name not available!"},
+                )
+            ),
+        ],
+        create_project_side_effect=[
+            UnauthorizedException(
+                http_resp=MockResponse(
+                    reason="Unauthorized",
+                    status=401,
+                    resp={"message": "Project name not available!"},
+                )
+            ),
+        ],
+    )
+    with pytest.raises(UnauthorizedException):
+        create_project(name=expected_name)
+
+
+@patch("gretel_client.projects.projects.get_session_config")
+def test_create_project_forbidden(
+    mock_get_session_config: Mock,
+):
+    expected_name = "my-super-awesome-project"
+    patch_session_config(
+        mock_get_session_config=mock_get_session_config,
+        get_project_side_effect=[
+            ForbiddenException(
+                http_resp=MockResponse(
+                    reason="Forbidden",
+                    status=403,
+                    resp={"message": "Project name not available!"},
+                )
+            ),
+        ],
+        create_project_side_effect=[
+            ForbiddenException(
+                http_resp=MockResponse(
+                    reason="Forbidden",
+                    status=403,
+                    resp={"message": "Project name not available!"},
+                )
+            ),
+        ],
+    )
+    with pytest.raises(ForbiddenException):
+        create_project(name=expected_name)
+
+
+def patch_session_config(
+    mock_get_session_config: Mock,
+    get_project_side_effect: list,
+    create_project_side_effect: list,
+):
+    projects_api = Mock()
+    projects_api.get_project.side_effect = get_project_side_effect
+    projects_api.create_project.side_effect = create_project_side_effect
+
+    def get_api(api, *args, **kwargs):
+        if api == ProjectsApi:
+            return projects_api
+        assert False, "unexpected API requested"
+
+    mock_get_session_config.return_value.get_api.side_effect = get_api
+    mock_get_session_config.return_value.default_runner = "cloud"

@@ -11,11 +11,6 @@ from functools import cached_property, wraps
 from pathlib import Path
 from typing import Any, BinaryIO, Dict, Iterator, List, Optional, Type, TypeVar, Union
 
-from gretel_client._api.exceptions import (
-    ApiException,
-    ForbiddenException,
-    NotFoundException,
-)
 from gretel_client.cli.utils.parser_utils import (
     DataSourceTypes,
     ref_data_factory,
@@ -447,6 +442,8 @@ def create_project(
                     status=400, reason=f"Project '{name}' already exists."
                 )
         except (UnauthorizedException, ForbiddenException, NotFoundException):
+            # In the case we get a 4xx error, proceed to try creating the project
+            # and use that as the failure mode
             pass
 
     resp = api.create_project(project=models.Project(**payload))
