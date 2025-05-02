@@ -2,6 +2,8 @@
 Common Gretel SDK errors and exceptions
 """
 
+import requests
+
 BROKEN_RESPONSE_STREAM_ERROR_MESSAGE = (
     "Error consuming API response stream. "
     "This error is likely temporary and we recommend retrying your request. "
@@ -34,3 +36,13 @@ class NavigatorApiStreamingResponseError(NavigatorApiError):
     streaming response from the API, such as it being
     incomplete or malformed.
     """
+
+
+def check_for_error_response(response: requests.Response) -> None:
+    try:
+        response.raise_for_status()
+    except requests.HTTPError:
+        if 400 <= response.status_code < 500:
+            raise NavigatorApiClientError(response.json())
+        else:
+            raise NavigatorApiServerError(response.json())

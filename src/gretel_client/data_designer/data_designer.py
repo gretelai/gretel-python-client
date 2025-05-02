@@ -113,6 +113,9 @@ def handle_workflow_validation_error(func):
             )
             err_message += f"\n|-- {e.msg}"
             violations = ""
+            if str(e):
+                violations += f"\n|-- {str(e)}"
+
             for violation in e.field_violations:
                 violations += f"\n|-- {violation.error_message}"
                 if camel_to_kebab(GenerateColumnsUsingSamplers.__name__) == e.task_name:

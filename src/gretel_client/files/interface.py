@@ -17,6 +17,7 @@ from gretel_client.config import (
     get_data_plane_endpoint,
     get_session_config,
 )
+from gretel_client.errors import check_for_error_response
 
 
 class File(pydantic.BaseModel):
@@ -95,7 +96,7 @@ class FileClient:
             files={"file": (file_name, file, mime_type)},
             headers={"Authorization": self.session.api_key},
         )
-
+        check_for_error_response(response)
         response_body = response.json()
 
         return File(
@@ -134,8 +135,7 @@ class FileClient:
             headers={"Authorization": self.session.api_key},
         )
 
-        response.raise_for_status()
-
+        check_for_error_response(response)
         response_body = response.json()
 
         return File(
@@ -167,7 +167,7 @@ class FileClient:
             headers={"Authorization": self.session.api_key},
         )
 
-        response.raise_for_status()
+        check_for_error_response(response)
 
         buffer = BytesIO(response.content)
         try:
@@ -191,4 +191,4 @@ class FileClient:
             headers={"Authorization": self.session.api_key},
         )
 
-        response.raise_for_status()
+        check_for_error_response(response)

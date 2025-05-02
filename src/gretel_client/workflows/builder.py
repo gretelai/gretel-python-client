@@ -26,8 +26,7 @@ from gretel_client._api.models.task_envelope_for_validation import (
 )
 from gretel_client.errors import (
     BROKEN_RESPONSE_STREAM_ERROR_MESSAGE,
-    NavigatorApiClientError,
-    NavigatorApiServerError,
+    check_for_error_response,
 )
 from gretel_client.files.interface import File
 from gretel_client.navigator_client_protocols import (
@@ -586,7 +585,7 @@ class WorkflowBuilder:
             json=self.to_dict(),
             stream=True,
         ) as response:
-            _check_for_error_response(response)
+            check_for_error_response(response)
             try:
                 for output in response.iter_lines():
                     try:
@@ -707,16 +706,6 @@ class WorkflowBuilder:
                     self._step_hash_to_name_map[step_input_hash]
                 )
         return disambiguated_step_input_names
-
-
-def _check_for_error_response(response: requests.Response) -> None:
-    try:
-        response.raise_for_status()
-    except requests.HTTPError:
-        if 400 <= response.status_code < 500:
-            raise NavigatorApiClientError(response.json())
-        else:
-            raise NavigatorApiServerError(response.json())
 
 
 def _generate_workflow_name(steps: list[Step] | None = None) -> str:
