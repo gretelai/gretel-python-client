@@ -1,6 +1,7 @@
 import json
 import numbers
 
+from collections import OrderedDict
 from typing import Self, TYPE_CHECKING
 
 import numpy as np
@@ -14,6 +15,7 @@ from rich.console import Console, Group
 from rich.padding import Padding
 from rich.panel import Panel
 from rich.pretty import Pretty
+from rich.rule import Rule
 from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
@@ -25,7 +27,8 @@ from gretel_client.data_designer.constants import (
 from gretel_client.data_designer.judge_rubrics import JudgeRubric
 from gretel_client.data_designer.types import EvaluationType, LLMJudgePromptTemplateType
 from gretel_client.data_designer.utils import code_lang_to_syntax_lexer
-from gretel_client.workflows.configs.tasks import CodeLang, OutputType
+from gretel_client.workflows.configs.base import ConfigBase
+from gretel_client.workflows.configs.tasks import CodeLang, OutputType, SamplerType
 from gretel_client.workflows.manager import LLMSuiteConfigWithGenerationParams
 
 if TYPE_CHECKING:
@@ -241,6 +244,38 @@ def display_sample_record(
     console.print(Group(*render_list), markup=False)
 
 
+def display_sampler_table(
+    sampler_params: dict[SamplerType, ConfigBase],
+    title: str | None = None,
+) -> None:
+    table = Table(expand=True)
+    table.add_column("Type")
+    table.add_column("Parameter")
+    table.add_column("Data Type")
+    table.add_column("Required", justify="center")
+    table.add_column("Constraints")
+
+    for sampler_type, params in sampler_params.items():
+        num = 0
+        schema = params.model_json_schema()
+        for param_name, field_info in schema["properties"].items():
+            is_required = param_name in schema.get("required", [])
+            table.add_row(
+                sampler_type if num == 0 else "",
+                param_name,
+                _get_field_type(field_info),
+                "✓" if is_required else "",
+                _get_field_constraints(field_info, schema),
+            )
+            num += 1
+        table.add_section()
+
+    title = title or "AI Data Designer Samplers"
+
+    group = Group(Rule(title, end="\n\n"), table)
+    console.print(group)
+
+
 def display_preview_evaluation_summary(
     eval_type: EvaluationType | LLMJudgePromptTemplateType,
     eval_results: dict,
@@ -341,7 +376,7 @@ def display_model_suite_info(
         Padding(
             Panel(
                 f"License: {model_suite_info.license}",
-                title=f"Model Suite",
+                title="Model Suite",
                 box=box.ROUNDED,
                 title_align="left",
                 padding=(1, 1, 1, 2),
@@ -416,3 +451,73 @@ def _convert_to_row_element(elem):
 
 def _pad_console_element(elem, padding=(1, 0, 1, 0)):
     return Padding(elem, padding)
+
+
+def _get_field_type(field: dict) -> str:
+    """Extract human-readable type information from a JSON Schema field."""
+
+    # single type
+    if "type" in field:
+        if field["type"] == "array":
+            return " | ".join(
+                [f"{f.strip()}[]" for f in _get_field_type(field["items"]).split("|")]
+            )
+        if field["type"] == "object":
+            return "dict"
+        return field["type"]
+
+    # union type
+    elif "anyOf" in field:
+        types = []
+        for f in field["anyOf"]:
+            if "$ref" in f:
+                types.append("enum")
+            elif f.get("type") == "array":
+                if "items" in f and "$ref" in f["items"]:
+                    types.append("enum[]")
+                else:
+                    types.append(f"{f['items']['type']}[]")
+            else:
+                types.append(f.get("type", ""))
+        return " | ".join(t for t in types if t)
+
+    return ""
+
+
+def _get_field_constraints(field: dict, schema: dict) -> str:
+    """Extract human-readable constraints from a JSON Schema field."""
+    constraints = []
+
+    # numeric constraints
+    if "minimum" in field:
+        constraints.append(f">= {field['minimum']}")
+    if "exclusiveMinimum" in field:
+        constraints.append(f"> {field['exclusiveMinimum']}")
+    if "maximum" in field:
+        constraints.append(f"<= {field['maximum']}")
+    if "exclusiveMaximum" in field:
+        constraints.append(f"< {field['exclusiveMaximum']}")
+
+    # string constraints
+    if "minLength" in field:
+        constraints.append(f"len > {field['minLength']}")
+    if "maxLength" in field:
+        constraints.append(f"len < {field['maxLength']}")
+
+    # array constraints
+    if "minItems" in field:
+        constraints.append(f"len > {field['minItems']}")
+    if "maxItems" in field:
+        constraints.append(f"len < {field['maxItems']}")
+
+    # enum constraints
+    if "enum" in _get_field_type(field) and "$defs" in schema:
+        enum_values = []
+        for defs in schema["$defs"].values():
+            if "enum" in defs:
+                enum_values.extend(defs["enum"])
+        if len(enum_values) > 0:
+            enum_values = OrderedDict.fromkeys(enum_values)
+            constraints.append(f"allowed: {', '.join(enum_values.keys())}")
+
+    return ", ".join(constraints)
