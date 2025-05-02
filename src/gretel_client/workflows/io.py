@@ -114,8 +114,21 @@ class Report:
             show_lines=True,
         )
 
-        for key, value in self.dict.items():
-            table.add_row(str(key), str(value))
+        table_fields = [
+            "synthetic_quality_score",
+            "column_correlation_stability",
+            "deep_structure_stability",
+            "column_distribution_stability",
+            "text_semantic_similarity",
+            "text_structure_similarity",
+            "data_privacy_score",
+            "membership_inference_protection_score",
+            "attribute_inference_protection_score",
+        ]
+
+        for field in table_fields:
+            if val := self.dict.get(field):
+                table.add_row(str(field), str(val))
 
         return table
 
