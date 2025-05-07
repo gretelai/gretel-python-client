@@ -29,7 +29,6 @@ class SourceConfigType(str, Enum):
     """
     allowed enum values
     """
-    AIDD = "AIDD"
     AIDD_COLUMNAR = "AIDD_COLUMNAR"
 
     @classmethod

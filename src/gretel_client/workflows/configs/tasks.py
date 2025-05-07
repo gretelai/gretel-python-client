@@ -50,7 +50,7 @@ class BigquerySource(ConfigBase):
 
 
 class Combiner(ConfigBase):
-    pass
+    num_records: Annotated[Optional[int], Field(title="Num Records")] = 100
 
 
 class ConcatDatasets(ConfigBase):
@@ -196,14 +196,10 @@ class Dtype(str, Enum):
 
 
 class GenerateColumnFromExpression(ConfigBase):
+    num_records: Annotated[Optional[int], Field(title="Num Records")] = 100
     name: Annotated[str, Field(title="Name")]
     expr: Annotated[str, Field(title="Expr")]
     dtype: Annotated[Optional[Dtype], Field(title="Dtype")] = "str"
-
-
-class DataConfig(ConfigBase):
-    type: Optional[OutputType] = "text"
-    params: Annotated[Optional[Dict[str, Any]], Field(title="Params")] = None
 
 
 class BernoulliMixtureSamplerParams(ConfigBase):
@@ -570,25 +566,6 @@ class SerializableConditionalDataColumn(ConfigBase):
     convert_to: Annotated[Optional[str], Field(title="Convert To")] = None
 
 
-class NumNewValuesToGenerate(RootModel[int]):
-    root: Annotated[int, Field(gt=0, le=25, title="Num New Values To Generate")]
-
-
-class SeedSubcategory(ConfigBase):
-    name: Annotated[str, Field(title="Name")]
-    description: Annotated[Optional[str], Field(title="Description")] = None
-    num_new_values_to_generate: Annotated[
-        Optional[NumNewValuesToGenerate], Field(title="Num New Values To Generate")
-    ] = None
-    generated_values: Annotated[
-        Optional[Dict[str, List[Union[str, int, bool]]]],
-        Field(title="Generated Values"),
-    ] = {}
-    values: Annotated[
-        Optional[Dict[str, List[Union[str, int, bool]]]], Field(title="Values")
-    ] = {}
-
-
 class GetGretelDataset(ConfigBase):
     name: Annotated[str, Field(title="Name")]
 
@@ -624,6 +601,25 @@ class Rubric(ConfigBase):
             title="Description",
         ),
     ] = ""
+
+
+class NumNewValuesToGenerate(RootModel[int]):
+    root: Annotated[int, Field(gt=0, le=25, title="Num New Values To Generate")]
+
+
+class SeedSubcategory(ConfigBase):
+    name: Annotated[str, Field(title="Name")]
+    description: Annotated[Optional[str], Field(title="Description")] = None
+    num_new_values_to_generate: Annotated[
+        Optional[NumNewValuesToGenerate], Field(title="Num New Values To Generate")
+    ] = None
+    generated_values: Annotated[
+        Optional[Dict[str, List[Union[str, int, bool]]]],
+        Field(title="Generated Values"),
+    ] = {}
+    values: Annotated[
+        Optional[Dict[str, List[Union[str, int, bool]]]], Field(title="Values")
+    ] = {}
 
 
 class MssqlDestination(ConfigBase):
@@ -1574,10 +1570,10 @@ class ColumnActions(ConfigBase):
 class GlinerBatchModeConfig(ConfigBase):
     enable: Annotated[
         Optional[bool], Field(description="Enable GLiNER batch mode.", title="Enable")
-    ] = False
+    ] = True
     batch_size: Annotated[
         Optional[int], Field(description="GLiNER batch size.", title="Batch Size")
-    ] = 10
+    ] = 8
     chunk_length: Annotated[
         Optional[int],
         Field(
@@ -1614,7 +1610,7 @@ class NERConfig(ConfigBase):
         Field(
             description="GLiNER batch mode configuration.", title="Gliner Batch Mode"
         ),
-    ] = {"enable": False, "batch_size": 10, "chunk_length": 512}
+    ] = {"enable": True, "batch_size": 8, "chunk_length": 512}
     entities: Annotated[
         Optional[List[str]],
         Field(
@@ -1885,7 +1881,7 @@ class Globals(ConfigBase):
         "ner_optimized": True,
         "enable_regexps": False,
         "enable_gliner": True,
-        "gliner_batch_mode": {"enable": False, "batch_size": 10, "chunk_length": 512},
+        "gliner_batch_mode": {"enable": True, "batch_size": 8, "chunk_length": 512},
         "entities": None,
     }
     lock_columns: Annotated[
@@ -1909,11 +1905,7 @@ class Transform(ConfigBase):
             "ner_optimized": True,
             "enable_regexps": False,
             "enable_gliner": True,
-            "gliner_batch_mode": {
-                "enable": False,
-                "batch_size": 10,
-                "chunk_length": 512,
-            },
+            "gliner_batch_mode": {"enable": True, "batch_size": 8, "chunk_length": 512},
             "entities": None,
         },
         "lock_columns": None,
@@ -1976,6 +1968,7 @@ class EvaluateDataDesignerDataset(ConfigBase):
 
 
 class GenerateColumnFromTemplateV2Config(ConfigBase):
+    num_records: Annotated[Optional[int], Field(title="Num Records")] = 100
     model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
     error_rate: Annotated[
         Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
@@ -2015,25 +2008,8 @@ class GenerateColumnConfigFromInstruction(ConfigBase):
     must_depend_on: Annotated[Optional[List[str]], Field(title="Must Depend On")] = None
 
 
-class GenerateColumnFromTemplate(ConfigBase):
-    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
-    error_rate: Annotated[
-        Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
-    ] = 0.2
-    model_configs: Annotated[
-        Optional[List[ModelConfig]], Field(title="Model Configs")
-    ] = None
-    model_alias: Annotated[
-        Optional[Union[str, ModelAlias]], Field(title="Model Alias")
-    ] = "text"
-    prompt: Annotated[str, Field(title="Prompt")]
-    name: Annotated[Optional[str], Field(title="Name")] = "response"
-    system_prompt: Annotated[Optional[str], Field(title="System Prompt")] = None
-    data_config: DataConfig
-    description: Annotated[Optional[str], Field(title="Description")] = ""
-
-
 class GenerateColumnFromTemplateV2(ConfigBase):
+    num_records: Annotated[Optional[int], Field(title="Num Records")] = 100
     model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
     error_rate: Annotated[
         Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
@@ -2095,21 +2071,6 @@ class GenerateSamplingColumnConfigFromInstruction(ConfigBase):
         Optional[List[SerializableConditionalDataColumn]],
         Field(title="Existing Samplers"),
     ] = None
-
-
-class GenerateSeedCategoryValues(ConfigBase):
-    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
-    error_rate: Annotated[
-        Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
-    ] = 0.2
-    model_configs: Annotated[
-        Optional[List[ModelConfig]], Field(title="Model Configs")
-    ] = None
-    model_alias: Annotated[
-        Optional[Union[str, ModelAlias]], Field(title="Model Alias")
-    ] = "text"
-    seed_categories: Annotated[List[SeedCategory], Field(title="Seed Categories")]
-    dataset_context: Annotated[Optional[str], Field(title="Dataset Context")] = ""
 
 
 class JudgeWithLlm(ConfigBase):

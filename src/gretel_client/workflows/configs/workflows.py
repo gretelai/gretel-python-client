@@ -65,7 +65,7 @@ class Globals(ConfigBase):
     model_configs: Annotated[
         Optional[List[ModelConfig]], Field(title="Model Configs")
     ] = None
-    error_rate: Annotated[Optional[float], Field(title="Error Rate")] = None
+    error_rate: Annotated[Optional[float], Field(title="Error Rate")] = 0.2
 
 
 class Workflow(ConfigBase):
