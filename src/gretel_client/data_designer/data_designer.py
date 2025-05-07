@@ -167,11 +167,6 @@ class DataDesigner:
                     case _:
                         col = LLMTextColumn(**col_dict)
             columns[col.name] = col
-        constraints = (
-            {c.target_column: c for c in valid_config.constraints}
-            if len(valid_config.constraints or []) > 0
-            else {}
-        )
         return cls(
             gretel_resource_provider=gretel_resource_provider,
             model_suite=valid_config.model_suite,
@@ -179,7 +174,7 @@ class DataDesigner:
             seed_dataset=valid_config.seed_dataset,
             person_samplers=valid_config.person_samplers,
             columns=columns,
-            constraints=constraints,
+            constraints=valid_config.constraints,
             evaluation_report=valid_config.evaluation_report,
         )
 
@@ -192,7 +187,7 @@ class DataDesigner:
         seed_dataset: SeedDataset | None = None,
         person_samplers: dict[str, PersonSamplerParams] | None = None,
         columns: dict[str, AIDDColumnT] | None = None,
-        constraints: dict[str, ColumnConstraint] | None = None,
+        constraints: list[ColumnConstraint] | None = None,
         evaluation_report: EvaluationReportT | None = None,
     ):
         self._gretel_resource_provider = gretel_resource_provider
@@ -205,7 +200,7 @@ class DataDesigner:
         self._workflow_manager = self._gretel_resource_provider.workflows
         self._repr_html_style = DEFAULT_REPR_HTML_STYLE
         self._latent_person_columns: dict[str, PersonSamplerParams] = {}
-        self._constraints = constraints or {}
+        self._constraints = constraints or []
         self._aidd_info = AIDDInfo(
             model_suite=model_suite, workflow_manager=self._workflow_manager
         )
@@ -260,7 +255,7 @@ class DataDesigner:
             seed_dataset=self._seed_dataset,
             person_samplers=person_samplers or None,
             columns=columns,
-            constraints=list(self._constraints.values()),
+            constraints=self._constraints or None,
             evaluation_report=self._evaluation_report,
         )
 
@@ -338,13 +333,15 @@ class DataDesigner:
         self._columns[column.name] = column
         return self
 
-    def get_constraint(self, target_column: str) -> ColumnConstraint | None:
-        """Returns the constraint for the given target column."""
-        return self._constraints.get(target_column, None)
+    def get_constraints(self, target_column: str) -> list[ColumnConstraint]:
+        """Returns the constraints for the given target column."""
+        return [c for c in self._constraints if c.target_column == target_column]
 
-    def delete_constraint(self, target_column: str) -> Self:
-        """Deletes the constraint for the given target column."""
-        self._constraints.pop(target_column, None)
+    def delete_constraints(self, target_column: str) -> Self:
+        """Deletes the constraints for the given target column."""
+        self._constraints = [
+            c for c in self._constraints if c.target_column != target_column
+        ]
         return self
 
     def add_constraint(
@@ -382,10 +379,12 @@ class DataDesigner:
         """
         if isinstance(params, dict):
             params = ColumnConstraintParams.model_validate(params)
-        self._constraints[target_column] = ColumnConstraint(
-            target_column=target_column,
-            type=type,
-            params=params,
+        self._constraints.append(
+            ColumnConstraint(
+                target_column=target_column,
+                type=type,
+                params=params,
+            )
         )
         return self
 
@@ -726,7 +725,7 @@ class DataDesigner:
                 self._task_registry.GenerateColumnsUsingSamplers(
                     data_schema=DataSchema(
                         columns=[c for c in self.sampler_columns],
-                        constraints=[c for c in list(self._constraints.values())],
+                        constraints=self._constraints,
                     ),
                     num_records=num_records,
                 )

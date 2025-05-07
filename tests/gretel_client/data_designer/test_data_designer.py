@@ -170,6 +170,9 @@ def test_column_operations():
 def test_constraint_operations():
     dd = (
         DataDesigner(gretel_resource_provider=MagicMock())
+        .add_column(
+            name="no_constraint", type="uniform", params={"low": 1, "high": 100}
+        )
         .add_column(name="age", type="gaussian", params={"mean": 35, "stddev": 5})
         .add_column(name="height", type="uniform", params={"low": 15, "high": 200})
         .add_constraint(
@@ -189,12 +192,16 @@ def test_constraint_operations():
             params={"operator": "gt", "rhs": "age"},
         )
     )
-    assert dd.get_constraint(target_column="age").params.operator == "gt"
-    assert dd.get_constraint(target_column="age").params.rhs == 30
+    assert len(dd.get_constraints(target_column="no_constraint")) == 0
+    assert len(dd.get_constraints(target_column="age")) == 2
+    assert len(dd.get_constraints(target_column="height")) == 1
+
+    assert dd.get_constraints(target_column="age")[0].params.operator == "lt"
+    assert dd.get_constraints(target_column="age")[1].params.rhs == 30
 
     # delete constraint by name
-    dd.delete_constraint(target_column="height")
-    assert dd.get_constraint(target_column="height") is None
+    dd.delete_constraints(target_column="height")
+    assert len(dd.get_constraints(target_column="height")) == 0
 
 
 def test_evaluation_operations():
