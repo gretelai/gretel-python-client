@@ -66,7 +66,7 @@ class GretelReport:
 
     def display_in_notebook(self):
         """Display the HTML report in a notebook."""
-        from IPython.display import display, HTML
+        from IPython.display import HTML, display
 
         display(HTML(data=self.as_html, metadata={"isolated": True}))
 

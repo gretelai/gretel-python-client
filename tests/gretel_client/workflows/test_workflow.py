@@ -50,9 +50,9 @@ def test_initialization_and_factory_method(
     assert workflow_run.steps[0].name == "generate_data"
 
     # Test factory method
-    api_provider_mock.get_api(WorkflowsApi).get_workflow_run.return_value = (
-        workflow_run_response
-    )
+    api_provider_mock.get_api(
+        WorkflowsApi
+    ).get_workflow_run.return_value = workflow_run_response
 
     workflow_run_from_factory = WorkflowRun.from_workflow_run_id(
         "wr_123", api_provider_mock, resource_provider_mock
@@ -104,7 +104,7 @@ def _prepare_status_mock(
         workflow_run_response, api_provider_mock, resource_provider_mock
     )
 
-    api_provider_mock.get_api(WorkflowsApi).get_workflow_run.return_value = (
-        workflow_run_response
-    )
+    api_provider_mock.get_api(
+        WorkflowsApi
+    ).get_workflow_run.return_value = workflow_run_response
     return workflow_run

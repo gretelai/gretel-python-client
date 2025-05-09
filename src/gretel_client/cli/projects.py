@@ -2,7 +2,7 @@ from typing import Optional
 
 import click
 
-from gretel_client.cli.common import pass_session, SessionContext
+from gretel_client.cli.common import SessionContext, pass_session
 from gretel_client.cli.hybrid import ClusterError, resolve_hybrid_environment
 from gretel_client.config import RunnerMode, write_config
 from gretel_client.projects import create_project

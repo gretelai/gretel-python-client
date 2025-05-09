@@ -9,7 +9,7 @@ import pytest
 import yaml
 
 from gretel_client.cli.utils.parser_utils import RefData
-from gretel_client.config import add_session_context, RunnerMode
+from gretel_client.config import RunnerMode, add_session_context
 from gretel_client.projects.artifact_handlers import (
     CloudArtifactsHandler,
     HybridArtifactsHandler,

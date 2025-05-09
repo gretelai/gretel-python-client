@@ -119,7 +119,7 @@ class RefData:
 
 
 def ref_data_factory(
-    ref_data: Optional[Union[RefDataTypes, RefData]] = None
+    ref_data: Optional[Union[RefDataTypes, RefData]] = None,
 ) -> RefData:
     if ref_data is None:
         return RefData()

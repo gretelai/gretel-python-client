@@ -13,12 +13,12 @@ except ImportError:
 
 from gretel_client.dataframe import _DataFrameT
 from gretel_client.gretel.artifact_fetching import (
+    GretelReport,
+    ReportType,
     fetch_final_model_config,
     fetch_model_logs,
     fetch_model_report,
     fetch_synthetic_data,
-    GretelReport,
-    ReportType,
 )
 from gretel_client.gretel.config_setup import (
     CONFIG_SETUP_DICT,

@@ -15,9 +15,9 @@ import smart_open
 
 from gretel_client.config import (
     ClientConfig,
+    RunnerMode,
     get_logger,
     get_session_config,
-    RunnerMode,
 )
 from gretel_client.projects.common import DataSourceTypes, RefDataTypes
 from gretel_client.projects.jobs import END_STATES, Job, Status

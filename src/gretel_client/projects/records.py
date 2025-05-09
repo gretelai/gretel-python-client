@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-from typing import Any, List, Optional, Type, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, List, Optional, Type
 
 from gretel_client.cli.utils.parser_utils import (
     DataSourceTypes,
-    ref_data_factory,
     RefData,
     RefDataTypes,
+    ref_data_factory,
 )
 from gretel_client.config import RunnerMode
 from gretel_client.models.config import get_model_type_config
-from gretel_client.projects.common import f, ModelRunArtifact
+from gretel_client.projects.common import ModelRunArtifact, f
 from gretel_client.projects.exceptions import (
     MaxConcurrentJobsException,
     RecordHandlerError,

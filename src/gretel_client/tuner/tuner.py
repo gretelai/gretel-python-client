@@ -9,7 +9,7 @@ from typing import Callable, Optional, Protocol, Union
 import optuna
 import pandas as pd
 
-from gretel_client.config import add_session_context, ClientConfig
+from gretel_client.config import ClientConfig, add_session_context
 from gretel_client.gretel.config_setup import (
     CONFIG_SETUP_DICT,
     get_model_docs_url,

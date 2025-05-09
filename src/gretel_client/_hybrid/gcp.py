@@ -1,6 +1,6 @@
 import re
 
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from google.cloud import kms
@@ -16,7 +16,6 @@ _REGEX_KMS_PATTERN = re.compile(
 
 
 class KMSEncryption(CredentialsEncryption):
-
     _kms_client: Any
 
     def __init__(

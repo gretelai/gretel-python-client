@@ -73,9 +73,7 @@ REPR_HTML_TEMPLATE = """
 }}}}
 </style>
 {{highlighted_html}}
-""".format(
-    fixed_width=REPR_HTML_FIXED_WIDTH
-)
+""".format(fixed_width=REPR_HTML_FIXED_WIDTH)
 
 
 MODEL_DUMP_KWARGS = dict(exclude={"model_configs", "model_suite", "error_rate"})

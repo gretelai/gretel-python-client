@@ -30,7 +30,6 @@ class SubmitBatchWorkflowResponse:
 
 
 class Client:
-
     _adapter: ClientAdapter
 
     def __init__(self, adapter: ClientAdapter):
@@ -97,7 +96,6 @@ TaskOutput = Union[pd.DataFrame, dict]
 
 
 class ClientAdapter(ABC, Generic[TaskInput]):
-
     @abstractmethod
     def run_task(
         self,

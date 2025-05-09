@@ -8,6 +8,8 @@ import click
 import yaml
 
 from gretel_client.cli.common import (
+    SessionContext,
+    StatusDescriptions,
     model_option,
     pass_session,
     poll_and_print,
@@ -15,13 +17,11 @@ from gretel_client.cli.common import (
     record_handler_option,
     ref_data_option,
     runner_option,
-    SessionContext,
-    StatusDescriptions,
 )
 from gretel_client.cli.models import models
-from gretel_client.cli.utils.parser_utils import ref_data_factory, RefData
+from gretel_client.cli.utils.parser_utils import RefData, ref_data_factory
 from gretel_client.config import RunnerMode
-from gretel_client.models.config import get_model_type_config, GPU
+from gretel_client.models.config import GPU, get_model_type_config
 from gretel_client.projects.jobs import Status
 from gretel_client.projects.records import RecordHandler
 
@@ -139,7 +139,6 @@ def create_and_run_record_handler(
     status_strings: StatusDescriptions,
     ref_data: Optional[RefData] = None,
 ):
-
     # NOTE: ``in_data`` is only evaluated to determine if we should set a --data-source
     # for the CLI args that get passed into a local container.  The ``data_source`` value
     # is what will be sent to the Cloud API.

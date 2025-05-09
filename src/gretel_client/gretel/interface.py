@@ -5,22 +5,22 @@ import sys
 import uuid
 
 from pathlib import Path
-from typing import Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 from gretel_client.config import (
-    add_session_context,
     ClientConfig,
+    add_session_context,
     configure_session,
     get_session_config,
 )
 from gretel_client.dataframe import _DataFrameT
 from gretel_client.factories import GretelFactories
 from gretel_client.gretel.artifact_fetching import (
+    PANDAS_IS_INSTALLED,
     fetch_final_model_config,
     fetch_model_logs,
     fetch_model_report,
     fetch_synthetic_data,
-    PANDAS_IS_INSTALLED,
 )
 from gretel_client.gretel.config_setup import (
     CONFIG_SETUP_DICT,
@@ -42,7 +42,7 @@ from gretel_client.gretel.job_results import (
 from gretel_client.helpers import poll
 from gretel_client.inference_api.third_party.aws import BedrockAdapter, SagemakerAdapter
 from gretel_client.inference_api.third_party.azure_openai import AzureOpenAIAdapter
-from gretel_client.projects import get_project, Project
+from gretel_client.projects import Project, get_project
 from gretel_client.projects.jobs import Status
 from gretel_client.projects.models import Model
 from gretel_client.rest.exceptions import ApiException, NotFoundException
@@ -72,7 +72,7 @@ EVALUATE_DOCS_URL = "https://docs.gretel.ai/optimize-synthetic-data/evaluate"
 
 
 def _convert_to_valid_data_source(
-    data: Optional[Union[str, Path, _DataFrameT]] = None
+    data: Optional[Union[str, Path, _DataFrameT]] = None,
 ) -> Optional[Union[str, _DataFrameT]]:
     """Returns a valid data source (str, DataFrame, or None) for a Gretel job."""
     return str(data) if isinstance(data, Path) else data
@@ -323,7 +323,7 @@ class Gretel:
 
             from gretel_client import Gretel
 
-            data_source="https://gretel-public-website.s3-us-west-2.amazonaws.com/datasets/USAdultIncome5k.csv"
+            data_source = "https://gretel-public-website.s3-us-west-2.amazonaws.com/datasets/USAdultIncome5k.csv"
 
             gretel = Gretel(project_name="my-project")
             trained = gretel.submit_train(
@@ -552,6 +552,7 @@ class Gretel:
         Example::
 
             from gretel_client import Gretel
+
             gretel = Gretel(api_key="prompt")
 
             yaml_config_string = '''
@@ -567,7 +568,7 @@ class Gretel:
                     choices: ["medium", "high"]
             '''
 
-            data_source="https://gretel-public-website.s3-us-west-2.amazonaws.com/datasets/USAdultIncome5k.csv"
+            data_source = "https://gretel-public-website.s3-us-west-2.amazonaws.com/datasets/USAdultIncome5k.csv"
 
             results = gretel.run_tuner(
                 tuner_config=yaml_config_string,
@@ -575,7 +576,7 @@ class Gretel:
                 n_trials=2,
                 params={
                     "batch_size": {"choices": [50, 100]},
-                    "generator_lr": {"log_range": [0.001, 0.01]}
+                    "generator_lr": {"log_range": [0.001, 0.01]},
                 },
                 privacy_filters={"similarity": {"choices": [None, "medium", "high"]}},
             )
@@ -638,6 +639,7 @@ class Gretel:
         Example::
 
             from gretel_client import Gretel
+
             gretel = Gretel(api_key="prompt")
 
             config = '''schema_version: "1.0"
@@ -658,7 +660,7 @@ class Gretel:
                             value: fake(seed=this).bothify(text="##")
             '''
 
-            data_source="https://gretel-public-website.s3-us-west-2.amazonaws.com/datasets/USAdultIncome5k.csv"
+            data_source = "https://gretel-public-website.s3-us-west-2.amazonaws.com/datasets/USAdultIncome5k.csv"
 
             transform_result = gretel.submit_transform(
                 config=config,
@@ -762,6 +764,7 @@ class Gretel:
         Example::
 
             from gretel_client import Gretel
+
             gretel = Gretel(api_key="prompt")
 
             config = '''schema_version: "1.0"

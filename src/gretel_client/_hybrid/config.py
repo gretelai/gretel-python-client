@@ -7,10 +7,10 @@ from gretel_client._hybrid.projects_api import HybridProjectsApi
 from gretel_client._hybrid.workflows_api import HybridWorkflowsApi
 from gretel_client.config import (
     ClientConfig,
-    configure_session,
     DelegatingClientConfig,
-    get_session_config,
     RunnerMode,
+    configure_session,
+    get_session_config,
     set_session_config,
 )
 from gretel_client.rest.api.projects_api import ProjectsApi

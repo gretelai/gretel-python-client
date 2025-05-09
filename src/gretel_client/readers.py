@@ -8,7 +8,7 @@ import json
 import os
 
 from collections.abc import Iterator
-from typing import Any, Callable, IO, List, Optional, TYPE_CHECKING, Union
+from typing import IO, TYPE_CHECKING, Any, Callable, List, Optional, Union
 
 import smart_open
 

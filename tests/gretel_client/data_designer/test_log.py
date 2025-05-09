@@ -15,7 +15,6 @@ def test_get_logger():
         patch("logging.StreamHandler") as mock_stream_handler,
         patch("logging.Formatter") as mock_formatter,
     ):
-
         mock_logger = MagicMock()
         mock_get_logger.return_value = mock_logger
         mock_handler = MagicMock()

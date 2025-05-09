@@ -1,5 +1,5 @@
 from typing import Optional, Type
-from unittest.mock import create_autospec, Mock
+from unittest.mock import Mock, create_autospec
 
 from requests import Session
 
@@ -16,7 +16,6 @@ from gretel_client.workflows.tasks import TaskRegistry
 
 
 class TestGretelApiFactory(GretelApiProviderProtocol):
-
     def __init__(self) -> None:
         self.cached_clients = {}
         self.session = create_autospec(Session)
@@ -45,7 +44,6 @@ class TestGretelApiFactory(GretelApiProviderProtocol):
 
 
 class TestGretelResourceProvider(GretelResourceProviderProtocol):
-
     def __init__(self) -> None:
         self._workflows = create_autospec(WorkflowManager)
         self._files = create_autospec(FileClient)

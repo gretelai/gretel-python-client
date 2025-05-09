@@ -11,7 +11,6 @@ TaskConfig = BaseModel
 
 
 class TaskRegistry:
-
     @classmethod
     def create(cls) -> Registry:
         registry = build_registry(TaskConfig, Registry)

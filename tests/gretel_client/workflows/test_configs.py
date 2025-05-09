@@ -31,7 +31,6 @@ def test_can_instantiate_config():
 
 
 def test_instantiate_registry_with_factory():
-
     class Task:
         def hello_world(self) -> str:
             return "hello world"

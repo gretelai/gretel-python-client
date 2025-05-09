@@ -16,8 +16,8 @@ from gretel_client.gretel.config_setup import (
     smart_load_yaml,
 )
 from gretel_client.tuner.exceptions import (
-    InvalidSamplerConfigError,
     InvalidSampleTypeError,
+    InvalidSamplerConfigError,
     SamplerCallbackError,
 )
 
@@ -76,8 +76,7 @@ class SampleType(_TunerEnum):
         if not step_optional:
             if len(value) != 2:
                 raise InvalidSampleTypeError(
-                    f"{self.upper()} must have exactly 2 elements. "
-                    f"You gave '{value}'."
+                    f"{self.upper()} must have exactly 2 elements. You gave '{value}'."
                 )
         else:
             if (len(value) < 2) or (len(value) > 3):
@@ -164,8 +163,7 @@ class ModelConfigSampler:
                     choices: [500, 1000]
         '''
         sampler = ModelConfigSampler(
-            config_str,
-            params={"generator_lr": {"log_range": [0.001, 0.01]}}
+            config_str, params={"generator_lr": {"log_range": [0.001, 0.01]}}
         )
     """
 
@@ -318,8 +316,7 @@ class ModelConfigSampler:
             return model_config_section
         elif not callable(self._callback):
             raise SamplerCallbackError(
-                "The callback function must be callable. "
-                f"You gave '{self._callback}'."
+                f"The callback function must be callable. You gave '{self._callback}'."
             )
         else:
             updated_config = self._callback(model_config_section)

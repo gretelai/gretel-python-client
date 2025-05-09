@@ -11,7 +11,6 @@ class RegistryMeta(type):
 
 
 class Registry(metaclass=RegistryMeta):
-
     ConcatDatasets = tasks.ConcatDatasets
     ExtractDataSeedsFromSampleRecords = tasks.ExtractDataSeedsFromSampleRecords
     IdGenerator = tasks.IdGenerator

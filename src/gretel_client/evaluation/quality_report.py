@@ -5,10 +5,10 @@ from typing import List, Optional, Union
 
 from gretel_client.config import ClientConfig, RunnerMode
 from gretel_client.evaluation.reports import (
-    BaseReport,
     DEFAULT_CORRELATION_COLUMNS,
     DEFAULT_RECORD_COUNT,
     DEFAULT_SQS_REPORT_COLUMNS,
+    BaseReport,
     ReportDictType,
 )
 from gretel_client.projects.common import DataSourceTypes, RefDataTypes
@@ -100,9 +100,9 @@ class QualityReport(BaseReport):
         if run_pii_replay:
             self._model_dict["models"][0]["evaluate"]["pii_replay"] = {"skip": False}
             if pii_entities:
-                self._model_dict["models"][0]["evaluate"]["pii_replay"][
-                    "entities"
-                ] = pii_entities
+                self._model_dict["models"][0]["evaluate"]["pii_replay"]["entities"] = (
+                    pii_entities
+                )
 
         super().__init__(
             project,

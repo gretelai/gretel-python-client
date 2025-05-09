@@ -15,9 +15,9 @@ from gretel_client.data_designer.constants import (
     VALIDATE_SQL_COLUMN_SUFFIXES,
 )
 from gretel_client.data_designer.utils import (
+    WithPrettyRepr,
     assert_valid_jinja2_template,
     get_prompt_template_keywords,
-    WithPrettyRepr,
 )
 from gretel_client.workflows.configs import tasks
 from gretel_client.workflows.configs.tasks import (
@@ -185,7 +185,7 @@ class SamplerColumn(WithPrettyRepr, tasks.ConditionalDataColumn):
                 params=CategorySamplerParams(values=["dog", "cat", "bird"]),
                 conditional_params={
                     "age < 20": CategorySamplerParams(values=["rabbit", "hamster"]),
-                }
+                },
             )
         )
     """
@@ -210,7 +210,6 @@ class SamplerColumn(WithPrettyRepr, tasks.ConditionalDataColumn):
 class LLMGenColumn(
     WithPrettyRepr, tasks.GenerateColumnFromTemplateV2, WithDAGColumnMixin
 ):
-
     @model_validator(mode="before")
     @classmethod
     def _set_output_format(cls, data: Any) -> Any:

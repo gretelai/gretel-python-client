@@ -14,7 +14,7 @@ import tempfile
 import time
 
 from pathlib import Path
-from typing import Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import pandas as pd
 import tqdm

@@ -16,8 +16,8 @@ from gretel_client.workflows.configs.tasks import (
     ScipySamplerParams,
     SubcategorySamplerParams,
     TimeDeltaSamplerParams,
-    UniformSamplerParams,
     UUIDSamplerParams,
+    UniformSamplerParams,
 )
 from gretel_client.workflows.configs.workflows import (
     GenerationParameters,

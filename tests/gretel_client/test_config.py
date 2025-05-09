@@ -14,19 +14,19 @@ from urllib3 import HTTPResponse
 from urllib3.exceptions import MaxRetryError
 
 from gretel_client.config import (
-    _load_config,
-    add_session_context,
     CLIENT_METRICS_HEADER_KEY,
-    ClientConfig,
-    configure_session,
-    get_client_version,
-    get_session_config,
     GRETEL_PREVIEW_FEATURES,
     GRETEL_RUNNER_MODE,
+    ClientConfig,
     GretelApiRetry,
     GretelClientConfigurationError,
     PreviewFeatures,
     RunnerMode,
+    _load_config,
+    add_session_context,
+    configure_session,
+    get_client_version,
+    get_session_config,
     write_config,
 )
 from gretel_client.rest.api.projects_api import ProjectsApi

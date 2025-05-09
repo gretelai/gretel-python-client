@@ -1,7 +1,7 @@
 import datetime
 
 from unittest import mock
-from unittest.mock import call, MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 
@@ -15,10 +15,10 @@ from gretel_client.rest_v1.models import (
     WorkflowTask,
 )
 from gretel_client.workflows.logs import (
+    WORKFLOW_TASK_SEARCH_KEY,
     LogWorker,
     TaskManager,
     WaitTimeExceeded,
-    WORKFLOW_TASK_SEARCH_KEY,
 )
 from gretel_client.workflows.runner_mode import RunnerMode
 from gretel_client.workflows.status import Status

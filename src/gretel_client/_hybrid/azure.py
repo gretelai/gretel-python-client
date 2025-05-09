@@ -1,18 +1,15 @@
 import base64
 import re
 
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
-    from azure.identity import DefaultAzureCredential
-    from azure.keyvault.keys import KeyClient
-    from azure.keyvault.keys.crypto import (
-        CryptographyClient,
-        EncryptionAlgorithm,
-    )
     from Crypto.Cipher import AES
     from Crypto.Random import get_random_bytes
     from Crypto.Util.Padding import pad
+    from azure.identity import DefaultAzureCredential
+    from azure.keyvault.keys import KeyClient
+    from azure.keyvault.keys.crypto import CryptographyClient, EncryptionAlgorithm
 
 from gretel_client._hybrid.creds_encryption import CredentialsEncryption
 

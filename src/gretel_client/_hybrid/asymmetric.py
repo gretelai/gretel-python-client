@@ -18,7 +18,6 @@ from gretel_client.rest_v1.models.config_asymmetric_key_metadata import (
 
 
 class AsymmetricCredentialsEncryption(BaseCredentialsEncryption):
-
     _projects_api: Optional[ProjectsApi]
     _asymmetric_key_metadata: Optional[ConfigAsymmetricKeyMetadata]
 

@@ -8,7 +8,7 @@ import click
 import yaml
 
 from gretel_client._hybrid.asymmetric import AsymmetricCredentialsEncryption
-from gretel_client.cli.common import pass_session, project_option, SessionContext
+from gretel_client.cli.common import SessionContext, pass_session, project_option
 from gretel_client.cli.connection_credentials_aws_kms import AWSKMSEncryption
 from gretel_client.cli.connection_credentials_azure_key_vault import (
     AzureKeyVaultEncryption,
@@ -17,9 +17,11 @@ from gretel_client.cli.connection_credentials_gcp_kms import GCPKMSEncryption
 from gretel_client.config import ClientConfig
 from gretel_client.rest_v1.api.connections_api import ConnectionsApi
 from gretel_client.rest_v1.api.projects_api import ProjectsApi as ProjectsV1API
-from gretel_client.rest_v1.models import CreateConnectionRequest
+from gretel_client.rest_v1.models import (
+    CreateConnectionRequest,
+    UpdateConnectionRequest,
+)
 from gretel_client.rest_v1.models import Project as V1Project
-from gretel_client.rest_v1.models import UpdateConnectionRequest
 
 
 @click.group(help="Commands for working with Gretel connections.")

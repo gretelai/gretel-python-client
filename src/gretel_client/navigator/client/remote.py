@@ -84,7 +84,6 @@ class WorkflowTaskError(Exception):
 
 @dataclass
 class Message:
-
     step: Optional[str]
     """
     The name of the step.
@@ -159,7 +158,6 @@ def _raise_on_task_error(message: Message):
 
 
 class RemoteClient(ClientAdapter[Serializable]):
-
     def __init__(self, api_endpoint: str, client_session: ClientConfig):
         self._session = client_session
         self._req_headers = {"Authorization": self._session.api_key}
@@ -234,7 +232,6 @@ class RemoteClient(ClientAdapter[Serializable]):
         workflow_id: Optional[str] = None,
         workflow_run_name: Optional[str] = None,
     ) -> SubmitBatchWorkflowResponse:
-
         for step in workflow_config["steps"]:
             if "num_records" in step["config"]:
                 step["config"]["num_records"] = num_records

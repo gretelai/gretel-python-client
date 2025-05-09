@@ -36,7 +36,6 @@ def test_runner_arg_is_honored():
                         model_jsons.append({"runner_mode": model_runner_mode})
 
                     for model_json in model_jsons:
-
                         actual_runner_mode = _determine_runner_mode(
                             sc, runner_arg, project, model, model_json
                         )

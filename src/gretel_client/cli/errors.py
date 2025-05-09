@@ -93,7 +93,7 @@ class HandleApiClientError(_ErrorHandler, ApiException, ApiExceptionV1):
         try:
             err_body = json.loads(self.ex.body)
             err_sections.append(
-                f'Reason: {err_body.get("message", ""), err_body.get("details", "")}',
+                f"Reason: {err_body.get('message', ''), err_body.get('details', '')}",
                 f"Context: \n{self._context_to_str(err_body)}",
             )
         except:

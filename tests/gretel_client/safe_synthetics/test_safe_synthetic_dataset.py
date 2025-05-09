@@ -207,7 +207,6 @@ def test_default_model_blueprint(ssd_factory: SafeSyntheticDatasetFactory):
 
 
 def test_can_load_yaml_strings(ssd_factory: SafeSyntheticDatasetFactory):
-
     xf = """\
 steps:
 - columns:

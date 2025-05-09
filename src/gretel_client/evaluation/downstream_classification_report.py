@@ -5,8 +5,8 @@ from typing import List, Optional, Union
 
 from gretel_client.config import ClientConfig, RunnerMode
 from gretel_client.evaluation.reports import (
-    BaseReport,
     DEFAULT_RECORD_COUNT,
+    BaseReport,
     ReportDictType,
 )
 from gretel_client.projects.common import DataSourceTypes, RefDataTypes

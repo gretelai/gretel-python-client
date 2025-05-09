@@ -3,10 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Union
 
-from gretel_client.config import ClientConfig, get_session_config, RunnerMode
+from gretel_client.config import ClientConfig, RunnerMode, get_session_config
 from gretel_client.evaluation.reports import (
-    BaseReport,
     DEFAULT_TEXT_RECORD_COUNT,
+    BaseReport,
     ReportDictType,
 )
 from gretel_client.projects.common import DataSourceTypes, RefDataTypes

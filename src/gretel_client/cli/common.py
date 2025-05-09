@@ -13,16 +13,16 @@ from typing import Any, Callable, Optional, Union
 import click
 
 from gretel_client.config import (
-    add_session_context,
     ClientConfig,
-    configure_custom_logger,
     RunnerMode,
+    add_session_context,
+    configure_custom_logger,
 )
-from gretel_client.models.config import get_status_description, StatusDescriptions
+from gretel_client.models.config import StatusDescriptions, get_status_description
 from gretel_client.projects.common import WAIT_UNTIL_DONE
 from gretel_client.projects.jobs import Job, WaitTimeExceeded
 from gretel_client.projects.models import Model
-from gretel_client.projects.projects import get_project, Project
+from gretel_client.projects.projects import Project, get_project
 from gretel_client.rest.exceptions import ApiException
 
 ExT = Union[str, Exception]
@@ -318,7 +318,6 @@ def _determine_runner_mode(
 
 
 class SessionContext(object):
-
     _project: Optional[Project] = None
     """The project to use for this command (explicitly specified)."""
 
@@ -654,7 +653,6 @@ def poll_and_print(
     callback: Callable = None,
 ):
     try:
-
         for update in job.poll_logs_status(wait=wait, callback=callback):
             if update.transitioned:
                 sc.log.info(

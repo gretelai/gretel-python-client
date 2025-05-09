@@ -11,12 +11,12 @@ from azure.storage.blob import BlobServiceClient
 
 from gretel_client.config import DEFAULT_GRETEL_ARTIFACT_ENDPOINT
 from gretel_client.projects.artifact_handlers import (
-    _get_artifact_path_and_file_name,
     ArtifactsException,
     CloudArtifactsHandler,
+    HybridArtifactsHandler,
+    _get_artifact_path_and_file_name,
     get_transport_params,
     hybrid_handler,
-    HybridArtifactsHandler,
 )
 from gretel_client.projects.exceptions import DataSourceError
 

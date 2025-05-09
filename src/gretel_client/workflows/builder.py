@@ -36,7 +36,7 @@ from gretel_client.navigator_client_protocols import (
 from gretel_client.rest_v1.api.workflows_api import WorkflowsApi
 from gretel_client.workflows.configs.tasks import DataSource
 from gretel_client.workflows.configs.workflows import Globals, Step, Workflow
-from gretel_client.workflows.tasks import task_to_step, TaskConfig
+from gretel_client.workflows.tasks import TaskConfig, task_to_step
 from gretel_client.workflows.workflow import WorkflowRun
 
 logger = logging.getLogger(__name__)
@@ -138,7 +138,6 @@ class LogMessage:
 
 @dataclass
 class Message:
-
     step: str
     """The name of the step"""
 
@@ -218,7 +217,6 @@ def _default_preview_printer(log: Message | WorkflowInterruption):
 
 
 class WorkflowSessionManager:
-
     def __init__(self):
         self._workflow_id = None
 

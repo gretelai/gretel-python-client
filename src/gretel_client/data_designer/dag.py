@@ -29,10 +29,8 @@ def topologically_sort_columns(
     side_effect_dict = {c.name: list(c.side_effect_columns) for c in columns}
 
     for col in columns:
-
         dag.add_node(col.name)
         for req_col_name in col.required_columns:
-
             if req_col_name in dag_column_names:
                 if logger is not None:
                     logger.info(f"  |-- 🔗 `{col.name}` depends on `{req_col_name}`")

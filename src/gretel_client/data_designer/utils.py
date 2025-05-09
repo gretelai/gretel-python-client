@@ -12,7 +12,7 @@ from typing import Any, Callable, Generic, Self, Type, TypeVar
 import pandas as pd
 import requests
 
-from jinja2 import meta, TemplateSyntaxError
+from jinja2 import TemplateSyntaxError, meta
 from jinja2.sandbox import ImmutableSandboxedEnvironment
 from pydantic import BaseModel
 from pygments import highlight
@@ -58,9 +58,7 @@ def camel_to_snake(s: str) -> str:
 
 
 def make_date_obj_serializable(obj: dict) -> dict:
-
     class DateTimeEncoder(json.JSONEncoder):
-
         def default(self, obj: Any) -> Any:
             if isinstance(obj, date):
                 return obj.isoformat()

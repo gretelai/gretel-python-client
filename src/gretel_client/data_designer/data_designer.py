@@ -59,10 +59,10 @@ from gretel_client.data_designer.utils import (
     smart_load_dataframe,
 )
 from gretel_client.data_designer.validate import (
-    rich_print_violations,
-    validate_aidd,
     Violation,
     ViolationLevel,
+    rich_print_violations,
+    validate_aidd,
 )
 from gretel_client.data_designer.viz_tools import AIDDMetadata
 from gretel_client.files.interface import File
@@ -81,15 +81,13 @@ from gretel_client.workflows.configs.tasks import (
     ColumnConstraintParams,
     ConstraintType,
     DataSchema,
-)
-from gretel_client.workflows.configs.tasks import Dtype as ExprDtype
-from gretel_client.workflows.configs.tasks import (
     GenerateColumnsUsingSamplers,
     OutputType,
     PersonSamplerParams,
     SamplerType,
     SamplingStrategy,
 )
+from gretel_client.workflows.configs.tasks import Dtype as ExprDtype
 from gretel_client.workflows.configs.workflows import Globals, ModelConfig
 from gretel_client.workflows.manager import WorkflowManager
 from gretel_client.workflows.tasks import TaskConfig
@@ -103,7 +101,6 @@ _SAMPLER_PARAMS: dict[SamplerType, Type[BaseModel]] = get_sampler_params()
 
 
 def handle_workflow_validation_error(func):
-
     def wrapper(self, *args, **kwargs):
         try:
             return func(self, *args, **kwargs)

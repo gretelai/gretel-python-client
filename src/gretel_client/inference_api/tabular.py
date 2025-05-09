@@ -382,7 +382,7 @@ class TabularInferenceAPI(BaseInferenceAPI):
                     "last_name": "Simpson",
                     "favorite_band": "The Beatles",
                     "favorite_tv_show": "Friends",
-                }
+                },
             ]
 
             prompt = "Please add a column with the character's favorite food."
@@ -518,7 +518,9 @@ class TabularInferenceAPI(BaseInferenceAPI):
                     "customer_id": 123,
                 }
             ]
-            df = tabular.generate(prompt=prompt, num_records=10, sample_data=sample_data)
+            df = tabular.generate(
+                prompt=prompt, num_records=10, sample_data=sample_data
+            )
         """
         ref_data = {}
         if sample_data:

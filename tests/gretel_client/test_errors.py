@@ -16,11 +16,11 @@ import gretel_client.rest.rest
 
 from gretel_client.cli.cli import cli
 from gretel_client.cli.errors import (
-    _ErrorHandler,
     HandleApiClientError,
     HandleConnectionError,
     HandleGretelResourceNotFoundError,
     HandlePythonError,
+    _ErrorHandler,
 )
 from gretel_client.projects.models import ModelConfigError, ModelNotFoundError
 

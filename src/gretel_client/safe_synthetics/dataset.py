@@ -12,14 +12,14 @@ from typing_extensions import Self
 
 from gretel_client.navigator_client_protocols import GretelResourceProviderProtocol
 from gretel_client.safe_synthetics.blueprints import (
+    TaskConfigError,
     load_blueprint_or_config,
     resolve_task_blueprint,
-    TaskConfigError,
 )
 from gretel_client.workflows.builder import (
-    task_to_step,
     WorkflowBuilder,
     WorkflowValidationError,
+    task_to_step,
 )
 from gretel_client.workflows.configs.registry import Registry
 from gretel_client.workflows.configs.tasks import EvaluateSafeSyntheticsDataset
@@ -31,7 +31,6 @@ logger = logging.getLogger(__name__)
 
 
 def handle_workflow_validation_error(func):
-
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         try:
@@ -46,7 +45,6 @@ def handle_workflow_validation_error(func):
 
 
 class SafeSyntheticModelRegistry:
-
     def __init__(self, registry: Registry) -> None:
         self._model_mappings = {
             "tabular_ft": registry.TabularFt,
@@ -234,9 +232,9 @@ class SafeSyntheticDataset:
                 # by convention, num_records should be configured
                 # on the generate field.
                 if task_config_num_records_adjusted.get("generate"):
-                    task_config_num_records_adjusted["generate"][
-                        "num_records"
-                    ] = num_records
+                    task_config_num_records_adjusted["generate"]["num_records"] = (
+                        num_records
+                    )
                 else:
                     task_config_num_records_adjusted["generate"] = {
                         "num_records": num_records
@@ -375,7 +373,6 @@ class SafeSyntheticDataset:
 
 
 class SafeSyntheticDatasetFactory:
-
     def __init__(self, resource_provider: GretelResourceProviderProtocol) -> None:
         self._resource_provider = resource_provider
 

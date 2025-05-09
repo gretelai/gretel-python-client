@@ -13,22 +13,22 @@ from typing import Any, BinaryIO, Dict, Iterator, List, Optional, Type, TypeVar,
 
 from gretel_client.cli.utils.parser_utils import (
     DataSourceTypes,
-    ref_data_factory,
     RefDataTypes,
+    ref_data_factory,
 )
 from gretel_client.config import (
     ClientConfig,
+    RunnerMode,
     get_logger,
     get_session_config,
-    RunnerMode,
 )
 from gretel_client.dataframe import _DataFrameT
 from gretel_client.projects.artifact_handlers import (
     ArtifactsHandler,
-    cloud_handler,
     CloudArtifactsHandler,
-    hybrid_handler,
     HybridArtifactsHandler,
+    cloud_handler,
+    hybrid_handler,
 )
 from gretel_client.projects.common import f
 from gretel_client.projects.exceptions import GretelProjectError
@@ -340,7 +340,7 @@ class Project:
         read binary data within a context manager
 
         >>> with job.get_artifact_handle("report_json") as file:
-        ...   print(file.read())
+        ...     print(file.read())
 
         Args:
             key: Artifact key to download.

@@ -10,8 +10,8 @@ import pandas as pd
 from gretel_client.gretel.artifact_fetching import fetch_synthetic_data
 from gretel_client.gretel.config_setup import (
     CONFIG_SETUP_DICT,
-    extract_model_config_section,
     ModelType,
+    extract_model_config_section,
 )
 from gretel_client.gretel.exceptions import GretelJobSubmissionError
 from gretel_client.helpers import poll

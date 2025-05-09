@@ -9,7 +9,7 @@ from __future__ import annotations
 from contextlib import contextmanager
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Any, Dict, Generator, List, Optional, Union
 
 import pandas as pd
 

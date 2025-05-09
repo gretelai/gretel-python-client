@@ -6,10 +6,10 @@ from gretel_client.data_designer.types import (
     SamplerColumn,
 )
 from gretel_client.data_designer.validate import (
-    _validate_code_validation,
-    _validate_prompt_templates,
     ViolationLevel,
     ViolationType,
+    _validate_code_validation,
+    _validate_prompt_templates,
 )
 from gretel_client.workflows.configs.tasks import CodeLang, OutputType
 

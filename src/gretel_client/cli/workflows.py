@@ -8,7 +8,7 @@ from typing import Optional
 import click
 import yaml
 
-from gretel_client.cli.common import pass_session, project_option, SessionContext
+from gretel_client.cli.common import SessionContext, pass_session, project_option
 from gretel_client.config import ClientConfig, get_session_config
 from gretel_client.projects.common import WAIT_UNTIL_DONE
 from gretel_client.rest_v1.api.workflows_api import WorkflowsApi
@@ -19,7 +19,7 @@ from gretel_client.rest_v1.models import (
     WorkflowRun,
 )
 from gretel_client.workflows.runner_mode import RunnerMode
-from gretel_client.workflows.status import Status, TERMINAL_STATES
+from gretel_client.workflows.status import TERMINAL_STATES, Status
 
 
 @click.group(

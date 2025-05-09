@@ -1,13 +1,13 @@
 import pandas as pd
 
 from gretel_client.inference_api.third_party.base import (
+    InferenceParams,
+    NavigatorDataStream,
+    ResponseMetadata,
     get_model_id,
     handle_non_streaming_response,
     handle_streaming_chunk,
-    InferenceParams,
     maybe_parse_last_chunk,
-    NavigatorDataStream,
-    ResponseMetadata,
 )
 
 

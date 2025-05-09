@@ -1,4 +1,4 @@
-from typing import Optional, Protocol, Type, TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING, Optional, Protocol, Type, TypeVar
 
 from requests import Session
 

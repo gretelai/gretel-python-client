@@ -5,7 +5,7 @@ import time
 import webbrowser
 
 from pathlib import Path
-from typing import Callable, IO, Literal, Optional, Union
+from typing import IO, Callable, Literal, Optional, Union
 
 import pandas as pd
 
@@ -165,7 +165,7 @@ class Report:
     def display_in_notebook(self):
         """Display the HTML report in a notebook."""
         try:
-            from IPython.display import display, HTML
+            from IPython.display import HTML, display
         except ImportError:
             raise ImportError(
                 "IPython is required to display HTML Report in notebooks."

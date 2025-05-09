@@ -13,8 +13,8 @@ from gretel_client.tuner.config_sampler import (
     TunableSection,
 )
 from gretel_client.tuner.exceptions import (
-    InvalidSamplerConfigError,
     InvalidSampleTypeError,
+    InvalidSamplerConfigError,
     ModelMetricMismatchError,
 )
 from gretel_client.tuner.metrics import GretelMetricName, GretelQualityScore

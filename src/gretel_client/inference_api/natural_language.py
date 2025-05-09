@@ -61,7 +61,9 @@ class NaturalLanguageInferenceAPI(BaseInferenceAPI):
 
         Example::
 
-            from gretel_client.inference_api.natural_language import NaturalLanguageInferenceAPI
+            from gretel_client.inference_api.natural_language import (
+                NaturalLanguageInferenceAPI,
+            )
 
             llm = NaturalLanguageInferenceAPI(api_key="prompt")
 

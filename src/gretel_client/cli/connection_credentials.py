@@ -12,7 +12,6 @@ _URL_B64_RE = re.compile(r"^[\sa-zA-Z0-9_-]+(?:=\s*){,2}$")
 
 
 class CredentialsEncryptionAdapter:
-
     _encryption_mechanism_ref: Union[
         CredentialsEncryption, Callable[[], CredentialsEncryption]
     ]

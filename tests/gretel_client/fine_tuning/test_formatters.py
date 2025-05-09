@@ -16,9 +16,9 @@ from openai.types.chat.chat_completion_user_message_param import (
 )
 
 from gretel_client.fine_tuning.formatters import (
-    _convert_dict_columns_to_json,
     OpenAIFormatter,
     TextFormatter,
+    _convert_dict_columns_to_json,
 )
 
 _DATASET = pd.DataFrame(

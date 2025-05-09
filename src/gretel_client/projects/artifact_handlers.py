@@ -9,7 +9,7 @@ import uuid
 from contextlib import contextmanager
 from functools import cached_property
 from pathlib import Path
-from typing import Any, BinaryIO, Dict, IO, List, Optional, Protocol, Tuple, Type, Union
+from typing import IO, Any, BinaryIO, Dict, List, Optional, Protocol, Tuple, Type, Union
 from urllib.parse import urlparse
 
 import requests
@@ -20,9 +20,9 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fi
 
 import gretel_client.projects.common as common
 
-from gretel_client.config import ClientConfig, DEFAULT_GRETEL_ARTIFACT_ENDPOINT
+from gretel_client.config import DEFAULT_GRETEL_ARTIFACT_ENDPOINT, ClientConfig
 from gretel_client.dataframe import _DataFrameT
-from gretel_client.projects.common import f, ModelArtifact, ModelRunArtifact, Pathlike
+from gretel_client.projects.common import ModelArtifact, ModelRunArtifact, Pathlike, f
 from gretel_client.rest.api.projects_api import ProjectsApi
 from gretel_client.rest.exceptions import NotFoundException
 from gretel_client.rest.model.artifact import Artifact
@@ -544,7 +544,7 @@ def _download(
 
 @contextmanager
 def _get_artifact_path_and_file_name(
-    artifact_path: Union[Path, str, _DataFrameT]
+    artifact_path: Union[Path, str, _DataFrameT],
 ) -> Tuple[str, str]:
     if isinstance(artifact_path, _DataFrameT):
         with tempfile.NamedTemporaryFile(delete=False) as tmp_file:

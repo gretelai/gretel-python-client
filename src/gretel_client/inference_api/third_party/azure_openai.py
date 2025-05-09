@@ -12,12 +12,12 @@ from typing import TYPE_CHECKING
 from gretel_client.inference_api.third_party.base import (
     BaseThirdParty,
     DataStreamT,
-    get_model_id,
-    handle_non_streaming_response,
-    handle_streaming_chunk,
     InferenceParams,
     ResponseMetadata,
     UserReturnDataT,
+    get_model_id,
+    handle_non_streaming_response,
+    handle_streaming_chunk,
 )
 
 if TYPE_CHECKING:

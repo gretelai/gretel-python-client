@@ -8,7 +8,7 @@ import copy
 import json
 
 from pathlib import Path
-from typing import Iterator, List, Optional, Type, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Iterator, List, Optional, Type, Union
 
 import requests.exceptions
 import yaml
@@ -17,14 +17,14 @@ from smart_open import open
 
 from gretel_client.cli.utils.parser_utils import (
     DataSourceTypes,
-    ref_data_factory,
     RefData,
     RefDataTypes,
+    ref_data_factory,
 )
-from gretel_client.config import get_logger, RunnerMode
+from gretel_client.config import RunnerMode, get_logger
 from gretel_client.dataframe import _DataFrameT
 from gretel_client.models.config import get_model_type_config
-from gretel_client.projects.common import f, ModelArtifact, NO, YES
+from gretel_client.projects.common import NO, YES, ModelArtifact, f
 from gretel_client.projects.exceptions import (
     GretelJobNotFound,
     MaxConcurrentJobsException,

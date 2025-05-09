@@ -4,7 +4,7 @@ from typing import Optional
 
 import click
 
-from gretel_client.cli.common import pass_session, SessionContext
+from gretel_client.cli.common import SessionContext, pass_session
 from gretel_client.config import ClientConfig
 from gretel_client.rest_v1.api.clusters_api import ClustersApi
 from gretel_client.rest_v1.models import Cluster

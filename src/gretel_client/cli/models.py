@@ -6,17 +6,17 @@ from typing import Optional
 import click
 
 from gretel_client.cli.common import (
+    SessionContext,
     model_option,
     pass_session,
     poll_and_print,
     project_option,
     ref_data_option,
     runner_option,
-    SessionContext,
 )
 from gretel_client.cli.utils.parser_utils import ref_data_factory
-from gretel_client.models.config import get_model_type_config, GPU
-from gretel_client.projects.common import ModelArtifact, WAIT_UNTIL_DONE
+from gretel_client.models.config import GPU, get_model_type_config
+from gretel_client.projects.common import WAIT_UNTIL_DONE, ModelArtifact
 from gretel_client.projects.jobs import Status
 from gretel_client.projects.models import Model, RunnerMode
 
@@ -223,7 +223,7 @@ def create(
                 f"\tgretel models get --project {sc.project.name} --model-id {model.model_id} --output .\n"
             )
         )
-    sc.log.info(("Billing estimate" f"\n{json.dumps(model.billing_details, indent=4)}"))
+    sc.log.info((f"Billing estimate\n{json.dumps(model.billing_details, indent=4)}"))
 
     if model.status == Status.COMPLETED:
         sc.log.info(

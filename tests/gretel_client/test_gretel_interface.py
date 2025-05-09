@@ -1,7 +1,7 @@
 import json
 
 from dataclasses import dataclass
-from unittest.mock import call, Mock, patch
+from unittest.mock import Mock, call, patch
 
 import pytest
 

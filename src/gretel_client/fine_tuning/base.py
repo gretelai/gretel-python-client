@@ -8,7 +8,7 @@ import datetime
 import uuid
 
 from pathlib import Path
-from typing import Optional, TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import pandas as pd
 
@@ -87,7 +87,6 @@ class FineTuningCheckpoint(BaseModel):
 
 
 class BaseFineTuner:
-
     formatter: Optional[BaseFormatter]
     """
     Required unless restoring from a checkpoint.

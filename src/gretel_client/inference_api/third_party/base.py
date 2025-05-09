@@ -261,7 +261,6 @@ def _user_data_to_ref_data(data: UserDataT) -> dict[str, Any]:
 def consume_stream(
     stream: NavigatorDataStream, params: InferenceParams
 ) -> Tuple[Optional[ResponseMetadata], UserDataT]:
-
     generated_records: list[dict[str, Any]] = []
     with tqdm(
         total=params.num_records,

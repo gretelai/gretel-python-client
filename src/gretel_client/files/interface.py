@@ -4,7 +4,7 @@ import tempfile
 
 from io import BytesIO
 from pathlib import Path
-from typing import BinaryIO, IO, Optional, Union
+from typing import IO, BinaryIO, Optional, Union
 
 import pandas as pd
 import pyarrow.parquet

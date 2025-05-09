@@ -212,7 +212,6 @@ def _validate_prompt_templates(
 def _validate_code_validation(
     columns: list[AIDDColumnT],
 ) -> list[Violation]:
-
     code_validation_columns = [
         c for c in columns if isinstance(c, CodeValidationColumn)
     ]
@@ -220,7 +219,6 @@ def _validate_code_validation(
 
     violations = []
     for validation_column in code_validation_columns:
-
         # check that the target column exists
         if validation_column.target_column not in columns_by_name:
             message = f"Target code column '{validation_column.target_column}' not found in column list."

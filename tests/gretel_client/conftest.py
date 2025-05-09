@@ -4,9 +4,9 @@ from unittest.mock import MagicMock
 import pytest
 
 from gretel_client.config import (
-    configure_session,
     DEFAULT_GRETEL_ARTIFACT_ENDPOINT,
     DEFAULT_RUNNER,
+    configure_session,
 )
 from gretel_client.test_utils import TestGretelApiFactory, TestGretelResourceProvider
 

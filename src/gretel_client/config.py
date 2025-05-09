@@ -689,7 +689,6 @@ class DelegatingClientConfig(ClientConfig):
 
 
 class TaggedClientConfig(DelegatingClientConfig):
-
     _context: Context
 
     def __init__(self, delegate: ClientConfig, context: Context):

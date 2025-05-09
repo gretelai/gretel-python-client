@@ -14,19 +14,19 @@ import requests
 from gretel_client._api.api_client import ApiClient as V2ApiClient
 from gretel_client._api.configuration import Configuration as V2Configuration
 from gretel_client.config import (
-    _load_config,
     ClientConfig,
     DefaultClientConfig,
     GretelClientConfigurationError,
     T,
+    _load_config,
 )
 from gretel_client.data_designer import DataDesignerFactory
 from gretel_client.files.interface import FileClient
 from gretel_client.projects.exceptions import GretelProjectError
 from gretel_client.projects.projects import (
+    Project,
     create_or_get_unique_project,
     get_project,
-    Project,
     tmp_project,
 )
 from gretel_client.safe_synthetics.dataset import SafeSyntheticDatasetFactory
@@ -313,7 +313,6 @@ class Gretel:
 
             # Otherwise try and load the project by name.
             if create_project:
-
                 # It's possible we receive a project_name produced by
                 # create_or_get_unique_project, which means it already
                 # contains a unique key, eg my-project-92fbf5bd66089f1. If

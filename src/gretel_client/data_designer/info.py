@@ -15,7 +15,6 @@ from gretel_client.workflows.manager import (
 
 
 class AIDDInfo:
-
     def __init__(self, model_suite: ModelSuite, workflow_manager: WorkflowManager):
         self._model_suite = model_suite
         self._workflow_manager = workflow_manager

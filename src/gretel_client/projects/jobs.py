@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import (
+    TYPE_CHECKING,
     BinaryIO,
     Callable,
     Iterator,
@@ -17,7 +18,6 @@ from typing import (
     Optional,
     Tuple,
     Type,
-    TYPE_CHECKING,
     Union,
 )
 
@@ -26,16 +26,16 @@ import smart_open
 import gretel_client.rest.exceptions
 
 from gretel_client.cli.utils.parser_utils import RefData
-from gretel_client.config import ClientConfig, get_logger, RunnerMode
+from gretel_client.config import ClientConfig, RunnerMode, get_logger
 from gretel_client.dataframe import _DataFrameT
 from gretel_client.models.config import get_model_type_config
 from gretel_client.projects.artifact_handlers import (
     ArtifactsHandler,
     CloudArtifactsHandler,
-    get_transport_params,
     HybridArtifactsHandler,
+    get_transport_params,
 )
-from gretel_client.projects.common import f, ModelArtifact, WAIT_UNTIL_DONE
+from gretel_client.projects.common import WAIT_UNTIL_DONE, ModelArtifact, f
 from gretel_client.projects.exceptions import (
     CreditExhaustException,
     DiscontinuedModelException,
@@ -384,7 +384,7 @@ class Job(ABC):
         read binary data within a context manager
 
         >>> with job.get_artifact_handle("report_json") as file:
-        ...   print(file.read())
+        ...     print(file.read())
 
         Args:
             artifact_key: Artifact type to download.

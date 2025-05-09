@@ -6,9 +6,9 @@ from typing import Optional
 from gretel_client.config import ClientConfig, configure_session, get_session_config
 from gretel_client.inference_api.base import (
     BaseInferenceAPI,
-    get_full_navigator_model_list,
     GretelInferenceAPIError,
     InferenceAPIModelType,
+    get_full_navigator_model_list,
 )
 from gretel_client.inference_api.natural_language import NaturalLanguageInferenceAPI
 from gretel_client.inference_api.tabular import TabularInferenceAPI

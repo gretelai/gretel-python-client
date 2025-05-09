@@ -1,7 +1,7 @@
 import click
 
 from gretel_client.cli.artifacts import artifacts
-from gretel_client.cli.common import pass_session, SessionContext
+from gretel_client.cli.common import SessionContext, pass_session
 from gretel_client.cli.connections import connections
 from gretel_client.cli.errors import ExceptionHandler
 from gretel_client.cli.hybrid import hybrid
@@ -10,12 +10,12 @@ from gretel_client.cli.projects import projects
 from gretel_client.cli.records import records
 from gretel_client.cli.workflows import workflows
 from gretel_client.config import (
+    GRETEL_TENANT_UNSET,
     ClientConfig,
+    RunnerMode,
     configure_session,
     get_client_version,
     get_session_config,
-    GRETEL_TENANT_UNSET,
-    RunnerMode,
     write_config,
 )
 from gretel_client.projects.common import f

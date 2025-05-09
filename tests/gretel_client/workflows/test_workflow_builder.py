@@ -1,7 +1,7 @@
 import datetime
 import json
 
-from unittest.mock import ANY, create_autospec, Mock, patch
+from unittest.mock import ANY, Mock, create_autospec, patch
 
 import pytest
 
@@ -103,8 +103,10 @@ def test_workflow_task_validation_error(
     mock_response.status = 422
     mock_response.body = '{"message": "Validation error", "details": [{"field_violations": [{"field": "num_records", "error_message": "Field is required"}]}]}'
 
-    api_provider_mock.get_mock(WorkflowsApi).validate_workflow_task.side_effect = (
-        ApiException(status=422, reason="Unprocessable Entity", body=mock_response.body)
+    api_provider_mock.get_mock(
+        WorkflowsApi
+    ).validate_workflow_task.side_effect = ApiException(
+        status=422, reason="Unprocessable Entity", body=mock_response.body
     )
 
     with pytest.raises(WorkflowValidationError) as excinfo:
@@ -183,9 +185,9 @@ def test_does_submit_batch_job(
     mock_response.workflow_id = "w_1"
 
     # Configure the mock API
-    api_provider_mock.get_mock(WorkflowsApi).exec_workflow_batch.return_value = (
-        mock_response
-    )
+    api_provider_mock.get_mock(
+        WorkflowsApi
+    ).exec_workflow_batch.return_value = mock_response
 
     # Add a step to the workflow
     builder.add_step(

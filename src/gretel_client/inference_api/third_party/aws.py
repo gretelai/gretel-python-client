@@ -16,26 +16,25 @@ from typing import TYPE_CHECKING
 # enforce it at the class level (on init).
 
 if TYPE_CHECKING:
-    from mypy_boto3_sagemaker_runtime import SageMakerRuntimeClient
     from botocore.client import BaseClient
+    from mypy_boto3_sagemaker_runtime import SageMakerRuntimeClient
 
 from gretel_client.inference_api.third_party.base import (
     BaseThirdParty,
     DataStreamT,
+    InferenceParams,
+    ResponseMetadata,
+    UserReturnDataT,
     get_model_id,
     handle_non_streaming_response,
     handle_streaming_chunk,
-    InferenceParams,
     maybe_parse_last_chunk,
-    ResponseMetadata,
-    UserReturnDataT,
 )
 
 
 def _create_stream_from_bedrock(
     client: BaseClient, endpoint_arn: str, params: InferenceParams
 ) -> DataStreamT:
-
     payload = params.as_openai_payload
     metadata = ResponseMetadata()
 
@@ -50,7 +49,9 @@ def _create_stream_from_bedrock(
         metadata.usage = response_dict.get("usage")
         metadata.model_id = get_model_id(response_dict)
     else:
-        response = client.invoke_model_with_response_stream(modelId=endpoint_arn, body=json.dumps(payload))  # type: ignore
+        response = client.invoke_model_with_response_stream(
+            modelId=endpoint_arn, body=json.dumps(payload)
+        )  # type: ignore
         event_stream = response["body"]
         chunk_buffer = StringIO()
         for event in event_stream:
@@ -76,7 +77,6 @@ def _create_stream_from_bedrock(
 def _create_stream_from_sagemaker(
     client: SageMakerRuntimeClient, endpoint_name: str, params: InferenceParams
 ) -> DataStreamT:
-
     payload = params.as_openai_payload
     metadata = ResponseMetadata()
 
@@ -144,7 +144,6 @@ class BedrockAdapter(BaseThirdParty):
         self,
         params,
     ) -> UserReturnDataT:
-
         base_stream = _create_stream_from_bedrock(
             self._client, self._endpoint_arn, params
         )
@@ -175,7 +174,6 @@ class SagemakerAdapter(BaseThirdParty):
         self,
         params,
     ) -> UserReturnDataT:
-
         base_stream = _create_stream_from_sagemaker(
             self._client, self._endpoint_name, params
         )

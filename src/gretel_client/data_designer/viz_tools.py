@@ -2,7 +2,7 @@ import json
 import numbers
 
 from collections import OrderedDict
-from typing import Self, TYPE_CHECKING
+from typing import TYPE_CHECKING, Self
 
 import numpy as np
 import pandas as pd
@@ -232,7 +232,7 @@ def display_sample_record(
             for measure, results in judge.items():
                 table.add_column(measure)
                 row.append(
-                    f"score: {results['score']}\n" f"reasoning: {results['reasoning']}"
+                    f"score: {results['score']}\nreasoning: {results['reasoning']}"
                 )
             table.add_row(*row)
             render_list.append(_pad_console_element(table, (1, 0, 1, 0)))
@@ -282,7 +282,6 @@ def display_preview_evaluation_summary(
     hist_name_color: str = DEFAULT_HIST_NAME_COLOR,
     hist_value_color: str = DEFAULT_HIST_VALUE_COLOR,
 ):
-
     render_list = []
 
     dash_sep = Text("-" * 100, style="bold")

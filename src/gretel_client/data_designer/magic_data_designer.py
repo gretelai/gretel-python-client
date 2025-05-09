@@ -230,7 +230,7 @@ def pprint_datacolumn(column: AIDDColumnT, use_html: bool = True) -> None:
     data column class.
     """
     if is_jupyter() and use_html:
-        from IPython.display import display, HTML
+        from IPython.display import HTML, display
 
         html_repr = column._repr_html_()
         if html_repr is not None:
@@ -693,8 +693,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
 
         ```python
         designer.add_column(
-            "question",
-            "Ask {{ farmer.first_name }} about the price of apples today."
+            "question", "Ask {{ farmer.first_name }} about the price of apples today."
         )
 
         designer.magic.refine_prompt("question", "User the farmer's full name.")
@@ -703,7 +702,9 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
         designer.magic.refine_prompt("question", "Ask about pears instead.")
         # "Ask {{ farmer.first_name }} {{ farmer.last_name }} about the price of pears today."
 
-        designer.magic.refine_prompt("question", "Use Jinja to ask for a random poundage of pears.")
+        designer.magic.refine_prompt(
+            "question", "Use Jinja to ask for a random poundage of pears."
+        )
         # Ask {{ farmer.first_name }} {{ farmer.last_name }} about the price of
         # {{ range(1, 10)|random }} pounds of pears today.
         ```
@@ -714,8 +715,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
 
         ```python
         designer.add_column(
-            "question",
-            "Ask {{ farmer.first_name }} about the price of apples today."
+            "question", "Ask {{ farmer.first_name }} about the price of apples today."
         )
 
         designer.magic.refine_prompt("question")
@@ -732,7 +732,6 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
         # You are speaking with {{ farmer.first_name }} {{ farmer.last_name }}, a local farmer.
         # Please greet {{ farmer.first_name }} politely and ask about the price of apples today.
         # Your question should be clear and to the point.
-
         ```
 
 
@@ -860,7 +859,7 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
         designer.add_column(
             name="programming_concepts",
             type="category",
-            params={"values": ["Linked Lists"]}
+            params={"values": ["Linked Lists"]},
         )
 
         aidd.magic.extend_category("programming_concepts")
@@ -868,7 +867,6 @@ class MagicDataDesignerEditor(Generic[DataDesignerT]):
 
         aidd.magic.extend_category("programming_concepts", n=1)
         # ['Linked Lists', 'Trees', 'Graphs', 'Hash Tables', 'Heaps', 'Stacks', 'Queues']
-
         ```
 
         Args:

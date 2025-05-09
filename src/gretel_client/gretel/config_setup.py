@@ -216,8 +216,8 @@ def create_model_config_from_base(
         # Create a GPT config with a custom column name and 100 epochs.
         config = create_model_config_from_base(
             base_config="natural-language",
-            column_name="custom_name", # not nested in a config section
-            params={"epochs": 100},    # nested in the `params` section
+            column_name="custom_name",  # not nested in a config section
+            params={"epochs": 100},  # nested in the `params` section
         )
     """
     config = smart_read_model_config(base_config)

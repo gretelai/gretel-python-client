@@ -1,7 +1,7 @@
 import os
 
 from typing import Callable
-from unittest.mock import ANY, call, MagicMock, patch
+from unittest.mock import ANY, MagicMock, call, patch
 
 import pytest
 
@@ -11,14 +11,14 @@ from gretel_client.cli.cli import cli
 from gretel_client.cli.hybrid import ClusterError
 from gretel_client.cli.utils.parser_utils import RefData
 from gretel_client.config import (
-    ClientConfig,
-    configure_session,
-    get_session_config,
     GRETEL_API_KEY,
     GRETEL_CONFIG_FILE,
     GRETEL_ENDPOINT,
     GRETEL_PROJECT,
+    ClientConfig,
     RunnerMode,
+    configure_session,
+    get_session_config,
 )
 from gretel_client.projects.jobs import Status
 from gretel_client.rest_v1.models.cluster import Cluster

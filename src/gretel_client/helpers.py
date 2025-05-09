@@ -29,7 +29,7 @@ def _progress_bar(
 ):
     x = int(size * current / total)
     print(
-        f'\r{prefix}[{"█"*x}{"."*(size-x)}] {current}/{total}{suffix}',
+        f"\r{prefix}[{'█' * x}{'.' * (size - x)}] {current}/{total}{suffix}",
         end="",
         flush=True,
     )
@@ -300,7 +300,7 @@ def display_terminal_warning(message):
 
 
 def display_jupyter_warning(message, emoji):
-    from IPython.display import display, HTML
+    from IPython.display import HTML, display
 
     warning_html = f"""
     <div style="background-color: #FFF3CD; 

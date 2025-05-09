@@ -1,6 +1,6 @@
 import inspect
 
-from typing import cast, Type, TypeVar
+from typing import Type, TypeVar, cast
 
 from gretel_client.workflows.configs.registry import Registry
 
