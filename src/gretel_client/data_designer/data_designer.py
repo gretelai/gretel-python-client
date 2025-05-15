@@ -761,6 +761,10 @@ class DataDesigner:
         for column_name in sorted_columns_names:
             column = self.get_column(column_name)
             next_step = self._get_next_dag_step(column_name)
+
+            if hasattr(next_step, "num_records"):
+                next_step.num_records = num_records
+
             builder.add_step(
                 step=next_step,
                 step_inputs=[last_step_added],
