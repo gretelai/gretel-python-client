@@ -521,3 +521,46 @@ def test_get_column_from_kwargs():
     assert person_sampler_column_no_params.params.locale == "en_US"
     assert person_sampler_column_no_params.params.sex is None
     assert person_sampler_column_no_params.params.city is None
+
+
+def _minimal_designer(resource_provider):
+    """Helper to build a designer with at least one sampler column so workflow validation passes."""
+    dd = DataDesigner(gretel_resource_provider=resource_provider)
+    dd.add_column(name="uid", type="uuid", params={})
+    return dd
+
+
+def test_drop_flag_adds_dropcolumns_step(mock_low_level_sdk_resources):
+    dd = _minimal_designer(mock_low_level_sdk_resources.mock_resource_provider)
+    dd.add_column(
+        name="dude", type="category", params={"values": ["John", "Jane"]}, drop=True
+    )
+    dd.preview()
+
+    steps = [
+        c[2]["step"]
+        for c in mock_low_level_sdk_resources.mock_workflow_builder.add_step.mock_calls
+    ]
+    drop_step = next((s for s in steps if isinstance(s, DropColumns)), None)
+
+    assert drop_step is not None
+    assert drop_step.columns == ["dude"]
+
+
+def test_drop_flag_false_retains_column(mock_low_level_sdk_resources):
+    dd = _minimal_designer(mock_low_level_sdk_resources.mock_resource_provider)
+    dd.add_column(
+        name="dude",
+        type="category",
+        params={"values": ["John", "Jane"]},
+        drop=False,
+    )
+    dd.preview()
+
+    assert "dude" not in dd._drop_columns
+
+    steps = [
+        call[2]["step"]
+        for call in mock_low_level_sdk_resources.mock_workflow_builder.add_step.mock_calls
+    ]
+    assert next((s for s in steps if isinstance(s, DropColumns)), None) is None

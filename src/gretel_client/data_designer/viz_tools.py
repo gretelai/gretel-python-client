@@ -54,6 +54,7 @@ class AIDDMetadata(BaseModel):
     validation_columns: list[str] = []
     expression_columns: list[str] = []
     evaluation_columns: list[str] = []
+    drop_columns: list[str] = []
     person_samplers: list[str] = []
     code_langs: list[CodeLang | str] = []
     eval_type: LLMJudgePromptTemplateType | None = None
@@ -104,6 +105,7 @@ class AIDDMetadata(BaseModel):
             llm_judge_columns=[col.name for col in aidd.llm_judge_columns],
             validation_columns=code_validation_columns,
             expression_columns=[col.name for col in aidd.expression_columns],
+            drop_columns=aidd._drop_columns,
             person_samplers=list(aidd._latent_person_columns.keys()),
             code_langs=[col.output_format for col in aidd.llm_code_columns],
             eval_type=None,
@@ -161,7 +163,7 @@ def display_sample_record(
         table = Table(title="Seed Columns", **table_kws)
         table.add_column("Name")
         table.add_column("Value")
-        for col in aidd_metadata.seed_columns:
+        for col in aidd_metadata.seed_columns and col not in aidd_metadata.drop_columns:
             table.add_row(col, _convert_to_row_element(record[col]))
         render_list.append(_pad_console_element(table))
 
@@ -176,7 +178,7 @@ def display_sample_record(
         table = Table(title="Generated Columns", **table_kws)
         table.add_column("Name")
         table.add_column("Value")
-        for col in [c for c in non_code_columns]:
+        for col in [c for c in non_code_columns if c not in aidd_metadata.drop_columns]:
             table.add_row(col, _convert_to_row_element(record[col]))
         render_list.append(_pad_console_element(table))
 
@@ -207,7 +209,11 @@ def display_sample_record(
     if len(aidd_metadata.validation_columns) > 0:
         table = Table(title="Validation", **table_kws)
         row = []
-        for col in aidd_metadata.validation_columns:
+        for col in [
+            c
+            for c in aidd_metadata.validation_columns
+            if c not in aidd_metadata.drop_columns
+        ]:
             value = record[col]
             if isinstance(value, numbers.Number):
                 table.add_column(col)
@@ -224,7 +230,11 @@ def display_sample_record(
         render_list.append(_pad_console_element(table, (1, 0, 1, 0)))
 
     if len(aidd_metadata.llm_judge_columns) > 0:
-        for col in aidd_metadata.llm_judge_columns:
+        for col in [
+            c
+            for c in aidd_metadata.llm_judge_columns
+            if c not in aidd_metadata.drop_columns
+        ]:
             table = Table(title=f"LLM-as-a-Judge: {col}", **table_kws)
             row = []
             judge = record[col]

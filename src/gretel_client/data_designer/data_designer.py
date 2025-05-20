@@ -408,9 +408,15 @@ class DataDesigner:
         self._evaluation_report = GeneralDatasetEvaluation(
             settings=settings
             or EvaluateDataDesignerDatasetSettings(
-                llm_judge_columns=[c.name for c in self.llm_judge_columns],
-                validation_columns=[c.name for c in self.code_validation_columns],
-                defined_categorical_columns=[c.name for c in self._categorical_columns],
+                llm_judge_columns=[
+                    c.name for c in self.llm_judge_columns if not c.drop
+                ],
+                validation_columns=[
+                    c.name for c in self.code_validation_columns if not c.drop
+                ],
+                defined_categorical_columns=[
+                    c.name for c in self._categorical_columns if not c.drop
+                ],
             )
         )
         return self
@@ -592,6 +598,21 @@ class DataDesigner:
         self._build_workflow()
         # Run semantic validation on full schema.
         violations = self._run_semantic_validation()
+
+        # Ensure all columns are not dropped
+        remaining_cols = [
+            name
+            for name in self._columns
+            if name not in self._latent_person_columns
+            and name not in self._drop_columns
+        ]
+
+        if len(remaining_cols) == 0:
+            raise DataDesignerValidationError(
+                "🛑 All generated columns are configured to be dropped. Please mark at "
+                "least one column with `drop=False`."
+            )
+
         if len(violations) == 0:
             logger.info("Validation passed ✅")
         return self
@@ -663,6 +684,13 @@ class DataDesigner:
             col
             for col in self.sampler_columns
             if (col.type == SamplerType.CATEGORY or col.type == SamplerType.SUBCATEGORY)
+        ]
+
+    @property
+    def _drop_columns(self) -> list[str]:
+        """Names of columns marked with drop=True (computed on demand)."""
+        return [
+            name for name, col in self._columns.items() if getattr(col, "drop", False)
         ]
 
     @handle_workflow_validation_error
@@ -773,7 +801,7 @@ class DataDesigner:
             last_step_added = next_step
 
         ########################################################
-        # Drop all latent columns from the final dataset
+        # Drop intermediate columns (`drop=True`) and latent person columns
         ########################################################
 
         if len(self._latent_person_columns) > 0:
@@ -789,6 +817,18 @@ class DataDesigner:
                 ),
             )
             last_step_added = drop_latent_columns_step
+
+        if self._drop_columns:
+            drop_cols_step = self._task_registry.DropColumns(columns=self._drop_columns)
+            builder.add_step(
+                step=drop_cols_step,
+                step_inputs=[last_step_added],
+                step_name=(
+                    f"dropping-{len(self._drop_columns)}-intermediate-column"
+                    f"{'s' if len(self._drop_columns) != 1 else ''}"
+                ),
+            )
+            last_step_added = drop_cols_step
 
         ########################################################
         # Run dataset evaluation if requested
@@ -806,11 +846,15 @@ class DataDesigner:
                 )
             else:
                 general_eval_step = self._task_registry.EvaluateDataDesignerDataset(
-                    llm_judge_columns=[c.name for c in self.llm_judge_columns],
+                    llm_judge_columns=[
+                        c.name for c in self.llm_judge_columns if not c.drop
+                    ],
                     columns_to_ignore=settings.columns_to_ignore,
-                    validation_columns=settings.validation_columns,
+                    validation_columns=[
+                        c.name for c in self.code_validation_columns if not c.drop
+                    ],
                     defined_categorical_columns=[
-                        c.name for c in self._categorical_columns
+                        c.name for c in self._categorical_columns if not c.drop
                     ],
                 )
             builder.add_step(

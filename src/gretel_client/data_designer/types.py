@@ -128,6 +128,17 @@ class SeedDataset(AIDDConfigBase):
 ##########################################################
 
 
+class WithDropColumnMixin(BaseModel):
+    """Adds a `drop` flag to indicate the column should be
+    removed from the final dataset before evaluation."""
+
+    drop: bool = Field(
+        default=False,
+        description="If true, remove this column from the final dataset "
+        "before evaluation.",
+    )
+
+
 class WithDAGColumnMixin:
     @property
     def required_columns(self) -> list[str]:
@@ -138,7 +149,7 @@ class WithDAGColumnMixin:
         return []
 
 
-class SamplerColumn(WithPrettyRepr, tasks.ConditionalDataColumn):
+class SamplerColumn(WithDropColumnMixin, WithPrettyRepr, tasks.ConditionalDataColumn):
     """AIDD column that uses a sampler to generate data.
 
     Sampler columns can be conditioned on other sampler columns using the `conditional_params` argument,
@@ -208,7 +219,10 @@ class SamplerColumn(WithPrettyRepr, tasks.ConditionalDataColumn):
 
 
 class LLMGenColumn(
-    WithPrettyRepr, tasks.GenerateColumnFromTemplateV2, WithDAGColumnMixin
+    WithDropColumnMixin,
+    WithPrettyRepr,
+    tasks.GenerateColumnFromTemplateV2,
+    WithDAGColumnMixin,
 ):
     @model_validator(mode="before")
     @classmethod
@@ -306,7 +320,9 @@ class LLMStructuredColumn(LLMGenColumn):
     output_type: OutputType = Field(default=OutputType.STRUCTURED)
 
 
-class LLMJudgeColumn(WithPrettyRepr, tasks.JudgeWithLlm, WithDAGColumnMixin):
+class LLMJudgeColumn(
+    WithDropColumnMixin, WithPrettyRepr, tasks.JudgeWithLlm, WithDAGColumnMixin
+):
     """AIDD column for llm-as-a-judge with custom rubrics.
 
     Args:
@@ -334,7 +350,9 @@ class LLMJudgeColumn(WithPrettyRepr, tasks.JudgeWithLlm, WithDAGColumnMixin):
         return f"using-llm-to-judge-column-{self.name}"
 
 
-class CodeValidationColumn(WithPrettyRepr, AIDDConfigBase, WithDAGColumnMixin):
+class CodeValidationColumn(
+    WithDropColumnMixin, WithPrettyRepr, AIDDConfigBase, WithDAGColumnMixin
+):
     """AIDD column for validating code in another column.
 
     Code validation is currently supported for Python and SQL.
@@ -371,7 +389,10 @@ class CodeValidationColumn(WithPrettyRepr, AIDDConfigBase, WithDAGColumnMixin):
 
 
 class ExpressionColumn(
-    WithPrettyRepr, tasks.GenerateColumnFromExpression, WithDAGColumnMixin
+    WithDropColumnMixin,
+    WithPrettyRepr,
+    tasks.GenerateColumnFromExpression,
+    WithDAGColumnMixin,
 ):
     """AIDD column for generated data based on jinja2 expressions.
 
