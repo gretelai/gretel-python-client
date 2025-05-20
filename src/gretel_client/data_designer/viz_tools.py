@@ -163,8 +163,9 @@ def display_sample_record(
         table = Table(title="Seed Columns", **table_kws)
         table.add_column("Name")
         table.add_column("Value")
-        for col in aidd_metadata.seed_columns and col not in aidd_metadata.drop_columns:
-            table.add_row(col, _convert_to_row_element(record[col]))
+        for col in aidd_metadata.seed_columns:
+            if col not in aidd_metadata.drop_columns:
+                table.add_row(col, _convert_to_row_element(record[col]))
         render_list.append(_pad_console_element(table))
 
     non_code_columns = (
