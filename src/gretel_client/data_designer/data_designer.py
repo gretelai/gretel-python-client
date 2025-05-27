@@ -845,17 +845,32 @@ class DataDesigner:
                     columns_to_ignore=settings.columns_to_ignore,
                 )
             else:
+                llm_judge_columns = (
+                    settings.llm_judge_columns
+                    if settings.llm_judge_columns is not None
+                    else [c.name for c in self.llm_judge_columns if not c.drop]
+                )
+                columns_to_ignore = (
+                    settings.columns_to_ignore
+                    if settings.columns_to_ignore is not None
+                    else []
+                )
+                validation_columns = (
+                    settings.validation_columns
+                    if settings.validation_columns is not None
+                    else [c.name for c in self.code_validation_columns if not c.drop]
+                )
+                defined_categorical_columns = (
+                    settings.defined_categorical_columns
+                    if settings.defined_categorical_columns is not None
+                    else [c.name for c in self._categorical_columns if not c.drop]
+                )
+
                 general_eval_step = self._task_registry.EvaluateDataDesignerDataset(
-                    llm_judge_columns=[
-                        c.name for c in self.llm_judge_columns if not c.drop
-                    ],
-                    columns_to_ignore=settings.columns_to_ignore,
-                    validation_columns=[
-                        c.name for c in self.code_validation_columns if not c.drop
-                    ],
-                    defined_categorical_columns=[
-                        c.name for c in self._categorical_columns if not c.drop
-                    ],
+                    llm_judge_columns=llm_judge_columns,
+                    columns_to_ignore=columns_to_ignore,
+                    validation_columns=validation_columns,
+                    defined_categorical_columns=defined_categorical_columns,
                 )
             builder.add_step(
                 step=general_eval_step,
