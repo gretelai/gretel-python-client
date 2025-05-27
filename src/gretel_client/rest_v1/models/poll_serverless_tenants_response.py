@@ -90,11 +90,11 @@ class PollServerlessTenantsResponse(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "tenants": (
-                    [ServerlessTenant.from_dict(_item) for _item in obj["tenants"]]
-                    if obj.get("tenants") is not None
-                    else None
-                )
+                "tenants": [
+                    ServerlessTenant.from_dict(_item) for _item in obj["tenants"]
+                ]
+                if obj.get("tenants") is not None
+                else None
             }
         )
         return _obj

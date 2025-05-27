@@ -91,11 +91,11 @@ class ModelConfigInput(BaseModel):
         _obj = cls.model_validate(
             {
                 "alias": obj.get("alias"),
-                "generation_parameters": (
-                    GenerationParametersInput.from_dict(obj["generation_parameters"])
-                    if obj.get("generation_parameters") is not None
-                    else None
-                ),
+                "generation_parameters": GenerationParametersInput.from_dict(
+                    obj["generation_parameters"]
+                )
+                if obj.get("generation_parameters") is not None
+                else None,
                 "model_name": obj.get("model_name"),
             }
         )

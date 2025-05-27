@@ -161,27 +161,23 @@ class CreateServerlessTenantRequest(BaseModel):
             {
                 "name": obj.get("name"),
                 "domain_guid": obj.get("domain_guid"),
-                "cloud_provider": (
-                    ServerlessTenantCloudProviderInfo.from_dict(obj["cloud_provider"])
-                    if obj.get("cloud_provider") is not None
-                    else None
-                ),
+                "cloud_provider": ServerlessTenantCloudProviderInfo.from_dict(
+                    obj["cloud_provider"]
+                )
+                if obj.get("cloud_provider") is not None
+                else None,
                 "tier": obj.get("tier"),
                 "revision": obj.get("revision"),
                 "tenant_type": obj.get("tenant_type"),
                 "branch": obj.get("branch"),
                 "state": obj.get("state"),
                 "disk_size_gb": obj.get("disk_size_gb"),
-                "keys": (
-                    [ConfigTenantKey.from_dict(_item) for _item in obj["keys"]]
-                    if obj.get("keys") is not None
-                    else None
-                ),
-                "limits": (
-                    ConfigTenantLimits.from_dict(obj["limits"])
-                    if obj.get("limits") is not None
-                    else None
-                ),
+                "keys": [ConfigTenantKey.from_dict(_item) for _item in obj["keys"]]
+                if obj.get("keys") is not None
+                else None,
+                "limits": ConfigTenantLimits.from_dict(obj["limits"])
+                if obj.get("limits") is not None
+                else None,
             }
         )
         return _obj

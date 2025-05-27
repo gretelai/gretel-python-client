@@ -90,11 +90,9 @@ class ListClustersResponse(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "clusters": (
-                    [Cluster.from_dict(_item) for _item in obj["clusters"]]
-                    if obj.get("clusters") is not None
-                    else None
-                )
+                "clusters": [Cluster.from_dict(_item) for _item in obj["clusters"]]
+                if obj.get("clusters") is not None
+                else None
             }
         )
         return _obj

@@ -103,11 +103,11 @@ class Status(BaseModel):
             {
                 "code": obj.get("code"),
                 "message": obj.get("message"),
-                "details": (
-                    [GoogleProtobufAny.from_dict(_item) for _item in obj["details"]]
-                    if obj.get("details") is not None
-                    else None
-                ),
+                "details": [
+                    GoogleProtobufAny.from_dict(_item) for _item in obj["details"]
+                ]
+                if obj.get("details") is not None
+                else None,
             }
         )
         return _obj

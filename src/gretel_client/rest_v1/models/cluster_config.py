@@ -88,11 +88,11 @@ class ClusterConfig(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "asymmetric_key": (
-                    ConfigAsymmetricKeyMetadata.from_dict(obj["asymmetric_key"])
-                    if obj.get("asymmetric_key") is not None
-                    else None
+                "asymmetric_key": ConfigAsymmetricKeyMetadata.from_dict(
+                    obj["asymmetric_key"]
                 )
+                if obj.get("asymmetric_key") is not None
+                else None
             }
         )
         return _obj

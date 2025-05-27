@@ -91,11 +91,9 @@ class ManualDistribution(BaseModel):
         _obj = cls.model_validate(
             {
                 "distribution_type": obj.get("distribution_type"),
-                "params": (
-                    ManualDistributionParams.from_dict(obj["params"])
-                    if obj.get("params") is not None
-                    else None
-                ),
+                "params": ManualDistributionParams.from_dict(obj["params"])
+                if obj.get("params") is not None
+                else None,
             }
         )
         return _obj

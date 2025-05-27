@@ -152,34 +152,28 @@ class UpdateServerlessTenantRequest(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "enabled_llms": (
-                    [LlmConfig.from_dict(_item) for _item in obj["enabled_llms"]]
-                    if obj.get("enabled_llms") is not None
-                    else None
-                ),
+                "enabled_llms": [
+                    LlmConfig.from_dict(_item) for _item in obj["enabled_llms"]
+                ]
+                if obj.get("enabled_llms") is not None
+                else None,
                 "tier": obj.get("tier"),
                 "revision": obj.get("revision"),
                 "tenant_type": obj.get("tenant_type"),
                 "branch": obj.get("branch"),
                 "state": obj.get("state"),
                 "disk_size_gb": obj.get("disk_size_gb"),
-                "keys": (
-                    [ConfigTenantKey.from_dict(_item) for _item in obj["keys"]]
-                    if obj.get("keys") is not None
-                    else None
-                ),
-                "provisioning_state": (
-                    ServerlessTenantProvisioningState.from_dict(
-                        obj["provisioning_state"]
-                    )
-                    if obj.get("provisioning_state") is not None
-                    else None
-                ),
-                "limits": (
-                    ConfigTenantLimits.from_dict(obj["limits"])
-                    if obj.get("limits") is not None
-                    else None
-                ),
+                "keys": [ConfigTenantKey.from_dict(_item) for _item in obj["keys"]]
+                if obj.get("keys") is not None
+                else None,
+                "provisioning_state": ServerlessTenantProvisioningState.from_dict(
+                    obj["provisioning_state"]
+                )
+                if obj.get("provisioning_state") is not None
+                else None,
+                "limits": ConfigTenantLimits.from_dict(obj["limits"])
+                if obj.get("limits") is not None
+                else None,
             }
         )
         return _obj

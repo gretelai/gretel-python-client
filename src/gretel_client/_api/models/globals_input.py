@@ -119,14 +119,11 @@ class GlobalsInput(BaseModel):
         _obj = cls.model_validate(
             {
                 "error_rate": obj.get("error_rate"),
-                "model_configs": (
-                    [
-                        ModelConfigInput.from_dict(_item)
-                        for _item in obj["model_configs"]
-                    ]
-                    if obj.get("model_configs") is not None
-                    else None
-                ),
+                "model_configs": [
+                    ModelConfigInput.from_dict(_item) for _item in obj["model_configs"]
+                ]
+                if obj.get("model_configs") is not None
+                else None,
                 "model_suite": obj.get("model_suite"),
                 "num_records": obj.get("num_records"),
             }

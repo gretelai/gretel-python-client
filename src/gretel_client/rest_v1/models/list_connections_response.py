@@ -90,11 +90,9 @@ class ListConnectionsResponse(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "data": (
-                    [Connection.from_dict(_item) for _item in obj["data"]]
-                    if obj.get("data") is not None
-                    else None
-                )
+                "data": [Connection.from_dict(_item) for _item in obj["data"]]
+                if obj.get("data") is not None
+                else None
             }
         )
         return _obj

@@ -90,11 +90,9 @@ class HTTPValidationError(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "detail": (
-                    [ValidationError.from_dict(_item) for _item in obj["detail"]]
-                    if obj.get("detail") is not None
-                    else None
-                )
+                "detail": [ValidationError.from_dict(_item) for _item in obj["detail"]]
+                if obj.get("detail") is not None
+                else None
             }
         )
         return _obj

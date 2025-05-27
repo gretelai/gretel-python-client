@@ -86,11 +86,9 @@ class UpdateServerlessTenantResponse(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "tenant": (
-                    ServerlessTenant.from_dict(obj["tenant"])
-                    if obj.get("tenant") is not None
-                    else None
-                )
+                "tenant": ServerlessTenant.from_dict(obj["tenant"])
+                if obj.get("tenant") is not None
+                else None
             }
         )
         return _obj

@@ -96,11 +96,11 @@ class SearchConnectionsResponse(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "connections": (
-                    [Connection.from_dict(_item) for _item in obj["connections"]]
-                    if obj.get("connections") is not None
-                    else None
-                ),
+                "connections": [
+                    Connection.from_dict(_item) for _item in obj["connections"]
+                ]
+                if obj.get("connections") is not None
+                else None,
                 "total": obj.get("total"),
             }
         )

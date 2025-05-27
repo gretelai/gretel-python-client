@@ -92,14 +92,12 @@ class GetModelSuitesResponse(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "model_suites": (
-                    [
-                        LLMSuiteConfigWithGenerationParams.from_dict(_item)
-                        for _item in obj["model_suites"]
-                    ]
-                    if obj.get("model_suites") is not None
-                    else None
-                )
+                "model_suites": [
+                    LLMSuiteConfigWithGenerationParams.from_dict(_item)
+                    for _item in obj["model_suites"]
+                ]
+                if obj.get("model_suites") is not None
+                else None
             }
         )
         return _obj

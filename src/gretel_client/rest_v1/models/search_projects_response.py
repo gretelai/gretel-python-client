@@ -90,11 +90,9 @@ class SearchProjectsResponse(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "projects": (
-                    [Project.from_dict(_item) for _item in obj["projects"]]
-                    if obj.get("projects") is not None
-                    else None
-                )
+                "projects": [Project.from_dict(_item) for _item in obj["projects"]]
+                if obj.get("projects") is not None
+                else None
             }
         )
         return _obj

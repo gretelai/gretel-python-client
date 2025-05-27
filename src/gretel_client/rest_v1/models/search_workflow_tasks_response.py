@@ -96,11 +96,9 @@ class SearchWorkflowTasksResponse(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "tasks": (
-                    [WorkflowTask.from_dict(_item) for _item in obj["tasks"]]
-                    if obj.get("tasks") is not None
-                    else None
-                ),
+                "tasks": [WorkflowTask.from_dict(_item) for _item in obj["tasks"]]
+                if obj.get("tasks") is not None
+                else None,
                 "total": obj.get("total"),
             }
         )

@@ -100,11 +100,9 @@ class LLMSuiteConfigWithGenerationParams(BaseModel):
             {
                 "license": obj.get("license"),
                 "model_aliases": obj.get("model_aliases"),
-                "models": (
-                    [LLMInfo.from_dict(_item) for _item in obj["models"]]
-                    if obj.get("models") is not None
-                    else None
-                ),
+                "models": [LLMInfo.from_dict(_item) for _item in obj["models"]]
+                if obj.get("models") is not None
+                else None,
                 "suite_name": obj.get("suite_name"),
             }
         )

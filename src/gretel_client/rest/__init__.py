@@ -18,11 +18,9 @@ from gretel_client.rest.api_client import ApiClient
 from gretel_client.rest.configuration import Configuration
 
 # import exceptions
-from gretel_client.rest.exceptions import (
-    ApiAttributeError,
-    ApiException,
-    ApiKeyError,
-    ApiTypeError,
-    ApiValueError,
-    OpenApiException,
-)
+from gretel_client.rest.exceptions import OpenApiException
+from gretel_client.rest.exceptions import ApiAttributeError
+from gretel_client.rest.exceptions import ApiTypeError
+from gretel_client.rest.exceptions import ApiValueError
+from gretel_client.rest.exceptions import ApiKeyError
+from gretel_client.rest.exceptions import ApiException

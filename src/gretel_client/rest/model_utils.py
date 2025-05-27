@@ -1535,10 +1535,11 @@ def model_to_dict(model_instance, serialize=True):
                 result[attr] = dict(
                     map(
                         lambda item: (
-                            (item[0], model_to_dict(item[1], serialize=serialize))
-                            if hasattr(item[1], "_data_store")
-                            else item
-                        ),
+                            item[0],
+                            model_to_dict(item[1], serialize=serialize),
+                        )
+                        if hasattr(item[1], "_data_store")
+                        else item,
                         value.items(),
                     )
                 )

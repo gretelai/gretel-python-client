@@ -86,11 +86,9 @@ class GetClusterResponse(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "cluster": (
-                    Cluster.from_dict(obj["cluster"])
-                    if obj.get("cluster") is not None
-                    else None
-                )
+                "cluster": Cluster.from_dict(obj["cluster"])
+                if obj.get("cluster") is not None
+                else None
             }
         )
         return _obj

@@ -91,11 +91,9 @@ class UniformDistribution(BaseModel):
         _obj = cls.model_validate(
             {
                 "distribution_type": obj.get("distribution_type"),
-                "params": (
-                    UniformDistributionParams.from_dict(obj["params"])
-                    if obj.get("params") is not None
-                    else None
-                ),
+                "params": UniformDistributionParams.from_dict(obj["params"])
+                if obj.get("params") is not None
+                else None,
             }
         )
         return _obj

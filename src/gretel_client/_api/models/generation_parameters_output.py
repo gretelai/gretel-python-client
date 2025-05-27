@@ -101,16 +101,12 @@ class GenerationParametersOutput(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "temperature": (
-                    Temperature.from_dict(obj["temperature"])
-                    if obj.get("temperature") is not None
-                    else None
-                ),
-                "top_p": (
-                    TopP.from_dict(obj["top_p"])
-                    if obj.get("top_p") is not None
-                    else None
-                ),
+                "temperature": Temperature.from_dict(obj["temperature"])
+                if obj.get("temperature") is not None
+                else None,
+                "top_p": TopP.from_dict(obj["top_p"])
+                if obj.get("top_p") is not None
+                else None,
             }
         )
         return _obj

@@ -86,11 +86,9 @@ class GetProjectResponse(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "project": (
-                    Project.from_dict(obj["project"])
-                    if obj.get("project") is not None
-                    else None
-                )
+                "project": Project.from_dict(obj["project"])
+                if obj.get("project") is not None
+                else None
             }
         )
         return _obj

@@ -109,21 +109,17 @@ class WorkflowInput(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "globals": (
-                    GlobalsInput.from_dict(obj["globals"])
-                    if obj.get("globals") is not None
-                    else None
-                ),
+                "globals": GlobalsInput.from_dict(obj["globals"])
+                if obj.get("globals") is not None
+                else None,
                 "inputs": obj.get("inputs"),
                 "name": obj.get("name"),
-                "steps": (
-                    [Step.from_dict(_item) for _item in obj["steps"]]
-                    if obj.get("steps") is not None
-                    else None
-                ),
-                "version": (
-                    obj.get("version") if obj.get("version") is not None else "2"
-                ),
+                "steps": [Step.from_dict(_item) for _item in obj["steps"]]
+                if obj.get("steps") is not None
+                else None,
+                "version": obj.get("version")
+                if obj.get("version") is not None
+                else "2",
             }
         )
         return _obj

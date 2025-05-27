@@ -91,11 +91,9 @@ class SearchActivityResponse(BaseModel):
 
         _obj = cls.model_validate(
             {
-                "events": (
-                    [ActivityEvent.from_dict(_item) for _item in obj["events"]]
-                    if obj.get("events") is not None
-                    else None
-                ),
+                "events": [ActivityEvent.from_dict(_item) for _item in obj["events"]]
+                if obj.get("events") is not None
+                else None,
                 "total": obj.get("total"),
             }
         )

@@ -140,29 +140,23 @@ class Cluster(BaseModel):
                 "guid": obj.get("guid"),
                 "name": obj.get("name"),
                 "owner_guid": obj.get("owner_guid"),
-                "owner_profile": (
-                    UserProfile.from_dict(obj["owner_profile"])
-                    if obj.get("owner_profile") is not None
-                    else None
-                ),
-                "cloud_provider": (
-                    ClusterCloudProviderInfo.from_dict(obj["cloud_provider"])
-                    if obj.get("cloud_provider") is not None
-                    else None
-                ),
+                "owner_profile": UserProfile.from_dict(obj["owner_profile"])
+                if obj.get("owner_profile") is not None
+                else None,
+                "cloud_provider": ClusterCloudProviderInfo.from_dict(
+                    obj["cloud_provider"]
+                )
+                if obj.get("cloud_provider") is not None
+                else None,
                 "cloud_provider_type": obj.get("cloud_provider_type"),
-                "status": (
-                    ClusterStatus.from_dict(obj["status"])
-                    if obj.get("status") is not None
-                    else None
-                ),
+                "status": ClusterStatus.from_dict(obj["status"])
+                if obj.get("status") is not None
+                else None,
                 "created_at": obj.get("created_at"),
                 "last_checkin_time": obj.get("last_checkin_time"),
-                "config": (
-                    ClusterConfig.from_dict(obj["config"])
-                    if obj.get("config") is not None
-                    else None
-                ),
+                "config": ClusterConfig.from_dict(obj["config"])
+                if obj.get("config") is not None
+                else None,
                 "chart_version": obj.get("chart_version"),
                 "app_version": obj.get("app_version"),
             }

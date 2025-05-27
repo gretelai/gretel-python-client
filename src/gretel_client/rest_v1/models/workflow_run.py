@@ -272,21 +272,17 @@ class WorkflowRun(BaseModel):
                 "workflow_id": obj.get("workflow_id"),
                 "name": obj.get("name"),
                 "project_id": obj.get("project_id"),
-                "project": (
-                    Project.from_dict(obj["project"])
-                    if obj.get("project") is not None
-                    else None
-                ),
+                "project": Project.from_dict(obj["project"])
+                if obj.get("project") is not None
+                else None,
                 "cluster_guid": obj.get("cluster_guid"),
                 "config": obj.get("config"),
                 "config_text": obj.get("config_text"),
                 "runner_mode": obj.get("runner_mode"),
                 "status": obj.get("status"),
-                "status_details": (
-                    StatusDetails.from_dict(obj["status_details"])
-                    if obj.get("status_details") is not None
-                    else None
-                ),
+                "status_details": StatusDetails.from_dict(obj["status_details"])
+                if obj.get("status_details") is not None
+                else None,
                 "created_by": obj.get("created_by"),
                 "created_at": obj.get("created_at"),
                 "updated_at": obj.get("updated_at"),
@@ -296,34 +292,26 @@ class WorkflowRun(BaseModel):
                 "lost_at": obj.get("lost_at"),
                 "cancelled_at": obj.get("cancelled_at"),
                 "lease_expires_at": obj.get("lease_expires_at"),
-                "cancellation_request": (
-                    WorkflowRunCancellationRequest.from_dict(
-                        obj["cancellation_request"]
-                    )
-                    if obj.get("cancellation_request") is not None
-                    else None
-                ),
-                "created_by_profile": (
-                    UserProfile.from_dict(obj["created_by_profile"])
-                    if obj.get("created_by_profile") is not None
-                    else None
-                ),
+                "cancellation_request": WorkflowRunCancellationRequest.from_dict(
+                    obj["cancellation_request"]
+                )
+                if obj.get("cancellation_request") is not None
+                else None,
+                "created_by_profile": UserProfile.from_dict(obj["created_by_profile"])
+                if obj.get("created_by_profile") is not None
+                else None,
                 "total_compute_time_sconds": obj.get("total_compute_time_sconds"),
-                "actions": (
-                    [ActionSummary.from_dict(_item) for _item in obj["actions"]]
-                    if obj.get("actions") is not None
-                    else None
-                ),
-                "billing_summary": (
-                    WorkflowRunBillingSummary.from_dict(obj["billing_summary"])
-                    if obj.get("billing_summary") is not None
-                    else None
-                ),
-                "report": (
-                    WorkflowRunReport.from_dict(obj["report"])
-                    if obj.get("report") is not None
-                    else None
-                ),
+                "actions": [ActionSummary.from_dict(_item) for _item in obj["actions"]]
+                if obj.get("actions") is not None
+                else None,
+                "billing_summary": WorkflowRunBillingSummary.from_dict(
+                    obj["billing_summary"]
+                )
+                if obj.get("billing_summary") is not None
+                else None,
+                "report": WorkflowRunReport.from_dict(obj["report"])
+                if obj.get("report") is not None
+                else None,
             }
         )
         return _obj

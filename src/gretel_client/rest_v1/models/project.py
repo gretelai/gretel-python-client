@@ -148,11 +148,9 @@ class Project(BaseModel):
                 "domain_guid": obj.get("domain_guid"),
                 "runner_mode": obj.get("runner_mode"),
                 "cluster_guid": obj.get("cluster_guid"),
-                "cluster": (
-                    Cluster.from_dict(obj["cluster"])
-                    if obj.get("cluster") is not None
-                    else None
-                ),
+                "cluster": Cluster.from_dict(obj["cluster"])
+                if obj.get("cluster") is not None
+                else None,
                 "modified": obj.get("modified"),
                 "created": obj.get("created"),
             }

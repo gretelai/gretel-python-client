@@ -108,14 +108,12 @@ class WorkflowOutput(BaseModel):
                 "globals": obj.get("globals"),
                 "inputs": obj.get("inputs"),
                 "name": obj.get("name"),
-                "steps": (
-                    [Step.from_dict(_item) for _item in obj["steps"]]
-                    if obj.get("steps") is not None
-                    else None
-                ),
-                "version": (
-                    obj.get("version") if obj.get("version") is not None else "2"
-                ),
+                "steps": [Step.from_dict(_item) for _item in obj["steps"]]
+                if obj.get("steps") is not None
+                else None,
+                "version": obj.get("version")
+                if obj.get("version") is not None
+                else "2",
             }
         )
         return _obj

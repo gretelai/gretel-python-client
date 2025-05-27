@@ -95,11 +95,9 @@ class TaskEnvelopeForValidation(BaseModel):
             {
                 "config": obj.get("config"),
                 "globals": obj.get("globals"),
-                "inputs": (
-                    [TaskInput.from_dict(_item) for _item in obj["inputs"]]
-                    if obj.get("inputs") is not None
-                    else None
-                ),
+                "inputs": [TaskInput.from_dict(_item) for _item in obj["inputs"]]
+                if obj.get("inputs") is not None
+                else None,
                 "name": obj.get("name"),
             }
         )

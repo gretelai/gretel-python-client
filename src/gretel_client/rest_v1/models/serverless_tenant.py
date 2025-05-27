@@ -122,24 +122,20 @@ class ServerlessTenant(BaseModel):
                 "name": obj.get("name"),
                 "domain_guid": obj.get("domain_guid"),
                 "created_at": obj.get("created_at"),
-                "cloud_provider": (
-                    ServerlessTenantCloudProviderInfo.from_dict(obj["cloud_provider"])
-                    if obj.get("cloud_provider") is not None
-                    else None
-                ),
-                "config": (
-                    ServerlessTenantConfig.from_dict(obj["config"])
-                    if obj.get("config") is not None
-                    else None
-                ),
+                "cloud_provider": ServerlessTenantCloudProviderInfo.from_dict(
+                    obj["cloud_provider"]
+                )
+                if obj.get("cloud_provider") is not None
+                else None,
+                "config": ServerlessTenantConfig.from_dict(obj["config"])
+                if obj.get("config") is not None
+                else None,
                 "cluster_guid": obj.get("cluster_guid"),
-                "provisioning_state": (
-                    ServerlessTenantProvisioningState.from_dict(
-                        obj["provisioning_state"]
-                    )
-                    if obj.get("provisioning_state") is not None
-                    else None
-                ),
+                "provisioning_state": ServerlessTenantProvisioningState.from_dict(
+                    obj["provisioning_state"]
+                )
+                if obj.get("provisioning_state") is not None
+                else None,
             }
         )
         return _obj
