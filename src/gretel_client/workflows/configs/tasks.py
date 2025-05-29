@@ -126,6 +126,10 @@ class EvaluateDataset(ConfigBase):
 
 
 class EvaluateSafeSyntheticsDataset(ConfigBase):
+    model_suite: Annotated[Optional[str], Field(title="Model Suite")] = "apache-2.0"
+    error_rate: Annotated[
+        Optional[float], Field(ge=0.0, le=1.0, title="Error Rate")
+    ] = 0.2
     skip_attribute_inference_protection: Annotated[
         Optional[bool], Field(title="Skip Attribute Inference Protection")
     ] = False
@@ -938,6 +942,26 @@ class NumInputRecordsToSample1(str, Enum):
     AUTO = "auto"
 
 
+class UseUnsloth(str, Enum):
+    AUTO = "auto"
+
+
+class RopeScalingFactor(RootModel[int]):
+    root: Annotated[
+        int,
+        Field(
+            description="Scale the base LLM's context length by this factor using RoPE scaling.",
+            ge=1,
+            le=6,
+            title="rope_scaling_factor",
+        ),
+    ]
+
+
+class RopeScalingFactor1(str, Enum):
+    AUTO = "auto"
+
+
 class TabularFTTrainingParams(ConfigBase):
     num_input_records_to_sample: Annotated[
         Optional[Union[NumInputRecordsToSample, NumInputRecordsToSample1]],
@@ -1020,18 +1044,16 @@ class TabularFTTrainingParams(ConfigBase):
         ),
     ] = ["q_proj", "k_proj", "v_proj", "o_proj"]
     use_unsloth: Annotated[
-        Optional[bool],
+        Optional[Union[bool, UseUnsloth]],
         Field(description="Whether to use unsloth.", title="use_unsloth"),
-    ] = True
+    ] = "auto"
     rope_scaling_factor: Annotated[
-        Optional[int],
+        Optional[Union[RopeScalingFactor, RopeScalingFactor1]],
         Field(
-            description="Scale the base LLM's context length by this factor using RoPE scaling. Only works if use_unsloth is set to True.",
-            ge=1,
-            le=6,
+            description="Scale the base LLM's context length by this factor using RoPE scaling.",
             title="rope_scaling_factor",
         ),
-    ] = 1
+    ] = "auto"
 
 
 class MaxSequencesPerExample(str, Enum):
@@ -1294,7 +1316,7 @@ class PeftParams(ConfigBase):
         ),
     ] = 1
     target_modules: Annotated[
-        Optional[Union[str, List[str]]],
+        Optional[Union[List[str], str]],
         Field(
             description="List of module names or regex expression of the module names to replace with LoRA. For example, ['q', 'v'] or '.*decoder.*(SelfAttention|EncDecAttention).*(q|v)$'. This can also be a wildcard 'all-linear' which matches all linear/Conv1D layers except the output layer. If not specified, modules will be chosen according to the model architecture. If the architecture is not known, an error will be raised -- in this case, you should specify the target modules manually.",
             title="Target Modules",
@@ -1546,11 +1568,11 @@ class Column(ConfigBase):
         Optional[str], Field(description="Rename to value.", title="Value")
     ] = None
     entity: Annotated[
-        Optional[Union[str, List[str]]],
+        Optional[Union[List[str], str]],
         Field(description="Column entity match.", title="Entity"),
     ] = None
     type: Annotated[
-        Optional[Union[str, List[str]]],
+        Optional[Union[List[str], str]],
         Field(description="Column type match.", title="Type"),
     ] = None
 
@@ -1622,7 +1644,7 @@ class NERConfig(ConfigBase):
 
 class Row(ConfigBase):
     name: Annotated[
-        Optional[Union[str, List[str]]], Field(description="Row name.", title="Name")
+        Optional[Union[List[str], str]], Field(description="Row name.", title="Name")
     ] = None
     condition: Annotated[
         Optional[str], Field(description="Row condition match.", title="Condition")
@@ -1634,11 +1656,11 @@ class Row(ConfigBase):
         Optional[str], Field(description="Row value definition.", title="Value")
     ] = None
     entity: Annotated[
-        Optional[Union[str, List[str]]],
+        Optional[Union[List[str], str]],
         Field(description="Row entity match.", title="Entity"),
     ] = None
     type: Annotated[
-        Optional[Union[str, List[str]]],
+        Optional[Union[List[str], str]],
         Field(description="Row type match.", title="Type"),
     ] = None
     fallback_value: Annotated[
@@ -2087,21 +2109,21 @@ class JudgeWithLlm(ConfigBase):
     prompt: Annotated[
         str,
         Field(
-            description="Template for generating prompts. Use Jinja2 templates to reference dataset columns.",
+            description="Template for generating prompts.Use Jinja2 templates to reference dataset columns.",
             title="Prompt",
         ),
     ]
     num_samples_to_judge: Annotated[
         Optional[int],
         Field(
-            description="Number of samples to judge. Default is 100.",
+            description="Number of samples to judge.If unset or None, then defaults to judging all records. Default is None.",
             title="Num Samples To Judge",
         ),
-    ] = 100
+    ] = None
     rubrics: Annotated[
         List[Rubric],
         Field(
-            description="List of rubric configurations to use for evaluation. At least one must be provided.",
+            description="List of rubric configurations to use for evaluation.At least one must be provided.",
             min_length=1,
             title="Rubrics",
         ),
