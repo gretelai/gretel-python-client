@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Annotated, Any, Dict, List, Optional, Union
 
-from pydantic import Field
+from pydantic import Field, RootModel
 
 from gretel_client.workflows.configs.base import ConfigBase
 
@@ -13,6 +13,10 @@ from gretel_client.workflows.configs.base import ConfigBase
 class DistributionType(str, Enum):
     UNIFORM = "uniform"
     MANUAL = "manual"
+
+
+class MaxTokens(RootModel[int]):
+    root: Annotated[int, Field(ge=1, title="Max Tokens")]
 
 
 class ManualDistributionParams(ConfigBase):
@@ -51,12 +55,27 @@ class GenerationParameters(ConfigBase):
         Optional[Union[float, UniformDistribution, ManualDistribution]],
         Field(title="Top P"),
     ] = None
+    max_tokens: Annotated[Optional[MaxTokens], Field(title="Max Tokens")] = None
 
 
 class ModelConfig(ConfigBase):
     alias: Annotated[str, Field(title="Alias")]
     model_name: Annotated[str, Field(title="Model Name")]
     generation_parameters: GenerationParameters
+    api_base: Annotated[
+        Optional[str],
+        Field(
+            description="OpenAI compliant base api endpoint for the model",
+            title="Api Base",
+        ),
+    ] = None
+    api_key: Annotated[
+        Optional[str],
+        Field(
+            description="Api Key for the model endpoint. This is included in plaintext in the model config, so remember to rotate it as needed.",
+            title="Api Key",
+        ),
+    ] = None
 
 
 class Globals(ConfigBase):

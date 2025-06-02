@@ -19,8 +19,8 @@ import re  # noqa: F401
 
 from typing import Any, ClassVar, Dict, List, Optional, Set
 
-from pydantic import BaseModel, ConfigDict
-from typing_extensions import Self
+from pydantic import BaseModel, ConfigDict, Field
+from typing_extensions import Annotated, Self
 
 from gretel_client._api.models.temperature import Temperature
 from gretel_client._api.models.top_p import TopP
@@ -31,9 +31,10 @@ class GenerationParametersInput(BaseModel):
     GenerationParametersInput
     """  # noqa: E501
 
+    max_tokens: Optional[Annotated[int, Field(strict=True, ge=1)]] = None
     temperature: Optional[Temperature] = None
     top_p: Optional[TopP] = None
-    __properties: ClassVar[List[str]] = ["temperature", "top_p"]
+    __properties: ClassVar[List[str]] = ["max_tokens", "temperature", "top_p"]
 
     model_config = ConfigDict(
         populate_by_name=True,
@@ -78,6 +79,11 @@ class GenerationParametersInput(BaseModel):
         # override the default output from pydantic by calling `to_dict()` of top_p
         if self.top_p:
             _dict["top_p"] = self.top_p.to_dict()
+        # set to None if max_tokens (nullable) is None
+        # and model_fields_set contains the field
+        if self.max_tokens is None and "max_tokens" in self.model_fields_set:
+            _dict["max_tokens"] = None
+
         # set to None if temperature (nullable) is None
         # and model_fields_set contains the field
         if self.temperature is None and "temperature" in self.model_fields_set:
@@ -101,6 +107,7 @@ class GenerationParametersInput(BaseModel):
 
         _obj = cls.model_validate(
             {
+                "max_tokens": obj.get("max_tokens"),
                 "temperature": Temperature.from_dict(obj["temperature"])
                 if obj.get("temperature") is not None
                 else None,

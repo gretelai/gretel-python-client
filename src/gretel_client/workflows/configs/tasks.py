@@ -93,6 +93,10 @@ class DistributionType(str, Enum):
     MANUAL = "manual"
 
 
+class MaxTokens(RootModel[int]):
+    root: Annotated[int, Field(ge=1, title="Max Tokens")]
+
+
 class ManualDistributionParams(ConfigBase):
     values: Annotated[List[float], Field(min_length=1, title="Values")]
     weights: Annotated[Optional[List[float]], Field(title="Weights")] = None
@@ -1956,12 +1960,27 @@ class GenerationParameters(ConfigBase):
         Optional[Union[float, UniformDistribution, ManualDistribution]],
         Field(title="Top P"),
     ] = None
+    max_tokens: Annotated[Optional[MaxTokens], Field(title="Max Tokens")] = None
 
 
 class ModelConfig(ConfigBase):
     alias: Annotated[str, Field(title="Alias")]
     model_name: Annotated[str, Field(title="Model Name")]
     generation_parameters: GenerationParameters
+    api_base: Annotated[
+        Optional[str],
+        Field(
+            description="OpenAI compliant base api endpoint for the model",
+            title="Api Base",
+        ),
+    ] = None
+    api_key: Annotated[
+        Optional[str],
+        Field(
+            description="Api Key for the model endpoint. This is included in plaintext in the model config, so remember to rotate it as needed.",
+            title="Api Key",
+        ),
+    ] = None
 
 
 class EvaluateDataDesignerDataset(ConfigBase):

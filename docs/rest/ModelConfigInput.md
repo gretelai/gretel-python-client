@@ -6,6 +6,8 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **alias** | **str** |  | 
+**api_base** | **str** |  | [optional] 
+**api_key** | **str** |  | [optional] 
 **generation_parameters** | [**GenerationParametersInput**](GenerationParametersInput.md) |  | 
 **model_name** | **str** |  | 
 

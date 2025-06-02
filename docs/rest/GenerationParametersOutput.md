@@ -5,6 +5,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
+**max_tokens** | **int** |  | [optional] 
 **temperature** | [**Temperature**](Temperature.md) |  | [optional] 
 **top_p** | [**TopP**](TopP.md) |  | [optional] 
 
