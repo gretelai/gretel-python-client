@@ -1,14 +1,19 @@
 import base64
 import os
-import re
 
 from typing import Optional
 
 import yaml
 
-from Crypto.Cipher import AES, PKCS1_OAEP
-from Crypto.Hash import SHA256
-from Crypto.PublicKey import RSA
+try:
+    from Crypto.Cipher import AES, PKCS1_OAEP
+    from Crypto.Hash import SHA256
+    from Crypto.PublicKey import RSA
+except ModuleNotFoundError:
+    AES, PKCS1_OAEP = None, None
+    SHA256 = None
+    RSA = None
+
 
 from gretel_client._hybrid.creds_encryption import BaseCredentialsEncryption
 from gretel_client.rest_v1.api.projects_api import ProjectsApi
