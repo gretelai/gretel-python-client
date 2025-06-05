@@ -19,7 +19,7 @@ import re  # noqa: F401
 
 from typing import Any, ClassVar, Dict, List, Optional, Set
 
-from pydantic import BaseModel, ConfigDict, StrictStr
+from pydantic import BaseModel, ConfigDict, StrictBool, StrictStr
 from typing_extensions import Self
 
 from gretel_client._api.models.generation_parameters_input import (
@@ -36,12 +36,14 @@ class ModelConfigInput(BaseModel):
     api_base: Optional[StrictStr] = None
     api_key: Optional[StrictStr] = None
     generation_parameters: GenerationParametersInput
+    is_reasoner: Optional[StrictBool] = False
     model_name: StrictStr
     __properties: ClassVar[List[str]] = [
         "alias",
         "api_base",
         "api_key",
         "generation_parameters",
+        "is_reasoner",
         "model_name",
     ]
 
@@ -116,6 +118,9 @@ class ModelConfigInput(BaseModel):
                 )
                 if obj.get("generation_parameters") is not None
                 else None,
+                "is_reasoner": obj.get("is_reasoner")
+                if obj.get("is_reasoner") is not None
+                else False,
                 "model_name": obj.get("model_name"),
             }
         )

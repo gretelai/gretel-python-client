@@ -1058,6 +1058,23 @@ class TabularFTTrainingParams(ConfigBase):
             title="rope_scaling_factor",
         ),
     ] = "auto"
+    validation_ratio: Annotated[
+        Optional[float],
+        Field(
+            description="The fraction of the training data that will be used for validation.The range should be 0 to 1. If set to 0, no validation will be performed.If set larger than 0, validation loss will be computed and reported throughout training.",
+            ge=0.0,
+            lt=1.0,
+            title="validation_ratio",
+        ),
+    ] = 0.0
+    validation_steps: Annotated[
+        Optional[int],
+        Field(
+            description="The number of steps between validation checks for the HF Trainer arguments.",
+            gt=0,
+            title="validation_steps",
+        ),
+    ] = 15
 
 
 class MaxSequencesPerExample(str, Enum):
@@ -1088,6 +1105,13 @@ class TrainTabularFTConfig(ConfigBase):
     ] = "auto"
     params: Optional[TabularFTTrainingParams] = None
     privacy_params: Optional[TabularFTPrivacyParams] = None
+    data_config: Annotated[
+        Optional[Dict[str, Any]],
+        Field(
+            description="If specified, applies a set of rules and constraints to ensure proper training and validation.",
+            title="Data Config",
+        ),
+    ] = None
 
 
 class BinaryEncoderHandler(str, Enum):
@@ -1320,7 +1344,7 @@ class PeftParams(ConfigBase):
         ),
     ] = 1
     target_modules: Annotated[
-        Optional[Union[List[str], str]],
+        Optional[Union[str, List[str]]],
         Field(
             description="List of module names or regex expression of the module names to replace with LoRA. For example, ['q', 'v'] or '.*decoder.*(SelfAttention|EncDecAttention).*(q|v)$'. This can also be a wildcard 'all-linear' which matches all linear/Conv1D layers except the output layer. If not specified, modules will be chosen according to the model architecture. If the architecture is not known, an error will be raised -- in this case, you should specify the target modules manually.",
             title="Target Modules",
@@ -1572,11 +1596,11 @@ class Column(ConfigBase):
         Optional[str], Field(description="Rename to value.", title="Value")
     ] = None
     entity: Annotated[
-        Optional[Union[List[str], str]],
+        Optional[Union[str, List[str]]],
         Field(description="Column entity match.", title="Entity"),
     ] = None
     type: Annotated[
-        Optional[Union[List[str], str]],
+        Optional[Union[str, List[str]]],
         Field(description="Column type match.", title="Type"),
     ] = None
 
@@ -1648,7 +1672,7 @@ class NERConfig(ConfigBase):
 
 class Row(ConfigBase):
     name: Annotated[
-        Optional[Union[List[str], str]], Field(description="Row name.", title="Name")
+        Optional[Union[str, List[str]]], Field(description="Row name.", title="Name")
     ] = None
     condition: Annotated[
         Optional[str], Field(description="Row condition match.", title="Condition")
@@ -1660,11 +1684,11 @@ class Row(ConfigBase):
         Optional[str], Field(description="Row value definition.", title="Value")
     ] = None
     entity: Annotated[
-        Optional[Union[List[str], str]],
+        Optional[Union[str, List[str]]],
         Field(description="Row entity match.", title="Entity"),
     ] = None
     type: Annotated[
-        Optional[Union[List[str], str]],
+        Optional[Union[str, List[str]]],
         Field(description="Row type match.", title="Type"),
     ] = None
     fallback_value: Annotated[
@@ -1970,17 +1994,18 @@ class ModelConfig(ConfigBase):
     api_base: Annotated[
         Optional[str],
         Field(
-            description="OpenAI compliant base api endpoint for the model",
+            description="OpenAI compliant base API endpoint for the model.",
             title="Api Base",
         ),
     ] = None
     api_key: Annotated[
         Optional[str],
         Field(
-            description="Api Key for the model endpoint. This is included in plaintext in the model config, so remember to rotate it as needed.",
+            description="API Key for the model endpoint. This is included in plaintext in the model config, so remember to rotate it as needed.",
             title="Api Key",
         ),
     ] = None
+    is_reasoner: Annotated[Optional[bool], Field(title="Is Reasoner")] = False
 
 
 class EvaluateDataDesignerDataset(ConfigBase):

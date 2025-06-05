@@ -9,6 +9,7 @@ Name | Type | Description | Notes
 **api_base** | **str** |  | [optional] 
 **api_key** | **str** |  | [optional] 
 **generation_parameters** | [**GenerationParametersOutput**](GenerationParametersOutput.md) |  | 
+**is_reasoner** | **bool** |  | [optional] [default to False]
 **model_name** | **str** |  | 
 
 ## Example

@@ -65,17 +65,18 @@ class ModelConfig(ConfigBase):
     api_base: Annotated[
         Optional[str],
         Field(
-            description="OpenAI compliant base api endpoint for the model",
+            description="OpenAI compliant base API endpoint for the model.",
             title="Api Base",
         ),
     ] = None
     api_key: Annotated[
         Optional[str],
         Field(
-            description="Api Key for the model endpoint. This is included in plaintext in the model config, so remember to rotate it as needed.",
+            description="API Key for the model endpoint. This is included in plaintext in the model config, so remember to rotate it as needed.",
             title="Api Key",
         ),
     ] = None
+    is_reasoner: Annotated[Optional[bool], Field(title="Is Reasoner")] = False
 
 
 class Globals(ConfigBase):
