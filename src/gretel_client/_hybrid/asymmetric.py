@@ -9,7 +9,7 @@ try:
     from Crypto.Cipher import AES, PKCS1_OAEP
     from Crypto.Hash import SHA256
     from Crypto.PublicKey import RSA
-except ModuleNotFoundError:
+except (ModuleNotFoundError, ImportError):
     AES, PKCS1_OAEP = None, None
     SHA256 = None
     RSA = None
