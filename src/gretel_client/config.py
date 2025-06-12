@@ -490,6 +490,8 @@ class DefaultClientConfig(ClientConfig):
         self._validate()
 
     def _validate(self) -> None:
+        if os.environ.get("GRETEL_ENDPOINT_SKIP_VALIDATION") == "true":
+            return
         if (
             self.artifact_endpoint != DEFAULT_GRETEL_ARTIFACT_ENDPOINT
             and self.default_runner == RunnerMode.CLOUD
