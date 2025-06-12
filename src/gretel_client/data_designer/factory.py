@@ -5,7 +5,14 @@ import gretel_client.data_designer.params as params
 
 from gretel_client.data_designer import DataDesigner
 from gretel_client.data_designer.types import ModelSuite
-from gretel_client.navigator_client_protocols import GretelResourceProviderProtocol
+from gretel_client.navigator_client_protocols import (
+    GretelApiProviderProtocol,
+    GretelResourceProviderProtocol,
+)
+from gretel_client.rest_v1.api.connections_api import (
+    ConnectionsApi,
+    CreateConnectionRequest,
+)
 from gretel_client.workflows.configs.workflows import ModelConfig
 
 
@@ -35,8 +42,11 @@ class DataDesignerFactory:
     params = params
 
     def __init__(
-        self, gretel_resource_provider: GretelResourceProviderProtocol
+        self,
+        api_factory: GretelApiProviderProtocol,
+        gretel_resource_provider: GretelResourceProviderProtocol,
     ) -> None:
+        self._connections_api = api_factory.get_api(ConnectionsApi)
         self._gretel_resource_provider = gretel_resource_provider
 
     def from_config(self, config: dict | str | Path) -> DataDesigner:
@@ -73,3 +83,29 @@ class DataDesignerFactory:
             model_suite=model_suite,
             model_configs=model_configs,
         )
+
+    def create_api_key_connection(
+        self, *, name: str, api_base: str, api_key: str
+    ) -> str:
+        """Create a new api key connection object.
+
+        Args:
+            name: Name of the connection.
+            api_base: Base URL of an OpenAI compatible API.
+            api_key: API key for the API.
+
+        Returns:
+            The ID of the created connection.
+        """
+        conn = self._connections_api.create_connection(
+            CreateConnectionRequest(
+                name=name,
+                project_id=self._gretel_resource_provider.project_id,
+                type="api_key",
+                config={"api_base": api_base},
+                credentials={
+                    "api_key": api_key,
+                },
+            )
+        )
+        return conn.id

@@ -62,18 +62,11 @@ class ModelConfig(ConfigBase):
     alias: Annotated[str, Field(title="Alias")]
     model_name: Annotated[str, Field(title="Model Name")]
     generation_parameters: GenerationParameters
-    api_base: Annotated[
+    connection_id: Annotated[
         Optional[str],
         Field(
-            description="OpenAI compliant base API endpoint for the model.",
-            title="Api Base",
-        ),
-    ] = None
-    api_key: Annotated[
-        Optional[str],
-        Field(
-            description="API Key for the model endpoint. This is included in plaintext in the model config, so remember to rotate it as needed.",
-            title="Api Key",
+            description="ID of connection that has OpenAI compliant base API endpoint and API key for the model.",
+            title="Connection Id",
         ),
     ] = None
     is_reasoner: Annotated[Optional[bool], Field(title="Is Reasoner")] = False

@@ -6,8 +6,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **alias** | **str** |  | 
-**api_base** | **str** |  | [optional] 
-**api_key** | **str** |  | [optional] 
+**connection_id** | **str** |  | [optional] 
 **generation_parameters** | [**GenerationParametersOutput**](GenerationParametersOutput.md) |  | 
 **is_reasoner** | **bool** |  | [optional] [default to False]
 **model_name** | **str** |  | 

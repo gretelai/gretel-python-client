@@ -701,7 +701,7 @@ class GenerateParams(ConfigBase):
             gt=0,
             title="maximum_text_length",
         ),
-    ] = 42
+    ] = 128
     top_p: Annotated[
         Optional[float],
         Field(
@@ -1164,17 +1164,17 @@ class TabularGANTrainingParams(ConfigBase):
     discriminator_dim: Annotated[
         Optional[List[int]], Field(title="Discriminator Dim")
     ] = None
-    generator_lr: Annotated[Optional[float], Field(title="Generator Lr")] = 0.0002
+    generator_lr: Annotated[Optional[float], Field(title="Generator Lr")] = 0.0001
     generator_decay: Annotated[Optional[float], Field(title="Generator Decay")] = 1e-06
     discriminator_lr: Annotated[Optional[float], Field(title="Discriminator Lr")] = (
-        0.0002
+        0.00033
     )
     discriminator_decay: Annotated[
         Optional[float], Field(title="Discriminator Decay")
     ] = 1e-06
     batch_size: Annotated[
         Optional[Union[int, BatchSize]], Field(title="Batch Size")
-    ] = 500
+    ] = "auto"
     discriminator_steps: Annotated[
         Optional[int], Field(title="Discriminator Steps")
     ] = 1
@@ -1187,7 +1187,7 @@ class TabularGANTrainingParams(ConfigBase):
     ] = False
     log_frequency: Annotated[Optional[bool], Field(title="Log Frequency")] = True
     cbn_sample_size: Annotated[Optional[int], Field(title="Cbn Sample Size")] = 250000
-    epochs: Annotated[Optional[Union[int, Epochs]], Field(title="Epochs")] = 600
+    epochs: Annotated[Optional[Union[int, Epochs]], Field(title="Epochs")] = "auto"
     pac: Annotated[Optional[int], Field(title="Pac")] = 10
     data_upsample_limit: Annotated[
         Optional[int], Field(title="Data Upsample Limit")
@@ -1253,7 +1253,7 @@ class GenerateFromTextFTConfig(ConfigBase):
             gt=0,
             title="maximum_text_length",
         ),
-    ] = 42
+    ] = 128
     top_p: Annotated[
         Optional[float],
         Field(
@@ -1344,7 +1344,7 @@ class PeftParams(ConfigBase):
         ),
     ] = 1
     target_modules: Annotated[
-        Optional[Union[str, List[str]]],
+        Optional[Union[List[str], str]],
         Field(
             description="List of module names or regex expression of the module names to replace with LoRA. For example, ['q', 'v'] or '.*decoder.*(SelfAttention|EncDecAttention).*(q|v)$'. This can also be a wildcard 'all-linear' which matches all linear/Conv1D layers except the output layer. If not specified, modules will be chosen according to the model architecture. If the architecture is not known, an error will be raised -- in this case, you should specify the target modules manually.",
             title="Target Modules",
@@ -1384,7 +1384,7 @@ class PrivacyParams(ConfigBase):
             le=100.0,
             title="epsilon",
         ),
-    ] = 8
+    ] = 5
     delta: Annotated[
         Optional[Union[Delta2, Delta3]],
         Field(
@@ -1481,7 +1481,7 @@ class TextFTTrainingParams(ConfigBase):
             gt=0,
             title="max_tokens",
         ),
-    ] = 512
+    ] = 128
     gradient_accumulation_steps: Annotated[
         Optional[int],
         Field(
@@ -1501,23 +1501,23 @@ class TextFTTrainingParams(ConfigBase):
     ] = None
 
 
-class Validation(RootModel[int]):
-    root: Annotated[
-        int,
-        Field(
-            description="Proportion of the training dataset to use for model validation. This value needs to be between 0.0 and 1.0. Defaults to `None`.",
-            gt=0,
-            title="validation",
-        ),
-    ]
-
-
-class Validation1(RootModel[float]):
+class Validation(RootModel[float]):
     root: Annotated[
         float,
         Field(
             description="Proportion of the training dataset to use for model validation. This value needs to be between 0.0 and 1.0. Defaults to `None`.",
             gt=0.0,
+            title="validation",
+        ),
+    ]
+
+
+class Validation1(RootModel[int]):
+    root: Annotated[
+        int,
+        Field(
+            description="Proportion of the training dataset to use for model validation. This value needs to be between 0.0 and 1.0. Defaults to `None`.",
+            gt=0,
             title="validation",
         ),
     ]
@@ -1858,7 +1858,7 @@ class GenerateFromTabularFTConfig(ConfigBase):
             ge=0,
             title="num_records",
         ),
-    ] = 5000
+    ] = 1000
     temperature: Annotated[
         Optional[float],
         Field(
@@ -1991,18 +1991,11 @@ class ModelConfig(ConfigBase):
     alias: Annotated[str, Field(title="Alias")]
     model_name: Annotated[str, Field(title="Model Name")]
     generation_parameters: GenerationParameters
-    api_base: Annotated[
+    connection_id: Annotated[
         Optional[str],
         Field(
-            description="OpenAI compliant base API endpoint for the model.",
-            title="Api Base",
-        ),
-    ] = None
-    api_key: Annotated[
-        Optional[str],
-        Field(
-            description="API Key for the model endpoint. This is included in plaintext in the model config, so remember to rotate it as needed.",
-            title="Api Key",
+            description="ID of connection that has OpenAI compliant base API endpoint and API key for the model.",
+            title="Connection Id",
         ),
     ] = None
     is_reasoner: Annotated[Optional[bool], Field(title="Is Reasoner")] = False

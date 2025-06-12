@@ -254,7 +254,7 @@ class Gretel:
         self._workflows = WorkflowManager(self._api_factory, self)
         self._tasks = TaskRegistry.create()
         self._safe_synthetic_dataset_factory = SafeSyntheticDatasetFactory(self)
-        self._data_designer_factory = DataDesignerFactory(self)
+        self._data_designer_factory = DataDesignerFactory(self._api_factory, self)
 
     def new_client(self, *, default_project_id: str | None = None) -> Gretel:
         init_params = self._init_params

@@ -33,15 +33,13 @@ class ModelConfigInput(BaseModel):
     """  # noqa: E501
 
     alias: StrictStr
-    api_base: Optional[StrictStr] = None
-    api_key: Optional[StrictStr] = None
+    connection_id: Optional[StrictStr] = None
     generation_parameters: GenerationParametersInput
     is_reasoner: Optional[StrictBool] = False
     model_name: StrictStr
     __properties: ClassVar[List[str]] = [
         "alias",
-        "api_base",
-        "api_key",
+        "connection_id",
         "generation_parameters",
         "is_reasoner",
         "model_name",
@@ -87,15 +85,10 @@ class ModelConfigInput(BaseModel):
         # override the default output from pydantic by calling `to_dict()` of generation_parameters
         if self.generation_parameters:
             _dict["generation_parameters"] = self.generation_parameters.to_dict()
-        # set to None if api_base (nullable) is None
+        # set to None if connection_id (nullable) is None
         # and model_fields_set contains the field
-        if self.api_base is None and "api_base" in self.model_fields_set:
-            _dict["api_base"] = None
-
-        # set to None if api_key (nullable) is None
-        # and model_fields_set contains the field
-        if self.api_key is None and "api_key" in self.model_fields_set:
-            _dict["api_key"] = None
+        if self.connection_id is None and "connection_id" in self.model_fields_set:
+            _dict["connection_id"] = None
 
         return _dict
 
@@ -111,8 +104,7 @@ class ModelConfigInput(BaseModel):
         _obj = cls.model_validate(
             {
                 "alias": obj.get("alias"),
-                "api_base": obj.get("api_base"),
-                "api_key": obj.get("api_key"),
+                "connection_id": obj.get("connection_id"),
                 "generation_parameters": GenerationParametersInput.from_dict(
                     obj["generation_parameters"]
                 )
