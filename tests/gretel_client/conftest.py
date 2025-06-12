@@ -35,7 +35,7 @@ def configure_session_client():
 
 @pytest.fixture
 def dev_ep() -> str:
-    return "https://api-dev.gretel.cloud"
+    return "https://api.dev.gretel.ai"
 
 
 @pytest.fixture(scope="function")

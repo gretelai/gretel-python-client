@@ -56,7 +56,7 @@ GRETEL_PROJECT = "GRETEL_PROJECT"
 GRETEL_RUNNER_MODE = "GRETEL_RUNNER_MODE"
 """Env variable name to set the default runner mode"""
 
-DEFAULT_GRETEL_ENDPOINT = "https://api.gretel.cloud"
+DEFAULT_GRETEL_ENDPOINT = "https://api.gretel.ai"
 """Default gretel endpoint"""
 
 DEFAULT_GRETEL_ARTIFACT_ENDPOINT = "cloud"

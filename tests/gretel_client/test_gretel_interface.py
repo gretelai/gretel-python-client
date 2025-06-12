@@ -59,7 +59,7 @@ def test_project_creation(
     gretel = Gretel(
         project_name="project-name",
         api_key="grtu...",
-        endpoint="https://api-dev.gretel.cloud",
+        endpoint="https://api.dev.gretel.ai",
         skip_configure_session=True,
     )
     assert mock_get_project.call_count == 2
@@ -118,7 +118,7 @@ def test_project_creation_invalid(
         Gretel(
             project_name="project_name",
             api_key="grtu...",
-            endpoint="https://api-dev.gretel.cloud",
+            endpoint="https://api.dev.gretel.ai",
             skip_configure_session=True,
         )
     assert e.match("Project name 'project_name-user_id' is invalid")
