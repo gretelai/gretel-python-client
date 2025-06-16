@@ -374,6 +374,13 @@ class PersonSamplerParams(ConfigBase):
             title="State",
         ),
     ] = None
+    with_synthetic_personas: Annotated[
+        Optional[bool],
+        Field(
+            description="If True, then append synthetic persona columns to each generated person.",
+            title="With Synthetic Personas",
+        ),
+    ] = False
 
 
 class PoissonSamplerParams(ConfigBase):
