@@ -45,7 +45,6 @@ class WorkflowManager:
         self._workflow_api = api_factory.get_api(WorkflowsApi)
         self._data_api = api_factory.get_api(V2WorkflowsApi)
         self._resource_provider = resource_provider
-
         self._workflow_session_manager = WorkflowSessionManager()
 
     def builder(

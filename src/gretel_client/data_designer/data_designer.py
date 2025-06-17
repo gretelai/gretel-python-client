@@ -469,6 +469,7 @@ class DataDesigner:
         num_records: int,
         name: str | None = None,
         run_name: str | None = None,
+        new_workflow: bool = False,
         wait_until_done: bool = False,
     ) -> WorkflowRun:
         """Create a new dataset based on the current Data Designer configuration.
@@ -483,6 +484,7 @@ class DataDesigner:
             run_name: Name of a specific workflow run. This name is useful as
                 a label for a particular workflow run when you plan to run the same
                 workflow multiple times (potentially with different configurations).
+            new_workflow: If True, create a new workflow instead of using existing
             wait_until_done: Block until the workflow has completed running.
                 If False, immediately returns the WorkflowRun object.
 
@@ -491,8 +493,19 @@ class DataDesigner:
         """
         logger.info("🚀 Submitting batch workflow")
         workflow = self._build_workflow(num_records=num_records)
+
+        # if a workflow with the same name has been created for
+        # the session, reuse that workflow.
+        if name:
+            workflow.for_workflow(workflow_name=name)
+
+        # Ensures that a new workflow is created for the run
+        if new_workflow:
+            workflow.for_workflow(None)
+
         return workflow.run(
-            name=name, run_name=run_name, wait_until_done=wait_until_done
+            run_name=run_name,
+            wait_until_done=wait_until_done,
         )
 
     def with_person_samplers(

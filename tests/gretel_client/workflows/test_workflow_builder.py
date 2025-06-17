@@ -1,7 +1,7 @@
 import datetime
 import json
 
-from unittest.mock import ANY, Mock, create_autospec, patch
+from unittest.mock import ANY, MagicMock, Mock, create_autospec, patch
 
 import pytest
 
@@ -224,22 +224,72 @@ def test_does_submit_batch_job(
     }
 
 
+def test_workflow_session_manager():
+    session = WorkflowSessionManager()
+    session.set_id("123", "apples")
+    session.set_id("456", "bananas")
+    assert session.get_id() == "456"
+    assert session.get_id_by_name("bananas") == "456"
+    assert session.get_id_by_name("apples") == "123"
+    assert session.get_id_by_name("oranges") is None
+
+
+@patch(
+    "gretel_client.workflows.builder.WorkflowRun.from_workflow_run_id", autospec=True
+)
 def test_workflow_session_management(
+    mock_from_workflow_run_id: MagicMock,
     api_provider_mock: TestGretelApiFactory,
     resource_provider_mock: TestGretelResourceProvider,
     tasks: Registry,
     stub_globals: Globals,
 ):
+    test_workflow_api = api_provider_mock.get_api(WorkflowsApi)
+    test_workflow_api.exec_workflow_batch.side_effect = [
+        MagicMock(workflow_id="wf-id-no-name-defined-1"),
+        MagicMock(workflow_id="wf-id-no-name-defined-2"),
+        MagicMock(workflow_id="wf-id-for-apples"),
+        MagicMock(workflow_id="wf-id-for-apples"),
+        MagicMock(workflow_id="wf-id-for-bananas"),
+        MagicMock(workflow_id="wf-id-for-bananas"),
+        MagicMock(workflow_id="wf-id-for-apples"),
+        MagicMock(workflow_id="wf-id-for-apples-new"),
+        MagicMock(workflow_id="wf-id-for-bananas"),
+    ]
+    # Unfortunately can't create mocks with name during construction
+    mock_first_workflow_run = MagicMock()
+    mock_first_workflow_run.name = "auto-generated-wf-run-name-1"
+    mock_second_workflow_run = MagicMock()
+    mock_second_workflow_run.name = "auto-generated-wf-run-name-2"
+    mock_third_workflow_run = MagicMock()
+    mock_third_workflow_run.name = "apples"
+    mock_fourth_workflow_run = MagicMock()
+    mock_fourth_workflow_run.name = "apples"
+    mock_fifth_workflow_run = MagicMock()
+    mock_fifth_workflow_run.name = "bananas"
+    mock_sixth_workflow_run = MagicMock()
+    mock_sixth_workflow_run.name = "bananas"
+    mock_seventh_workflow_run = MagicMock()
+    mock_seventh_workflow_run.name = "apples"
+    mock_eighth_workflow_run = MagicMock()
+    mock_eighth_workflow_run.name = "apples"
+    mock_ninth_workflow_run = MagicMock()
+    mock_ninth_workflow_run.name = "bananas"
+
+    mock_from_workflow_run_id.side_effect = [
+        mock_first_workflow_run,
+        mock_second_workflow_run,
+        mock_third_workflow_run,
+        mock_fourth_workflow_run,
+        mock_fifth_workflow_run,
+        mock_sixth_workflow_run,
+        mock_seventh_workflow_run,
+        mock_eighth_workflow_run,
+        mock_ninth_workflow_run,
+    ]
+
     workflow_session = WorkflowSessionManager()
-
-    builder_one = WorkflowBuilder(
-        "proj_1",
-        stub_globals,
-        api_provider_mock,
-        resource_provider_mock,
-        workflow_session,
-    )
-    builder_two = WorkflowBuilder(
+    wf_builder = WorkflowBuilder(
         "proj_1",
         stub_globals,
         api_provider_mock,
@@ -247,22 +297,89 @@ def test_workflow_session_management(
         workflow_session,
     )
 
-    builder_one.for_workflow("w_1")
-    builder_one.set_name("test")
-
-    builder_two.set_name("test")
-    builder_two.add_step(tasks.IdGenerator())
-    builder_two.run()
-
-    api_provider_mock.get_mock(
+    # First run call without a workflow name
+    # This should create a new workflow
+    wf_builder.run()
+    exec_batch_request = api_provider_mock.get_mock(
         WorkflowsApi
-    ).exec_workflow_batch.assert_called_once_with(
-        ExecBatchRequest(
-            project_id="proj_1",
-            workflow_config=builder_two.to_dict(),
-            workflow_id="w_1",
-        )
-    )
+    ).exec_workflow_batch.call_args[0][0]
+    assert exec_batch_request.workflow_id is None
+    assert (
+        exec_batch_request.workflow_config["name"] is not None
+    )  # one is auto-generated client side
+
+    # Second run call without a workflow name
+    # This should use the id of the workflow that was just created in the first call
+    wf_builder.run()
+    exec_batch_request = api_provider_mock.get_mock(
+        WorkflowsApi
+    ).exec_workflow_batch.call_args[0][0]
+    assert exec_batch_request.workflow_id == "wf-id-no-name-defined-1"
+    assert (
+        exec_batch_request.workflow_config["name"] is not None
+    )  # one is auto-generated client side
+
+    # Third call with a new name should force a new workflow to be created
+    wf_builder.for_workflow(workflow_name="apples")
+    wf_builder.run()
+    exec_batch_request = api_provider_mock.get_mock(
+        WorkflowsApi
+    ).exec_workflow_batch.call_args[0][0]
+    assert exec_batch_request.workflow_id is None
+    assert exec_batch_request.workflow_config["name"] == "apples"
+
+    # Fourth call with the same name should use the existing workflow created for the one above
+    wf_builder.for_workflow(workflow_name="apples")
+    wf_builder.run()
+    exec_batch_request = api_provider_mock.get_mock(
+        WorkflowsApi
+    ).exec_workflow_batch.call_args[0][0]
+    assert exec_batch_request.workflow_id == "wf-id-for-apples"
+    assert exec_batch_request.workflow_config["name"] == "apples"
+
+    # Fifth call with a different name should force a new workflow to be created
+    wf_builder.for_workflow(workflow_name="bananas")
+    wf_builder.run()
+    exec_batch_request = api_provider_mock.get_mock(
+        WorkflowsApi
+    ).exec_workflow_batch.call_args[0][0]
+    assert exec_batch_request.workflow_id is None
+    assert exec_batch_request.workflow_config["name"] == "bananas"
+
+    # Sixth call without any name should use the last used workflow
+    wf_builder.run()
+    exec_batch_request = api_provider_mock.get_mock(
+        WorkflowsApi
+    ).exec_workflow_batch.call_args[0][0]
+    assert exec_batch_request.workflow_id == "wf-id-for-bananas"
+    assert exec_batch_request.workflow_config["name"] == "bananas"
+
+    # Seventh call using a name specified previously should use the existing workflow
+    wf_builder.for_workflow(workflow_name="apples")
+    wf_builder.run()
+    exec_batch_request = api_provider_mock.get_mock(
+        WorkflowsApi
+    ).exec_workflow_batch.call_args[0][0]
+    assert exec_batch_request.workflow_id == "wf-id-for-apples"
+    assert exec_batch_request.workflow_config["name"] == "apples"
+
+    # Eighth call specifying new workflow flag should create a new workflow regarldless of the name provided
+    wf_builder.for_workflow(workflow_id=None)
+    wf_builder.run()
+    exec_batch_request = api_provider_mock.get_mock(
+        WorkflowsApi
+    ).exec_workflow_batch.call_args[0][0]
+    assert exec_batch_request.workflow_id is None
+    assert exec_batch_request.workflow_config["name"] == "apples"
+
+    # Finally, can switch back to a previously used name without the new workflow flag
+    wf_builder.for_workflow(workflow_name="bananas")
+    wf_builder.run()
+    exec_batch_request = api_provider_mock.get_mock(
+        WorkflowsApi
+    ).exec_workflow_batch.call_args[0][0]
+    assert exec_batch_request.workflow_id == "wf-id-for-bananas"
+    assert exec_batch_request.workflow_config["name"] == "bananas"
 
 
 def test_handle_step_name_duplicates(builder: WorkflowBuilder, tasks: Registry):

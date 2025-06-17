@@ -306,6 +306,11 @@ class SafeSyntheticDataset:
         Raises:
             WorkflowValidationError: If the workflow configuration is invalid
         """
+        # if a workflow with the same name has been created for
+        # the session, reuse that workflow.
+        if name:
+            self._builder.for_workflow(workflow_name=name)
+
         # Ensures that a new workflow is created for the run
         if new_workflow:
             self._builder.for_workflow(None)
@@ -351,7 +356,9 @@ class SafeSyntheticDataset:
                 )
 
         return self._builder.run(
-            name=name, run_name=run_name, wait_until_done=wait_until_done
+            name=name,
+            run_name=run_name,
+            wait_until_done=wait_until_done,
         )
 
     def _format_data_source(self, data_source: str | Path | pd.DataFrame) -> str:

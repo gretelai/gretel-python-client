@@ -219,11 +219,18 @@ def _default_preview_printer(log: Message | WorkflowInterruption):
 class WorkflowSessionManager:
     def __init__(self):
         self._workflow_id = None
+        self._workflows_by_name = {}
 
-    def set_id(self, workflow_id: Optional[str]):
+    def set_id(
+        self, workflow_id: str | None = None, workflow_name: str | None = None
+    ) -> None:
         self._workflow_id = workflow_id
+        self._workflows_by_name[workflow_name] = workflow_id
 
-    def get_id(self) -> Optional[str]:
+    def get_id_by_name(self, name: str) -> str | None:
+        return self._workflows_by_name.get(name)
+
+    def get_id(self) -> str | None:
         return self._workflow_id
 
 
@@ -287,23 +294,35 @@ class WorkflowBuilder:
         self._name = name
         return self
 
-    def for_workflow(self, workflow_id: str | None = None) -> Self:
+    def for_workflow(
+        self, workflow_id: str | None = None, workflow_name: str | None = None
+    ) -> Self:
         """
         Configure this builder to use an existing workflow.
-
         When a workflow ID is specified, the `run()` method will execute a new run
         within the context of the existing workflow instead of creating a new workflow.
         This allows multiple runs to share the same workflow.
-
         Args:
             workflow_id: The ID of an existing workflow to use. If set to
                 None, a new workflow will get created for the subsequent
                 run.
-
+            workflow_name: Set the name of the workflow. If a workflow has been
+                created with the same name for the current session that workflow
+                will be reused.
         Returns:
             Self: The builder instance for method chaining
         """
         self._workflow_session_manager.set_id(workflow_id)
+        if workflow_id and workflow_name:
+            raise ValueError("Please choose one of workflow_id or workflow_name")
+
+        # if a workflow was created in the current session with
+        # the same name, use that
+        if workflow_name:
+            workflow_id = self._workflow_session_manager.get_id_by_name(workflow_name)
+            self.set_name(workflow_name)
+
+        self._workflow_session_manager.set_id(workflow_id, workflow_name)
         return self
 
     def with_data_source(
@@ -640,6 +659,7 @@ class WorkflowBuilder:
                 This can be used to track the status of the workflow and retrieve
                 results when it completes.
         """
+
         if name:
             self.set_name(name)
 
@@ -652,7 +672,6 @@ class WorkflowBuilder:
                     workflow_run_name=run_name,
                 )
             )
-
         except ApiException as ex:
             try:
                 error_details = json.loads(ex.body)
@@ -665,13 +684,13 @@ class WorkflowBuilder:
         logger.info(f"▶️ {wf_op} Workflow: {response.workflow_id}")
         logger.info(f"▶️ Created Workflow Run: {response.workflow_run_id}")
 
-        self._workflow_session_manager.set_id(response.workflow_id)
-
         workflow_run = WorkflowRun.from_workflow_run_id(
             response.workflow_run_id,
             self._api_provider,
             self._resource_provider,
         )
+
+        self._workflow_session_manager.set_id(response.workflow_id, workflow_run.name)
 
         logger.info(f"🔗 Workflow Run console link: {workflow_run.console_url}")
 

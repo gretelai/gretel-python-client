@@ -380,7 +380,8 @@ def test_workflow_builder_run_integration(
         wait_until_done=True,
     )
     mock_low_level_sdk_resources.mock_workflow_builder.run.assert_called_with(
-        name="test-wfl", run_name="test-run-name", wait_until_done=True
+        run_name="test-run-name",
+        wait_until_done=True,
     )
 
 

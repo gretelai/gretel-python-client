@@ -1,5 +1,5 @@
 from typing import Optional
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 import yaml
@@ -53,7 +53,11 @@ def ssd_factory(
 
 
 def extract_workflow_from_mock(dataset: SafeSyntheticDataset) -> Workflow:
-    dataset.create()
+    with patch(
+        "gretel_client.workflows.builder.WorkflowRun.from_workflow_run_id"
+    ) as mock_from_workflow_run_id:
+        mock_from_workflow_run_id.return_value = Mock()
+        dataset.create()
     args = dataset._builder._data_api.exec_workflow_batch.call_args
     return Workflow(**args[0][0].workflow_config)
 
