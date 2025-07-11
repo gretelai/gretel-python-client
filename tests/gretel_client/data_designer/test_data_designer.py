@@ -3,6 +3,7 @@ import tempfile
 
 from unittest.mock import MagicMock
 
+import pandas as pd
 import pytest
 import yaml
 
@@ -113,7 +114,7 @@ def test_data_designer_from_config(stub_aidd_config_str):
     assert dd.model_suite == "apache-2.0"
     assert dd.model_configs[0].alias == "my_own_code_model"
 
-    ## Magic checks
+    # Magic checks
     assert dd.get_column(column_name="code_id") in dd.magic.known_columns
     assert dd.get_column(column_name="text") in dd.magic.known_columns
     assert dd.get_column(column_name="code") in dd.magic.known_columns
@@ -565,3 +566,60 @@ def test_drop_flag_false_retains_column(mock_low_level_sdk_resources):
         for call in mock_low_level_sdk_resources.mock_workflow_builder.add_step.mock_calls
     ]
     assert next((s for s in steps if isinstance(s, DropColumns)), None) is None
+
+
+@pytest.mark.parametrize("from_analytics", [True, False])
+def test_error_blocks_preview_success(mock_low_level_sdk_resources, from_analytics):
+    dd = _minimal_designer(mock_low_level_sdk_resources.mock_resource_provider)
+    dd.add_column(name="test_col", prompt="Write some text")
+
+    mock_df = pd.DataFrame({"uid": ["123"], "test_col": ["generated text"]})
+
+    if from_analytics:
+        err_msg = "Error occurred while processing event props STREAMING_TASK_CREATED: Object of type ndarray is not JSON serializable"
+    else:
+        err_msg = "Failed to generate column: API rate limit exceeded"
+
+    mock_messages = [
+        MagicMock(
+            step="generating-test_col",
+            has_log_message=False,
+            has_output=False,
+            payload=None,
+        ),
+        MagicMock(
+            step="generating-test_col",
+            has_log_message=True,
+            has_output=False,
+            log_message=MagicMock(
+                level="ERROR",
+                msg=err_msg,
+                ts="2024-01-01T00:00:00",
+                is_error=True,
+                is_warning=False,
+                is_info=False,
+            ),
+            payload=None,
+        ),
+        MagicMock(
+            step="generating-test_col",
+            has_log_message=False,
+            has_output=True,
+            has_dataset=True,
+            dataset=mock_df,
+            payload=mock_df,
+        ),
+    ]
+
+    mock_low_level_sdk_resources.mock_workflow_builder.iter_preview.return_value = iter(
+        mock_messages
+    )
+
+    preview_result = dd.preview()
+
+    if from_analytics:
+        assert preview_result.success is True
+        assert preview_result.output is not None
+        assert preview_result.dataset is not None
+    else:
+        assert preview_result.success is False

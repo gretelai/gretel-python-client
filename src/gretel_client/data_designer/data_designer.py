@@ -202,7 +202,7 @@ class DataDesigner:
             model_suite=model_suite, workflow_manager=self._workflow_manager
         )
 
-        ## Synchronization: Cause any mutation of these dictionaries to trigger a reset on the magic object
+        # Synchronization: Cause any mutation of these dictionaries to trigger a reset on the magic object
         self.magic = MagicDataDesignerEditor(self)
         self._columns = CallbackOnMutateDict(self.magic.reset)
         self._columns |= columns or {}
@@ -935,11 +935,22 @@ class DataDesigner:
                     elif log_msg.is_warning:
                         logger.warning(formatted_msg)
                     else:
-                        success = False
-                        logger.error(formatted_msg)
+                        # Check if this is an analytics error that shouldn't fail the preview
+                        if "Error occurred while processing event props" in log_msg.msg:
+                            # Log as warning instead of error, and don't set success=False
+                            logger.warning(f"Analytics warning: {formatted_msg}")
+                        else:
+                            success = False
+                            logger.error(formatted_msg)
 
             if message.has_output:
-                logger.debug(f"Step output: {json.dumps(message.payload, indent=4)}")
+                try:
+                    logger.debug(
+                        f"Step output: {json.dumps(message.payload, indent=4)}"
+                    )
+                except (TypeError, ValueError):
+                    # Some payloads (like DataFrames) can't be JSON serialized
+                    logger.debug(f"Step output: {type(message.payload).__name__}")
 
                 output = message.payload
                 if message.has_dataset:
