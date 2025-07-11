@@ -28,7 +28,7 @@ def test_dag_construction():
     dd.add_column(
         LLMCodeColumn(
             name="depends_on_validation",
-            prompt="Write {{ test_code_pylint_score }}.",
+            prompt="Write {{ test_code_python_linter_score }}.",
             output_format=CodeLang.PYTHON,
         )
     )

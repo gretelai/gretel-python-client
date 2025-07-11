@@ -14,9 +14,9 @@ SQL_DIALECTS = {
 }
 
 VALIDATE_PYTHON_COLUMN_SUFFIXES = [
-    "_pylint_score",
-    "_pylint_severity",
-    "_pylint_messages",
+    "_python_linter_score",
+    "_python_linter_severity",
+    "_python_linter_messages",
 ]
 
 VALIDATE_SQL_COLUMN_SUFFIXES = [
