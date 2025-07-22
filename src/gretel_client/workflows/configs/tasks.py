@@ -2031,6 +2031,7 @@ class EvaluateDataDesignerDataset(ConfigBase):
     defined_categorical_columns: Annotated[
         Optional[List[str]], Field(title="Defined Categorical Columns")
     ] = None
+    outlier_analysis: Annotated[Optional[bool], Field(title="Outlier Analysis")] = True
 
 
 class GenerateColumnFromTemplateV2Config(ConfigBase):

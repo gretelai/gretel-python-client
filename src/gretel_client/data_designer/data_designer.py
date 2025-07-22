@@ -395,7 +395,8 @@ class DataDesigner:
         return self
 
     def with_evaluation_report(
-        self, settings: EvaluateDataDesignerDatasetSettings | None = None
+        self,
+        settings: EvaluateDataDesignerDatasetSettings | None = None,
     ) -> Self:
         """Add an evaluation report to the current Data Designer configuration.
 
@@ -405,20 +406,23 @@ class DataDesigner:
         Returns:
             The current Data Designer instance.
         """
-        self._evaluation_report = GeneralDatasetEvaluation(
-            settings=settings
-            or EvaluateDataDesignerDatasetSettings(
-                llm_judge_columns=[
-                    c.name for c in self.llm_judge_columns if not c.drop
-                ],
-                validation_columns=[
-                    c.name for c in self.code_validation_columns if not c.drop
-                ],
-                defined_categorical_columns=[
-                    c.name for c in self._categorical_columns if not c.drop
-                ],
-            )
-        )
+        settings = EvaluateDataDesignerDatasetSettings.model_validate(settings or {})
+
+        # Fill in any missing values with defaults
+        if not settings.llm_judge_columns:
+            settings.llm_judge_columns = [
+                c.name for c in self.llm_judge_columns if not c.drop
+            ]
+        if not settings.validation_columns:
+            settings.validation_columns = [
+                c.name for c in self.code_validation_columns if not c.drop
+            ]
+        if not settings.defined_categorical_columns:
+            settings.defined_categorical_columns = [
+                c.name for c in self._categorical_columns if not c.drop
+            ]
+
+        self._evaluation_report = GeneralDatasetEvaluation(settings=settings)
         return self
 
     def preview(

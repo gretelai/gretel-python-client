@@ -102,6 +102,7 @@ class EvaluateDataDesignerDatasetSettings(AIDDConfigBase):
     columns_to_ignore: list[str] = Field(default_factory=list)
     validation_columns: list[str] = Field(default_factory=list)
     defined_categorical_columns: list[str] = Field(default_factory=list)
+    outlier_analysis: bool = Field(default=True)
 
     @model_validator(mode="after")
     def check_for_llm_judge_columns(self) -> Self:
