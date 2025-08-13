@@ -87,6 +87,11 @@ class WorkflowOutput(BaseModel):
                 if _item:
                     _items.append(_item.to_dict())
             _dict["steps"] = _items
+        # set to None if globals (nullable) is None
+        # and model_fields_set contains the field
+        if self.globals is None and "globals" in self.model_fields_set:
+            _dict["globals"] = None
+
         # set to None if inputs (nullable) is None
         # and model_fields_set contains the field
         if self.inputs is None and "inputs" in self.model_fields_set:
